@@ -1,0 +1,249 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn-back" (click)="back()">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <div class="header-info">
+      <h1 class="page-title">{{ pageTitle }}</h1>
+      @if (order.state) {
+        <span class="state-badge state-{{ order.state }}">{{ order.state }}</span>
+      }
+    </div>
+    <div class="header-actions">
+      @if (!isReadOnly) {
+        <button class="btn-secondary" (click)="save()" [disabled]="saving">
+          <span class="material-icons">save</span>
+          {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
+        </button>
+        <button class="btn-primary" (click)="confirm()" [disabled]="confirming || saving">
+          <span class="material-icons">check_circle</span>
+          {{ confirming ? 'Confirmation...' : 'Confirmer & Facturer' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success">
+      <span class="material-icons">check_circle</span> {{ successMsg }}
+    </div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-danger">
+      <span class="material-icons">error</span> {{ errorMsg }}
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <!-- Informations générales -->
+    <div class="card mb-16">
+      <div class="card-header">Informations générales</div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Client <span class="required">*</span></label>
+            <select [(ngModel)]="order.partnerId" [disabled]="isReadOnly" class="form-control">
+              <option [value]="0" disabled>— Sélectionner un client —</option>
+              @for (c of clients; track c.id) {
+                <option [value]="c.id">{{ c.name }}{{ c.ref ? ' (' + c.ref + ')' : '' }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Journal de vente <span class="required">*</span></label>
+            <select [(ngModel)]="order.journalId" [disabled]="isReadOnly" class="form-control">
+              @for (j of journals; track j.id) {
+                <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date du bon</label>
+            <input type="date" [(ngModel)]="order.date" [disabled]="isReadOnly" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Date d'échéance</label>
+            <input type="date" [(ngModel)]="order.dateEcheance" [disabled]="isReadOnly" class="form-control" />
+          </div>
+          <div class="form-group form-full">
+            <label>Notes</label>
+            <textarea [(ngModel)]="order.notes" [disabled]="isReadOnly" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lignes -->
+    <div class="card mb-16">
+      <div class="card-header">
+        <span>Lignes de commande</span>
+        @if (!isReadOnly) {
+          <button class="btn-add-line" (click)="addLine()">
+            <span class="material-icons">add</span> Ajouter une ligne
+          </button>
+        }
+      </div>
+      <div class="lines-table-wrapper">
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th class="line-num">#</th>
+              <th style="min-width:260px">Article</th>
+              <th class="text-right" style="width:80px">Qté</th>
+              <th class="text-right" style="width:110px">Prix U.</th>
+              <th class="text-right" style="width:80px">Rem. %</th>
+              <th class="text-right" style="width:80px">TVA %</th>
+              <th style="width:90px">Compte</th>
+              <th class="text-right" style="width:110px">Montant HT</th>
+              <th class="text-right" style="width:120px">Montant TTC</th>
+              @if (!isReadOnly) { <th style="width:36px"></th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of order.lines; track $index; let i = $index) {
+              <tr>
+                <td class="line-num">{{ i + 1 }}</td>
+                <!-- Colonne article avec autocomplete -->
+                <td class="product-cell">
+                  @if (!isReadOnly) {
+                    <div class="autocomplete-wrap">
+                      <div class="autocomplete-input-row">
+                        <input
+                          type="text"
+                          class="input-cell product-search"
+                          [placeholder]="allProducts.length === 0 ? 'Aucun article en stock' : 'Rechercher un article...'"
+                          [(ngModel)]="lineSearches[i]"
+                          (focus)="openSuggestions(i)"
+                          (blur)="closeSuggestions(i)"
+                          (input)="openSuggestions(i)"
+                          autocomplete="off"
+                        />
+                        @if (line.productCode) {
+                          <button class="btn-clear-product" (click)="clearLine(i)" title="Changer d'article">
+                            <span class="material-icons">close</span>
+                          </button>
+                        }
+                      </div>
+                      @if (activeSuggestionIdx === i) {
+                        <div class="suggestions-panel">
+                          @for (p of getSuggestions(i); track p.id) {
+                            <div class="suggestion-item" (mousedown)="selectProduct(i, p)">
+                              <div class="suggestion-main">
+                                @if (p.defaultCode) {
+                                  <span class="sug-code">{{ p.defaultCode }}</span>
+                                }
+                                <span class="sug-name">{{ p.name }}</span>
+                              </div>
+                              <div class="suggestion-meta">
+                                <span class="sug-stock" [class.low]="(p.qtyOnHand || 0) <= 0">
+                                  {{ p.qtyOnHand | number:'1.0-0' }} {{ p.uomName }}
+                                </span>
+                                <span class="sug-price">{{ p.salePrice | number:'1.0-0' }} FCFA</span>
+                              </div>
+                            </div>
+                          }
+                          @if (getSuggestions(i).length === 0) {
+                            <div class="sug-empty">
+                              @if (allProducts.length === 0) { Aucun article dans le stock }
+                              @else { Aucun résultat pour "{{ lineSearches[i] }}" }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="product-readonly">
+                      @if (line.productCode) { <span class="sug-code">{{ line.productCode }}</span> }
+                      <span>{{ line.description }}</span>
+                    </div>
+                  }
+                </td>
+                <td class="text-right">
+                  @if (!isReadOnly) {
+                    <div class="qty-cell-wrap">
+                      <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)"
+                             class="input-cell text-right" [class.qty-warning]="hasStockWarning(i)" min="0" />
+                      @if (line.productId) {
+                        <span class="stock-badge" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
+                          {{ lineStockQty[i] }} dispo
+                        </span>
+                      }
+                    </div>
+                  } @else { {{ line.quantity }} }
+                </td>
+                <td class="text-right">
+                  @if (!isReadOnly) {
+                    <input type="number" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" />
+                  } @else { {{ line.prixUnitaire | number:'1.0-0' }} }
+                </td>
+                <td class="text-right">
+                  @if (!isReadOnly) {
+                    <input type="number" [(ngModel)]="line.tauxRemise" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" max="100" />
+                  } @else { {{ line.tauxRemise || 0 }} % }
+                </td>
+                <td class="text-right">
+                  @if (!isReadOnly) {
+                    <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" />
+                  } @else { {{ line.tauxTVA || 0 }} % }
+                </td>
+                <td>
+                  @if (!isReadOnly) {
+                    <input type="text" [(ngModel)]="line.accountCode" class="input-cell" placeholder="706100" />
+                  } @else { {{ line.accountCode || '—' }} }
+                </td>
+                <td class="text-right amount-col">{{ line.montantHT | number:'1.0-0' }}</td>
+                <td class="text-right amount-col-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
+                @if (!isReadOnly) {
+                  <td>
+                    <button class="btn-remove-line" (click)="removeLine($index)" title="Supprimer">
+                      <span class="material-icons">delete_outline</span>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+            @if (order.lines.length === 0) {
+              <tr>
+                <td colspan="10" class="empty-lines">
+                  @if (!isReadOnly) {
+                    <button class="btn-add-line-inline" (click)="addLine()">
+                      <span class="material-icons">add_circle_outline</span>
+                      Cliquez pour ajouter une ligne
+                    </button>
+                  } @else {
+                    Aucune ligne
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Totaux -->
+    <div class="totals-card">
+      <div class="totals-grid">
+        <div class="total-row">
+          <span class="total-label">Total remise</span>
+          <span class="total-value text-muted">{{ order.totalRemise | number:'1.0-0' }} FCFA</span>
+        </div>
+        <div class="total-row">
+          <span class="total-label">Total HT</span>
+          <span class="total-value">{{ order.totalHT | number:'1.0-0' }} FCFA</span>
+        </div>
+        <div class="total-row">
+          <span class="total-label">TVA</span>
+          <span class="total-value">{{ order.totalTVA | number:'1.0-0' }} FCFA</span>
+        </div>
+        <div class="total-row total-ttc">
+          <span class="total-label">Total TTC</span>
+          <span class="total-value">{{ order.totalTTC | number:'1.0-0' }} FCFA</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>

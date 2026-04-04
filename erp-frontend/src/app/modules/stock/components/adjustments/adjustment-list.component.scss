@@ -1,0 +1,139 @@
+.page-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px;
+  .page-title { font-size: 20px; font-weight: 600; color: #212529; margin: 0 0 4px; }
+  .page-subtitle { font-size: 13px; color: #6c757d; margin: 0; }
+}
+
+.btn-primary, .btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border: none; border-radius: 6px;
+  font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif;
+  transition: all 0.2s;
+  .material-icons { font-size: 18px; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+.btn-primary { background: #2c7be5; color: white; &:hover:not(:disabled) { background: #1a68d1; } }
+.btn-secondary { background: white; color: #2c7be5; border: 1px solid #2c7be5; &:hover:not(:disabled) { background: #f0f5ff; } }
+
+.alert {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;
+  .material-icons { font-size: 18px; }
+  &.alert-success { background: #d1f0e8; color: #0a5c45; border: 1px solid #a3e0c9; }
+  &.alert-danger { background: #fde8e8; color: #721c24; border: 1px solid #f5c6cb; }
+}
+
+.loading-state { display: flex; align-items: center; gap: 8px; padding: 48px; justify-content: center; color: #6c757d; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.card {
+  background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;
+  &-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; border-bottom: 1px solid #f0f0f0;
+    font-weight: 600; color: #212529; font-size: 14px;
+  }
+}
+.count-badge { background: #e8f0fe; color: #1a68d1; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+
+.adj-table {
+  width: 100%; border-collapse: collapse;
+  th {
+    padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600;
+    color: #6c757d; text-transform: uppercase; background: #f8f9fa; border-bottom: 1px solid #e9ecef;
+  }
+  td { padding: 9px 12px; font-size: 13px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafafa; }
+}
+
+.text-right { text-align: right; }
+.text-muted { color: #6c757d; }
+.small { font-size: 12px; }
+.mono { font-family: 'Roboto Mono', monospace; }
+
+.product-cell { display: flex; align-items: center; gap: 6px; }
+.product-name { font-weight: 500; }
+.code-badge { background: #e8f0fe; color: #1a68d1; padding: 1px 6px; border-radius: 3px; font-size: 11px; font-family: monospace; }
+
+.diff-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  &.positive { background: #d1f0e8; color: #0a5c45; }
+  &.negative { background: #fde8e8; color: #721c24; }
+}
+.positive { color: #0a5c45; }
+.negative { color: #721c24; }
+.move-ref { font-family: monospace; font-size: 11px; background: #f8f9fa; padding: 1px 5px; border-radius: 3px; }
+.empty-state { text-align: center; padding: 40px; color: #adb5bd; font-size: 14px; }
+.mt-12 { margin-top: 12px; }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; }
+.modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: white; border-radius: 10px; width: 620px; max-width: calc(100vw - 32px);
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2); z-index: 1001;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid #f0f0f0; position: sticky; top: 0; background: white;
+  h2 { margin: 0; font-size: 16px; font-weight: 600; }
+}
+.btn-close {
+  width: 32px; height: 32px; background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: #6c757d; border-radius: 4px;
+  &:hover { background: #f0f0f0; }
+}
+.modal-body { padding: 20px; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 20px; border-top: 1px solid #f0f0f0; background: #fafafa;
+  position: sticky; bottom: 0;
+}
+
+.info-box {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: #f0f5ff; border: 1px solid #c7d9f8; border-radius: 6px;
+  padding: 12px; font-size: 13px; color: #1a4a8a; margin-bottom: 16px;
+  .material-icons { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group {
+  display: flex; flex-direction: column; gap: 5px;
+  label { font-size: 13px; font-weight: 500; color: #495057; }
+}
+.form-control {
+  padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px;
+  font-size: 14px; font-family: 'Roboto', sans-serif; outline: none;
+  &:focus { border-color: #2c7be5; }
+}
+.required { color: #dc3545; }
+
+/* Quantity comparison widget */
+.qty-comparison {
+  display: flex; align-items: center; gap: 12px;
+  background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 16px;
+}
+.qty-box {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: white; border-radius: 6px; padding: 12px; border: 2px solid #dee2e6;
+  &.current { border-color: #dee2e6; }
+  &.new { border-color: #2c7be5; }
+  &.diff { &.positive { border-color: #28a745; background: #f0fff4; }
+             &.negative { border-color: #dc3545; background: #fff8f8; }
+             &.zero { border-color: #dee2e6; } }
+}
+.qty-label { font-size: 11px; text-transform: uppercase; font-weight: 600; color: #6c757d; }
+.qty-value { font-size: 22px; font-weight: 700; color: #212529; font-family: 'Roboto Mono', monospace; }
+.qty-sub { font-size: 11px; color: #6c757d; }
+.qty-input {
+  width: 100%; text-align: center; font-size: 22px; font-weight: 700;
+  border: none; outline: none; background: transparent; font-family: 'Roboto Mono', monospace;
+  color: #2c7be5;
+}
+.arrow-icon { color: #adb5bd; font-size: 28px; flex-shrink: 0; }

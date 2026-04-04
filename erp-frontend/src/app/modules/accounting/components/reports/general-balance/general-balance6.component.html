@@ -1,0 +1,113 @@
+<div class="page-container report-container">
+  <div class="page-header no-print">
+    <h1 class="page-title">
+      <span class="material-icons">table_chart</span>
+      Balance Générale — 6 Colonnes
+    </h1>
+    @if (generated) {
+      <button class="btn btn-outline" (click)="print()">
+        <span class="material-icons">print</span>Imprimer
+      </button>
+    }
+  </div>
+
+  <div class="report-header no-print">
+    <div class="filters-bar" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>Du *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>Au *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-group" style="flex:1">
+        <label>Journaux</label>
+        <select class="form-control" multiple style="height:60px">
+          @for (j of journals; track j.id) {
+            <option [value]="j.id" (click)="toggleJournal(j.id!)">{{ j.code }} - {{ j.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Afficher</label>
+        <select class="form-control" [(ngModel)]="displayAccount">
+          <option value="all">Tous les comptes</option>
+          <option value="movement">Avec mouvements</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="spinner-sm"></span> }
+          <span class="material-icons">play_arrow</span>Générer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+  } @else if (generated) {
+    @if (lines.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">table_chart</span>
+        <h3>Aucune donnée</h3>
+      </div>
+    } @else {
+      <div class="table-container" style="overflow-x:auto">
+        <div class="report-title-bar">
+          <h3>Balance Générale 6 Colonnes — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</h3>
+          <span class="report-period">{{ lines.length }} compte(s)</span>
+        </div>
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th rowspan="2">Code</th>
+              <th rowspan="2">Intitulé</th>
+              <th colspan="2" class="text-center" style="background:#e8f4fd">Soldes Initiaux</th>
+              <th colspan="2" class="text-center" style="background:#e8f5e9">Mouvements</th>
+              <th colspan="2" class="text-center" style="background:#f3e5f5">Soldes Finaux</th>
+            </tr>
+            <tr>
+              <th class="text-right" style="background:#e8f4fd">Débit</th>
+              <th class="text-right" style="background:#e8f4fd">Crédit</th>
+              <th class="text-right" style="background:#e8f5e9">Débit</th>
+              <th class="text-right" style="background:#e8f5e9">Crédit</th>
+              <th class="text-right" style="background:#f3e5f5">Débit</th>
+              <th class="text-right" style="background:#f3e5f5">Crédit</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines; track line.accountCode) {
+              <tr [class]="'account-class-' + getAccountClass(line.accountCode)">
+                <td><strong class="mono">{{ line.accountCode }}</strong></td>
+                <td>{{ line.accountName }}</td>
+                <td class="text-right">{{ line.initialDebit > 0 ? (line.initialDebit | number:'1.2-2') : '' }}</td>
+                <td class="text-right">{{ line.initialCredit > 0 ? (line.initialCredit | number:'1.2-2') : '' }}</td>
+                <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">TOTAL GÉNÉRAL</td>
+              <td>{{ totals.initD | number:'1.2-2' }}</td>
+              <td>{{ totals.initC | number:'1.2-2' }}</td>
+              <td>{{ totals.mvtD | number:'1.2-2' }}</td>
+              <td>{{ totals.mvtC | number:'1.2-2' }}</td>
+              <td>{{ totals.finD | number:'1.2-2' }}</td>
+              <td>{{ totals.finC | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>

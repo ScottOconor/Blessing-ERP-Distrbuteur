@@ -1,0 +1,48 @@
+import { Routes } from '@angular/router';
+import { SalesLayoutComponent } from './layout/sales-layout.component';
+
+export const salesRoutes: Routes = [
+  {
+    path: '',
+    component: SalesLayoutComponent,
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./components/dashboard/sales-dashboard.component').then(m => m.SalesDashboardComponent)
+      },
+      {
+        path: 'orders',
+        loadComponent: () => import('./components/orders/order-list.component').then(m => m.OrderListComponent)
+      },
+      {
+        path: 'orders/new',
+        loadComponent: () => import('./components/orders/order-form.component').then(m => m.OrderFormComponent)
+      },
+      {
+        path: 'orders/:id',
+        loadComponent: () => import('./components/orders/order-form.component').then(m => m.OrderFormComponent)
+      },
+      {
+        path: 'invoices',
+        loadComponent: () => import('./components/invoices/invoice-list.component').then(m => m.InvoiceListComponent)
+      },
+      {
+        path: 'invoices/:id',
+        loadComponent: () => import('./components/invoices/invoice-detail.component').then(m => m.InvoiceDetailComponent)
+      },
+      {
+        path: 'avoirs',
+        loadComponent: () => import('./components/invoices/avoir-list.component').then(m => m.AvoirListComponent)
+      },
+      {
+        path: 'clients',
+        loadComponent: () => import('./components/clients/client-list.component').then(m => m.ClientListComponent)
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./components/reports/sales-reports.component').then(m => m.SalesReportsComponent)
+      }
+    ]
+  }
+];

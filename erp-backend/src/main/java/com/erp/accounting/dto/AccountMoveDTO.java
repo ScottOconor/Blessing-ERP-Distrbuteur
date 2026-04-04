@@ -1,0 +1,28 @@
+package com.erp.accounting.dto;
+
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AccountMoveDTO {
+    private Long id;
+    private String name;
+    private LocalDate date;
+    private String ref;
+    private String state;
+    private Long journalId;
+    private String journalName;
+    private Long companyId;
+    private Long partnerId;
+    private String partnerName;
+    private List<AccountMoveLineDTO> lines;
+    private LocalDateTime createdAt;
+    private BigDecimal totalDebit;
+    private BigDecimal totalCredit;
+}

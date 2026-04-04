@@ -1,0 +1,80 @@
+<div class="accounting-layout">
+  <!-- TOP NAVBAR -->
+  <nav class="acc-navbar">
+    <!-- Brand -->
+    <div class="acc-brand" (click)="goHome()">
+      <span class="material-icons">chevron_left</span>
+      <div class="brand-icon">
+        <span class="material-icons">calculate</span>
+      </div>
+      <span class="brand-label">Comptabilité</span>
+    </div>
+
+    <!-- Nav divider -->
+    <div class="nav-divider"></div>
+
+    <!-- Main Navigation -->
+    <nav class="acc-nav">
+      @for (item of navItems; track item.id) {
+        <!-- Simple link -->
+        @if (!item.children) {
+          <a
+            class="nav-link"
+            [class.active]="isRouteActive(item.route!)"
+            (click)="navigateTo(item.route!)"
+          >
+            <span class="material-icons">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        }
+
+        <!-- Dropdown -->
+        @if (item.children) {
+          <div
+            class="nav-item-dropdown"
+            [class.open]="activeDropdown === item.id"
+            [class.active]="hasActiveChild(item.children)"
+          >
+            <button
+              class="nav-link dropdown-toggle"
+              (click)="toggleDropdown(item.id)"
+            >
+              <span class="material-icons">{{ item.icon }}</span>
+              {{ item.label }}
+              <span class="material-icons arrow">expand_more</span>
+            </button>
+            <div class="dropdown-panel">
+              @for (child of item.children; track child.route) {
+                <button
+                  class="dropdown-item"
+                  [class.active]="isRouteActive(child.route)"
+                  (click)="navigateTo(child.route)"
+                >
+                  <span class="material-icons">{{ child.icon }}</span>
+                  {{ child.label }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      }
+    </nav>
+
+    <!-- Right side -->
+    <div class="nav-right">
+      <div class="user-pill">
+        <div class="user-avatar-sm">{{ userInitials }}</div>
+        <span class="user-name-sm">{{ userName }}</span>
+        <span class="company-name">| {{ companyName }}</span>
+      </div>
+      <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+        <span class="material-icons">logout</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE CONTENT -->
+  <main class="acc-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

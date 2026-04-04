@@ -1,0 +1,133 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title"><span class="material-icons">inventory_2</span> État du stock</h1>
+    <div class="header-right">
+      <div class="total-value-chip">
+        <span class="material-icons">paid</span>
+        Valeur totale : <strong>{{ totalValue | number:'1.0-0' }} FCFA</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" placeholder="Rechercher un article..." [(ngModel)]="searchProduct" (ngModelChange)="applyFilter()" />
+    <select class="filter-select" [(ngModel)]="filterWarehouseId" (ngModelChange)="filterLocationId = ''; applyFilter()">
+      <option value="">Tous les entrepôts</option>
+      @for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }
+    </select>
+    <select class="filter-select" [(ngModel)]="filterLocationId" (ngModelChange)="applyFilter()">
+      <option value="">Tous les emplacements</option>
+      @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
+    </select>
+    <div class="view-toggle">
+      <button class="toggle-btn" [class.active]="viewMode === 'by-product'" (click)="viewMode = 'by-product'">
+        <span class="material-icons">category</span> Par article
+      </button>
+      <button class="toggle-btn" [class.active]="viewMode === 'by-location'" (click)="viewMode = 'by-location'">
+        <span class="material-icons">place</span> Par emplacement
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement du stock...</div>
+  } @else if (filtered.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">inventory_2</span>
+      <p>Aucun stock disponible@if (searchProduct) { pour "{{ searchProduct }}" }.</p>
+    </div>
+  } @else {
+
+    @if (viewMode === 'by-product') {
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Référence</th><th>Article</th><th>Emplacement</th>
+              <th class="text-right">Quantité</th><th class="text-right">Réservé</th>
+              <th class="text-right">Disponible</th><th class="text-right">CMUP</th>
+              <th class="text-right">Valeur</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (g of groupedByProduct; track g.product) {
+              @if (g.lines.length > 1) {
+                <tr class="group-header">
+                  <td class="font-mono text-muted">{{ g.code || '—' }}</td>
+                  <td class="font-bold text-blue" colspan="2">{{ g.product }}</td>
+                  <td class="text-right font-bold">{{ g.total | number:'1.0-2' }}</td>
+                  <td></td><td></td><td></td>
+                  <td class="text-right font-bold text-blue">{{ g.value | number:'1.0-0' }}</td>
+                </tr>
+              }
+              @for (q of g.lines; track q.id) {
+                <tr [class.sub-row]="g.lines.length > 1">
+                  @if (g.lines.length === 1) {
+                    <td class="font-mono text-muted">{{ q.productCode || '—' }}</td>
+                    <td class="font-bold">{{ q.productName }}</td>
+                  } @else {
+                    <td></td><td class="text-muted indent">↳</td>
+                  }
+                  <td class="text-muted">{{ q.locationCompleteName || q.locationName }}</td>
+                  <td class="text-right font-mono">{{ q.quantity | number:'1.0-2' }} {{ q.uomName }}</td>
+                  <td class="text-right text-muted">{{ q.reservedQuantity | number:'1.0-2' }}</td>
+                  <td class="text-right">
+                    <span [class]="q.availableQuantity <= 0 ? 'qty-zero' : 'qty-ok'">
+                      {{ q.availableQuantity | number:'1.0-2' }}
+                    </span>
+                  </td>
+                  <td class="text-right font-mono text-muted">{{ q.standardPrice | number:'1.0-0' }}</td>
+                  <td class="text-right font-bold font-mono">{{ q.totalValue | number:'1.0-0' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="7" class="total-label">VALEUR TOTALE DU STOCK AFFICHÉ</td>
+              <td class="text-right total-value">{{ totalValue | number:'1.0-0' }} FCFA</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+
+    @if (viewMode === 'by-location') {
+      <div class="location-groups">
+        @for (g of groupedByLocation; track g.location) {
+          <div class="loc-group-card">
+            <div class="loc-group-header">
+              <span class="material-icons">place</span>
+              <span class="loc-group-name">{{ g.location }}</span>
+              <span class="loc-group-count">{{ g.lines.length }} article(s)</span>
+              <span class="loc-group-value">{{ g.value | number:'1.0-0' }} FCFA</span>
+            </div>
+            <table class="data-table inner-table">
+              <thead>
+                <tr>
+                  <th>Référence</th><th>Article</th>
+                  <th class="text-right">Qté</th><th class="text-right">Disponible</th>
+                  <th class="text-right">CMUP</th><th class="text-right">Valeur</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (q of g.lines; track q.id) {
+                  <tr>
+                    <td class="font-mono text-muted">{{ q.productCode || '—' }}</td>
+                    <td class="font-bold">{{ q.productName }}</td>
+                    <td class="text-right">{{ q.quantity | number:'1.0-2' }} {{ q.uomName }}</td>
+                    <td class="text-right">
+                      <span [class]="q.availableQuantity <= 0 ? 'qty-zero' : 'qty-ok'">{{ q.availableQuantity | number:'1.0-2' }}</span>
+                    </td>
+                    <td class="text-right font-mono text-muted">{{ q.standardPrice | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold font-mono">{{ q.totalValue | number:'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

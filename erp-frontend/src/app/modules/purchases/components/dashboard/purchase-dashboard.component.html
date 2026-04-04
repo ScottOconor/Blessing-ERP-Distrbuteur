@@ -1,0 +1,79 @@
+<div class="pur-dashboard">
+  <div class="page-header">
+    <div>
+      <h1>Tableau de bord Achats</h1>
+      <p class="subtitle">Vue d'ensemble de vos commandes fournisseurs</p>
+    </div>
+    <button class="btn-primary" (click)="newOrder()">
+      <span class="material-icons">add</span>
+      Nouvelle commande
+    </button>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <span class="material-icons kpi-icon blue">shopping_cart</span>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ totalOrders }}</div>
+        <div class="kpi-label">Total commandes</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="material-icons kpi-icon orange">pending</span>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ draftOrders }}</div>
+        <div class="kpi-label">Brouillons</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="material-icons kpi-icon teal">check_circle</span>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ confirmedOrders }}</div>
+        <div class="kpi-label">Confirmées</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="material-icons kpi-icon green">inventory</span>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ receivedOrders }}</div>
+        <div class="kpi-label">Réceptionnées</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h2>Commandes récentes</h2>
+      <button class="btn-link" (click)="viewOrders()">Voir tout</button>
+    </div>
+    @if (recentOrders.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">shopping_cart</span>
+        <p>Aucune commande. <a (click)="newOrder()">Créer la première</a></p>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Fournisseur</th>
+            <th>Date</th>
+            <th>Total TTC</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of recentOrders; track o.id) {
+            <tr class="row-link" [routerLink]="['/purchases/orders', o.id]">
+              <td><strong>{{ o.name }}</strong></td>
+              <td>{{ o.partnerName }}</td>
+              <td>{{ o.date | date:'dd/MM/yyyy' }}</td>
+              <td class="text-right">{{ (o.totalTTC ?? 0) | number:'1.0-0' }} FCFA</td>
+              <td><span class="badge" [class]="'badge-' + o.state">{{ stateLabel(o.state) }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

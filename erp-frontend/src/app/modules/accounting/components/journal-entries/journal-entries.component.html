@@ -1,0 +1,118 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">receipt_long</span>
+      Écritures Comptables
+    </h1>
+    <div class="page-actions">
+      <button class="btn btn-primary" (click)="router.navigate(['/accounting/journal-entries/new'])">
+        <span class="material-icons">add</span>
+        Nouvelle écriture
+      </button>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label>Journal</label>
+      <select class="form-control" [(ngModel)]="filters.journalId">
+        <option value="">Tous</option>
+        @for (j of journals; track j.id) {
+          <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Du</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.dateFrom">
+    </div>
+    <div class="filter-group">
+      <label>Au</label>
+      <input type="date" class="form-control" [(ngModel)]="filters.dateTo">
+    </div>
+    <div class="filter-group">
+      <label>Statut</label>
+      <select class="form-control" [(ngModel)]="filters.state">
+        <option value="">Tous</option>
+        <option value="draft">Brouillon</option>
+        <option value="posted">Validé</option>
+        <option value="cancel">Annulé</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" (click)="loadMoves()">
+        <span class="material-icons">search</span>
+        Filtrer
+      </button>
+      <button class="btn btn-outline" (click)="resetFilters()">
+        <span class="material-icons">clear</span>
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-container">
+    @if (loading) {
+      <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    } @else if (moves.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">receipt_long</span>
+        <h3>Aucune écriture trouvée</h3>
+        <p>Modifiez les filtres ou créez une nouvelle écriture.</p>
+      </div>
+    } @else {
+      <table class="table-erp">
+        <thead>
+          <tr>
+            <th>N° Pièce</th>
+            <th>Date</th>
+            <th>Journal</th>
+            <th>Référence</th>
+            <th>Partenaire</th>
+            <th class="text-right">Total Débit</th>
+            <th class="text-right">Total Crédit</th>
+            <th>Statut</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (move of moves; track move.id) {
+            <tr (click)="router.navigate(['/accounting/journal-entries', move.id])" style="cursor:pointer">
+              <td><strong>{{ move.name || 'Brouillon' }}</strong></td>
+              <td>{{ move.date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ move.journalName }}</td>
+              <td class="text-muted">{{ move.ref || '-' }}</td>
+              <td>{{ move.partnerName || '-' }}</td>
+              <td class="text-right amount-debit">{{ move.totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right amount-credit">{{ move.totalCredit | number:'1.2-2' }}</td>
+              <td><span [class]="getStateBadgeClass(move.state)">{{ getStateLabel(move.state) }}</span></td>
+              <td class="text-center" (click)="$event.stopPropagation()">
+                <div class="action-btns">
+                  <button class="btn btn-ghost btn-sm"
+                    (click)="router.navigate(['/accounting/journal-entries', move.id])"
+                    title="Voir/Modifier">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                  @if (move.state === 'draft') {
+                    <button class="btn btn-ghost btn-sm" style="color:#28a745"
+                      (click)="postMove(move.id!, $event)" title="Valider">
+                      <span class="material-icons">check_circle</span>
+                    </button>
+                  }
+                  @if (move.state === 'posted') {
+                    <button class="btn btn-ghost btn-sm" style="color:#dc3545"
+                      (click)="cancelMove(move.id!, $event)" title="Annuler">
+                      <span class="material-icons">cancel</span>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

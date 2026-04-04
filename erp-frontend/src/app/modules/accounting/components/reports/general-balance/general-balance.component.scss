@@ -1,0 +1,40 @@
+.mono {
+  font-family: 'Courier New', monospace;
+  color: #714B67;
+}
+
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  color: #721c24;
+  font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.print-only { display: none; }
+.print-report-title {
+  h2 { font-size: 20px; margin-bottom: 4px; }
+  p { color: #6c757d; }
+}
+
+.spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; margin-bottom: 16px; }
+}

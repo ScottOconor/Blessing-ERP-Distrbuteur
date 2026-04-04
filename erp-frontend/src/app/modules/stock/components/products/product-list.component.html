@@ -1,0 +1,192 @@
+<div class="page-container">
+  <!-- Input file caché -->
+  <input #importInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportFileChange($event)" />
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><span class="material-icons">category</span> Articles</h1>
+      <span class="badge-count">{{ filtered.length }} article(s)</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-outline" (click)="downloadTemplate()">
+        <span class="material-icons">download</span> Modèle Excel
+      </button>
+      <button class="btn-import" (click)="triggerImport()" [disabled]="importLoading">
+        <span class="material-icons">upload_file</span> {{ importLoading ? 'Lecture...' : 'Importer Excel' }}
+      </button>
+      <button class="btn-primary" (click)="openCreate()">
+        <span class="material-icons">add</span> Nouvel article
+      </button>
+    </div>
+  </div>
+
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+
+  <div class="toolbar">
+    <input class="search-input" placeholder="Rechercher par nom, référence..." [(ngModel)]="search" (ngModelChange)="applyFilter()" />
+    <div class="filter-tabs">
+      @for (t of ['all','product','service','consu']; track t) {
+        <button class="filter-btn" [class.active]="filterType === t" (click)="filterType = t; applyFilter()">
+          {{ t === 'all' ? 'Tous' : typeLabels[t] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    @if (loading) {
+      <div class="empty"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>
+    } @else if (filtered.length === 0) {
+      <div class="empty"><span class="material-icons">category</span><p>Aucun article trouvé</p></div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Nom</th>
+            <th>Catégorie</th>
+            <th>Type</th>
+            <th>Unité</th>
+            <th class="text-right">CMUP</th>
+            <th class="text-right">Prix vente</th>
+            <th class="text-right">Stock</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of filtered; track p.id) {
+            <tr>
+              <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
+              <td class="font-bold">{{ p.name }}</td>
+              <td class="text-muted">{{ p.categoryName || '—' }}</td>
+              <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
+              <td class="text-muted">{{ p.uomName || '—' }}</td>
+              <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
+              <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
+              <td class="text-right">
+                @if (p.type === 'product') {
+                  <span [class]="(p.qtyOnHand || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyOnHand | number:'1.0-2' }}</span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td>
+                <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
+                  <span class="material-icons">edit</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+<!-- Modal Import Excel Articles -->
+@if (showImportModal) {
+  <div class="modal-overlay" (click)="closeImportModal()">
+    <div class="modal" (click)="$event.stopPropagation()" style="max-width:800px">
+      <div class="modal-header">
+        <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span> Aperçu import articles ({{ importRows.length }} ligne(s))</h2>
+        <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
+      </div>
+      <div style="overflow-x:auto;max-height:50vh">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Nom</th><th>Code</th><th>Type</th><th>Catégorie</th><th class="text-right">Prix Achat</th><th class="text-right">Prix Vente</th></tr></thead>
+          <tbody>
+            @for (row of importRows; track $index; let i = $index) {
+              <tr>
+                <td class="text-muted">{{ i+1 }}</td>
+                <td class="font-bold">{{ row['Nom*'] || row['Nom'] }}</td>
+                <td class="font-mono">{{ row['Code (Référence)'] || '—' }}</td>
+                <td>{{ row['Type (product/service/consu)'] || 'product' }}</td>
+                <td>{{ row['Catégorie'] || '—' }}</td>
+                <td class="text-right">{{ row['Prix Achat (FCFA)'] || '0' }}</td>
+                <td class="text-right">{{ row['Prix Vente (FCFA)'] || '0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeImportModal()">Annuler</button>
+        <button class="btn-primary" (click)="confirmImport()">
+          <span class="material-icons">check_circle</span> Confirmer l'import ({{ importRows.length }} articles)
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal création/édition -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editingProduct ? 'Modifier' : 'Nouvel article' }}</h2>
+        <button class="btn-close" (click)="closeModal()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        @if (errorMsg) { <div class="alert alert-danger">{{ errorMsg }}</div> }
+        <div class="form-row">
+          <div class="form-group">
+            <label>Référence (SKU)</label>
+            <input type="text" [(ngModel)]="form.defaultCode" class="form-control" placeholder="REF-001" />
+          </div>
+          <div class="form-group required-field">
+            <label>Nom <span class="req">*</span></label>
+            <input type="text" [(ngModel)]="form.name" class="form-control" placeholder="Nom de l'article" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select [(ngModel)]="form.categoryId" class="form-control">
+              <option [ngValue]="null">— Aucune —</option>
+              @for (c of categories; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select [(ngModel)]="form.type" class="form-control">
+              <option value="product">Stockable</option>
+              <option value="service">Service</option>
+              <option value="consu">Consommable</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Unité de mesure</label>
+            <input type="text" [(ngModel)]="form.uomName" class="form-control" placeholder="Unité, kg, L..." />
+          </div>
+          <div class="form-group">
+            <label>Prix de revient (CMUP)</label>
+            <input type="number" [(ngModel)]="form.standardPrice" class="form-control" min="0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prix de vente</label>
+            <input type="number" [(ngModel)]="form.salePrice" class="form-control" min="0" />
+          </div>
+          @if (form.type === 'product') {
+            <div class="form-group">
+              <label>Compte stock OHADA</label>
+              <input type="text" [(ngModel)]="form.stockAccountCode" class="form-control" placeholder="311000" />
+            </div>
+          }
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="form.description" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()">Annuler</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving">
+          <span class="material-icons">save</span> {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

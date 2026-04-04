@@ -1,0 +1,75 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mouvements de produits</h1>
+      <p class="page-subtitle">Historique de tous les mouvements de stock validés</p>
+    </div>
+    <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+  </div>
+
+  <!-- Filtres -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Rechercher..." />
+    </div>
+    <select [(ngModel)]="filterProductId" (ngModelChange)="load()" class="filter-select">
+      <option [ngValue]="null">Tous les articles</option>
+      @for (p of products; track p.id) {
+        <option [ngValue]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+      }
+    </select>
+    <select [(ngModel)]="limit" (ngModelChange)="load()" class="filter-select">
+      <option [value]="50">50 derniers</option>
+      <option [value]="100">100 derniers</option>
+      <option [value]="200">200 derniers</option>
+      <option [value]="500">500 derniers</option>
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <div class="card-header">
+        <span>{{ filtered.length }} mouvement(s)</span>
+      </div>
+      <table class="move-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Article</th>
+            <th>De</th>
+            <th>Vers</th>
+            <th class="text-right">Quantité</th>
+            <th class="text-right">Prix unit.</th>
+            <th class="text-right">Valeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of filtered; track m.id) {
+            <tr>
+              <td>
+                <span class="type-badge" [class]="getMoveType(m)">{{ getMoveTypeLabel(m) }}</span>
+              </td>
+              <td>
+                <div class="product-cell">
+                  @if (m.productCode) { <span class="code-badge">{{ m.productCode }}</span> }
+                  <span class="product-name">{{ m.productName }}</span>
+                </div>
+              </td>
+              <td class="text-muted small">{{ m.locationName }}</td>
+              <td class="text-muted small">{{ m.locationDestName }}</td>
+              <td class="text-right mono">{{ m.qtyDone | number:'1.0-2' }} {{ m.uomName }}</td>
+              <td class="text-right mono text-muted">{{ m.priceUnit | number:'1.0-0' }}</td>
+              <td class="text-right mono fw-bold">{{ m.subtotalValue | number:'1.0-0' }} FCFA</td>
+            </tr>
+          }
+          @if (filtered.length === 0) {
+            <tr><td colspan="7" class="empty-state">Aucun mouvement trouvé</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

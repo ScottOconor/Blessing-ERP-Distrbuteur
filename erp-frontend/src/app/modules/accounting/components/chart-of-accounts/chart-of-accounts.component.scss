@@ -1,0 +1,74 @@
+.account-code {
+  font-family: 'Courier New', monospace;
+  color: #714B67;
+  font-size: 14px;
+}
+
+.deprecated-row {
+  opacity: 0.5;
+  background: #fafafa !important;
+  td { color: #adb5bd !important; }
+}
+
+.action-btns {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.alert-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  color: #155724;
+  font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  color: #721c24;
+  font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #714B67;
+  }
+}
+
+.spinner-sm-btn {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

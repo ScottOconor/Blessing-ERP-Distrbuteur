@@ -1,0 +1,244 @@
+<div class="page-container">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn-back" (click)="back()">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <div class="header-info">
+      <h1 class="page-title">{{ invoice?.name || 'Document' }}</h1>
+      @if (isAvoir) {
+        <span class="badge-type-avoir">AVOIR</span>
+      }
+      @if (invoice?.state) {
+        <span [class]="getStateBadge(invoice!.state!)">{{ getStateLabel(invoice!.state!) }}</span>
+      }
+      @if (invoice?.originalInvoiceName) {
+        <span class="ecriture-ref">
+          <span class="material-icons">link</span> {{ invoice!.originalInvoiceName }}
+        </span>
+      }
+      @if (invoice?.accountMoveName) {
+        <span class="ecriture-ref">
+          <span class="material-icons">receipt_long</span> {{ invoice!.accountMoveName }}
+        </span>
+      }
+    </div>
+    <div class="header-actions">
+      @if (invoice?.state === 'draft') {
+        <button class="btn-primary" (click)="postInvoice()" [disabled]="posting">
+          <span class="material-icons">check_circle</span>
+          {{ posting ? 'Validation...' : (isAvoir ? 'Valider l\'avoir' : 'Valider la facture') }}
+        </button>
+        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
+          <span class="material-icons">cancel</span> Annuler
+        </button>
+      }
+      @if (invoice?.state === 'posted' && isInvoice) {
+        <button class="btn-payment" (click)="openPaymentForm()">
+          <span class="material-icons">payments</span>
+          Enregistrer un paiement
+        </button>
+        <button class="btn-avoir" (click)="createAvoir()" [disabled]="creatingAvoir">
+          <span class="material-icons">undo</span>
+          {{ creatingAvoir ? 'Création...' : 'Créer un avoir' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (invoice) {
+
+    <!-- Infos facture -->
+    <div class="info-grid mb-16">
+      <div class="info-card">
+        <div class="info-label">Client</div>
+        <div class="info-value font-bold">{{ invoice.partnerName }}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Journal</div>
+        <div class="info-value">{{ invoice.journalName }}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Date</div>
+        <div class="info-value">{{ invoice.date | date:'dd/MM/yyyy' }}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Échéance</div>
+        <div class="info-value">{{ invoice.dateEcheance ? (invoice.dateEcheance | date:'dd/MM/yyyy') : '—' }}</div>
+      </div>
+      @if (invoice.salesOrderName) {
+        <div class="info-card clickable" (click)="viewOrder()">
+          <div class="info-label">Bon de commande</div>
+          <div class="info-value link">{{ invoice.salesOrderName }}</div>
+        </div>
+      }
+      @if (invoice.originalInvoiceName) {
+        <div class="info-card">
+          <div class="info-label">Facture d'origine</div>
+          <div class="info-value link" (click)="goToOriginalInvoice(invoice.originalInvoiceId!)">
+            {{ invoice.originalInvoiceName }}
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Lignes -->
+    <div class="card mb-16">
+      <div class="card-header">Lignes de facturation</div>
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Description</th>
+            <th class="text-right">Qté</th>
+            <th class="text-right">Prix U.</th>
+            <th class="text-right">Remise %</th>
+            <th class="text-right">TVA %</th>
+            <th>Compte</th>
+            <th class="text-right">HT</th>
+            <th class="text-right">TVA</th>
+            <th class="text-right">TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of invoice.lines; track line.id) {
+            <tr>
+              <td class="text-muted">{{ line.productCode || '—' }}</td>
+              <td>{{ line.description }}</td>
+              <td class="text-right">{{ line.quantity }}</td>
+              <td class="text-right">{{ line.prixUnitaire | number:'1.0-0' }}</td>
+              <td class="text-right">{{ line.tauxRemise || 0 }}%</td>
+              <td class="text-right">{{ line.tauxTVA || 0 }}%</td>
+              <td class="font-mono text-muted">{{ line.accountCode || '—' }}</td>
+              <td class="text-right">{{ line.montantHT | number:'1.0-0' }}</td>
+              <td class="text-right text-muted">{{ line.montantTVA | number:'1.0-0' }}</td>
+              <td class="text-right font-bold">{{ line.montantTTC | number:'1.0-0' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totaux & paiements -->
+    <div class="bottom-section">
+      <!-- Paiements -->
+      <div class="payments-section">
+        <div class="card">
+          <div class="card-header">
+            <span>Paiements</span>
+            @if (invoice.state === 'posted') {
+              <button class="btn-add-payment" (click)="openPaymentForm()">
+                <span class="material-icons">add</span> Ajouter
+              </button>
+            }
+          </div>
+          @if (!invoice.payments || invoice.payments.length === 0) {
+            <div class="no-payments">Aucun paiement enregistré</div>
+          } @else {
+            <table class="payments-table">
+              <thead>
+                <tr>
+                  <th>Référence</th>
+                  <th>Date</th>
+                  <th>Journal</th>
+                  <th>Mémo</th>
+                  <th class="text-right">Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of invoice.payments; track p.id) {
+                  <tr>
+                    <td class="font-mono">{{ p.name }}</td>
+                    <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ p.journalName }}</td>
+                    <td class="text-muted">{{ p.memo || '—' }}</td>
+                    <td class="text-right text-success font-bold">{{ p.amount | number:'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+        <!-- Formulaire de paiement inline -->
+        @if (showPaymentForm) {
+          <div class="payment-form card mt-12">
+            <div class="card-header">Nouveau paiement</div>
+            <div class="payment-form-body">
+              <div class="form-group">
+                <label>Journal <span class="required">*</span></label>
+                <select [(ngModel)]="payment.journalId" class="form-control">
+                  @for (j of cashBankJournals; track j.id) {
+                    <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Date</label>
+                <input type="date" [(ngModel)]="payment.date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label>Montant <span class="required">*</span></label>
+                <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" />
+              </div>
+              <div class="form-group">
+                <label>Mémo</label>
+                <input type="text" [(ngModel)]="payment.memo" class="form-control" placeholder="Référence..." />
+              </div>
+              <div class="payment-form-actions">
+                <button class="btn-secondary" (click)="closePaymentForm()">Annuler</button>
+                <button class="btn-primary" (click)="savePayment()" [disabled]="savingPayment">
+                  <span class="material-icons">save</span>
+                  {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Totaux -->
+      <div class="totals-section">
+        <div class="totals-card">
+          <div class="total-row">
+            <span>Total HT</span>
+            <span>{{ invoice.totalHT | number:'1.0-0' }} FCFA</span>
+          </div>
+          <div class="total-row">
+            <span>TVA</span>
+            <span>{{ invoice.totalTVA | number:'1.0-0' }} FCFA</span>
+          </div>
+          <div class="total-row total-ttc">
+            <span>Total TTC</span>
+            <span>{{ invoice.totalTTC | number:'1.0-0' }} FCFA</span>
+          </div>
+          <div class="total-row text-success">
+            <span>Montant payé</span>
+            <span>{{ invoice.montantPaye | number:'1.0-0' }} FCFA</span>
+          </div>
+          <div class="total-row" [class.total-due]="(invoice.montantDu || 0) > 0">
+            <span>Reste dû</span>
+            <span>{{ invoice.montantDu | number:'1.0-0' }} FCFA</span>
+          </div>
+          @if (invoice.state === 'posted' || invoice.state === 'paid') {
+            <div class="progress-section">
+              <div class="progress-bar-lg">
+                <div class="progress-fill" [style.width]="getProgressPct() + '%'"></div>
+              </div>
+              <span class="progress-label">{{ getProgressPct() }}% payé</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

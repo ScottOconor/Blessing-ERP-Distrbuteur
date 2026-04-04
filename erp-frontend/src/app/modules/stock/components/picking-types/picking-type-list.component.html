@@ -1,0 +1,47 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Types d'opérations</h1>
+      <p class="page-subtitle">Configurés automatiquement lors de la création d'un entrepôt</p>
+    </div>
+    <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <table class="cfg-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Code</th>
+            <th>Entrepôt</th>
+            <th>Emplacement source</th>
+            <th>Emplacement dest.</th>
+            <th>Préfixe séquence</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of pickingTypes; track t.id) {
+            <tr>
+              <td class="fw-500">{{ t.name }}</td>
+              <td><span class="code-badge" [class]="t.code">{{ getCodeLabel(t.code) }}</span></td>
+              <td class="text-muted">{{ t.warehouseName || getWarehouseName(t.warehouseId) }}</td>
+              <td class="text-muted small">{{ t.defaultLocationSrcName || '—' }}</td>
+              <td class="text-muted small">{{ t.defaultLocationDestName || '—' }}</td>
+              <td class="mono text-muted small">{{ t.sequencePrefix || '—' }}</td>
+            </tr>
+          }
+          @if (pickingTypes.length === 0) {
+            <tr>
+              <td colspan="6" class="empty-state">
+                Aucun type d'opération — créez un entrepôt pour en générer automatiquement
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

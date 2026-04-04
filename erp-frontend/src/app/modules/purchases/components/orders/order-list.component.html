@@ -1,0 +1,113 @@
+<div class="pur-list-page">
+  <div class="page-header">
+    <div>
+      <h1>Commandes fournisseurs</h1>
+      <p class="subtitle">{{ filteredOrders.length }} commande(s)</p>
+    </div>
+    <button class="btn-primary" (click)="newOrder()">
+      <span class="material-icons">add</span>
+      Nouvelle commande
+    </button>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success">
+      <span class="material-icons">check_circle</span>
+      {{ successMsg }}
+    </div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-error">
+      <span class="material-icons">error</span>
+      {{ errorMsg }}
+      <button (click)="errorMsg = ''">×</button>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    @for (f of stateFilters; track f.value) {
+      <button class="filter-btn" [class.active]="stateFilter === f.value" (click)="setFilter(f.value)">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Table -->
+  @if (loading) {
+    <div class="loading-state"><span class="spinner"></span> Chargement...</div>
+  } @else if (filteredOrders.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">shopping_cart</span>
+      <p>Aucune commande trouvée.</p>
+      <button class="btn-primary" (click)="newOrder()">Créer une commande</button>
+    </div>
+  } @else {
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Fournisseur</th>
+            <th>Date</th>
+            <th>Date livraison</th>
+            <th class="text-right">Total HT</th>
+            <th class="text-right">Total TTC</th>
+            <th>Réception</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of filteredOrders; track order.id) {
+            <tr class="row-link" (click)="editOrder(order.id!)">
+              <td><strong class="ref-link">{{ order.name }}</strong></td>
+              <td>{{ order.partnerName }}</td>
+              <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ order.dateExpected ? (order.dateExpected | date:'dd/MM/yyyy') : '—' }}</td>
+              <td class="text-right">{{ (order.totalHT ?? 0) | number:'1.0-0' }}</td>
+              <td class="text-right"><strong>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong></td>
+              <td>
+                @if (order.pickingName) {
+                  <span class="picking-ref">
+                    {{ order.pickingName }}
+                    <span class="badge badge-picking-{{ order.pickingState }}">{{ order.pickingState }}</span>
+                  </span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+              <td><span [class]="stateBadge(order.state)">{{ stateLabel(order.state) }}</span></td>
+              <td class="actions-cell" (click)="$event.stopPropagation()">
+                @if (order.state === 'draft') {
+                  <button class="btn-action btn-confirm"
+                    [disabled]="actionInProgress === order.id"
+                    (click)="confirmOrder(order, $event)" title="Confirmer">
+                    <span class="material-icons">check</span>
+                  </button>
+                  <button class="btn-action btn-cancel"
+                    [disabled]="actionInProgress === order.id"
+                    (click)="cancelOrder(order, $event)" title="Annuler">
+                    <span class="material-icons">close</span>
+                  </button>
+                }
+                @if (order.state === 'confirmed') {
+                  <button class="btn-action btn-receive"
+                    [disabled]="actionInProgress === order.id"
+                    (click)="receiveOrder(order, $event)" title="Réceptionner">
+                    <span class="material-icons">inventory</span>
+                  </button>
+                  <button class="btn-action btn-cancel"
+                    [disabled]="actionInProgress === order.id"
+                    (click)="cancelOrder(order, $event)" title="Annuler">
+                    <span class="material-icons">close</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

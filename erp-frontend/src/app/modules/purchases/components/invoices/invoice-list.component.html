@@ -1,0 +1,76 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="material-icons">receipt_long</span>
+        Factures fournisseurs
+      </h1>
+      <span class="record-count">{{ filteredInvoices.length }} facture(s)</span>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    @for (f of stateFilters; track f.value) {
+      <button class="filter-btn" [class.active]="stateFilter === f.value" (click)="setFilter(f.value)">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <div class="card">
+    @if (loading) {
+      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+    } @else if (filteredInvoices.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">receipt_long</span>
+        <p>Aucune facture — confirmez une commande d'achat pour en créer une automatiquement.</p>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Numéro</th>
+            <th>Date</th>
+            <th>Fournisseur</th>
+            <th>Commande d'achat</th>
+            <th class="text-right">Total HT</th>
+            <th class="text-right">Total TTC</th>
+            <th class="text-right">Payé</th>
+            <th class="text-right">Reste dû</th>
+            <th>Paiement</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inv of filteredInvoices; track inv.id) {
+            <tr class="clickable-row" (click)="openInvoice(inv)">
+              <td class="font-mono font-bold">{{ inv.name }}</td>
+              <td>{{ inv.date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ inv.partnerName }}</td>
+              <td>
+                @if (inv.purchaseOrderName) {
+                  <span class="link-ref">{{ inv.purchaseOrderName }}</span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
+              <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
+              <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
+              <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
+                {{ inv.montantDu | number:'1.0-0' }}
+              </td>
+              <td>
+                @if (inv.state === 'posted' || inv.state === 'paid') {
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
+                  </div>
+                  <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+                }
+              </td>
+              <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

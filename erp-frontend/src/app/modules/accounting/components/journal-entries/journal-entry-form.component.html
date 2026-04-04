@@ -1,0 +1,338 @@
+<div class="page-container">
+  @if (loading) {
+    <div style="text-align:center;padding:80px"><div class="spinner"></div></div>
+  } @else {
+
+    <!-- ENTRY HEADER -->
+    <div class="entry-header card mb-3">
+      <div class="entry-header-left">
+        <div class="entry-number">{{ move.name || 'Nouvelle écriture' }}</div>
+        <span [class]="getStateBadgeClass(move.state)">{{ getStateLabel(move.state) }}</span>
+      </div>
+      <div class="entry-actions">
+        @if (move.state === 'draft' || !move.state) {
+          <button class="btn btn-success" (click)="post()" [disabled]="posting || saving">
+            @if (posting) { <span class="spinner-sm-white"></span> }
+            <span class="material-icons">check_circle</span> Valider
+          </button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving || posting">
+            @if (saving) { <span class="spinner-sm-white"></span> }
+            <span class="material-icons">save</span> Sauvegarder
+          </button>
+        }
+        @if (move.state === 'posted') {
+          <button class="btn btn-danger" (click)="cancel()">
+            <span class="material-icons">cancel</span> Annuler l'écriture
+          </button>
+        }
+        <button class="btn btn-outline" (click)="router.navigate(['/accounting/journal-entries'])">
+          <span class="material-icons">arrow_back</span> Retour
+        </button>
+      </div>
+    </div>
+
+    @if (errorMsg) {
+      <div class="alert-error mb-3">
+        <span class="material-icons">error_outline</span>{{ errorMsg }}
+      </div>
+    }
+    @if (successMsg) {
+      <div class="alert-success mb-3">
+        <span class="material-icons">check_circle</span>{{ successMsg }}
+      </div>
+    }
+
+    <!-- CHAMPS EN-TÊTE -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="form-row cols-4">
+          <div class="form-group">
+            <label>Journal *</label>
+            <select class="form-control" [(ngModel)]="move.journalId" [disabled]="isReadonly">
+              <option [ngValue]="0" disabled>-- Sélectionner --</option>
+              @for (j of journals; track j.id) {
+                <option [ngValue]="j.id">{{ j.code }} - {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" class="form-control" [(ngModel)]="move.date" [disabled]="isReadonly">
+          </div>
+          <div class="form-group">
+            <label>Référence</label>
+            <input type="text" class="form-control" [(ngModel)]="move.ref"
+              placeholder="Référence externe" [disabled]="isReadonly">
+          </div>
+          <div class="form-group">
+            <label>Partenaire</label>
+            <select class="form-control" [(ngModel)]="move.partnerId" [disabled]="isReadonly">
+              <option [ngValue]="undefined">-- Aucun --</option>
+              @for (p of partners; track p.id) {
+                <option [ngValue]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGNES D'ÉCRITURE -->
+    <div class="card">
+      <div class="card-header">
+        <h3 style="font-size:14px">
+          <span class="material-icons" style="font-size:18px;color:#714B67">table_rows</span>
+          Lignes d'écriture
+        </h3>
+        @if (!isReadonly) {
+          <button class="btn btn-outline-primary btn-sm" (click)="autoBalance()">
+            <span class="material-icons">balance</span> Équilibrer
+          </button>
+        }
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="entry-lines-table">
+          <thead>
+            <tr>
+              <th style="min-width:220px">Compte *</th>
+              <th style="min-width:180px">Libellé</th>
+              <th style="min-width:130px">Partenaire</th>
+              <th style="min-width:160px">Analytique</th>
+              <th style="width:120px;text-align:right">Débit</th>
+              <th style="width:120px;text-align:right">Crédit</th>
+              @if (!isReadonly) {
+                <th style="width:48px;text-align:center">Sup.</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines; track trackByIndex($index); let i = $index) {
+              <tr>
+                <!-- COMPTE -->
+                <td>
+                  <div class="autocomplete-container">
+                    <input type="text" class="line-input"
+                      [(ngModel)]="line.accountSearch"
+                      (ngModelChange)="onAccountSearch(line)"
+                      (blur)="hideAccountSuggestions(line)"
+                      placeholder="Taper code ou nom..."
+                      [disabled]="isReadonly">
+                    @if (line.showAccountSuggestions) {
+                      <div class="autocomplete-list">
+                        @for (acc of line.accountSuggestions; track acc.id) {
+                          <button type="button" class="autocomplete-item" (mousedown)="selectAccount(line, acc)">
+                            <span class="account-code">{{ acc.code }}</span>
+                            <span class="account-name">{{ acc.name }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+                <!-- LIBELLÉ -->
+                <td>
+                  <input type="text" class="line-input" [(ngModel)]="line.name"
+                    placeholder="Description..." [disabled]="isReadonly">
+                </td>
+                <!-- PARTENAIRE -->
+                <td>
+                  <select class="line-input" [(ngModel)]="line.partnerId" [disabled]="isReadonly">
+                    <option [ngValue]="null">-</option>
+                    @for (p of partners; track p.id) {
+                      <option [ngValue]="p.id">{{ p.name }}</option>
+                    }
+                  </select>
+                </td>
+                <!-- ANALYTIQUE : bouton ventilation -->
+                <td>
+                  @if (!isReadonly) {
+                    <button type="button" class="btn-analytic"
+                      [class.has-distribution]="line.analyticDistributions.length > 0"
+                      (click)="openAnalyticModal(i)"
+                      [title]="line.analyticDistributions.length > 0 ? 'Modifier la ventilation' : 'Ajouter ventilation analytique'">
+                      <span class="material-icons">analytics</span>
+                      @if (line.analyticDistributions.length > 0) {
+                        <span class="analytic-summary">{{ getDistributionSummary(line) }}</span>
+                      } @else if (line.analyticAccountId) {
+                        <span class="analytic-summary">{{ getAnalyticLabel(line.analyticAccountId) }}</span>
+                      } @else {
+                        <span class="analytic-placeholder">Ventiler...</span>
+                      }
+                    </button>
+                  } @else {
+                    <span class="analytic-readonly">
+                      {{ getDistributionSummary(line) || getAnalyticLabel(line.analyticAccountId) || '—' }}
+                    </span>
+                  }
+                </td>
+                <!-- DÉBIT -->
+                <td>
+                  <input type="number" class="line-input text-right" [(ngModel)]="line.debit"
+                    (ngModelChange)="onDebitChange(line)"
+                    min="0" step="0.01" [disabled]="isReadonly">
+                </td>
+                <!-- CRÉDIT -->
+                <td>
+                  <input type="number" class="line-input text-right" [(ngModel)]="line.credit"
+                    (ngModelChange)="onCreditChange(line)"
+                    min="0" step="0.01" [disabled]="isReadonly">
+                </td>
+                @if (!isReadonly) {
+                  <td style="text-align:center">
+                    <button type="button" class="btn-remove-line" (click)="removeLine(i)"
+                      [disabled]="lines.length === 1" title="Supprimer">
+                      <span class="material-icons">delete_outline</span>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        @if (!isReadonly) {
+          <div style="padding:8px 12px">
+            <button type="button" class="btn btn-outline btn-sm" (click)="addLine()">
+              <span class="material-icons">add</span> Ajouter une ligne
+            </button>
+          </div>
+        }
+
+        <!-- TOTAUX -->
+        <div class="entry-totals">
+          <div class="total-item">
+            <div class="total-label">Total Débit</div>
+            <div class="total-value text-debit">{{ totalDebit | number:'1.2-2' }}</div>
+          </div>
+          <div class="total-item">
+            <div class="total-label">Total Crédit</div>
+            <div class="total-value text-credit">{{ totalCredit | number:'1.2-2' }}</div>
+          </div>
+          <div class="total-item total-diff">
+            <div class="total-label">Différence</div>
+            <div class="total-value" [class.balanced]="isBalanced" [class.unbalanced]="!isBalanced">
+              {{ difference | number:'1.2-2' }}
+              @if (isBalanced) {
+                <span class="material-icons balanced-icon">check_circle</span>
+              } @else {
+                <span class="material-icons unbalanced-icon">error</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- ===================================================== -->
+<!-- FENÊTRE FLOTTANTE DE VENTILATION ANALYTIQUE           -->
+<!-- ===================================================== -->
+@if (analyticModalIndex !== null && lines[analyticModalIndex]) {
+  <div class="analytic-overlay" (click)="closeAnalyticModal()"></div>
+
+  <div class="analytic-modal">
+    <div class="analytic-modal-header">
+      <div class="analytic-modal-title">
+        <span class="material-icons">analytics</span>
+        Ventilation analytique
+      </div>
+      <button class="btn-icon" (click)="closeAnalyticModal()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <!-- INFO LIGNE -->
+    <div class="analytic-modal-info">
+      <span class="analytic-line-label">
+        <span class="material-icons" style="font-size:14px;vertical-align:middle">receipt</span>
+        {{ lines[analyticModalIndex].accountSearch || 'Ligne sans compte' }}
+        @if (lines[analyticModalIndex].name) {
+          — {{ lines[analyticModalIndex].name }}
+        }
+      </span>
+      <span class="analytic-line-amount">
+        Montant : <strong>{{ getLineAmount(lines[analyticModalIndex]) | number:'1.2-2' }}</strong>
+      </span>
+    </div>
+
+    <!-- LIGNES DE VENTILATION -->
+    <div class="analytic-modal-body">
+      @for (dist of lines[analyticModalIndex].analyticDistributions; track $index; let di = $index) {
+        <div class="dist-row">
+          <div class="dist-account">
+            <label>Compte analytique</label>
+            <select class="form-control" [(ngModel)]="dist.analyticAccountId">
+              <option [ngValue]="null">— Sélectionner —</option>
+              @for (a of analyticAccounts; track a.id) {
+                <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="dist-amount">
+            <label>Montant</label>
+            <div class="dist-amount-row">
+              <input type="number" class="form-control" [(ngModel)]="dist.amount"
+                min="0" step="0.01" placeholder="0.00">
+              <button type="button" class="btn-fill-remaining" title="Compléter avec le reste"
+                (click)="autoFillRemaining(lines[analyticModalIndex]!, di)">
+                <span class="material-icons">auto_fix_high</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="btn-remove-dist"
+            (click)="removeDistributionRow(lines[analyticModalIndex]!, di)"
+            [disabled]="lines[analyticModalIndex]!.analyticDistributions.length <= 1"
+            title="Supprimer">
+            <span class="material-icons">delete_outline</span>
+          </button>
+        </div>
+      }
+
+      <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px"
+        (click)="addDistributionRow(lines[analyticModalIndex]!)">
+        <span class="material-icons">add</span> Ajouter un compte
+      </button>
+    </div>
+
+    <!-- TOTAL / RESTE -->
+    <div class="analytic-modal-totals">
+      <div class="dist-total-line">
+        <span>Total ventilé</span>
+        <strong>{{ getDistributedTotal(lines[analyticModalIndex]!) | number:'1.2-2' }}</strong>
+      </div>
+      <div class="dist-total-line" [class.dist-ok]="Math.abs(getRemaining(lines[analyticModalIndex]!)) < 0.01"
+           [class.dist-warn]="Math.abs(getRemaining(lines[analyticModalIndex]!)) >= 0.01">
+        <span>Reste à ventiler</span>
+        <strong>{{ getRemaining(lines[analyticModalIndex]!) | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="analytic-modal-footer">
+      <button class="btn btn-outline btn-sm" (click)="clearDistributions(lines[analyticModalIndex]!)">
+        <span class="material-icons">clear</span> Effacer
+      </button>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline btn-sm" (click)="closeAnalyticModal()">Annuler</button>
+      <button class="btn btn-primary btn-sm"
+        [disabled]="!isDistributionValid(lines[analyticModalIndex]!)"
+        (click)="confirmDistribution(lines[analyticModalIndex]!)">
+        <span class="material-icons">check</span> Confirmer
+      </button>
+    </div>
+
+    @if (!isDistributionValid(lines[analyticModalIndex]!)) {
+      <div class="dist-warning">
+        <span class="material-icons">warning</span>
+        @if (getRemaining(lines[analyticModalIndex]!) > 0.01) {
+          Il reste {{ getRemaining(lines[analyticModalIndex]!) | number:'1.2-2' }} à ventiler
+        } @else if (getRemaining(lines[analyticModalIndex]!) < -0.01) {
+          La ventilation dépasse le montant de la ligne de {{ (-getRemaining(lines[analyticModalIndex]!)) | number:'1.2-2' }}
+        } @else {
+          Veuillez sélectionner un compte analytique pour chaque ligne
+        }
+      </div>
+    }
+  </div>
+}

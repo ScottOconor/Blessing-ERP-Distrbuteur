@@ -1,0 +1,125 @@
+<div class="login-page">
+  <!-- LEFT PANEL -->
+  <div class="login-left">
+    <div class="login-brand">
+      <div class="brand-logo">
+        <span class="material-icons">business</span>
+      </div>
+      <h1 class="brand-name">ERP Système</h1>
+      <p class="brand-subtitle">Système de Gestion d'Entreprise</p>
+    </div>
+
+    <div class="modules-preview">
+      <div class="module-icon">
+        <span class="material-icons">calculate</span>
+        <span>Comptabilité</span>
+      </div>
+      <div class="module-icon">
+        <span class="material-icons">shopping_cart</span>
+        <span>Ventes</span>
+      </div>
+      <div class="module-icon">
+        <span class="material-icons">local_shipping</span>
+        <span>Achats</span>
+      </div>
+      <div class="module-icon">
+        <span class="material-icons">inventory_2</span>
+        <span>Stock</span>
+      </div>
+      <div class="module-icon">
+        <span class="material-icons">people</span>
+        <span>Ressources Humaines</span>
+      </div>
+      <div class="module-icon">
+        <span class="material-icons">settings</span>
+        <span>Paramètres</span>
+      </div>
+    </div>
+
+    <div class="left-footer">
+      <p>Solution intégrée pour la gestion de votre entreprise</p>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="login-right">
+    <div class="login-form-container">
+      <div class="form-header">
+        <div class="form-logo">
+          <span class="material-icons">lock</span>
+        </div>
+        <h2>Connexion</h2>
+        <p>Accédez à votre espace de gestion</p>
+      </div>
+
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <div class="form-group">
+          <label for="username">
+            <span class="material-icons">person</span>
+            Nom d'utilisateur
+          </label>
+          <input
+            id="username"
+            type="text"
+            class="form-control"
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Entrez votre nom d'utilisateur"
+            autocomplete="username"
+            required
+            [class.is-invalid]="errorMessage"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">
+            <span class="material-icons">key</span>
+            Mot de passe
+          </label>
+          <div class="password-field">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              class="form-control"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="Entrez votre mot de passe"
+              autocomplete="current-password"
+              required
+              [class.is-invalid]="errorMessage"
+            >
+            <button type="button" class="toggle-password" (click)="togglePassword()">
+              <span class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        @if (errorMessage) {
+          <div class="alert-error">
+            <span class="material-icons">error_outline</span>
+            {{ errorMessage }}
+          </div>
+        }
+
+        <button
+          type="submit"
+          class="btn-login"
+          [class.loading]="loading"
+          [disabled]="loading"
+        >
+          @if (!loading) {
+            <span class="material-icons">login</span>
+            Se connecter
+          } @else {
+            <span class="spinner-sm"></span>
+            Connexion en cours...
+          }
+        </button>
+      </form>
+
+      <div class="form-footer">
+        <p>ERP v1.0 &mdash; &copy; 2026</p>
+      </div>
+    </div>
+  </div>
+</div>

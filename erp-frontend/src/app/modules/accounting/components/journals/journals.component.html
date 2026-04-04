@@ -1,0 +1,154 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">book</span>
+      Journaux Comptables
+    </h1>
+    <div class="page-actions">
+      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel Odoo">
+        <span class="material-icons">upload_file</span>
+        {{ importing ? 'Import...' : 'Importer' }}
+        <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing">
+      </label>
+      <button class="btn btn-primary" (click)="openCreate()">
+        <span class="material-icons">add</span>
+        Nouveau journal
+      </button>
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert-success mb-3">
+      <span class="material-icons">check_circle</span>{{ successMsg }}
+    </div>
+  }
+
+  <div class="table-container">
+    @if (loading) {
+      <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    } @else if (journals.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">book</span>
+        <h3>Aucun journal</h3>
+        <p>Créez votre premier journal comptable.</p>
+      </div>
+    } @else {
+      <table class="table-erp">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Compte débit défaut</th>
+            <th>Compte crédit défaut</th>
+            <th class="text-center">Actif</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (journal of journals; track journal.id) {
+            <tr>
+              <td><strong class="journal-code">{{ journal.code }}</strong></td>
+              <td>{{ journal.name }}</td>
+              <td>
+                <span [class]="getTypeBadgeClass(journal.type)">{{ getTypeLabel(journal.type) }}</span>
+              </td>
+              <td class="text-muted fs-sm">{{ getAccountName(journal.defaultDebitAccountId) }}</td>
+              <td class="text-muted fs-sm">{{ getAccountName(journal.defaultCreditAccountId) }}</td>
+              <td class="text-center">
+                @if (journal.active) {
+                  <span class="material-icons" style="color:#28a745;font-size:18px">check_circle</span>
+                } @else {
+                  <span class="material-icons" style="color:#dee2e6;font-size:18px">cancel</span>
+                }
+              </td>
+              <td class="text-center">
+                <button class="btn btn-ghost btn-sm" (click)="openEdit(journal)" title="Modifier">
+                  <span class="material-icons">edit</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingJournal ? 'Modifier le journal' : 'Nouveau journal' }}</h3>
+        <button class="modal-close" (click)="closeModal()"><span class="material-icons">close</span></button>
+      </div>
+      <form [formGroup]="journalForm" (ngSubmit)="saveJournal()">
+        <div class="modal-body">
+          @if (errorMsg) {
+            <div class="alert-error mb-3">
+              <span class="material-icons">error_outline</span>{{ errorMsg }}
+            </div>
+          }
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Code *</label>
+              <input formControlName="code" class="form-control"
+                [class.is-invalid]="journalForm.get('code')?.invalid && journalForm.get('code')?.touched"
+                placeholder="Ex: VTE" style="text-transform:uppercase">
+              @if (journalForm.get('code')?.invalid && journalForm.get('code')?.touched) {
+                <span class="invalid-feedback">Code requis (max 10 caractères)</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <select formControlName="type" class="form-control">
+                @for (type of journalTypes; track type.value) {
+                  <option [value]="type.value">{{ type.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Nom *</label>
+            <input formControlName="name" class="form-control"
+              [class.is-invalid]="journalForm.get('name')?.invalid && journalForm.get('name')?.touched"
+              placeholder="Ex: Journal des ventes">
+            @if (journalForm.get('name')?.invalid && journalForm.get('name')?.touched) {
+              <span class="invalid-feedback">Le nom est requis</span>
+            }
+          </div>
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Compte débit par défaut</label>
+              <select formControlName="defaultDebitAccountId" class="form-control">
+                <option [ngValue]="null">-- Aucun --</option>
+                @for (account of accounts; track account.id) {
+                  <option [ngValue]="account.id">{{ account.code }} - {{ account.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Compte crédit par défaut</label>
+              <select formControlName="defaultCreditAccountId" class="form-control">
+                <option [ngValue]="null">-- Aucun --</option>
+                @for (account of accounts; track account.id) {
+                  <option [ngValue]="account.id">{{ account.code }} - {{ account.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="active">
+            <span>Journal actif</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="closeModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving">
+            {{ editingJournal ? 'Enregistrer' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

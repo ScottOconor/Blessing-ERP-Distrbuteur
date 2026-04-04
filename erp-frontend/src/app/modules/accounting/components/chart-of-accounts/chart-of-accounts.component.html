@@ -1,0 +1,208 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">account_tree</span>
+      Plan Comptable
+    </h1>
+    <div class="page-actions">
+      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel Odoo">
+        <span class="material-icons">upload_file</span>
+        {{ importing ? 'Import...' : 'Importer' }}
+        <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing">
+      </label>
+      <button class="btn btn-primary" (click)="openCreate()">
+        <span class="material-icons">add</span>
+        Nouveau compte
+      </button>
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert-success mb-3">
+      <span class="material-icons">check_circle</span>
+      {{ successMsg }}
+    </div>
+  }
+  @if (errorMsg && !showModal) {
+    <div class="alert-error mb-3">
+      <span class="material-icons">error_outline</span>
+      {{ errorMsg }}
+    </div>
+  }
+
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <div class="filter-group" style="flex:1">
+      <label>Rechercher</label>
+      <div class="search-box">
+        <span class="material-icons">search</span>
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Code ou intitulé..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="applyFilters()"
+        >
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Classe</label>
+      <select class="form-control" [(ngModel)]="selectedClass" (ngModelChange)="applyFilters()">
+        <option value="">Toutes</option>
+        @for (cls of classes; track cls) {
+          <option [value]="cls">Classe {{ cls }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-actions">
+      <span style="font-size:13px;color:#6c757d;">{{ filteredAccounts.length }} compte(s)</span>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-container">
+    @if (loading) {
+      <div style="text-align:center;padding:60px">
+        <div class="spinner"></div>
+      </div>
+    } @else if (filteredAccounts.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">account_tree</span>
+        <h3>Aucun compte trouvé</h3>
+        <p>Modifiez vos critères de recherche ou créez un nouveau compte.</p>
+      </div>
+    } @else {
+      <table class="table-erp">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Intitulé du compte</th>
+            <th>Type de compte</th>
+            <th>Type interne</th>
+            <th class="text-center">Rapprochement</th>
+            <th>Statut</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (account of filteredAccounts; track account.id) {
+            <tr [class]="'account-class-' + getAccountClass(account.code)"
+                [class.deprecated-row]="account.deprecated">
+              <td><strong class="account-code">{{ account.code }}</strong></td>
+              <td>{{ account.name }}</td>
+              <td class="text-muted fs-sm">{{ getAccountTypeLabel(account.accountType) }}</td>
+              <td class="text-muted fs-sm">{{ account.internalType }}</td>
+              <td class="text-center">
+                @if (account.reconcile) {
+                  <span class="material-icons" style="color:#28a745;font-size:18px;">check_circle</span>
+                } @else {
+                  <span class="material-icons" style="color:#dee2e6;font-size:18px;">radio_button_unchecked</span>
+                }
+              </td>
+              <td>
+                @if (account.deprecated) {
+                  <span class="badge badge-secondary">Désactivé</span>
+                } @else {
+                  <span class="badge badge-success">Actif</span>
+                }
+              </td>
+              <td class="text-center">
+                <div class="action-btns">
+                  <button class="btn btn-ghost btn-sm" (click)="openEdit(account)" title="Modifier">
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button class="btn btn-ghost btn-sm" (click)="toggleDeprecated(account)"
+                    [title]="account.deprecated ? 'Activer' : 'Désactiver'">
+                    <span class="material-icons">{{ account.deprecated ? 'toggle_off' : 'toggle_on' }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+<!-- MODAL -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingAccount ? 'Modifier le compte' : 'Nouveau compte' }}</h3>
+        <button class="modal-close" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
+        <div class="modal-body">
+          @if (errorMsg) {
+            <div class="alert-error mb-3">
+              <span class="material-icons">error_outline</span>
+              {{ errorMsg }}
+            </div>
+          }
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Code *</label>
+              <input formControlName="code" class="form-control"
+                [class.is-invalid]="accountForm.get('code')?.invalid && accountForm.get('code')?.touched"
+                placeholder="Ex: 411000">
+              @if (accountForm.get('code')?.hasError('required') && accountForm.get('code')?.touched) {
+                <span class="invalid-feedback">Le code est requis</span>
+              }
+              @if (accountForm.get('code')?.hasError('pattern') && accountForm.get('code')?.touched) {
+                <span class="invalid-feedback">Uniquement des chiffres</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Intitulé *</label>
+              <input formControlName="name" class="form-control"
+                [class.is-invalid]="accountForm.get('name')?.invalid && accountForm.get('name')?.touched"
+                placeholder="Ex: Clients">
+              @if (accountForm.get('name')?.hasError('required') && accountForm.get('name')?.touched) {
+                <span class="invalid-feedback">L'intitulé est requis</span>
+              }
+            </div>
+          </div>
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Type de compte *</label>
+              <select formControlName="accountType" class="form-control">
+                @for (type of accountTypes; track type.value) {
+                  <option [value]="type.value">{{ type.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Type interne *</label>
+              <select formControlName="internalType" class="form-control">
+                @for (type of internalTypes; track type.value) {
+                  <option [value]="type.value">{{ type.label }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:24px">
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="reconcile">
+              <span>Permettre le rapprochement</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" formControlName="deprecated">
+              <span>Compte désactivé</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="closeModal()">Annuler</button>
+          <button type="submit" class="btn btn-primary" [disabled]="saving">
+            @if (saving) { <span class="spinner-sm-btn"></span> }
+            {{ editingAccount ? 'Enregistrer' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

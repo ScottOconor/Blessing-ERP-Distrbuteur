@@ -1,0 +1,21 @@
+package com.erp.stock.repository;
+
+import com.erp.stock.entity.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ProductRepository extends JpaRepository<Product, Long> {
+    List<Product> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
+    List<Product> findByCompanyIdOrderByNameAsc(Long companyId);
+    Optional<Product> findByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
+
+    @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND p.type = 'product' AND p.active = true ORDER BY p.name")
+    List<Product> findStorableByCompanyId(@Param("cid") Long companyId);
+
+    @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.defaultCode) LIKE LOWER(CONCAT('%',:q,'%'))) ORDER BY p.name")
+    List<Product> search(@Param("cid") Long companyId, @Param("q") String query);
+}

@@ -1,0 +1,37 @@
+.page-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .page-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; margin: 0;
+    .material-icons { color: #017E84; }
+  }
+  .badge-count { background: #e9ecef; color: #6c757d; font-size: 12px; padding: 2px 10px; border-radius: 12px; }
+}
+.btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #017E84; color: white;
+  border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif;
+  .material-icons { font-size: 18px; }
+  &:hover { background: #015f64; }
+}
+.card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+.empty { display: flex; flex-direction: column; align-items: center; padding: 60px; color: #6c757d; gap: 10px;
+  .material-icons { font-size: 48px; color: #dee2e6; }
+  p { margin: 0; }
+}
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.data-table { width: 100%; border-collapse: collapse;
+  th { padding: 10px 14px; font-size: 11px; font-weight: 600; color: #6c757d; text-transform: uppercase; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
+  td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+  tr.clickable { cursor: pointer; &:hover td { background: #f0fafa; } }
+  tbody tr:last-child td { border-bottom: none; }
+}
+.text-right { text-align: right; }
+.font-mono { font-family: monospace; }
+.font-bold { font-weight: 600; }
+.text-muted { color: #adb5bd; }
+.text-teal { color: #017E84; }
+.chevron { color: #dee2e6; font-size: 18px !important; }
+.state-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+  &[data-state="draft"] { background: #f0f0f0; color: #6c757d; }
+  &[data-state="done"] { background: #d1f0e8; color: #0a5c45; }
+  &[data-state="cancelled"] { background: #fde8e8; color: #721c24; }
+}

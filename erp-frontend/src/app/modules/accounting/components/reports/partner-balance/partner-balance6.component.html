@@ -1,0 +1,134 @@
+<div class="page-container report-container">
+  <div class="page-header no-print">
+    <h1 class="page-title">
+      <span class="material-icons">people</span>
+      Balance des Tiers — 6 Colonnes
+    </h1>
+    @if (generated) {
+      <button class="btn btn-outline" (click)="print()"><span class="material-icons">print</span>Imprimer</button>
+    }
+  </div>
+
+  <div class="report-header no-print">
+    <div class="filters-bar" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>Du *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>Au *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-group">
+        <label>Type de tiers</label>
+        <select class="form-control" [(ngModel)]="resultSelection">
+          <option value="customer">Clients seulement</option>
+          <option value="supplier">Fournisseurs seulement</option>
+          <option value="customer_supplier">Clients et Fournisseurs</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Afficher</label>
+        <select class="form-control" [(ngModel)]="displayAccount">
+          <option value="all">Tous</option>
+          <option value="movement">Avec mouvements</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="spinner-sm"></span> }
+          <span class="material-icons">play_arrow</span>Générer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+  } @else if (generated) {
+    @if (lines.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">people</span>
+        <h3>Aucune donnée</h3>
+      </div>
+    } @else {
+      <div class="table-container" style="overflow-x:auto">
+        <div class="report-title-bar">
+          <h3>Balance des Tiers 6 Colonnes — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</h3>
+        </div>
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th rowspan="2">Réf.</th>
+              <th rowspan="2">N° Compte</th>
+              <th rowspan="2">Nom du Tiers</th>
+              <th rowspan="2">Type</th>
+              <th colspan="2" class="text-center" style="background:#e8f4fd">Soldes Initiaux</th>
+              <th colspan="2" class="text-center" style="background:#e8f5e9">Mouvements</th>
+              <th colspan="2" class="text-center" style="background:#f3e5f5">Soldes Finaux</th>
+            </tr>
+            <tr>
+              <th class="text-right" style="background:#e8f4fd">Débit</th>
+              <th class="text-right" style="background:#e8f4fd">Crédit</th>
+              <th class="text-right" style="background:#e8f5e9">Débit</th>
+              <th class="text-right" style="background:#e8f5e9">Crédit</th>
+              <th class="text-right" style="background:#f3e5f5">Débit</th>
+              <th class="text-right" style="background:#f3e5f5">Crédit</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (customers.length > 0) {
+              <tr class="section-header"><td colspan="10">CLIENTS</td></tr>
+              @for (line of customers; track line.partnerRef) {
+                <tr>
+                  <td class="text-muted fs-sm">{{ line.partnerRef }}</td>
+                  <td><span class="mono">{{ line.accountNumber }}</span></td>
+                  <td><strong>{{ line.partnerName }}</strong></td>
+                  <td><span class="badge badge-sale">Client</span></td>
+                  <td class="text-right">{{ line.initialDebit > 0 ? (line.initialDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.initialCredit > 0 ? (line.initialCredit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                </tr>
+              }
+            }
+            @if (suppliers.length > 0) {
+              <tr class="section-header"><td colspan="10">FOURNISSEURS</td></tr>
+              @for (line of suppliers; track line.partnerRef) {
+                <tr>
+                  <td class="text-muted fs-sm">{{ line.partnerRef }}</td>
+                  <td><span class="mono">{{ line.accountNumber }}</span></td>
+                  <td><strong>{{ line.partnerName }}</strong></td>
+                  <td><span class="badge badge-purchase">Fournisseur</span></td>
+                  <td class="text-right">{{ line.initialDebit > 0 ? (line.initialDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.initialCredit > 0 ? (line.initialCredit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">TOTAL GÉNÉRAL</td>
+              <td>{{ totals.initD | number:'1.2-2' }}</td>
+              <td>{{ totals.initC | number:'1.2-2' }}</td>
+              <td>{{ totals.mvtD | number:'1.2-2' }}</td>
+              <td>{{ totals.mvtC | number:'1.2-2' }}</td>
+              <td>{{ totals.finD | number:'1.2-2' }}</td>
+              <td>{{ totals.finC | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>

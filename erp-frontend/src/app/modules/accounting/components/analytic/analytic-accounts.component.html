@@ -1,0 +1,150 @@
+<div class="page-container">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-icons">analytics</span>
+        Comptes Analytiques
+      </h1>
+      <p class="page-subtitle">Gérez votre plan analytique (centres de coût, projets, axes d'analyse)</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénère les lignes analytiques depuis les écritures validées">
+        <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
+        {{ recalculating ? 'Recalcul...' : 'Recalculer' }}
+      </button>
+      <button class="btn btn-primary" (click)="openNew()">
+        <span class="material-icons">add</span>
+        Nouveau compte
+      </button>
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert-success mb-3">
+      <span class="material-icons">check_circle</span>{{ successMsg }}
+    </div>
+  }
+  @if (errorMsg && !showForm) {
+    <div class="alert-error mb-3">
+      <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
+  }
+
+  <!-- FORMULAIRE -->
+  @if (showForm) {
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 style="font-size:14px">
+          <span class="material-icons" style="font-size:18px;color:#714B67">
+            {{ editMode ? 'edit' : 'add_circle' }}
+          </span>
+          {{ editMode ? 'Modifier le compte analytique' : 'Nouveau compte analytique' }}
+        </h3>
+        <button class="btn-icon" (click)="closeForm()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="card-body">
+        @if (errorMsg) {
+          <div class="alert-error mb-3">
+            <span class="material-icons">error_outline</span>{{ errorMsg }}
+          </div>
+        }
+        <div class="form-row cols-3">
+          <div class="form-group">
+            <label>Code *</label>
+            <input type="text" class="form-control" [(ngModel)]="form.code"
+              placeholder="ex: ADM, ADM-DIR..." maxlength="20">
+          </div>
+          <div class="form-group">
+            <label>Nom *</label>
+            <input type="text" class="form-control" [(ngModel)]="form.name"
+              placeholder="ex: Administration, Directrice...">
+          </div>
+          <div class="form-group">
+            <label>Compte parent</label>
+            <select class="form-control" [(ngModel)]="form.parentId">
+              <option [ngValue]="null">— Aucun (compte racine) —</option>
+              @for (a of flatAccounts; track a.id) {
+                @if (a.id !== form.id) {
+                  <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                }
+              }
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-control" [(ngModel)]="form.description"
+            placeholder="Description optionnelle...">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" (click)="save()">
+            <span class="material-icons">save</span>
+            Sauvegarder
+          </button>
+          <button class="btn btn-outline" (click)="closeForm()">Annuler</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- LISTE DES COMPTES -->
+  <div class="card">
+    <div class="card-header">
+      <h3 style="font-size:14px">
+        <span class="material-icons" style="font-size:18px;color:#714B67">account_tree</span>
+        Plan analytique
+      </h3>
+    </div>
+    <div class="card-body" style="padding:0">
+      @if (loading) {
+        <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
+      } @else if (flatAccounts.length === 0) {
+        <div class="empty-state">
+          <span class="material-icons">analytics</span>
+          <p>Aucun compte analytique. Créez votre premier compte pour commencer.</p>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nom</th>
+              <th>Parent</th>
+              <th>Description</th>
+              <th style="width:120px;text-align:center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (account of getSortedAccounts(); track account.id) {
+              <tr>
+                <td>
+                  <span [style.paddingLeft.px]="getDepth(account) * 24">
+                    @if (getDepth(account) > 0) {
+                      <span class="material-icons" style="font-size:13px;color:#aaa;vertical-align:middle;margin-right:4px">subdirectory_arrow_right</span>
+                    }
+                    <strong [style.color]="getDepth(account) === 0 ? '#714B67' : '#333'">{{ account.code }}</strong>
+                  </span>
+                </td>
+                <td [style.fontWeight]="getDepth(account) === 0 ? '600' : '400'">{{ account.name }}</td>
+                <td><span class="text-muted">{{ getParentLabel(account.parentId) }}</span></td>
+                <td><span class="text-muted" style="font-size:12px">{{ account.description || '—' }}</span></td>
+                <td style="text-align:center">
+                  <button class="btn-icon" title="Modifier" (click)="openEdit(account)">
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button class="btn-icon btn-icon-danger" title="Archiver" (click)="delete(account)">
+                    <span class="material-icons">archive</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

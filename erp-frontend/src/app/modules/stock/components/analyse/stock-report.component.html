@@ -1,0 +1,149 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Rapport de stock</h1>
+      <p class="page-subtitle">État des stocks valorisés par article et emplacement</p>
+    </div>
+    <div class="header-actions">
+      <div class="view-toggle">
+        <button [class.active]="viewMode === 'product'" (click)="viewMode = 'product'">Par article</button>
+        <button [class.active]="viewMode === 'location'" (click)="viewMode = 'location'">Par emplacement</button>
+      </div>
+      <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+      <button class="btn-secondary" (click)="printReport()"><span class="material-icons">print</span> Imprimer</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <span class="kpi-icon material-icons">category</span>
+      <div>
+        <div class="kpi-value">{{ byProduct.length }}</div>
+        <div class="kpi-label">Articles en stock</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon material-icons">inventory_2</span>
+      <div>
+        <div class="kpi-value">{{ filtered.length }}</div>
+        <div class="kpi-label">Lignes de stock</div>
+      </div>
+    </div>
+    <div class="kpi-card accent">
+      <span class="kpi-icon material-icons">price_check</span>
+      <div>
+        <div class="kpi-value">{{ totalValue | number:'1.0-0' }} FCFA</div>
+        <div class="kpi-label">Valeur totale du stock</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Rechercher un article..." />
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    @if (viewMode === 'product') {
+      <div class="card">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Catégorie</th>
+              <th class="text-right">Quantité totale</th>
+              <th class="text-right">CMUP</th>
+              <th class="text-right">Valeur totale</th>
+              <th>Emplacements</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of byProduct; track row.productId) {
+              <tr>
+                <td>
+                  <div class="product-cell">
+                    @if (row.productCode) { <span class="code-badge">{{ row.productCode }}</span> }
+                    <span class="product-name">{{ row.productName }}</span>
+                  </div>
+                </td>
+                <td class="text-muted small">{{ row.uomName }}</td>
+                <td class="text-right mono">
+                  <span [class.low-stock]="row.totalQty <= 0">{{ row.totalQty | number:'1.0-2' }}</span>
+                </td>
+                <td class="text-right mono text-muted">
+                  {{ row.locations[0]?.standardPrice | number:'1.0-0' }} FCFA
+                </td>
+                <td class="text-right mono fw-bold">{{ row.totalValue | number:'1.0-0' }} FCFA</td>
+                <td class="text-muted small">
+                  @for (loc of row.locations; track loc.locationId) {
+                    <span class="loc-chip">{{ loc.locationName }}: {{ loc.quantity | number:'1.0-0' }}</span>
+                  }
+                </td>
+              </tr>
+            }
+            @if (byProduct.length === 0) {
+              <tr><td colspan="6" class="empty-state">Aucun stock disponible</td></tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="4"><strong>TOTAL GÉNÉRAL</strong></td>
+              <td class="text-right mono fw-bold">{{ totalValue | number:'1.0-0' }} FCFA</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    } @else {
+      <!-- Vue par emplacement -->
+      <div class="card">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Emplacement</th>
+              <th>Article</th>
+              <th class="text-right">Quantité</th>
+              <th class="text-right">Réservé</th>
+              <th class="text-right">Disponible</th>
+              <th class="text-right">CMUP</th>
+              <th class="text-right">Valeur</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (q of filtered; track q.id) {
+              <tr>
+                <td class="text-muted small">{{ q.locationCompleteName || q.locationName }}</td>
+                <td>
+                  <div class="product-cell">
+                    @if (q.productCode) { <span class="code-badge">{{ q.productCode }}</span> }
+                    <span class="product-name">{{ q.productName }}</span>
+                  </div>
+                </td>
+                <td class="text-right mono">{{ q.quantity | number:'1.0-2' }}</td>
+                <td class="text-right mono text-muted">{{ q.reservedQuantity | number:'1.0-2' }}</td>
+                <td class="text-right mono" [class.low-stock]="q.availableQuantity <= 0">{{ q.availableQuantity | number:'1.0-2' }}</td>
+                <td class="text-right mono text-muted">{{ q.standardPrice | number:'1.0-0' }}</td>
+                <td class="text-right mono fw-bold">{{ q.totalValue | number:'1.0-0' }} FCFA</td>
+              </tr>
+            }
+            @if (filtered.length === 0) {
+              <tr><td colspan="7" class="empty-state">Aucun stock disponible</td></tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="6"><strong>TOTAL GÉNÉRAL</strong></td>
+              <td class="text-right mono fw-bold">{{ totalValue | number:'1.0-0' }} FCFA</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>

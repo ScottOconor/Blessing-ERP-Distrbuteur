@@ -1,0 +1,151 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Ajustements de stock</h1>
+      <p class="page-subtitle">Corriger les quantités en stock suite à un inventaire physique</p>
+    </div>
+    <button class="btn-primary" (click)="openNew()">
+      <span class="material-icons">add</span> Nouvel ajustement
+    </button>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <div class="card-header">
+        <span>Historique des ajustements</span>
+        <span class="count-badge">{{ adjustments.length }}</span>
+      </div>
+      <table class="adj-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Article</th>
+            <th>Emplacement</th>
+            <th class="text-right">Avant</th>
+            <th class="text-right">Après</th>
+            <th class="text-right">Écart Qté</th>
+            <th class="text-right">CMUP</th>
+            <th class="text-right">Valeur écart</th>
+            <th>Écriture</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of adjustments; track a.id) {
+            <tr>
+              <td class="text-muted small">{{ a.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div class="product-cell">
+                  @if (a.productCode) { <span class="code-badge">{{ a.productCode }}</span> }
+                  <span class="product-name">{{ a.productName }}</span>
+                </div>
+              </td>
+              <td class="text-muted small">{{ a.locationName }}</td>
+              <td class="text-right mono">{{ a.qtyBefore | number:'1.0-2' }} {{ a.uomName }}</td>
+              <td class="text-right mono">{{ a.qtyAfter | number:'1.0-2' }} {{ a.uomName }}</td>
+              <td class="text-right">
+                <span class="diff-badge" [class.positive]="(a.qtyDiff || 0) > 0" [class.negative]="(a.qtyDiff || 0) < 0">
+                  {{ (a.qtyDiff || 0) > 0 ? '+' : '' }}{{ a.qtyDiff | number:'1.0-2' }}
+                </span>
+              </td>
+              <td class="text-right mono text-muted">{{ a.unitCost | number:'1.0-0' }}</td>
+              <td class="text-right mono" [class.positive]="(a.valueDiff || 0) > 0" [class.negative]="(a.valueDiff || 0) < 0">
+                {{ (a.valueDiff || 0) > 0 ? '+' : '' }}{{ a.valueDiff | number:'1.0-0' }} FCFA
+              </td>
+              <td class="text-muted small">
+                @if (a.accountMoveName) { <span class="move-ref">{{ a.accountMoveName }}</span> }
+                @else { — }
+              </td>
+              <td class="text-muted small">{{ a.notes || '—' }}</td>
+            </tr>
+          }
+          @if (adjustments.length === 0) {
+            <tr><td colspan="10" class="empty-state">Aucun ajustement enregistré</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false"></div>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Nouvel ajustement de stock</h2>
+      <button class="btn-close" (click)="showModal = false"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      @if (errorMsg) {
+        <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div>
+      }
+      <div class="info-box">
+        <span class="material-icons">info</span>
+        Un ajustement corrige la quantité théorique du stock pour la faire correspondre à l'inventaire physique réel. Une écriture comptable est automatiquement générée.
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Article <span class="required">*</span></label>
+          <select [(ngModel)]="form.productId" (ngModelChange)="onProductChange()" class="form-control">
+            <option [value]="0" disabled>— Sélectionner un article —</option>
+            @for (p of products; track p.id) {
+              <option [value]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Emplacement <span class="required">*</span></label>
+          <select [(ngModel)]="form.locationId" (ngModelChange)="onLocationChange()" class="form-control">
+            <option [value]="0" disabled>— Sélectionner un emplacement —</option>
+            @for (l of locations; track l.id) {
+              <option [value]="l.id">{{ l.completeName || l.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (selectedProduct) {
+        <div class="qty-comparison">
+          <div class="qty-box current">
+            <span class="qty-label">Quantité système actuelle</span>
+            <span class="qty-value">{{ selectedProductQty | number:'1.0-2' }} {{ selectedProduct.uomName }}</span>
+            <span class="qty-sub">CMUP: {{ selectedProduct.standardPrice | number:'1.0-0' }} FCFA</span>
+          </div>
+          <span class="material-icons arrow-icon">arrow_forward</span>
+          <div class="qty-box new">
+            <span class="qty-label">Quantité réelle comptée</span>
+            <input type="number" [(ngModel)]="form.newQty" class="qty-input" min="0" step="0.01" />
+            <span class="qty-sub">{{ selectedProduct.uomName }}</span>
+          </div>
+          <div class="qty-box diff" [class.positive]="getDiff() > 0" [class.negative]="getDiff() < 0" [class.zero]="getDiff() === 0">
+            <span class="qty-label">Écart</span>
+            <span class="qty-value">{{ getDiff() > 0 ? '+' : '' }}{{ getDiff() | number:'1.0-2' }}</span>
+            <span class="qty-sub">
+              @if (getDiff() !== 0) {
+                {{ (getDiff() * (selectedProduct.standardPrice || 0)) | number:'1.0-0' }} FCFA
+              } @else { Aucun écart }
+            </span>
+          </div>
+        </div>
+      }
+
+      <div class="form-group mt-12">
+        <label>Motif / Notes</label>
+        <input type="text" [(ngModel)]="form.notes" class="form-control" placeholder="Ex: Inventaire annuel, casse, vol..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="showModal = false" [disabled]="saving">Annuler</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving">
+        <span class="material-icons">check</span>
+        {{ saving ? 'Enregistrement...' : 'Valider l\'ajustement' }}
+      </button>
+    </div>
+  </div>
+}

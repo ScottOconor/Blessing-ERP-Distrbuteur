@@ -1,0 +1,233 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="material-icons">undo</span>
+        Avoirs clients
+      </h1>
+      <span class="record-count">{{ filteredAvoirs.length }} avoir(s)</span>
+    </div>
+    <div class="header-right">
+      @if (totalAvoirs() > 0) {
+        <div class="total-badge">
+          Total validés : <strong>{{ totalAvoirs() | number:'1.0-0' }} FCFA</strong>
+        </div>
+      }
+      <button class="btn-new" (click)="openCreate()">
+        <span class="material-icons">add</span>
+        Nouvel avoir
+      </button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    @for (f of stateFilters; track f.value) {
+      <button class="filter-btn" [class.active]="stateFilter === f.value" (click)="setFilter(f.value)">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <div class="card">
+    @if (loading) {
+      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+    } @else if (filteredAvoirs.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">undo</span>
+        <p>Aucun avoir. Cliquez sur "Nouvel avoir" pour en créer un.</p>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Numéro</th>
+            <th>Date</th>
+            <th>Client</th>
+            <th>Facture d'origine</th>
+            <th class="text-right">Total HT</th>
+            <th class="text-right">Total TTC</th>
+            <th>Écriture</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (avoir of filteredAvoirs; track avoir.id) {
+            <tr class="clickable-row" (click)="openAvoir(avoir)">
+              <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
+              <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
+              <td>{{ avoir.partnerName }}</td>
+              <td>
+                @if (avoir.originalInvoiceName) {
+                  <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
+              <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
+              <td>
+                @if (avoir.accountMoveName) {
+                  <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+<!-- ===== Modal création avoir ===== -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span class="material-icons">undo</span>
+        <h2>Nouvel avoir client</h2>
+        <button class="btn-close-modal" (click)="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      @if (errorMsg) {
+        <div class="modal-error">
+          <span class="material-icons">error</span> {{ errorMsg }}
+        </div>
+      }
+
+      <div class="modal-body">
+        <!-- Infos générales -->
+        <div class="modal-grid">
+          <div class="form-group">
+            <label>Client <span class="req">*</span></label>
+            <select [(ngModel)]="avoirForm.partnerId" class="form-control">
+              <option [value]="0" disabled>— Sélectionner un client —</option>
+              @for (c of clients; track c.id) {
+                <option [value]="c.id">{{ c.name }}{{ c.ref ? ' (' + c.ref + ')' : '' }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Journal <span class="req">*</span></label>
+            <select [(ngModel)]="avoirForm.journalId" class="form-control">
+              @for (j of journals; track j.id) {
+                <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="avoirForm.date" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Date d'échéance</label>
+            <input type="date" [(ngModel)]="avoirForm.dateEcheance" class="form-control" />
+          </div>
+          <div class="form-group form-full">
+            <label>Notes</label>
+            <textarea [(ngModel)]="avoirForm.notes" class="form-control" rows="2" placeholder="Motif de l'avoir..."></textarea>
+          </div>
+        </div>
+
+        <!-- Lignes -->
+        <div class="lines-section">
+          <div class="lines-header">
+            <span class="lines-title">Lignes</span>
+            <button class="btn-add-line" (click)="addLine()">
+              <span class="material-icons">add</span> Ajouter une ligne
+            </button>
+          </div>
+
+          @if (avoirForm.lines.length === 0) {
+            <div class="lines-empty">
+              <button class="btn-add-line-empty" (click)="addLine()">
+                <span class="material-icons">add_circle_outline</span>
+                Cliquez pour ajouter une ligne
+              </button>
+            </div>
+          } @else {
+            <div class="lines-wrap">
+              <table class="lines-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th style="min-width:200px">Article / Description</th>
+                    <th class="ar">Qté</th>
+                    <th class="ar">Prix U.</th>
+                    <th class="ar">TVA %</th>
+                    <th class="ar">HT</th>
+                    <th class="ar">TTC</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (line of avoirForm.lines; track $index; let i = $index) {
+                    <tr>
+                      <td class="ln">{{ i + 1 }}</td>
+                      <td>
+                        <div class="ac-wrap">
+                          <div class="ac-row">
+                            <input type="text" class="inp" [(ngModel)]="lineSearches[i]"
+                              placeholder="Rechercher un article..."
+                              (focus)="openSuggestions(i)"
+                              (blur)="closeSuggestions(i)"
+                              (input)="openSuggestions(i)"
+                              autocomplete="off" />
+                            @if (line.productCode) {
+                              <button class="btn-clr" (click)="clearLine(i)">
+                                <span class="material-icons">close</span>
+                              </button>
+                            }
+                          </div>
+                          @if (activeSuggestionIdx === i) {
+                            <div class="sug-panel">
+                              @for (p of getSuggestions(i); track p.id) {
+                                <div class="sug-item" (mousedown)="selectProduct(i, p)">
+                                  @if (p.defaultCode) { <span class="sc">{{ p.defaultCode }}</span> }
+                                  <span class="sn">{{ p.name }}</span>
+                                  <span class="sp">{{ p.salePrice | number:'1.0-0' }}</span>
+                                </div>
+                              }
+                              @if (getSuggestions(i).length === 0) {
+                                <div class="sug-empty">Aucun résultat</div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" min="0" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" /></td>
+                      <td class="ar amt">{{ line.montantHT | number:'1.0-0' }}</td>
+                      <td class="ar amt-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
+                      <td>
+                        <button class="btn-del" (click)="removeLine(i)">
+                          <span class="material-icons">delete_outline</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Totaux -->
+            <div class="modal-totals">
+              <div class="tot-row"><span>Total HT</span><span>{{ avoirForm.totalHT | number:'1.0-0' }} FCFA</span></div>
+              <div class="tot-row"><span>TVA</span><span>{{ avoirForm.totalTVA | number:'1.0-0' }} FCFA</span></div>
+              <div class="tot-row tot-ttc"><span>Total TTC</span><span>{{ avoirForm.totalTTC | number:'1.0-0' }} FCFA</span></div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeModal()">Annuler</button>
+        <button class="btn-save" (click)="saveAvoir()" [disabled]="saving">
+          <span class="material-icons">save</span>
+          {{ saving ? 'Création...' : 'Créer l\'avoir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

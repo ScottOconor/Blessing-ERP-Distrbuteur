@@ -1,0 +1,120 @@
+$accent: #00A09D;
+
+.pur-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.pur-navbar {
+  background-color: #1c1c1c;
+  height: 50px;
+  display: flex;
+  align-items: stretch;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.pur-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  min-width: 160px;
+  color: white;
+  &:hover { background: rgba(255,255,255,0.08); }
+  .material-icons:first-child { font-size: 20px; color: rgba(255,255,255,0.5); }
+  .brand-icon {
+    width: 28px; height: 28px;
+    background: $accent;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    .material-icons { font-size: 16px; color: white; }
+  }
+  .brand-label { font-size: 14px; font-weight: 600; color: white; }
+}
+
+.nav-divider { width: 1px; background: rgba(255,255,255,0.1); margin: 8px 4px; }
+
+.pur-nav { display: flex; align-items: stretch; flex: 1; overflow: visible; }
+
+.nav-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 16px;
+  color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 400;
+  cursor: pointer; transition: all 0.15s;
+  border: none; background: none; height: 100%; white-space: nowrap;
+  font-family: 'Roboto', sans-serif; text-decoration: none;
+  .material-icons { font-size: 16px; }
+  &:hover { color: white; background: rgba(255,255,255,0.08); }
+  &.active { color: white; background: rgba($accent, 0.35); border-bottom: 3px solid $accent; }
+}
+
+.nav-item-dropdown {
+  position: relative; display: flex; align-items: stretch;
+  &.active > .dropdown-toggle { color: white; background: rgba($accent, 0.3); border-bottom: 3px solid $accent; }
+  &.open > .dropdown-toggle { color: white; background: rgba(255,255,255,0.12); .arrow { transform: rotate(180deg); } }
+  &:hover .dropdown-panel, &.open .dropdown-panel { display: flex; flex-direction: column; }
+}
+
+.dropdown-toggle { cursor: pointer; .arrow { margin-left: 2px; font-size: 16px !important; transition: transform 0.2s; } }
+
+.dropdown-panel {
+  display: none;
+  position: absolute; top: 100%; left: 0;
+  min-width: 240px;
+  background: white; border-radius: 0 0 8px 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  z-index: 200; padding: 6px 0;
+  animation: dropIn 0.15s ease;
+  .dropdown-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; font-size: 13px; color: #212529;
+    cursor: pointer; border: none; background: none;
+    width: 100%; text-align: left; transition: background 0.1s;
+    font-family: 'Roboto', sans-serif;
+    .material-icons { font-size: 16px; color: #6c757d; }
+    &:hover { background: #f8f9fa; color: $accent; .material-icons { color: $accent; } }
+    &.active { background: #e6f7f7; color: $accent; font-weight: 600; .material-icons { color: $accent; } }
+  }
+}
+
+.nav-right {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; border-left: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-pill {
+  display: flex; align-items: center; gap: 8px;
+  color: rgba(255,255,255,0.8); font-size: 13px;
+  .user-avatar-sm {
+    width: 28px; height: 28px; background: $accent; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: white;
+  }
+  .user-name-sm { font-weight: 500; }
+}
+
+.btn-nav-logout {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; background: none;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  cursor: pointer; color: rgba(255,255,255,0.6); transition: all 0.2s;
+  .material-icons { font-size: 18px; }
+  &:hover { background: rgba(220,53,69,0.3); border-color: rgba(220,53,69,0.5); color: #ff6b6b; }
+}
+
+.pur-content {
+  margin-top: 50px; flex: 1;
+  background: #f5f5f5; min-height: calc(100vh - 50px); overflow-y: auto;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

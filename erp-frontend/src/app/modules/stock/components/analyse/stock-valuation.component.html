@@ -1,0 +1,102 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Valorisation de stock</h1>
+      <p class="page-subtitle">Couches de valorisation CMUP — historique des coûts</p>
+    </div>
+    <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <span class="kpi-icon material-icons" style="color:#28a745">trending_up</span>
+      <div>
+        <div class="kpi-value">{{ totalPositive | number:'1.0-0' }} FCFA</div>
+        <div class="kpi-label">Entrées valorisées</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-icon material-icons" style="color:#dc3545">trending_down</span>
+      <div>
+        <div class="kpi-value">{{ totalNegative | number:'1.0-0' }} FCFA</div>
+        <div class="kpi-label">Sorties valorisées</div>
+      </div>
+    </div>
+    <div class="kpi-card accent">
+      <span class="kpi-icon material-icons">account_balance</span>
+      <div>
+        <div class="kpi-value">{{ totalValue | number:'1.0-0' }} FCFA</div>
+        <div class="kpi-label">Solde net valorisé</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Rechercher..." />
+    </div>
+    <select [(ngModel)]="filterProductId" (ngModelChange)="load()" class="filter-select">
+      <option [ngValue]="null">Tous les articles</option>
+      @for (p of products; track p.id) {
+        <option [ngValue]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+      }
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <table class="val-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Article</th>
+            <th>Emplacement</th>
+            <th class="text-right">Quantité</th>
+            <th class="text-right">Coût unit.</th>
+            <th class="text-right">Valeur</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of filtered; track l.id) {
+            <tr>
+              <td class="text-muted small">{{ l.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div class="product-cell">
+                  @if (l.productCode) { <span class="code-badge">{{ l.productCode }}</span> }
+                  <span class="product-name">{{ l.productName }}</span>
+                </div>
+              </td>
+              <td class="text-muted small">{{ l.locationName || '—' }}</td>
+              <td class="text-right mono" [class.positive]="l.quantity > 0" [class.negative]="l.quantity < 0">
+                {{ l.quantity > 0 ? '+' : '' }}{{ l.quantity | number:'1.0-4' }}
+              </td>
+              <td class="text-right mono text-muted">{{ l.unitCost | number:'1.0-2' }}</td>
+              <td class="text-right mono fw-bold" [class.positive]="l.value > 0" [class.negative]="l.value < 0">
+                {{ l.value > 0 ? '+' : '' }}{{ l.value | number:'1.0-0' }} FCFA
+              </td>
+              <td class="text-muted small">{{ l.description }}</td>
+            </tr>
+          }
+          @if (filtered.length === 0) {
+            <tr><td colspan="7" class="empty-state">Aucune couche de valorisation</td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="5"><strong>TOTAL NET</strong></td>
+            <td class="text-right mono fw-bold" [class.positive]="totalValue > 0" [class.negative]="totalValue < 0">
+              {{ totalValue | number:'1.0-0' }} FCFA
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+</div>

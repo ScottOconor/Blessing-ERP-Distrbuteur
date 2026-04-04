@@ -1,0 +1,46 @@
+.journal-code {
+  font-family: 'Courier New', monospace;
+  color: #714B67;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.alert-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  color: #155724;
+  font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  color: #721c24;
+  font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: #714B67;
+    cursor: pointer;
+  }
+}

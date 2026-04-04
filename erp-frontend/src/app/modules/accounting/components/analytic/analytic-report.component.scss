@@ -1,0 +1,12 @@
+.row-child {
+  background: #fafafa;
+}
+
+.totals-row td {
+  background: #f0f0f0;
+  border-top: 2px solid #714B67;
+}
+
+@media print {
+  .no-print { display: none !important; }
+}

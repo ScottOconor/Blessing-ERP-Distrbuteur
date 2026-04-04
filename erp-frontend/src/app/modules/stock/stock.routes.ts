@@ -1,0 +1,29 @@
+import { Routes } from '@angular/router';
+import { StockLayoutComponent } from './layout/stock-layout.component';
+
+export const stockRoutes: Routes = [
+  {
+    path: '',
+    component: StockLayoutComponent,
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./components/dashboard/stock-dashboard.component').then(m => m.StockDashboardComponent) },
+      { path: 'products', loadComponent: () => import('./components/products/product-list.component').then(m => m.ProductListComponent) },
+      { path: 'warehouses', loadComponent: () => import('./components/warehouses/warehouse-list.component').then(m => m.WarehouseListComponent) },
+      { path: 'adjustments', loadComponent: () => import('./components/adjustments/adjustment-list.component').then(m => m.AdjustmentListComponent) },
+      { path: 'expeditions', loadComponent: () => import('./components/livraisons/livraison-list.component').then(m => m.LivraisonListComponent) },
+      { path: 'expeditions/new', loadComponent: () => import('./components/livraisons/livraison-detail.component').then(m => m.LivraisonDetailComponent) },
+      { path: 'expeditions/:id', loadComponent: () => import('./components/livraisons/livraison-detail.component').then(m => m.LivraisonDetailComponent) },
+      { path: 'transferts', loadComponent: () => import('./components/transferts/transfert-list.component').then(m => m.TransfertListComponent) },
+      { path: 'transferts/new', loadComponent: () => import('./components/transferts/transfert-detail.component').then(m => m.TransfertDetailComponent) },
+      { path: 'transferts/:id', loadComponent: () => import('./components/transferts/transfert-detail.component').then(m => m.TransfertDetailComponent) },
+      { path: 'agences', loadComponent: () => import('./components/agences/agency-list.component').then(m => m.AgencyListComponent) },
+      { path: 'categories', loadComponent: () => import('./components/categories/category-list.component').then(m => m.CategoryListComponent) },
+      { path: 'locations', loadComponent: () => import('./components/locations/location-list.component').then(m => m.LocationListComponent) },
+      { path: 'picking-types', loadComponent: () => import('./components/picking-types/picking-type-list.component').then(m => m.PickingTypeListComponent) },
+      { path: 'analyse/rapport', loadComponent: () => import('./components/analyse/stock-report.component').then(m => m.StockReportComponent) },
+      { path: 'analyse/mouvements', loadComponent: () => import('./components/analyse/stock-movements.component').then(m => m.StockMovementsComponent) },
+      { path: 'analyse/valorisation', loadComponent: () => import('./components/analyse/stock-valuation.component').then(m => m.StockValuationComponent) },
+    ]
+  }
+];

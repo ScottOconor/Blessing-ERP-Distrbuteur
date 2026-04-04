@@ -1,0 +1,136 @@
+<div class="page-container report-container">
+  <div class="page-header no-print">
+    <h1 class="page-title">
+      <span class="material-icons">account_balance</span>
+      Bilan OHADA
+    </h1>
+    @if (generated) {
+      <button class="btn btn-outline" (click)="print()"><span class="material-icons">print</span>Imprimer</button>
+    }
+  </div>
+
+  <div class="report-header no-print">
+    <div class="filters-bar" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>Date de clôture *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="spinner-sm"></span> }
+          <span class="material-icons">play_arrow</span>Générer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+  } @else if (generated) {
+    <div class="print-header print-only">
+      <h2>BILAN AU {{ dateTo | date:'dd MMMM yyyy':'':'fr' }}</h2>
+      <p>SYSCOHADA RÉVISÉ</p>
+    </div>
+
+    <div class="bilan-container">
+      <!-- ACTIF -->
+      <div class="bilan-col">
+        <div class="bilan-col-header actif-header">
+          <span class="material-icons">trending_down</span>
+          ACTIF
+        </div>
+        <table class="table-erp bilan-table">
+          <thead>
+            <tr>
+              <th>Réf.</th>
+              <th>ACTIF</th>
+              <th class="text-right">Brut</th>
+              <th class="text-right">Amort./Dép.</th>
+              <th class="text-right">Net N</th>
+              <th class="text-right">Net N-1</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (section of actifSections; track section.label) {
+              <tr class="section-header">
+                <td colspan="6">{{ section.label }}</td>
+              </tr>
+              @for (line of section.lines; track line.code) {
+                <tr>
+                  <td class="mono fs-sm">{{ line.code }}</td>
+                  <td>{{ line.label }}</td>
+                  <td class="text-right">{{ line.brut | number:'1.2-2' }}</td>
+                  <td class="text-right text-danger">{{ line.amort > 0 ? '-' : '' }}{{ line.amort | number:'1.2-2' }}</td>
+                  <td class="text-right fw-semibold">{{ line.net | number:'1.2-2' }}</td>
+                  <td class="text-right text-muted">{{ line.netPrevious | number:'1.2-2' }}</td>
+                </tr>
+              }
+              <tr class="total-row">
+                <td colspan="2">Total {{ section.label }}</td>
+                <td></td><td></td>
+                <td class="text-right">{{ section.total | number:'1.2-2' }}</td>
+                <td></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">TOTAL ACTIF</td>
+              <td>{{ totalActif | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- PASSIF -->
+      <div class="bilan-col">
+        <div class="bilan-col-header passif-header">
+          <span class="material-icons">trending_up</span>
+          PASSIF
+        </div>
+        <table class="table-erp bilan-table">
+          <thead>
+            <tr>
+              <th>Réf.</th>
+              <th>PASSIF</th>
+              <th class="text-right">Net N</th>
+              <th class="text-right">Net N-1</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (section of passifSections; track section.label) {
+              <tr class="section-header">
+                <td colspan="4">{{ section.label }}</td>
+              </tr>
+              @for (line of section.lines; track line.code) {
+                <tr>
+                  <td class="mono fs-sm">{{ line.code }}</td>
+                  <td>{{ line.label }}</td>
+                  <td class="text-right fw-semibold">{{ line.net | number:'1.2-2' }}</td>
+                  <td class="text-right text-muted">{{ line.netPrevious | number:'1.2-2' }}</td>
+                </tr>
+              }
+              <tr class="total-row">
+                <td colspan="2">Total {{ section.label }}</td>
+                <td class="text-right">{{ section.total | number:'1.2-2' }}</td>
+                <td></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">TOTAL PASSIF</td>
+              <td>{{ totalPassif | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  }
+</div>

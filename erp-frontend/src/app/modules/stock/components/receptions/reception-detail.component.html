@@ -1,0 +1,197 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <button class="btn-back" (click)="router.navigate(['/stock/receptions'])">
+        <span class="material-icons">arrow_back</span>
+      </button>
+      <div>
+        <h1 class="page-title">
+          <span class="material-icons">move_to_inbox</span>
+          {{ isNew ? 'Nouvelle réception' : (picking?.name || 'Réception') }}
+        </h1>
+        @if (!isNew && picking) {
+          <span class="state-badge" [attr.data-state]="picking.state">{{ stateLabel(picking.state || '') }}</span>
+        }
+      </div>
+    </div>
+    <div class="header-actions">
+      @if (!isDone && !isCancelled) {
+        <button class="btn-secondary" (click)="save()" [disabled]="saving">
+          <span class="material-icons">save</span> {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
+        </button>
+      }
+      @if (!isNew && !isDone && !isCancelled) {
+        <button class="btn-validate" (click)="validate()" [disabled]="validating">
+          <span class="material-icons">check_circle</span> {{ validating ? 'Validation...' : 'Valider la réception' }}
+        </button>
+        <button class="btn-cancel-picking" (click)="cancel()" [disabled]="cancelling">
+          <span class="material-icons">cancel</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (errorMsg) { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div> }
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <!-- Info comptable si validé -->
+    @if (isDone && picking?.accountMoveName) {
+      <div class="info-banner">
+        <span class="material-icons">book</span>
+        Écriture comptable générée : <strong>{{ picking!.accountMoveName }}</strong>
+        · Valeur totale : <strong>{{ picking!.totalValue | number:'1.0-0' }} FCFA</strong>
+      </div>
+    }
+
+    <div class="form-layout">
+      <!-- Colonne principale : lignes -->
+      <div class="form-main">
+        <div class="card">
+          <div class="card-header">
+            <span>Lignes de réception</span>
+            @if (isDraft) {
+              <button class="btn-add-line" (click)="addLine()">
+                <span class="material-icons">add</span> Ajouter un article
+              </button>
+            }
+          </div>
+          <div class="lines-container">
+            @if (lines.length === 0) {
+              <div class="empty-lines">Aucune ligne — cliquez sur "Ajouter un article"</div>
+            }
+            <table class="lines-table" [class.has-lines]="lines.length > 0">
+              @if (lines.length > 0) {
+                <thead>
+                  <tr>
+                    <th style="width:35%">Article</th>
+                    <th style="width:12%">Unité</th>
+                    <th style="width:12%">Qté demandée</th>
+                    <th style="width:12%">Qté reçue</th>
+                    <th style="width:14%">Prix unitaire</th>
+                    <th style="width:12%">Sous-total</th>
+                    @if (isDraft) { <th style="width:3%"></th> }
+                  </tr>
+                </thead>
+              }
+              <tbody>
+                @for (line of lines; track $index; let i = $index) {
+                  <tr>
+                    <td>
+                      @if (isDraft) {
+                        <select class="line-select" [(ngModel)]="line.productId" (ngModelChange)="onProductChange(i)">
+                          <option [ngValue]="null">— Choisir —</option>
+                          @for (p of products; track p.id) {
+                            <option [value]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+                          }
+                        </select>
+                      } @else {
+                        <span class="font-bold">{{ productName(line.productId) }}</span>
+                      }
+                    </td>
+                    <td>
+                      @if (isDraft) {
+                        <input type="text" class="line-input" [(ngModel)]="line.uomName" placeholder="Unité" />
+                      } @else { {{ line.uomName }} }
+                    </td>
+                    <td>
+                      @if (isDraft) {
+                        <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDemanded" min="0" (ngModelChange)="line.qtyDone = line.qtyDemanded" />
+                      } @else { <span class="text-right-cell">{{ line.qtyDemanded }}</span> }
+                    </td>
+                    <td>
+                      @if (!isDone) {
+                        <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDone" min="0" />
+                      } @else { <span class="text-right-cell font-bold">{{ line.qtyDone }}</span> }
+                    </td>
+                    <td>
+                      @if (isDraft) {
+                        <input type="number" class="line-input text-right" [(ngModel)]="line.priceUnit" min="0" />
+                      } @else { <span class="text-right-cell">{{ line.priceUnit | number:'1.0-0' }}</span> }
+                    </td>
+                    <td class="text-right-cell font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
+                    @if (isDraft) {
+                      <td>
+                        <button class="btn-remove-line" (click)="removeLine(i)" title="Supprimer">
+                          <span class="material-icons">delete</span>
+                        </button>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+              @if (lines.length > 0) {
+                <tfoot>
+                  <tr>
+                    <td colspan="5" class="total-label">TOTAL</td>
+                    <td class="text-right-cell total-value">{{ lineTotal | number:'1.0-0' }} FCFA</td>
+                    @if (isDraft) { <td></td> }
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar : infos générales -->
+      <div class="form-side">
+        <div class="card">
+          <div class="card-header">Informations</div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Type d'opération</label>
+              @if (isDraft) {
+                <select class="form-control" [(ngModel)]="selectedTypeId">
+                  @for (t of pickingTypes; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+                </select>
+              } @else { <div class="form-value">{{ picking?.pickingTypeName }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Emplacement source</label>
+              @if (isDraft) {
+                <select class="form-control" [(ngModel)]="selectedSrcId">
+                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
+                </select>
+              } @else { <div class="form-value">{{ locationName(picking?.locationId!) }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Emplacement destination</label>
+              @if (isDraft) {
+                <select class="form-control" [(ngModel)]="selectedDestId">
+                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
+                </select>
+              } @else { <div class="form-value">{{ locationName(picking?.locationDestId!) }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Fournisseur</label>
+              @if (isDraft) {
+                <input type="text" class="form-control" [(ngModel)]="partnerName" placeholder="Nom du fournisseur" />
+              } @else { <div class="form-value">{{ partnerName || '—' }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Date planifiée</label>
+              @if (isDraft) {
+                <input type="date" class="form-control" [(ngModel)]="scheduledDate" />
+              } @else { <div class="form-value">{{ scheduledDate | date:'dd/MM/yyyy' }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Origine (BC, PO...)</label>
+              @if (isDraft) {
+                <input type="text" class="form-control" [(ngModel)]="origin" placeholder="Ex: BC-2026-00001" />
+              } @else { <div class="form-value">{{ origin || '—' }}</div> }
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              @if (isDraft) {
+                <textarea class="form-control" [(ngModel)]="notes" rows="2"></textarea>
+              } @else { <div class="form-value">{{ notes || '—' }}</div> }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

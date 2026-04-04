@@ -1,0 +1,193 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">bar_chart</span>
+      Statistiques de ventes
+    </h1>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-icon teal"><span class="material-icons">receipt_long</span></div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalCA | number:'1.0-0' }}</div>
+          <div class="kpi-label">CA Total TTC (FCFA)</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon green"><span class="material-icons">payments</span></div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalEncaisse | number:'1.0-0' }}</div>
+          <div class="kpi-label">Encaissé (FCFA)</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon red"><span class="material-icons">pending_actions</span></div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalDu | number:'1.0-0' }}</div>
+          <div class="kpi-label">Reste dû (FCFA)</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon purple"><span class="material-icons">undo</span></div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ totalAvoirs | number:'1.0-0' }}</div>
+          <div class="kpi-label">Total avoirs validés (FCFA)</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon blue"><span class="material-icons">percent</span></div>
+        <div class="kpi-body">
+          <div class="kpi-value">{{ tauxEncaissement }}%</div>
+          <div class="kpi-label">Taux d'encaissement</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA par période -->
+    <div class="card mb-16">
+      <div class="card-header">
+        <span>Chiffre d'affaires par période</span>
+        <div class="card-header-actions">
+          <div class="period-tabs">
+            <button class="tab-btn" [class.active]="periodMode === 'month'" (click)="setPeriod('month')">Mois</button>
+            <button class="tab-btn" [class.active]="periodMode === 'quarter'" (click)="setPeriod('quarter')">Trimestre</button>
+            <button class="tab-btn" [class.active]="periodMode === 'year'" (click)="setPeriod('year')">Annuel</button>
+          </div>
+          @if (periodMode !== 'year') {
+            <select class="year-select" [ngModel]="selectedYear" (ngModelChange)="setYear($event)">
+              @for (y of years; track y) {
+                <option [value]="y">{{ y }}</option>
+              }
+            </select>
+          }
+        </div>
+      </div>
+      <div class="chart-section">
+        <div class="bar-chart">
+          @for (p of periodStats; track p.label) {
+            <div class="bar-col">
+              <div class="bar-wrap">
+                <div class="bar-encaisse" [style.height]="(p.encaisse / getMaxCA() * 160) + 'px'"
+                     [title]="'Encaissé: ' + (p.encaisse | number:'1.0-0') + ' FCFA'"></div>
+                <div class="bar-ca" [style.height]="(p.caTTC / getMaxCA() * 160) + 'px'"
+                     [title]="'CA TTC: ' + (p.caTTC | number:'1.0-0') + ' FCFA'"></div>
+              </div>
+              <div class="bar-label">{{ p.label }}</div>
+              @if (p.caTTC > 0) {
+                <div class="bar-value">{{ p.caTTC | number:'1.0-0' }}</div>
+              }
+            </div>
+          }
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="dot teal"></span>CA TTC</span>
+          <span class="legend-item"><span class="dot green"></span>Encaissé</span>
+        </div>
+      </div>
+
+      <!-- Period table -->
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th class="text-right">Nb factures</th>
+            <th class="text-right">CA HT</th>
+            <th class="text-right">CA TTC</th>
+            <th class="text-right">Encaissé</th>
+            <th class="text-right">Taux</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of periodStats; track p.label) {
+            <tr [class.row-empty]="p.caTTC === 0">
+              <td class="font-bold">{{ p.label }}</td>
+              <td class="text-right">{{ p.nbFactures }}</td>
+              <td class="text-right font-mono">{{ p.caHT | number:'1.0-0' }}</td>
+              <td class="text-right font-mono font-bold">{{ p.caTTC | number:'1.0-0' }}</td>
+              <td class="text-right font-mono text-success">{{ p.encaisse | number:'1.0-0' }}</td>
+              <td class="text-right">
+                @if (p.caTTC > 0) {
+                  <span class="pct-badge" [class.full]="p.encaisse >= p.caTTC">
+                    {{ (p.encaisse / p.caTTC * 100 | number:'1.0-0') }}%
+                  </span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom row: états + top clients -->
+    <div class="two-col">
+      <!-- Factures par statut -->
+      <div class="card">
+        <div class="card-header">Factures par statut</div>
+        <div class="state-list">
+          @for (s of invoicesByState; track s.label) {
+            <div class="state-row">
+              <div class="state-dot" [style.background]="s.color"></div>
+              <div class="state-label">{{ s.label }}</div>
+              <div class="state-count">{{ s.count }}</div>
+              <div class="state-bar-wrap">
+                <div class="state-bar" [style.background]="s.color"
+                     [style.width]="(s.count / (invoices.length || 1) * 100) + '%'"></div>
+              </div>
+              <div class="state-amount font-mono">{{ s.amount | number:'1.0-0' }}</div>
+            </div>
+          }
+        </div>
+        <div class="card-header" style="border-top: 1px solid #f0f0f0; margin-top: 8px;">Bons de commande par statut</div>
+        <div class="state-list">
+          @for (s of ordersByState; track s.label) {
+            <div class="state-row">
+              <div class="state-dot" [style.background]="s.color"></div>
+              <div class="state-label">{{ s.label }}</div>
+              <div class="state-count">{{ s.count }}</div>
+              <div class="state-bar-wrap">
+                <div class="state-bar" [style.background]="s.color"
+                     [style.width]="(s.count / (orders.length || 1) * 100) + '%'"></div>
+              </div>
+              <div class="state-amount text-muted">—</div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Top clients -->
+      <div class="card">
+        <div class="card-header">Top 10 clients (CA TTC)</div>
+        @if (clientStats.length === 0) {
+          <div class="empty-state"><p>Aucune donnée</p></div>
+        } @else {
+          <div class="client-list">
+            @for (c of clientStats; track c.name; let i = $index) {
+              <div class="client-row">
+                <div class="client-rank">#{{ i + 1 }}</div>
+                <div class="client-info">
+                  <div class="client-name">{{ c.name }}</div>
+                  <div class="client-bar-wrap">
+                    <div class="client-bar" [style.width]="(c.caTTC / getMaxClientCA() * 100) + '%'"></div>
+                  </div>
+                </div>
+                <div class="client-stats">
+                  <div class="client-ca">{{ c.caTTC | number:'1.0-0' }}</div>
+                  <div class="client-sub">
+                    <span class="text-success">{{ c.encaisse | number:'1.0-0' }} encaissé</span>
+                    @if (c.du > 0) { · <span class="text-danger">{{ c.du | number:'1.0-0' }} dû</span> }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

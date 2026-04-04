@@ -1,0 +1,61 @@
+<div class="page-container report-container">
+  <div class="page-header no-print">
+    <h1 class="page-title">
+      <span class="material-icons">trending_up</span>
+      Compte de Résultat - P&L
+    </h1>
+    @if (generated) {
+      <button class="btn btn-outline" (click)="print()"><span class="material-icons">print</span>Imprimer</button>
+    }
+  </div>
+
+  <div class="report-header no-print">
+    <div class="filters-bar" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>Date de début *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>Date de fin *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="spinner-sm"></span> }
+          <span class="material-icons">play_arrow</span>Générer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+  } @else if (generated) {
+    <div class="print-header print-only">
+      <h2>COMPTE DE RÉSULTAT DU {{ dateFrom | date:'dd MMMM yyyy':'':'fr' }} AU {{ dateTo | date:'dd MMMM yyyy':'':'fr' }}</h2>
+      <p>SYSCOHADA RÉVISÉ</p>
+    </div>
+
+    <div class="pl-container">
+      <table class="table-erp pl-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Libellé</th>
+            <th class="text-right">Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Placeholder for profit/loss data -->
+          <tr>
+            <td colspan="3" class="text-center">Aucune donnée généré</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

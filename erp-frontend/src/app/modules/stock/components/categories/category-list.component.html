@@ -1,0 +1,126 @@
+<div class="page-container">
+  <!-- Input file caché -->
+  <input #importInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportFileChange($event)" />
+
+  <div class="page-header">
+    <h1 class="page-title">Catégories d'articles</h1>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-outline" (click)="downloadTemplate()"><span class="material-icons">download</span> Modèle Excel</button>
+      <button class="btn-import" (click)="triggerImport()" [disabled]="importLoading">
+        <span class="material-icons">upload_file</span> {{ importLoading ? 'Lecture...' : 'Importer Excel' }}
+      </button>
+      <button class="btn-primary" (click)="openNew()"><span class="material-icons">add</span> Nouvelle catégorie</button>
+    </div>
+  </div>
+
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <table class="cfg-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Nom</th>
+            <th>Cpte stock</th>
+            <th>Cpte variation</th>
+            <th>Cpte COGS</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of categories; track c.id) {
+            <tr>
+              <td><span class="code-badge">{{ c.code || '—' }}</span></td>
+              <td class="fw-500">{{ c.name }}</td>
+              <td class="mono text-muted">{{ c.stockAccountCode }}</td>
+              <td class="mono text-muted">{{ c.stockInAccountCode }}</td>
+              <td class="mono text-muted">{{ c.cogsAccountCode }}</td>
+              <td><button class="btn-icon" (click)="openEdit(c)"><span class="material-icons">edit</span></button></td>
+            </tr>
+          }
+          @if (categories.length === 0) {
+            <tr><td colspan="6" class="empty-state">Aucune catégorie — créez la première</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- Modal Import Catégories -->
+@if (showImportModal) {
+  <div class="modal-backdrop" (click)="closeImportModal()"></div>
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <h3>Aperçu import catégories ({{ importRows.length }} ligne(s))</h3>
+      <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
+    </div>
+    <div style="overflow-x:auto;max-height:400px">
+      <table class="cfg-table">
+        <thead><tr><th>#</th><th>Nom</th><th>Code</th><th>Cpte Stock</th><th>Cpte Entrée</th><th>Cpte CMV</th></tr></thead>
+        <tbody>
+          @for (row of importRows; track $index; let i = $index) {
+            <tr>
+              <td class="text-muted">{{ i+1 }}</td>
+              <td style="font-weight:600">{{ row['Nom*'] || row['Nom'] }}</td>
+              <td>{{ row['Code'] || '—' }}</td>
+              <td class="mono">{{ row['Compte Stock (311xxx)'] || '311000' }}</td>
+              <td class="mono">{{ row['Compte Entrée Stock (603x)'] || '6031' }}</td>
+              <td class="mono">{{ row['Compte CMV (605xx)'] || '60500' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeImportModal()">Annuler</button>
+      <button class="btn-primary" (click)="confirmImport()">
+        <span class="material-icons">check_circle</span> Confirmer ({{ importRows.length }} catégories)
+      </button>
+    </div>
+  </div>
+}
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false"></div>
+  <div class="modal">
+    <div class="modal-header">
+      <h2>{{ editingId ? 'Modifier' : 'Nouvelle' }} catégorie</h2>
+      <button class="btn-close" (click)="showModal = false"><span class="material-icons">close</span></button>
+    </div>
+    <div class="modal-body">
+      @if (errorMsg) { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div> }
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>Nom <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="form.name" class="form-control" placeholder="Ex: Produits finis" />
+        </div>
+        <div class="form-group">
+          <label>Code</label>
+          <input type="text" [(ngModel)]="form.code" class="form-control" placeholder="PF" />
+        </div>
+        <div class="form-group">
+          <label>Compte stock OHADA</label>
+          <input type="text" [(ngModel)]="form.stockAccountCode" class="form-control" placeholder="311000" />
+        </div>
+        <div class="form-group">
+          <label>Compte variation stocks (achat)</label>
+          <input type="text" [(ngModel)]="form.stockInAccountCode" class="form-control" placeholder="6031" />
+        </div>
+        <div class="form-group">
+          <label>Compte coût des ventes</label>
+          <input type="text" [(ngModel)]="form.cogsAccountCode" class="form-control" placeholder="60500" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="showModal = false">Annuler</button>
+      <button class="btn-primary" (click)="save()" [disabled]="saving">
+        <span class="material-icons">save</span> {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
+      </button>
+    </div>
+  </div>
+}

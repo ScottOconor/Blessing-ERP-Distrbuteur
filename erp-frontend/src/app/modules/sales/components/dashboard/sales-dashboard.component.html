@@ -1,0 +1,138 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">dashboard</span>
+      Tableau de bord — Ventes
+    </h1>
+    <button class="btn-refresh" (click)="loadDashboard()" title="Actualiser">
+      <span class="material-icons" [class.spin]="loading">refresh</span>
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-overlay">
+      <span class="material-icons spin">refresh</span> Chargement...
+    </div>
+  }
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    @for (kpi of kpis; track kpi.label) {
+      <div class="kpi-card" [class.clickable]="!!kpi.route" (click)="navigateTo(kpi.route)">
+        <div class="kpi-icon" [style.background]="kpi.color + '18'" [style.color]="kpi.color">
+          <span class="material-icons">{{ kpi.icon }}</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value" [style.color]="kpi.color">{{ kpi.value }}</div>
+          <div class="kpi-label">{{ kpi.label }}</div>
+          @if (kpi.sub) { <div class="kpi-sub">{{ kpi.sub }}</div> }
+        </div>
+        @if (kpi.route) {
+          <span class="material-icons kpi-arrow">chevron_right</span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Stats bons & factures -->
+  <div class="stats-row">
+    <!-- Bons de commande par statut -->
+    <div class="card stats-card">
+      <div class="card-header">
+        <span class="material-icons">receipt</span>
+        Bons de commande par statut
+      </div>
+      <div class="stats-list">
+        @for (s of orderStats; track s.label) {
+          <div class="stat-item">
+            <div class="stat-dot" [style.background]="s.color"></div>
+            <span class="stat-label">{{ s.label }}</span>
+            <span class="stat-count" [style.color]="s.color">{{ s.count }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Factures par statut -->
+    <div class="card stats-card">
+      <div class="card-header">
+        <span class="material-icons">description</span>
+        Factures par statut
+      </div>
+      <div class="stats-list">
+        @for (s of invoiceStats; track s.label) {
+          <div class="stat-item">
+            <div class="stat-dot" [style.background]="s.color"></div>
+            <span class="stat-label">{{ s.label }}</span>
+            <div class="stat-right">
+              <span class="stat-count" [style.color]="s.color">{{ s.count }}</span>
+              @if (s.amount > 0) {
+                <span class="stat-amount">{{ s.amount | number:'1.0-0' }} F</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Dernières activités -->
+  <div class="activity-row">
+    <!-- Derniers bons -->
+    <div class="card activity-card">
+      <div class="card-header">
+        <span>Derniers bons de commande</span>
+        <button class="btn-link" (click)="navigateTo('/sales/orders')">Voir tout</button>
+      </div>
+      @if (recentOrders.length === 0) {
+        <div class="empty-activity">Aucun bon de commande</div>
+      } @else {
+        <table class="mini-table">
+          <thead>
+            <tr><th>Numéro</th><th>Client</th><th class="text-right">TTC</th><th>Statut</th></tr>
+          </thead>
+          <tbody>
+            @for (o of recentOrders; track o.id) {
+              <tr class="clickable-row" (click)="goToOrder(o.id)">
+                <td class="font-mono">{{ o.name }}</td>
+                <td>{{ o.partnerName }}</td>
+                <td class="text-right font-bold">{{ o.totalTTC | number:'1.0-0' }}</td>
+                <td><span [class]="getStateBadge(o.state || '')">{{ getStateLabel(o.state || '') }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!-- Dernières factures -->
+    <div class="card activity-card">
+      <div class="card-header">
+        <span>Dernières factures</span>
+        <button class="btn-link" (click)="navigateTo('/sales/invoices')">Voir tout</button>
+      </div>
+      @if (recentInvoices.length === 0) {
+        <div class="empty-activity">Aucune facture</div>
+      } @else {
+        <table class="mini-table">
+          <thead>
+            <tr><th>Numéro</th><th>Client</th><th class="text-right">TTC</th><th class="text-right">Reste</th><th>Statut</th></tr>
+          </thead>
+          <tbody>
+            @for (inv of recentInvoices; track inv.id) {
+              <tr class="clickable-row" (click)="goToInvoice(inv.id)">
+                <td class="font-mono">{{ inv.name }}</td>
+                <td>{{ inv.partnerName }}</td>
+                <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
+                <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
+                  {{ inv.montantDu | number:'1.0-0' }}
+                </td>
+                <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>

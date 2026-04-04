@@ -1,0 +1,87 @@
+<div class="welcome-page">
+  <!-- HEADER -->
+  <header class="welcome-header">
+    <div class="header-brand">
+      <div class="brand-icon">
+        <span class="material-icons">business</span>
+      </div>
+      <span class="brand-text">K.I.T</span>
+      <p>Saisir le moment, créer l'avenir !</p>
+    </div>
+
+    <div class="header-right">
+      <div class="user-info">
+        <div class="user-avatar">{{ userInitials }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ userName }}</span>
+          <span class="user-role">Administrateur</span>
+        </div>
+      </div>
+      <button class="btn-logout" (click)="logout()" title="Se déconnecter">
+        <span class="material-icons">logout</span>
+        Déconnexion
+      </button>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="welcome-hero">
+    <div class="hero-content">
+      <h1>{{ getGreeting() }}, <strong>{{ userName }}</strong>&nbsp;!</h1>
+      <p>Que souhaitez-vous faire aujourd'hui ?</p>
+      <div class="hero-date">
+        <span class="material-icons">calendar_today</span>
+        {{ currentDate | date:'EEEE d MMMM yyyy' }}
+      </div>
+    </div>
+    <div class="hero-illustration">
+      <span class="material-icons">dashboard</span>
+    </div>
+  </div>
+
+  <!-- MODULES GRID -->
+  <main class="welcome-main">
+    <section class="modules-section">
+      <div class="section-title">
+        <h2>📱 Applications disponibles</h2>
+        <p>Sélectionnez un module pour commencer</p>
+      </div>
+
+      <div class="modules-grid">
+        <div *ngFor="let module of modules" 
+             class="module-card"
+             [class.available]="module.available"
+             [class.disabled]="!module.available"
+             (click)="navigateTo(module)"
+             [style.--module-color]="module.color"
+             role="button"
+             [tabindex]="module.available ? 0 : -1">
+          
+          <div *ngIf="!module.available" class="soon-badge">Bientôt disponible</div>
+
+          <div class="module-icon-wrapper">
+            <div class="module-icon" [style.background-color]="module.color">
+              <span class="material-icons">{{ module.icon }}</span>
+            </div>
+          </div>
+
+          <div class="module-info">
+            <h3>{{ module.name }}</h3>
+            <p>{{ module.description }}</p>
+          </div>
+
+          <div *ngIf="module.available" class="module-arrow">
+            <span class="material-icons">arrow_forward</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="welcome-footer">
+    <h1>Kairos Innovation Technologies</h1>
+    <span>Saisir le Moment, Créer l'avenir !</span>
+    <p>ERP v1.0 &mdash; &copy; K.I.T &mdash; Tous droits réservés</p>
+  </footer>
+</div>

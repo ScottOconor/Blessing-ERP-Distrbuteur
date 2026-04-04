@@ -1,0 +1,170 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AccountingService } from '../../services/accounting.service';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { AccountJournal, AccountAccount } from '../../../../core/models/account.model';
+import { ImportResult } from '../../../../core/models/import-result.model';
+
+@Component({
+  selector: 'app-journals',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  templateUrl: './journals.component.html',
+  styleUrl: './journals.component.scss'
+})
+export class JournalsComponent implements OnInit {
+  journals: AccountJournal[] = [];
+  accounts: AccountAccount[] = [];
+  loading = false;
+  showModal = false;
+  editingJournal: AccountJournal | null = null;
+  saving = false;
+  successMsg = '';
+  errorMsg = '';
+  importing = false;
+
+  journalForm!: FormGroup;
+
+  journalTypes = [
+    { value: 'sale', label: 'Vente', icon: 'shopping_cart' },
+    { value: 'purchase', label: 'Achat', icon: 'local_shipping' },
+    { value: 'cash', label: 'Caisse', icon: 'payments' },
+    { value: 'bank', label: 'Banque', icon: 'account_balance' },
+    { value: 'general', label: 'Opérations diverses', icon: 'sync_alt' }
+  ];
+
+  constructor(
+    private accountingService: AccountingService,
+    private authService: AuthService,
+    private fb: FormBuilder
+  ) {}
+
+  ngOnInit(): void {
+    this.buildForm();
+    this.loadData();
+  }
+
+  buildForm(): void {
+    this.journalForm = this.fb.group({
+      code: ['', [Validators.required, Validators.maxLength(10)]],
+      name: ['', Validators.required],
+      type: ['general', Validators.required],
+      defaultDebitAccountId: [null],
+      defaultCreditAccountId: [null],
+      active: [true],
+      companyId: [this.authService.getCompanyId()]
+    });
+  }
+
+  loadData(): void {
+    this.loading = true;
+    const companyId = this.authService.getCompanyId();
+    this.accountingService.getJournals(companyId).subscribe({
+      next: (data) => { this.journals = data; this.loading = false; },
+      error: () => { this.loading = false; }
+    });
+    this.accountingService.getAccounts(companyId).subscribe({
+      next: (data) => this.accounts = data.filter(a => !a.deprecated),
+      error: () => {}
+    });
+  }
+
+  openCreate(): void {
+    this.editingJournal = null;
+    this.journalForm.reset({
+      code: '',
+      name: '',
+      type: 'general',
+      defaultDebitAccountId: null,
+      defaultCreditAccountId: null,
+      active: true,
+      companyId: this.authService.getCompanyId()
+    });
+    this.showModal = true;
+    this.errorMsg = '';
+  }
+
+  openEdit(journal: AccountJournal): void {
+    this.editingJournal = journal;
+    this.journalForm.patchValue(journal);
+    this.showModal = true;
+    this.errorMsg = '';
+  }
+
+  closeModal(): void {
+    this.showModal = false;
+    this.editingJournal = null;
+  }
+
+  saveJournal(): void {
+    if (this.journalForm.invalid) {
+      this.journalForm.markAllAsTouched();
+      return;
+    }
+    this.saving = true;
+    this.errorMsg = '';
+    const data = this.journalForm.value as AccountJournal;
+
+    const obs = this.editingJournal
+      ? this.accountingService.updateJournal(this.editingJournal.id!, data)
+      : this.accountingService.createJournal(data);
+
+    obs.subscribe({
+      next: () => {
+        this.saving = false;
+        this.closeModal();
+        this.loadData();
+        this.showSuccess(this.editingJournal ? 'Journal modifié' : 'Journal créé avec succès');
+      },
+      error: (err) => {
+        this.saving = false;
+        this.errorMsg = err.error?.message || 'Erreur lors de la sauvegarde';
+      }
+    });
+  }
+
+  getTypeBadgeClass(type: string): string {
+    const map: Record<string, string> = {
+      sale: 'badge-sale', purchase: 'badge-purchase',
+      cash: 'badge-cash', bank: 'badge-bank', general: 'badge-general'
+    };
+    return 'badge ' + (map[type] || 'badge-secondary');
+  }
+
+  getTypeLabel(type: string): string {
+    return this.journalTypes.find(t => t.value === type)?.label || type;
+  }
+
+  getAccountName(id?: number): string {
+    if (!id) return '-';
+    const acc = this.accounts.find(a => a.id === id);
+    return acc ? `${acc.code} - ${acc.name}` : String(id);
+  }
+
+  onImport(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.importing = true;
+    this.accountingService.importJournals(file, this.authService.getCompanyId()).subscribe({
+      next: (res: ImportResult) => {
+        this.importing = false;
+        (event.target as HTMLInputElement).value = '';
+        const msg = `Import terminé : ${res.created} créés, ${res.updated} mis à jour`;
+        this.showSuccess(msg);
+        if (res.errors.length > 0) this.errorMsg = res.errors.slice(0, 3).join(' | ');
+        this.loadData();
+      },
+      error: (err: any) => {
+        this.importing = false;
+        (event.target as HTMLInputElement).value = '';
+        this.errorMsg = err?.error?.message || 'Erreur lors de l\'import';
+      }
+    });
+  }
+
+  showSuccess(msg: string): void {
+    this.successMsg = msg;
+    setTimeout(() => this.successMsg = '', 5000);
+  }
+}
