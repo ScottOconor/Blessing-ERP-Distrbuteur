@@ -6,6 +6,8 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { AccountingService } from '../../../services/accounting.service';
 import { AccountJournal } from '../../../../../core/models/account.model';
 import { BalanceLine4Cols } from '../../../../../core/models/report.model';
+import { ExcelExportService } from '../../../../../core/services/excel-export.service';
+import { PdfExportService } from '../../../../../core/services/pdf-export.service';
 
 @Component({
   selector: 'app-general-balance4',
@@ -18,6 +20,7 @@ export class GeneralBalance4Component implements OnInit {
   journals: AccountJournal[] = [];
   selectedJournalIds: number[] = [];
   lines: BalanceLine4Cols[] = [];
+  totals: any = null;
   loading = false;
   generated = false;
   errorMsg = '';
@@ -29,7 +32,9 @@ export class GeneralBalance4Component implements OnInit {
   constructor(
     private reportService: ReportService,
     private accountingService: AccountingService,
-    private authService: AuthService
+    private authService: AuthService,
+    private excelExport: ExcelExportService,
+    private pdfExport: PdfExportService
   ) {}
 
   ngOnInit(): void {
@@ -57,6 +62,7 @@ export class GeneralBalance4Component implements OnInit {
     }).subscribe({
       next: (res) => {
         this.lines = res.lines || res || [];
+        this.totals = res.totals || null;
         this.loading = false;
         this.generated = true;
       },
@@ -67,13 +73,44 @@ export class GeneralBalance4Component implements OnInit {
     });
   }
 
+  today = new Date();
+
   get totalDebit(): number { return this.lines.reduce((s, l) => s + (l.debit || 0), 0); }
   get totalCredit(): number { return this.lines.reduce((s, l) => s + (l.credit || 0), 0); }
   get totalFinalDebit(): number { return this.lines.reduce((s, l) => s + (l.finalDebit || 0), 0); }
   get totalFinalCredit(): number { return this.lines.reduce((s, l) => s + (l.finalCredit || 0), 0); }
 
+  get isEquilibre(): boolean {
+    if (!this.totals) return true;
+    const bilanNet = (this.totals.bilanDebit || 0) - (this.totals.bilanCredit || 0);
+    const gestionNet = (this.totals.gestionDebit || 0) - (this.totals.gestionCredit || 0);
+    return Math.abs(bilanNet + gestionNet) <= 0.01;
+  }
+
   getAccountClass(code: string): string { return code ? code[0] : ''; }
   print(): void { window.print(); }
+
+  exportPdf(): void {
+    this.pdfExport.exportBalance4(
+      this.lines, this.totals,
+      this.totalDebit, this.totalCredit,
+      this.totalFinalDebit, this.totalFinalCredit,
+      this.dateFrom, this.dateTo
+    );
+  }
+
+  exportExcel(): void {
+    this.excelExport.exportBalance4(
+      this.lines, this.totals,
+      this.totalDebit, this.totalCredit,
+      this.totalFinalDebit, this.totalFinalCredit,
+      this.dateFrom, this.dateTo
+    );
+  }
+
+  onJournalChange(selectedOptions: any) {
+    this.selectedJournalIds = Array.from(selectedOptions).map((o: any) => +o.value);
+  }
 
   toggleJournal(id: number): void {
     const idx = this.selectedJournalIds.indexOf(id);

@@ -1,11 +1,19 @@
 <div class="page-container report-container">
+
   <div class="page-header no-print">
     <h1 class="page-title">
       <span class="material-icons">account_balance</span>
       Bilan OHADA
     </h1>
     @if (generated) {
-      <button class="btn btn-outline" (click)="print()"><span class="material-icons">print</span>Imprimer</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> Exporter PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Exporter Excel
+        </button>
+      </div>
     }
   </div>
 
@@ -18,118 +26,89 @@
       <div class="filter-actions">
         <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
           @if (loading) { <span class="spinner-sm"></span> }
-          <span class="material-icons">play_arrow</span>Générer
+          <span class="material-icons">play_arrow</span> Générer
         </button>
       </div>
     </div>
   </div>
 
   @if (errorMsg) {
-    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+    <div class="alert-error mb-3 no-print">
+      <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
   }
 
   @if (loading) {
-    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
   } @else if (generated) {
-    <div class="print-header print-only">
-      <h2>BILAN AU {{ dateTo | date:'dd MMMM yyyy':'':'fr' }}</h2>
-      <p>SYSCOHADA RÉVISÉ</p>
+
+    <div class="bilan-print-header">
+      <h2>BILAN AU {{ dateTo | date:'dd/MM/yyyy' }}</h2>
+      <div class="bilan-subtitle">SYSCOHADA RÉVISÉ</div>
+      <div class="bilan-printed">Imprimé le {{ today | date:'dd/MM/yyyy HH:mm' }}</div>
     </div>
 
-    <div class="bilan-container">
-      <!-- ACTIF -->
-      <div class="bilan-col">
-        <div class="bilan-col-header actif-header">
-          <span class="material-icons">trending_down</span>
-          ACTIF
-        </div>
-        <table class="table-erp bilan-table">
-          <thead>
-            <tr>
-              <th>Réf.</th>
-              <th>ACTIF</th>
-              <th class="text-right">Brut</th>
-              <th class="text-right">Amort./Dép.</th>
-              <th class="text-right">Net N</th>
-              <th class="text-right">Net N-1</th>
+    <div class="bilan-table-wrap">
+      <table class="bilan-full-table">
+        <thead>
+          <tr class="bilan-thead-main">
+            <th style="width:4%">REF</th>
+            <th style="width:21%">ACTIF</th>
+            <th class="text-right" style="width:8%">BRUT</th>
+            <th class="text-right" style="width:8%">AMORT.</th>
+            <th class="text-right" style="width:9%">NET N</th>
+            <th class="passif-start text-center" style="width:4%">REF</th>
+            <th style="width:28%">PASSIF</th>
+            <th class="text-right" style="width:18%">NET N</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of rowIndices; track i) {
+@let actif = actifRows[i];
+@let passif = passifRows[i];
+            <tr [class.bilan-row-header]="actif.isHeader || passif.isHeader"
+                [class.bilan-row-total]="actif.isTotal || passif.isTotal">
+              <td class="bilan-ref mono">{{ (!actif.isHeader && !actif.isEmpty) ? actif.ref : '' }}</td>
+              <td [class.bilan-section-label]="actif.isHeader" [class.bilan-total-label]="actif.isTotal">{{ actif.label }}</td>
+              <td class="text-right mono">
+                @if (!actif.isHeader && !actif.isEmpty && actif.brut !== 0) { {{ actif.brut | number:'1.0-0' }} }
+              </td>
+              <td class="text-right mono">
+                @if (!actif.isHeader && !actif.isEmpty && actif.amort !== 0) { {{ actif.amort | number:'1.0-0' }} }
+              </td>
+              <td class="text-right mono fw-bold">
+                @if (!actif.isHeader && !actif.isEmpty) {
+                  {{ actif.net !== 0 || actif.isTotal ? (actif.net | number:'1.0-0') : '' }}
+                }
+              </td>
+              <td class="passif-start bilan-ref mono">{{ (!passif.isHeader && !passif.isEmpty) ? passif.ref : '' }}</td>
+              <td [class.bilan-section-label]="passif.isHeader" [class.bilan-total-label]="passif.isTotal">{{ passif.label }}</td>
+              <td class="text-right mono fw-bold">
+                @if (!passif.isHeader && !passif.isEmpty) {
+                  {{ passif.net !== 0 || passif.isTotal ? (passif.net | number:'1.0-0') : '' }}
+                }
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            @for (section of actifSections; track section.label) {
-              <tr class="section-header">
-                <td colspan="6">{{ section.label }}</td>
-              </tr>
-              @for (line of section.lines; track line.code) {
-                <tr>
-                  <td class="mono fs-sm">{{ line.code }}</td>
-                  <td>{{ line.label }}</td>
-                  <td class="text-right">{{ line.brut | number:'1.2-2' }}</td>
-                  <td class="text-right text-danger">{{ line.amort > 0 ? '-' : '' }}{{ line.amort | number:'1.2-2' }}</td>
-                  <td class="text-right fw-semibold">{{ line.net | number:'1.2-2' }}</td>
-                  <td class="text-right text-muted">{{ line.netPrevious | number:'1.2-2' }}</td>
-                </tr>
-              }
-              <tr class="total-row">
-                <td colspan="2">Total {{ section.label }}</td>
-                <td></td><td></td>
-                <td class="text-right">{{ section.total | number:'1.2-2' }}</td>
-                <td></td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4">TOTAL ACTIF</td>
-              <td>{{ totalActif | number:'1.2-2' }}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="bilan-tfoot-total">
+            <td colspan="4" style="text-align:left;">BZ — TOTAL GÉNÉRAL ACTIF</td>
+            <td class="text-right mono">{{ totalActif | number:'1.0-0' }}</td>
+            <td class="passif-start" colspan="2" style="text-align:left;">BZ — TOTAL GÉNÉRAL PASSIF</td>
+            <td class="text-right mono">{{ totalPassif | number:'1.0-0' }}</td>
+          </tr>
+        </tfoot>
+      </table>
 
-      <!-- PASSIF -->
-      <div class="bilan-col">
-        <div class="bilan-col-header passif-header">
-          <span class="material-icons">trending_up</span>
-          PASSIF
-        </div>
-        <table class="table-erp bilan-table">
-          <thead>
-            <tr>
-              <th>Réf.</th>
-              <th>PASSIF</th>
-              <th class="text-right">Net N</th>
-              <th class="text-right">Net N-1</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (section of passifSections; track section.label) {
-              <tr class="section-header">
-                <td colspan="4">{{ section.label }}</td>
-              </tr>
-              @for (line of section.lines; track line.code) {
-                <tr>
-                  <td class="mono fs-sm">{{ line.code }}</td>
-                  <td>{{ line.label }}</td>
-                  <td class="text-right fw-semibold">{{ line.net | number:'1.2-2' }}</td>
-                  <td class="text-right text-muted">{{ line.netPrevious | number:'1.2-2' }}</td>
-                </tr>
-              }
-              <tr class="total-row">
-                <td colspan="2">Total {{ section.label }}</td>
-                <td class="text-right">{{ section.total | number:'1.2-2' }}</td>
-                <td></td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2">TOTAL PASSIF</td>
-              <td>{{ totalPassif | number:'1.2-2' }}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
+      <div [class]="isEquilibre ? 'bilan-equilibre ok' : 'bilan-equilibre warn'">
+        @if (isEquilibre) {
+          <span class="material-icons">check_circle</span>
+          <strong>✓ BILAN ÉQUILIBRÉ</strong> — Total Actif = Total Passif = {{ totalActif | number:'1.0-0' }} FCFA
+        } @else {
+          <span class="material-icons">warning</span>
+          <strong>⚠ BILAN DÉSÉQUILIBRÉ</strong> — Différence = {{ (totalActif - totalPassif) | number:'1.0-0' }} FCFA
+        }
       </div>
     </div>
   }

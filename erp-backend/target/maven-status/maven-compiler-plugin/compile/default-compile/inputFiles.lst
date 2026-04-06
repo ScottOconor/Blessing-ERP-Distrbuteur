@@ -24,6 +24,7 @@ C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\dt
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\repository\AnalyticLineRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\repository\StockMoveRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\entity\AnalyticDistributionItem.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\service\SalesStatsService.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\entity\Agency.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\entity\SalesOrderLine.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\entity\AnalyticAccount.java
@@ -36,6 +37,7 @@ C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\auth\dto
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\repository\AnalyticDistributionItemRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\entity\InvoicePayment.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\purchases\dto\PurchaseInvoicePaymentRequest.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesStatsResponse.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesOrderRequest.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\entity\Partner.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\entity\SalesInvoiceLine.java
@@ -54,8 +56,11 @@ C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounti
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\entity\SalesInvoice.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\dto\AnalyticAccountDTO.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\dto\PartnerBalanceLineDTO.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\controller\SalesStatsController.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesStatsLine.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\InvoicePaymentDTO.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\purchases\dto\PurchaseOrderRequest.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesStatsClient.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\dto\StockMoveDTO.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\purchases\dto\PurchaseOrderDTO.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesOrderDTO.java
@@ -67,6 +72,7 @@ C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\re
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesInvoiceRequest.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\auth\controller\AuthController.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\repository\ProductRepository.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\dto\SalesStatsRequest.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\auth\filter\JwtAuthFilter.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\dto\StockAdjustmentDTO.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\dto\AnalyticDistributionItemDTO.java
@@ -114,6 +120,7 @@ C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounti
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\service\StockService.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\auth\service\UserDetailsServiceImpl.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\dto\AccountAccountDTO.java
+C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\sales\repository\SalesInvoiceLineRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\accounting\repository\AccountJournalRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\repository\StockAdjustmentRepository.java
 C:\Users\K.I.T\OneDrive\Documents\ERP\erp-backend\src\main\java\com\erp\stock\entity\StockPicking.java

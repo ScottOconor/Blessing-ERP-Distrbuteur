@@ -1,20 +1,28 @@
 <div class="page-container report-container">
+
+  <!-- ===== HEADER (écran seulement) ===== -->
   <div class="page-header no-print">
     <h1 class="page-title">
       <span class="material-icons">table_chart</span>
       Balance Générale — 6 Colonnes
     </h1>
     @if (generated) {
-      <button class="btn btn-outline" (click)="print()">
-        <span class="material-icons">print</span>Imprimer
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> Exporter PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Exporter Excel
+        </button>
+      </div>
     }
   </div>
 
+  <!-- ===== FILTRES ===== -->
   <div class="report-header no-print">
     <div class="filters-bar" style="margin-bottom:0">
       <div class="filter-group">
-        <label>Du *</label>
+        <label>Période du *</label>
         <input type="date" class="form-control" [(ngModel)]="dateFrom">
       </div>
       <div class="filter-group">
@@ -22,10 +30,12 @@
         <input type="date" class="form-control" [(ngModel)]="dateTo">
       </div>
       <div class="filter-group" style="flex:1">
-        <label>Journaux</label>
-        <select class="form-control" multiple style="height:60px">
+        <label>Journaux (Ctrl+clic)</label>
+        <select class="form-control" multiple style="height:60px" #jSelect
+(change)="onJournalChange(jSelect.selectedOptions)"
+          >
           @for (j of journals; track j.id) {
-            <option [value]="j.id" (click)="toggleJournal(j.id!)">{{ j.code }} - {{ j.name }}</option>
+            <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
           }
         </select>
       </div>
@@ -39,74 +49,113 @@
       <div class="filter-actions">
         <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
           @if (loading) { <span class="spinner-sm"></span> }
-          <span class="material-icons">play_arrow</span>Générer
+          <span class="material-icons">play_arrow</span> Générer
         </button>
       </div>
     </div>
   </div>
 
   @if (errorMsg) {
-    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
+    <div class="alert-error mb-3 no-print">
+      <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
   }
 
   @if (loading) {
-    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
   } @else if (generated) {
+
+    <!-- ===== EN-TÊTE D'IMPRESSION ===== -->
+    <div class="rpt-print-header">
+      <h2>Balance Générale à 6 Colonnes</h2>
+      <div class="rpt-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
+      <div class="rpt-printed">Imprimé le {{ today | date:'dd/MM/yyyy HH:mm' }}</div>
+    </div>
+
     @if (lines.length === 0) {
-      <div class="empty-state">
+      <div class="empty-state no-print">
         <span class="material-icons">table_chart</span>
         <h3>Aucune donnée</h3>
+        <p>Aucun mouvement pour cette période.</p>
       </div>
     } @else {
-      <div class="table-container" style="overflow-x:auto">
-        <div class="report-title-bar">
-          <h3>Balance Générale 6 Colonnes — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</h3>
-          <span class="report-period">{{ lines.length }} compte(s)</span>
-        </div>
-        <table class="table-erp">
+      <div class="rpt-table-wrap">
+        <table class="rpt-table">
           <thead>
-            <tr>
-              <th rowspan="2">Code</th>
-              <th rowspan="2">Intitulé</th>
-              <th colspan="2" class="text-center" style="background:#e8f4fd">Soldes Initiaux</th>
-              <th colspan="2" class="text-center" style="background:#e8f5e9">Mouvements</th>
-              <th colspan="2" class="text-center" style="background:#f3e5f5">Soldes Finaux</th>
+            <tr class="rpt-thead-group">
+              <th rowspan="2" style="width:10%">N°Compte</th>
+              <th rowspan="2" style="width:26%">Libellé du Compte</th>
+              <th colspan="2" style="width:21%;text-align:center">Soldes Initiaux</th>
+              <th colspan="2" style="width:21%;text-align:center">Mouvements Période</th>
+              <th colspan="2" style="width:22%;text-align:center">Soldes Finaux</th>
             </tr>
-            <tr>
-              <th class="text-right" style="background:#e8f4fd">Débit</th>
-              <th class="text-right" style="background:#e8f4fd">Crédit</th>
-              <th class="text-right" style="background:#e8f5e9">Débit</th>
-              <th class="text-right" style="background:#e8f5e9">Crédit</th>
-              <th class="text-right" style="background:#f3e5f5">Débit</th>
-              <th class="text-right" style="background:#f3e5f5">Crédit</th>
+            <tr class="rpt-thead-sub">
+              <th class="text-right">Débit</th>
+              <th class="text-right">Crédit</th>
+              <th class="text-right">Débit</th>
+              <th class="text-right">Crédit</th>
+              <th class="text-right">Débiteur</th>
+              <th class="text-right">Créditeur</th>
             </tr>
           </thead>
           <tbody>
             @for (line of lines; track line.accountCode) {
-              <tr [class]="'account-class-' + getAccountClass(line.accountCode)">
+              <tr>
                 <td><strong class="mono">{{ line.accountCode }}</strong></td>
                 <td>{{ line.accountName }}</td>
-                <td class="text-right">{{ line.initialDebit > 0 ? (line.initialDebit | number:'1.2-2') : '' }}</td>
-                <td class="text-right">{{ line.initialCredit > 0 ? (line.initialCredit | number:'1.2-2') : '' }}</td>
-                <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
-                <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
-                <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
-                <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.initialDebit > 0 ? (line.initialDebit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.initialCredit > 0 ? (line.initialCredit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
               </tr>
             }
           </tbody>
           <tfoot>
-            <tr>
-              <td colspan="2">TOTAL GÉNÉRAL</td>
-              <td>{{ totals.initD | number:'1.2-2' }}</td>
-              <td>{{ totals.initC | number:'1.2-2' }}</td>
-              <td>{{ totals.mvtD | number:'1.2-2' }}</td>
-              <td>{{ totals.mvtC | number:'1.2-2' }}</td>
-              <td>{{ totals.finD | number:'1.2-2' }}</td>
-              <td>{{ totals.finC | number:'1.2-2' }}</td>
+            <!-- Totaux comptes de bilan -->
+            <tr class="rpt-tfoot-bilan">
+              <td colspan="2">Totaux comptes de bilan</td>
+              <td class="text-right mono">{{ bilanTotals.initD > 0 ? (bilanTotals.initD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ bilanTotals.initC > 0 ? (bilanTotals.initC | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ bilanTotals.mvtD > 0 ? (bilanTotals.mvtD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ bilanTotals.mvtC > 0 ? (bilanTotals.mvtC | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ bilanTotals.finD > 0 ? (bilanTotals.finD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ bilanTotals.finC > 0 ? (bilanTotals.finC | number:'1.2-2') : '—' }}</td>
+            </tr>
+            <!-- Totaux comptes de gestion -->
+            <tr class="rpt-tfoot-gestion">
+              <td colspan="2">Totaux comptes de gestion</td>
+              <td class="text-right mono">{{ gestionTotals.initD > 0 ? (gestionTotals.initD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ gestionTotals.initC > 0 ? (gestionTotals.initC | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ gestionTotals.mvtD > 0 ? (gestionTotals.mvtD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ gestionTotals.mvtC > 0 ? (gestionTotals.mvtC | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ gestionTotals.finD > 0 ? (gestionTotals.finD | number:'1.2-2') : '—' }}</td>
+              <td class="text-right mono">{{ gestionTotals.finC > 0 ? (gestionTotals.finC | number:'1.2-2') : '—' }}</td>
+            </tr>
+            <!-- Totaux de la balance -->
+            <tr class="rpt-tfoot-total">
+              <td colspan="2">Totaux de la balance</td>
+              <td class="text-right mono">{{ totals.initD | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.initC | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.mvtD | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.mvtC | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.finD | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.finC | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
+
+        <!-- Message d'équilibre -->
+        <div [class]="isEquilibre ? 'rpt-equilibre ok' : 'rpt-equilibre warn'">
+          @if (isEquilibre) {
+            <span class="material-icons">check_circle</span>
+            <strong>✓ Balance équilibrée</strong> — Les mouvements nets de bilan et de gestion s'équilibrent correctement.
+          } @else {
+            <span class="material-icons">warning</span>
+            <strong>⚠ Déséquilibre détecté</strong> — Les totaux nets de bilan et gestion ne s'équilibrent pas sur la période.
+          }
+        </div>
       </div>
     }
   }

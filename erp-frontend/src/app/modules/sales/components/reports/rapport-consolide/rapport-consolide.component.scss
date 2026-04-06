@@ -1,0 +1,10 @@
+@use '../sales-report-shared' as *;
+
+// Extra column for consolidé
+.remise-col {
+  color: #e65100;
+}
+
+.consolide-table tbody .srpt-line td.remise-col {
+  color: #e65100;
+}

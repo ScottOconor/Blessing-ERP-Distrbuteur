@@ -6,6 +6,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../services/accounting.service';
 import { GrandLivreAccount } from '../../../../core/models/report.model';
 import { AccountAccount } from '../../../../core/models/account.model';
+import { ExcelExportService } from '../../../../core/services/excel-export.service';
+import { PdfExportService } from '../../../../core/services/pdf-export.service';
 
 @Component({
   selector: 'app-grand-livre',
@@ -21,6 +23,7 @@ export class GrandLivreComponent implements OnInit {
   loading = false;
   generated = false;
   errorMsg = '';
+  today = new Date();
 
   dateFrom = '';
   dateTo = '';
@@ -28,7 +31,9 @@ export class GrandLivreComponent implements OnInit {
   constructor(
     private reportService: ReportService,
     private accountingService: AccountingService,
-    private authService: AuthService
+    private authService: AuthService,
+    private excelExport: ExcelExportService,
+    private pdfExport: PdfExportService
   ) {}
 
   ngOnInit(): void {
@@ -54,7 +59,25 @@ export class GrandLivreComponent implements OnInit {
       accountIds: this.selectedAccountIds.length > 0 ? this.selectedAccountIds : undefined
     }).subscribe({
       next: (res) => {
-        this.data = res.accounts || res || [];
+        // Backend returns {accounts: {"101": {...}}} — convert to array
+        const raw = res.accounts || res || {};
+        this.data = Object.values(raw).map((a: any) => ({
+          accountCode: a.accountCode,
+          accountName: a.accountName,
+          totalDebit: a.totalDebit,
+          totalCredit: a.totalCredit,
+          finalBalance: a.finalBalance,
+          lines: (a.lines || []).map((l: any) => ({
+            date: l.date,
+            moveRef: l.pieceName || l.ref || '',
+            journalCode: l.journal || '',
+            label: l.libelle || l.name || '',
+            partner: l.partner || '',
+            debit: l.debit,
+            credit: l.credit,
+            balance: l.balance
+          }))
+        }));
         this.loading = false;
         this.generated = true;
       },
@@ -65,8 +88,18 @@ export class GrandLivreComponent implements OnInit {
     });
   }
 
-  print(): void {
-    window.print();
+  print(): void { window.print(); }
+
+  exportPdf(): void {
+    this.pdfExport.exportGrandLivre(this.data, this.dateFrom, this.dateTo);
+  }
+
+  exportExcel(): void {
+    this.excelExport.exportGrandLivre(this.data, this.dateFrom, this.dateTo);
+  }
+
+  onAccountChange(selectedOptions: any) {
+    this.selectedAccountIds = Array.from(selectedOptions).map((o: any) => +o.value);
   }
 
   toggleAccount(id: number): void {

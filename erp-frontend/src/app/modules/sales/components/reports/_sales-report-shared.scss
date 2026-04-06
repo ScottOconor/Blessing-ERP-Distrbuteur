@@ -1,0 +1,165 @@
+// ===== Shared styles for Sales Reports (État Commercial + Rapport Consolidé) =====
+
+.mono { font-family: 'Courier New', monospace; }
+.text-right { text-align: right; font-variant-numeric: tabular-nums; }
+.text-center { text-align: center; }
+
+.alert-error {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; background: #f8d7da; border: 1px solid #f5c6cb;
+  border-radius: 8px; color: #721c24; font-size: 13px;
+  .material-icons { font-size: 18px; }
+}
+
+.spinner-sm {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== PRINT HEADER ===== */
+.srpt-print-header {
+  display: none;
+  text-align: center;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #333;
+
+  h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .srpt-period {
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 2px;
+  }
+
+  .srpt-meta {
+    font-size: 10px;
+    color: #777;
+  }
+}
+
+/* ===== TABLE ===== */
+.srpt-table-wrap { overflow-x: auto; }
+
+.srpt-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 12px;
+  border: 1px solid #dee2e6;
+
+  th, td {
+    padding: 6px 10px;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+  }
+
+  thead .srpt-thead th {
+    background-color: #017E84;
+    color: white;
+    font-weight: 600;
+    font-size: 11px;
+    text-align: left;
+    &.text-right { text-align: right; }
+  }
+
+  tbody {
+    .srpt-client-header td {
+      background-color: #e8f4f4 !important;
+      font-weight: 700;
+      color: #017E84;
+      font-size: 12px;
+      border-top: 2px solid #017E84;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .material-icons { font-size: 16px; vertical-align: middle; }
+      .srpt-ref { font-weight: 400; font-size: 11px; color: #6c757d; }
+    }
+
+    // Fix: table row flex doesn't apply — use regular td
+    tr.srpt-client-header td {
+      display: table-cell;
+    }
+
+    .srpt-line {
+      &:nth-child(even) { background-color: #fafafa; }
+      &:hover { background-color: #f0fbfb; }
+
+      td { color: #212529; }
+      td.text-right { text-align: right; }
+    }
+
+    .srpt-client-subtotal td {
+      background-color: #e0f7fa !important;
+      font-weight: 600;
+      border-top: 1px solid #00acc1;
+      font-size: 11px;
+      color: #006064;
+      &:first-child { text-align: left; }
+      &.text-right { text-align: right; }
+    }
+  }
+
+  tfoot .srpt-grand-total td {
+    background-color: #017E84 !important;
+    color: white !important;
+    font-weight: 700;
+    border-top: 2px solid #015f64;
+    font-size: 12px;
+    &:first-child { text-align: left; }
+    &.text-right { text-align: right; }
+  }
+}
+
+/* ===== PRINT ===== */
+@media print {
+  .no-print { display: none !important; }
+  .srpt-print-header { display: block !important; }
+
+  .srpt-table {
+    font-size: 8px;
+
+    th, td { padding: 3px 5px; }
+
+    thead .srpt-thead th {
+      background-color: #017E84 !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    tbody {
+      .srpt-client-header td {
+        background-color: #e8f4f4 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        border-top: 2px solid #017E84 !important;
+      }
+
+      .srpt-client-subtotal td {
+        background-color: #e0f7fa !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+
+    tfoot .srpt-grand-total td {
+      background-color: #017E84 !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+}

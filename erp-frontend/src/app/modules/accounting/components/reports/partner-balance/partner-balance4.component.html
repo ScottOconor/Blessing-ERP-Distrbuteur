@@ -5,7 +5,10 @@
       Balance des Tiers — 4 Colonnes
     </h1>
     @if (generated) {
-      <button class="btn btn-outline" (click)="print()"><span class="material-icons">print</span>Imprimer</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()"><span class="material-icons">picture_as_pdf</span> Exporter PDF</button>
+        <button class="btn btn-outline" (click)="exportExcel()"><span class="material-icons">table_view</span> Exporter Excel</button>
+      </div>
     }
   </div>
 

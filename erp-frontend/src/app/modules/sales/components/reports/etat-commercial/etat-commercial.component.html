@@ -1,0 +1,122 @@
+<div class="page-container report-container">
+
+  <!-- ===== HEADER ===== -->
+  <div class="page-header no-print">
+    <h1 class="page-title">
+      <span class="material-icons">table_chart</span>
+      État Commercial — Statistiques de Ventes
+    </h1>
+    @if (generated) {
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> Exporter PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Exporter Excel
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ===== FILTRES ===== -->
+  <div class="report-header no-print">
+    <div class="filters-bar" style="margin-bottom:0">
+      <div class="filter-group">
+        <label>Période du *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>Au *</label>
+        <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="spinner-sm"></span> }
+          <span class="material-icons">play_arrow</span> Générer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error mb-3 no-print">
+      <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
+  }
+
+  @if (loading) {
+    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
+  } @else if (generated && data) {
+
+    <!-- ===== EN-TÊTE IMPRESSION ===== -->
+    <div class="srpt-print-header">
+      <h2>ÉTAT COMMERCIAL — STATISTIQUES DE VENTES</h2>
+      <div class="srpt-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
+      <div class="srpt-meta">
+        {{ data.totalInvoices }} facture(s) &nbsp;|&nbsp;
+        Imprimé le {{ today | date:'dd/MM/yyyy HH:mm' }}
+      </div>
+    </div>
+
+    @if (data.clients.length === 0) {
+      <div class="empty-state no-print">
+        <span class="material-icons">table_chart</span>
+        <h3>Aucune donnée</h3>
+        <p>Aucune vente enregistrée pour cette période.</p>
+      </div>
+    } @else {
+      <div class="srpt-table-wrap">
+        <table class="srpt-table">
+          <thead>
+            <tr class="srpt-thead">
+              <th style="width:12%">Code</th>
+              <th style="width:44%">Désignation</th>
+              <th class="text-right" style="width:11%">Quantité</th>
+              <th class="text-right" style="width:16%">CA HT</th>
+              <th class="text-right" style="width:17%">CA TTC</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (client of data.clients; track client.clientName) {
+              <!-- CLIENT HEADER -->
+              <tr class="srpt-client-header">
+                <td colspan="5">
+                  <span class="material-icons">person</span>
+                  {{ client.clientName }}
+                  @if (client.clientRef) { <span class="srpt-ref">[{{ client.clientRef }}]</span> }
+                </td>
+              </tr>
+
+              <!-- PRODUCT LINES -->
+              @for (line of client.lines; track $index) {
+                <tr class="srpt-line">
+                  <td class="mono">{{ line.productCode || '' }}</td>
+                  <td>{{ line.productName }}</td>
+                  <td class="text-right mono">{{ line.qty | number:'1.2-2' }}</td>
+                  <td class="text-right mono">{{ line.montantHT | number:'1.2-2' }}</td>
+                  <td class="text-right mono">{{ line.montantTTC | number:'1.2-2' }}</td>
+                </tr>
+              }
+
+              <!-- CLIENT SUBTOTAL -->
+              <tr class="srpt-client-subtotal">
+                <td colspan="2">Sous-total {{ client.clientName }}</td>
+                <td class="text-right mono">{{ client.totalQty | number:'1.2-2' }}</td>
+                <td class="text-right mono">{{ client.totalHT | number:'1.2-2' }}</td>
+                <td class="text-right mono">{{ client.totalTTC | number:'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="srpt-grand-total">
+              <td colspan="2">TOTAL GÉNÉRAL — {{ data.totalInvoices }} facture(s)</td>
+              <td class="text-right mono">{{ data.grandTotalQty | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ data.grandTotalHT | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ data.grandTotalTTC | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+</div>

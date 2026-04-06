@@ -114,6 +114,38 @@ export interface SalesClient {
   receivableAccountCode?: string;
 }
 
+// ===== Sales Stats =====
+export interface SalesStatsLine {
+  productCode?: string;
+  productName?: string;
+  qty: number;
+  prixMoyen: number;
+  montantHT: number;
+  montantTTC: number;
+  remise: number;
+}
+
+export interface SalesStatsClient {
+  clientName: string;
+  clientRef?: string;
+  lines: SalesStatsLine[];
+  totalQty: number;
+  totalHT: number;
+  totalTTC: number;
+  totalRemise: number;
+}
+
+export interface SalesStatsResponse {
+  dateFrom: string;
+  dateTo: string;
+  clients: SalesStatsClient[];
+  grandTotalQty: number;
+  grandTotalHT: number;
+  grandTotalTTC: number;
+  grandTotalRemise: number;
+  totalInvoices: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SalesService {
   private apiUrl = `http://${window.location.hostname}:8080/api/sales`;
@@ -196,5 +228,14 @@ export class SalesService {
   }
   updateClient(id: number, client: SalesClient): Observable<SalesClient> {
     return this.http.put<SalesClient>(`${this.apiUrl}/clients/${id}`, client);
+  }
+
+  // Stats Reports
+  getEtatCommercial(req: { dateFrom: string; dateTo: string; companyId: number }): Observable<SalesStatsResponse> {
+    return this.http.post<SalesStatsResponse>(`${this.apiUrl}/stats/etat-commercial`, req);
+  }
+
+  getRapportConsolide(req: { dateFrom: string; dateTo: string; companyId: number }): Observable<SalesStatsResponse> {
+    return this.http.post<SalesStatsResponse>(`${this.apiUrl}/stats/rapport-consolide`, req);
   }
 }

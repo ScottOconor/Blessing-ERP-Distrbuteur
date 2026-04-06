@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../../services/report.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { CompteResultatLine } from '../../../../../core/models/report.model';
+import { ExcelExportService } from '../../../../../core/services/excel-export.service';
+import { PdfExportService } from '../../../../../core/services/pdf-export.service';
 
 @Component({
   selector: 'app-profit-loss',
@@ -18,11 +20,14 @@ export class ProfitLossComponent implements OnInit {
   errorMsg = '';
   dateFrom = '';
   dateTo = '';
+  today = new Date();
   lines: CompteResultatLine[] = [];
 
   constructor(
     private reportService: ReportService,
-    private authService: AuthService
+    private authService: AuthService,
+    private excelExport: ExcelExportService,
+    private pdfExport: PdfExportService
   ) {}
 
   ngOnInit(): void {
@@ -39,7 +44,14 @@ export class ProfitLossComponent implements OnInit {
       companyId: this.authService.getCompanyId()
     }).subscribe({
       next: (res) => {
-        this.lines = res.lines || res || [];
+        // Backend returns { rubriques: { TA: {code, label, amount}, ... }, totals: {...} }
+        const rubriques = res.rubriques || {};
+        this.lines = Object.values(rubriques).map((r: any) => ({
+          code: r.code || '',
+          label: r.label || '',
+          current: Number(r.amount) || 0,
+          isTotal: !!(r.code && r.code.startsWith('X'))
+        }));
         this.loading = false;
         this.generated = true;
       },
@@ -48,6 +60,14 @@ export class ProfitLossComponent implements OnInit {
   }
 
   print(): void { window.print(); }
+
+  exportPdf(): void {
+    this.pdfExport.exportCompteResultat(this.lines, this.dateFrom, this.dateTo);
+  }
+
+  exportExcel(): void {
+    this.excelExport.exportCompteResultat(this.lines, this.dateFrom, this.dateTo);
+  }
 
   get resultNet(): number {
     const lastTotal = [...this.lines].reverse().find(l => l.isTotal);

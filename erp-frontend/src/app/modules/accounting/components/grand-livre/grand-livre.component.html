@@ -1,14 +1,18 @@
 <div class="page-container">
-  <div class="page-header">
+  <div class="page-header no-print">
     <h1 class="page-title">
       <span class="material-icons">menu_book</span>
       Grand Livre
     </h1>
     @if (generated) {
-      <div class="page-actions no-print">
-        <button class="btn btn-outline" (click)="print()">
-          <span class="material-icons">print</span>
-          Imprimer / Export
+      <div class="page-actions" style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span>
+          Exporter PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportExcel()">
+          <span class="material-icons">table_view</span>
+          Exporter Excel
         </button>
       </div>
     }
@@ -25,14 +29,12 @@
       <input type="date" class="form-control" [(ngModel)]="dateTo">
     </div>
     <div class="filter-group" style="flex:1">
-      <label>Comptes (optionnel)</label>
-      <select class="form-control" multiple style="height:60px"
-        (change)="selectedAccountIds = []">
-        <option value="" disabled>Tous les comptes</option>
+      <label>Comptes (optionnel, Ctrl+clic)</label>
+      <select class="form-control" multiple style="height:80px" #accountSelect
+(change)="onAccountChange(accountSelect.selectedOptions)"
+        >
         @for (acc of accounts; track acc.id) {
-              <option [value]="acc.id" (change)="toggleAccount(acc.id!)">
-            {{ acc.code }} - {{ acc.name }}
-          </option>
+          <option [value]="acc.id">{{ acc.code }} - {{ acc.name }}</option>
         }
       </select>
     </div>
@@ -46,8 +48,16 @@
   </div>
 
   @if (errorMsg) {
-    <div class="alert-error mb-3">
+    <div class="alert-error mb-3 no-print">
       <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
+  }
+
+  <!-- PRINT HEADER -->
+  @if (generated) {
+    <div class="gl-print-header">
+      <h2>Grand Livre</h2>
+      <div class="gl-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
     </div>
   }
 

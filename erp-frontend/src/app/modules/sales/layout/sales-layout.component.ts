@@ -37,7 +37,16 @@ export class SalesLayoutComponent implements OnInit {
       ]
     },
     { id: 'clients', label: 'Clients', icon: 'people', route: '/sales/clients' },
-    { id: 'reports', label: 'Statistiques', icon: 'bar_chart', route: '/sales/reports' }
+    {
+      id: 'reports',
+      label: 'Rapports',
+      icon: 'assessment',
+      children: [
+        { label: 'Tableau de bord', icon: 'bar_chart', route: '/sales/reports' },
+        { label: 'État Commercial', icon: 'table_chart', route: '/sales/reports/etat-commercial' },
+        { label: 'Rapport Consolidé', icon: 'summarize', route: '/sales/reports/rapport-consolide' }
+      ]
+    }
   ];
 
   constructor(private authService: AuthService, private router: Router) {}

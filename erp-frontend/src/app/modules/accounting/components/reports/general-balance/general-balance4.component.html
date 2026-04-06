@@ -1,18 +1,24 @@
 <div class="page-container report-container">
+
+  <!-- ===== HEADER (écran seulement) ===== -->
   <div class="page-header no-print">
     <h1 class="page-title">
       <span class="material-icons">table_chart</span>
       Balance Générale — 4 Colonnes
     </h1>
     @if (generated) {
-      <button class="btn btn-outline" (click)="print()">
-        <span class="material-icons">print</span>
-        Imprimer
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> Exporter PDF
+        </button>
+        <button class="btn btn-outline" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Exporter Excel
+        </button>
+      </div>
     }
   </div>
 
-  <!-- FILTERS -->
+  <!-- ===== FILTRES ===== -->
   <div class="report-header no-print">
     <div class="filters-bar" style="margin-bottom:0">
       <div class="filter-group">
@@ -24,12 +30,12 @@
         <input type="date" class="form-control" [(ngModel)]="dateTo">
       </div>
       <div class="filter-group" style="flex:1">
-        <label>Journaux (optionnel)</label>
-        <select class="form-control" multiple style="height:60px">
+        <label>Journaux (Ctrl+clic)</label>
+        <select class="form-control" multiple style="height:60px" #jSelect
+(change)="onJournalChange(jSelect.selectedOptions)"
+          >
           @for (j of journals; track j.id) {
-            <option [value]="j.id" (click)="toggleJournal(j.id!)">
-              {{ j.code }} - {{ j.name }}
-            </option>
+            <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
           }
         </select>
       </div>
@@ -43,73 +49,104 @@
       <div class="filter-actions">
         <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
           @if (loading) { <span class="spinner-sm"></span> }
-          <span class="material-icons">play_arrow</span>
-          Générer
+          <span class="material-icons">play_arrow</span> Générer
         </button>
       </div>
     </div>
   </div>
 
   @if (errorMsg) {
-    <div class="alert-error mb-3">
+    <div class="alert-error mb-3 no-print">
       <span class="material-icons">error_outline</span>{{ errorMsg }}
     </div>
   }
 
   @if (loading) {
-    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
   } @else if (generated) {
-    <!-- PRINT HEADER -->
-    <div class="print-only print-report-title">
-      <h2>Balance Générale — 4 Colonnes</h2>
-      <p>Période: {{ dateFrom }} au {{ dateTo }}</p>
+
+    <!-- ===== EN-TÊTE D'IMPRESSION ===== -->
+    <div class="rpt-print-header">
+      <h2>Balance Générale à 4 Colonnes</h2>
+      <div class="rpt-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
+      <div class="rpt-printed">Imprimé le {{ today | date:'dd/MM/yyyy HH:mm' }}</div>
     </div>
 
     @if (lines.length === 0) {
-      <div class="empty-state">
+      <div class="empty-state no-print">
         <span class="material-icons">table_chart</span>
         <h3>Aucune donnée</h3>
         <p>Aucun mouvement pour cette période.</p>
       </div>
     } @else {
-      <div class="table-container">
-        <div class="report-title-bar">
-          <h3>Balance Générale — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</h3>
-          <span class="report-period">{{ lines.length }} compte(s)</span>
-        </div>
-        <table class="table-erp">
+      <div class="rpt-table-wrap">
+        <table class="rpt-table">
           <thead>
-            <tr>
-              <th>Code</th>
-              <th>Intitulé du compte</th>
-              <th class="text-right">Mouvements Débit</th>
-              <th class="text-right">Mouvements Crédit</th>
-              <th class="text-right">Solde Débiteur</th>
-              <th class="text-right">Solde Créditeur</th>
+            <tr class="rpt-thead-group">
+              <th rowspan="2" style="width:10%">N°Compte</th>
+              <th rowspan="2" style="width:34%">Libellé du Compte</th>
+              <th colspan="2" style="width:28%;text-align:center">Mouvements Période</th>
+              <th colspan="2" style="width:28%;text-align:center">Soldes Finaux</th>
+            </tr>
+            <tr class="rpt-thead-sub">
+              <th class="text-right">Débit</th>
+              <th class="text-right">Crédit</th>
+              <th class="text-right">Débiteur</th>
+              <th class="text-right">Créditeur</th>
             </tr>
           </thead>
           <tbody>
             @for (line of lines; track line.accountCode) {
-              <tr [class]="'account-class-' + getAccountClass(line.accountCode)">
+              <tr>
                 <td><strong class="mono">{{ line.accountCode }}</strong></td>
                 <td>{{ line.accountName }}</td>
-                <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
-                <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
-                <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
-                <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                <td class="text-right mono">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
               </tr>
             }
           </tbody>
           <tfoot>
-            <tr>
-              <td colspan="2">TOTAL GÉNÉRAL</td>
-              <td>{{ totalDebit | number:'1.2-2' }}</td>
-              <td>{{ totalCredit | number:'1.2-2' }}</td>
-              <td>{{ totalFinalDebit | number:'1.2-2' }}</td>
-              <td>{{ totalFinalCredit | number:'1.2-2' }}</td>
+            <!-- Totaux comptes de bilan -->
+            <tr class="rpt-tfoot-bilan">
+              <td colspan="2">Totaux comptes de bilan</td>
+              <td class="text-right mono">{{ (totals?.bilanDebit > 0 ? (totals.bilanDebit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.bilanCredit > 0 ? (totals.bilanCredit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.bilanFinalDebit > 0 ? (totals.bilanFinalDebit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.bilanFinalCredit > 0 ? (totals.bilanFinalCredit | number:'1.2-2') : '—') }}</td>
+            </tr>
+            <!-- Totaux comptes de gestion -->
+            <tr class="rpt-tfoot-gestion">
+              <td colspan="2">Totaux comptes de gestion</td>
+              <td class="text-right mono">{{ (totals?.gestionDebit > 0 ? (totals.gestionDebit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.gestionCredit > 0 ? (totals.gestionCredit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.gestionFinalDebit > 0 ? (totals.gestionFinalDebit | number:'1.2-2') : '—') }}</td>
+              <td class="text-right mono">{{ (totals?.gestionFinalCredit > 0 ? (totals.gestionFinalCredit | number:'1.2-2') : '—') }}</td>
+            </tr>
+            <!-- Totaux de la balance -->
+            <tr class="rpt-tfoot-total">
+              <td colspan="2">Totaux de la balance</td>
+              <td class="text-right mono">{{ totalDebit | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totalCredit | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totalFinalDebit | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totalFinalCredit | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>
+
+        <!-- Message d'équilibre -->
+        @if (totals) {
+          <div [class]="isEquilibre ? 'rpt-equilibre ok' : 'rpt-equilibre warn'">
+            @if (isEquilibre) {
+              <span class="material-icons">check_circle</span>
+              <strong>✓ Balance équilibrée</strong> — Les mouvements nets de bilan et de gestion s'équilibrent correctement.
+            } @else {
+              <span class="material-icons">warning</span>
+              <strong>⚠ Déséquilibre détecté</strong> — Les totaux nets de bilan et gestion ne s'équilibrent pas sur la période.
+            }
+          </div>
+        }
       </div>
     }
   }

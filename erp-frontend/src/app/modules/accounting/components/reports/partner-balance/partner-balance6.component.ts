@@ -6,6 +6,8 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { AccountingService } from '../../../services/accounting.service';
 import { AccountJournal } from '../../../../../core/models/account.model';
 import { PartnerBalanceLine } from '../../../../../core/models/report.model';
+import { ExcelExportService } from '../../../../../core/services/excel-export.service';
+import { PdfExportService } from '../../../../../core/services/pdf-export.service';
 
 @Component({
   selector: 'app-partner-balance6',
@@ -28,7 +30,9 @@ export class PartnerBalance6Component implements OnInit {
   constructor(
     private reportService: ReportService,
     private accountingService: AccountingService,
-    private authService: AuthService
+    private authService: AuthService,
+    private excelExport: ExcelExportService,
+    private pdfExport: PdfExportService
   ) {}
 
   ngOnInit(): void {
@@ -69,4 +73,12 @@ export class PartnerBalance6Component implements OnInit {
   }
 
   print(): void { window.print(); }
+
+  exportPdf(): void {
+    this.pdfExport.exportPartnerBalance6(this.lines, this.dateFrom, this.dateTo);
+  }
+
+  exportExcel(): void {
+    this.excelExport.exportPartnerBalance6(this.lines, this.dateFrom, this.dateTo);
+  }
 }
