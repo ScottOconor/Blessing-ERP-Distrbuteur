@@ -8,4 +8,8 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
     List<Warehouse> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
     List<Warehouse> findByCompanyIdOrderByNameAsc(Long companyId);
     boolean existsByCodeAndCompanyId(String code, Long companyId);
+
+    default List<Warehouse> findByCompanyIdAndActiveTrue(Long companyId) {
+        return findByCompanyIdAndActiveOrderByNameAsc(companyId, true);
+    }
 }

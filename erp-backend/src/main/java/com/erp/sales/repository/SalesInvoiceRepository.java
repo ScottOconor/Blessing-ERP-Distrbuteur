@@ -18,7 +18,7 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
 
     List<SalesInvoice> findByCompanyIdAndPartnerIdOrderByDateDesc(Long companyId, Long partnerId);
 
-    Optional<SalesInvoice> findBySalesOrderId(Long orderId);
+    Optional<SalesInvoice> findFirstBySalesOrderId(Long orderId);
 
     List<SalesInvoice> findByCompanyIdAndTypeOrderByDateDescNameDesc(Long companyId, String type);
 

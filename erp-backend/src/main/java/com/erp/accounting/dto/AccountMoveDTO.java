@@ -25,4 +25,8 @@ public class AccountMoveDTO {
     private LocalDateTime createdAt;
     private BigDecimal totalDebit;
     private BigDecimal totalCredit;
+    /** ID de l'extourne générée — non null = déjà extournée */
+    private Long reversalId;
+    /** Vrai si cette écriture est elle-même une extourne */
+    private boolean isReversal;
 }

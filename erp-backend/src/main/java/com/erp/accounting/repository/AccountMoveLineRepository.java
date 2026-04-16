@@ -121,4 +121,10 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             @Param("accountIds") List<Long> accountIds);
+
+    /** Toutes les lignes postées d'un journal pour une date précise (pour solde journalier) */
+    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.date = :date AND l.move.state = 'posted'")
+    List<AccountMoveLine> findPostedLinesByJournalAndDate(
+            @Param("journalId") Long journalId,
+            @Param("date") LocalDate date);
 }

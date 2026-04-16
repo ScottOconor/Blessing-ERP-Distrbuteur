@@ -29,6 +29,7 @@ public class SalesInvoiceRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LineRequest {
+        private Long productId;
         private String productCode;
         private String description;
         private BigDecimal quantity;
@@ -36,5 +37,9 @@ public class SalesInvoiceRequest {
         private BigDecimal tauxRemise;
         private BigDecimal tauxTVA;
         private String accountCode;
+        /** Catégorie du produit (pour calcul frais d'enlèvement) */
+        private Long categoryId;
+        /** Produit consigne : exclut du précompte, ristourne, enlèvement */
+        private boolean consigne;
     }
 }

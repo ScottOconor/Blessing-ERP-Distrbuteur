@@ -13,5 +13,7 @@ public interface AccountJournalRepository extends JpaRepository<AccountJournal, 
 
     List<AccountJournal> findByCompanyId(Long companyId);
 
-    java.util.Optional<AccountJournal> findByCodeAndCompanyId(String code, Long companyId);
+    java.util.Optional<AccountJournal> findFirstByCodeAndCompanyId(String code, Long companyId);
+    /** @deprecated Utiliser findFirstByCodeAndCompanyId */
+    @Deprecated java.util.Optional<AccountJournal> findByCodeAndCompanyId(String code, Long companyId);
 }

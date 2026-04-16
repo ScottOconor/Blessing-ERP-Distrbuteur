@@ -47,4 +47,23 @@ public class PurchaseInvoiceLine {
 
     @Column(precision = 20, scale = 2)
     private BigDecimal montantTTC;
+
+    // ===== Champs précompte =====
+
+    /** Précompte calculé sur cette ligne */
+    @Column(precision = 20, scale = 2)
+    private BigDecimal precompte;
+
+    /** Prix unitaire TTC */
+    @Column(name = "prix_unitaire_ttc", precision = 20, scale = 4)
+    private BigDecimal prixUnitaireTTC;
+
+    /** Indique si c'est un produit consigne */
+    @Builder.Default
+    @Column(name = "is_consigne")
+    private boolean consigne = false;
+
+    /** Catégorie de produit (pour calcul remise fournisseur) */
+    @Column(name = "category_id")
+    private Long categoryId;
 }

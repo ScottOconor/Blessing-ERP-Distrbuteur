@@ -33,5 +33,7 @@ public class SalesOrderRequest {
         private BigDecimal tauxRemise;    // % remise, défaut 0
         private BigDecimal tauxTVA;       // % TVA, ex: 19.25
         private String accountCode;       // compte de produit, ex: "706100"
+        private Long categoryId;          // catégorie produit (ristourne, enlèvement)
+        private boolean consigne;         // exclut PSA/ristourne/enlèvement
     }
 }

@@ -103,6 +103,51 @@ public class AccountController {
         return ResponseEntity.ok(accountingService.cancelEntry(id));
     }
 
+    @PostMapping("/moves/{id}/reverse")
+    public ResponseEntity<AccountMoveDTO> reverseMove(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(accountingService.reverseEntry(id));
+    }
+
+    @GetMapping("/journals/{id}/account-balance")
+    public ResponseEntity<java.util.Map<String, Object>> getJournalAccountBalance(
+            @PathVariable("id") Long journalId) {
+        return ResponseEntity.ok(accountingService.getJournalAccountBalance(journalId));
+    }
+
+    @GetMapping("/journals/{id}/moves")
+    public ResponseEntity<List<AccountMoveDTO>> getMovesForJournal(
+            @PathVariable("id") Long journalId,
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(name = "from", required = false) LocalDate from,
+            @RequestParam(name = "to", required = false) LocalDate to) {
+        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, from, to));
+    }
+
+    // ===================== SOLDES JOURNALIERS =====================
+
+    @GetMapping("/journals/{id}/daily-balances")
+    public ResponseEntity<List<JournalDailyBalanceDTO>> getDailyBalances(@PathVariable("id") Long journalId) {
+        return ResponseEntity.ok(accountingService.getDailyBalances(journalId));
+    }
+
+    @GetMapping("/journals/{id}/daily-balance")
+    public ResponseEntity<JournalDailyBalanceDTO> getDailyBalance(
+            @PathVariable("id") Long journalId,
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(name = "date", required = false) LocalDate date) {
+        LocalDate effectiveDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(accountingService.getDailyBalance(journalId, effectiveDate));
+    }
+
+    @PostMapping("/journals/{id}/close-day")
+    public ResponseEntity<JournalDailyBalanceDTO> closeDay(
+            @PathVariable("id") Long journalId,
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(name = "date", required = false) LocalDate date) {
+        LocalDate effectiveDate = date != null ? date : LocalDate.now();
+        return ResponseEntity.ok(accountingService.updateDailyBalance(journalId, companyId, effectiveDate));
+    }
+
     // ===================== PARTNERS =====================
 
     @GetMapping("/partners")
@@ -113,5 +158,17 @@ public class AccountController {
     @PostMapping("/partners")
     public ResponseEntity<PartnerDTO> createPartner(@Valid @RequestBody PartnerDTO dto) {
         return ResponseEntity.ok(accountingService.createPartner(dto));
+    }
+
+    @PutMapping("/partners/{id}")
+    public ResponseEntity<PartnerDTO> updatePartner(@PathVariable("id") Long id,
+                                                     @RequestBody PartnerDTO dto) {
+        return ResponseEntity.ok(accountingService.updatePartner(id, dto));
+    }
+
+    @DeleteMapping("/partners/{id}")
+    public ResponseEntity<Void> deletePartner(@PathVariable("id") Long id) {
+        accountingService.deletePartner(id);
+        return ResponseEntity.noContent().build();
     }
 }

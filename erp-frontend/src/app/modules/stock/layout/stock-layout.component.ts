@@ -22,6 +22,7 @@ export class StockLayoutComponent implements OnInit {
       label: 'Opérations',
       icon: 'swap_horiz',
       children: [
+        { label: 'Réceptions fournisseurs', icon: 'move_to_inbox', route: '/stock/receptions' },
         { label: 'Ajustements de stock', icon: 'tune', route: '/stock/adjustments' },
         { label: 'Transferts inter-dépôts', icon: 'compare_arrows', route: '/stock/transferts' },
       ]

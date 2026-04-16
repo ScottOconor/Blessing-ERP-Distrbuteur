@@ -103,6 +103,14 @@ export class WarehouseListComponent implements OnInit {
     });
   }
 
+  deleteWarehouse(w: Warehouse): void {
+    if (!confirm(`Supprimer l'entrepôt "${w.name}" ?`)) return;
+    this.stockService.deleteWarehouse(w.id!).subscribe({
+      next: () => { this.showSuccessMsg('Entrepôt supprimé'); this.load(); },
+      error: (e) => this.showSuccessMsg('Erreur : ' + (e.error?.message || 'Impossible de supprimer'))
+    });
+  }
+
   usageLabel(usage: string): string {
     const m: Record<string, string> = { internal: 'Interne', transit: 'Transit', supplier: 'Fournisseur', customer: 'Client', view: 'Vue' };
     return m[usage] || usage;

@@ -38,7 +38,10 @@
               <td class="mono text-muted">{{ c.stockAccountCode }}</td>
               <td class="mono text-muted">{{ c.stockInAccountCode }}</td>
               <td class="mono text-muted">{{ c.cogsAccountCode }}</td>
-              <td><button class="btn-icon" (click)="openEdit(c)"><span class="material-icons">edit</span></button></td>
+              <td style="display:flex;gap:4px">
+                <button class="btn-icon" (click)="openEdit(c)"><span class="material-icons">edit</span></button>
+                <button class="btn-icon btn-icon-danger" (click)="deleteCategory(c)" title="Supprimer"><span class="material-icons">delete</span></button>
+              </td>
             </tr>
           }
           @if (categories.length === 0) {

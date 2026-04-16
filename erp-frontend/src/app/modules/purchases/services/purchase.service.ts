@@ -11,6 +11,8 @@ export interface PurchaseOrderLine {
   prixUnitaire: number;
   tauxTVA?: number;
   accountCode?: string;
+  categoryId?: number;   // catégorie produit (remise, précompte)
+  consigne?: boolean;    // exclut PSA/remise
   montantHT?: number;
   montantTVA?: number;
   montantTTC?: number;
@@ -47,9 +49,22 @@ export interface PurchaseInvoiceLine {
   prixUnitaire: number;
   tauxTVA?: number;
   accountCode?: string;
+  categoryId?: number;
+  categoryName?: string;
   montantHT?: number;
   montantTVA?: number;
   montantTTC?: number;
+  precompte?: number;
+  prixUnitaireTTC?: number;
+  consigne?: boolean;
+}
+
+export interface RemiseDetail {
+  categoryName: string;
+  quantite: number;
+  montantUnitaire: number;
+  montantTotal: number;
+  typeRemise?: string;
 }
 
 export interface PurchaseInvoicePayment {
@@ -82,19 +97,27 @@ export interface PurchaseInvoice {
   originalInvoiceName?: string;
   accountMoveId?: number;
   accountMoveName?: string;
+  pickingId?: number;
+  pickingState?: string;
   totalHT?: number;
   totalTVA?: number;
   totalTTC?: number;
   montantPaye?: number;
   montantDu?: number;
+  totalRemise?: number;
+  totalPrecompte?: number;
+  totalLiquideNu?: number;
+  fraisEnlevementTTC?: number;
+  netAPayer?: number;
   lines: PurchaseInvoiceLine[];
+  remiseDetails?: RemiseDetail[];
   payments?: PurchaseInvoicePayment[];
   createdAt?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
-  private base = `http://${window.location.hostname}:8080/api/purchases`;
+  private base = `http://${window.location.hostname}:8085/api/purchases`;
 
   constructor(private http: HttpClient) {}
 
@@ -154,6 +177,14 @@ export class PurchaseService {
 
   cancelInvoice(id: number): Observable<PurchaseInvoice> {
     return this.http.post<PurchaseInvoice>(`${this.base}/invoices/${id}/cancel`, {});
+  }
+
+  reverseInvoiceEntries(id: number): Observable<PurchaseInvoice> {
+    return this.http.post<PurchaseInvoice>(`${this.base}/invoices/${id}/reverse-entries`, {});
+  }
+
+  generateRemises(id: number): Observable<any> {
+    return this.http.post<any>(`${this.base}/invoices/${id}/generate-remises`, {});
   }
 
   // ===================== AVOIRS FOURNISSEURS =====================

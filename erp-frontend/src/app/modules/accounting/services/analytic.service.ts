@@ -42,7 +42,7 @@ export interface AnalyticBalanceLine {
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticService {
-  private apiUrl = `http://${window.location.hostname}:8080/api/analytic`;
+  private apiUrl = `http://${window.location.hostname}:8085/api/analytic`;
 
   constructor(private http: HttpClient) {}
 

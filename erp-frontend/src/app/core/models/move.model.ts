@@ -27,4 +27,8 @@ export interface AccountMove {
   companyId: number;
   totalDebit?: number;
   totalCredit?: number;
+  /** ID de l'extourne générée — non null = déjà extournée, bouton désactivé */
+  reversalId?: number;
+  /** Vrai si cette écriture est elle-même une extourne — ne peut pas être extournée */
+  isReversal?: boolean;
 }

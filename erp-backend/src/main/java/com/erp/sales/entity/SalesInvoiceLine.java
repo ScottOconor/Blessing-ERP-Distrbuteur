@@ -21,6 +21,10 @@ public class SalesInvoiceLine {
     @JoinColumn(name = "invoice_id")
     private SalesInvoice invoice;
 
+    /** ID du produit (pour mouvements de stock) */
+    @Column(name = "product_id")
+    private Long productId;
+
     private String productCode;
 
     @Column(nullable = false)
@@ -49,4 +53,27 @@ public class SalesInvoiceLine {
 
     @Column(precision = 20, scale = 2)
     private BigDecimal montantTTC;
+
+    // ===== Champs précompte / enlèvement =====
+
+    /** Précompte calculé sur cette ligne (retenue à la source) */
+    @Column(precision = 20, scale = 2)
+    private BigDecimal precompte;
+
+    /** Frais d'enlèvement pour cette ligne = montantEnlevement * quantite */
+    @Column(name = "frais_enlevement", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevement;
+
+    /** Prix unitaire TTC (prixUnitaire * (1 + tauxTVA/100)) */
+    @Column(name = "prix_unitaire_ttc", precision = 20, scale = 4)
+    private BigDecimal prixUnitaireTTC;
+
+    /** Indique si c'est un produit consigne (exclut du précompte et ristourne) */
+    @Builder.Default
+    @Column(name = "is_consigne")
+    private boolean consigne = false;
+
+    /** Catégorie de produit pour le calcul des frais d'enlèvement */
+    @Column(name = "category_id")
+    private Long categoryId;
 }

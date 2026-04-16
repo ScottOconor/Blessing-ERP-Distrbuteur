@@ -90,6 +90,31 @@ public class SalesInvoice {
     @Column(precision = 20, scale = 2)
     private BigDecimal montantDu;
 
+    // ===== Champs ristourne / précompte / enlèvement =====
+
+    /** Total ristourne TTC déduit sur cette facture */
+    @Column(name = "total_ristourne", precision = 20, scale = 2)
+    private BigDecimal totalRistourne;
+
+    /** Total frais d'enlèvement TTC */
+    @Column(name = "frais_enlevement_ttc", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementTTC;
+
+    /** Total précompte (retenue à la source) */
+    @Column(name = "total_precompte", precision = 20, scale = 2)
+    private BigDecimal totalPrecompte;
+
+    /**
+     * Total liquide nu = somme(price_subtotal + precompte pour les non-consignes) + TVA
+     * Base de calcul de la ristourne
+     */
+    @Column(name = "total_liquide_nu", precision = 20, scale = 2)
+    private BigDecimal totalLiquideNu;
+
+    /** Net à payer = TTC - ristourne + enlèvement */
+    @Column(name = "net_a_payer", precision = 20, scale = 2)
+    private BigDecimal netAPayer;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

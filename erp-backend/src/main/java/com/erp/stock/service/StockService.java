@@ -82,6 +82,10 @@ public class StockService {
         return toCategoryDTO(categoryRepo.save(c));
     }
 
+    public void deleteCategory(Long id) {
+        categoryRepo.deleteById(id);
+    }
+
     private ProductCategoryDTO toCategoryDTO(ProductCategory c) {
         String parentName = null;
         if (c.getParentId() != null) {
@@ -167,6 +171,13 @@ public class StockService {
         return toProductDTO(productRepo.save(p), qty);
     }
 
+    public void deleteProduct(Long id) {
+        Product p = productRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
+        p.setActive(false);
+        productRepo.save(p);
+    }
+
     private ProductDTO toProductDTO(Product p, BigDecimal qtyOnHand) {
         String catName = p.getCategoryId() != null
                 ? categoryRepo.findById(p.getCategoryId()).map(ProductCategory::getName).orElse(null) : null;
@@ -222,50 +233,44 @@ public class StockService {
         }
         String code = dto.getCode().toUpperCase();
 
-        // 1. Créer les emplacements système
+        // 1. Emplacements système (fournisseurs / clients)
         StockLocation supplierLoc = locationRepo.save(StockLocation.builder()
                 .name("Fournisseurs").usage("supplier").companyId(null).active(true).build());
         StockLocation customerLoc = locationRepo.save(StockLocation.builder()
                 .name("Clients").usage("customer").companyId(null).active(true).build());
 
-        // 2. Emplacement vue (racine de l'entrepôt)
-        StockLocation viewLoc = locationRepo.save(StockLocation.builder()
-                .name(dto.getName()).usage("view").companyId(dto.getCompanyId()).active(true).build());
-
-        // 3. Emplacement stock principal
+        // 2. Un seul emplacement stock pour cet entrepôt
         StockLocation stockLoc = locationRepo.save(StockLocation.builder()
-                .name("Stock").usage("internal").parentId(viewLoc.getId())
+                .name(code + "/Stock").usage("internal")
                 .companyId(dto.getCompanyId()).active(true)
-                .accountCode(dto.getStockJournalId() != null ? null : "311000")
+                .accountCode("311000")
                 .build());
 
-        // 4. Emplacement transit inter-dépôts
-        StockLocation transitLoc = locationRepo.save(StockLocation.builder()
-                .name("Transit").usage("transit").parentId(viewLoc.getId())
-                .companyId(dto.getCompanyId()).active(true).build());
-
-        viewLoc.setWarehouseId(null); // vue n'a pas de warehouseId
-
-        // 5. Créer l'entrepôt
+        // 3. Créer l'entrepôt
         Warehouse wh = Warehouse.builder()
                 .name(dto.getName()).code(code)
                 .stockLocationId(stockLoc.getId())
                 .stockJournalId(dto.getStockJournalId())
+                .depotAchatWarehouseId(dto.getDepotAchatWarehouseId())
+                .avarWarehouseId(dto.getAvarWarehouseId())
                 .companyId(dto.getCompanyId()).active(true)
                 .build();
         wh = warehouseRepo.save(wh);
-
-        // 6. Mettre à jour les warehouseId sur les locations
         stockLoc.setWarehouseId(wh.getId());
-        transitLoc.setWarehouseId(wh.getId());
         locationRepo.save(stockLoc);
-        locationRepo.save(transitLoc);
 
-        // 7. Créer les types d'opérations
+        // 4. Créer les types d'opérations
+        // incoming → destination = stock du Dépôt Achat si configuré, sinon stock principal
+        Long incomingDestId = stockLoc.getId();
+        if (wh.getDepotAchatWarehouseId() != null) {
+            incomingDestId = warehouseRepo.findById(wh.getDepotAchatWarehouseId())
+                    .map(Warehouse::getStockLocationId).orElse(stockLoc.getId());
+        }
+
         pickingTypeRepo.save(StockPickingType.builder()
                 .name("Réceptions").code("incoming").warehouseId(wh.getId())
                 .defaultLocationSrcId(supplierLoc.getId())
-                .defaultLocationDestId(stockLoc.getId())
+                .defaultLocationDestId(incomingDestId)
                 .sequencePrefix(code + "/IN")
                 .companyId(dto.getCompanyId()).build());
 
@@ -290,8 +295,298 @@ public class StockService {
         Warehouse wh = warehouseRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
         wh.setName(dto.getName());
         if (dto.getStockJournalId() != null) wh.setStockJournalId(dto.getStockJournalId());
+        wh.setDepotAchatWarehouseId(dto.getDepotAchatWarehouseId());
+        wh.setAvarWarehouseId(dto.getAvarWarehouseId());
         wh.setActive(dto.isActive());
+
+        // Mettre à jour le picking type "incoming" si le Dépôt Achat a changé
+        if (dto.getDepotAchatWarehouseId() != null) {
+            Long daStockLocId = warehouseRepo.findById(dto.getDepotAchatWarehouseId())
+                    .map(Warehouse::getStockLocationId).orElse(null);
+            if (daStockLocId != null) {
+                pickingTypeRepo.findByWarehouseIdOrderByNameAsc(wh.getId()).stream()
+                        .filter(pt -> "incoming".equals(pt.getCode()))
+                        .forEach(pt -> {
+                            pt.setDefaultLocationDestId(daStockLocId);
+                            pickingTypeRepo.save(pt);
+                        });
+            }
+        }
+
         return toWarehouseDTO(warehouseRepo.save(wh), false);
+    }
+
+    public void deleteWarehouse(Long id) {
+        Warehouse wh = warehouseRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
+        wh.setActive(false);
+        warehouseRepo.save(wh);
+    }
+
+    // ============================================================
+    // RÉCEPTIONS — Bordereau (Dépôt Achat → Magasin Principal)
+    // ============================================================
+
+    /**
+     * Retourne les pickings incoming en attente (état confirmed) pour une société.
+     * Ce sont les entrées Dépôt Achat créées lors de la validation des factures fournisseurs.
+     */
+    @Transactional(readOnly = true)
+    public List<StockPickingDTO> getPendingReceptions(Long companyId) {
+        return pickingRepo.findByCompanyIdAndPickingTypeCodeAndState(companyId, "incoming", "confirmed")
+                .stream().map(p -> toPickingDTO(p, false)).collect(Collectors.toList());
+    }
+
+    /**
+     * Construit le bordereau de réception à partir d'un picking incoming.
+     */
+    @Transactional(readOnly = true)
+    public ReceptionBordereauDTO getBordereau(Long pickingId) {
+        StockPicking picking = pickingRepo.findById(pickingId)
+                .orElseThrow(() -> new EntityNotFoundException("Picking introuvable: " + pickingId));
+
+        List<ReceptionBordereauDTO.LigneBordereau> lignes = picking.getMoves().stream()
+                .map(m -> {
+                    BigDecimal qteCommandee = m.getQtyDemanded() != null ? m.getQtyDemanded() : ZERO;
+                    BigDecimal qteRecue = m.getQtyDone() != null ? m.getQtyDone() : ZERO;
+                    BigDecimal reste = qteCommandee.subtract(qteRecue).max(ZERO);
+                    return ReceptionBordereauDTO.LigneBordereau.builder()
+                            .moveId(m.getId())
+                            .productCode(m.getProductCode())
+                            .productName(m.getProductName())
+                            .prixUnitaire(m.getPriceUnit())
+                            .qteCommandee(qteCommandee)
+                            .qteRecue(qteRecue)
+                            .reste(reste)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return ReceptionBordereauDTO.builder()
+                .pickingId(picking.getId())
+                .pickingName(picking.getName())
+                .invoiceRef(picking.getOrigin())
+                .supplierName(picking.getPartnerName())
+                .invoiceDate(picking.getScheduledDate())
+                .companyId(picking.getCompanyId())
+                .lignes(lignes)
+                .build();
+    }
+
+    /**
+     * Valide un bordereau de réception via des transferts inter-dépôts :
+     *   - Dépôt Achat → Magasin principal : quantités reçues
+     *   - Dépôt Achat → Avaries : reliquats (quantités non reçues)
+     *
+     * Les deux transferts sont créés comme des StockPickings internes et immédiatement validés.
+     */
+    public ReceptionBordereauDTO validateBordereau(Long pickingId,
+                                                    List<ReceptionBordereauDTO.LigneBordereau> lignesRecues) {
+        StockPicking picking = pickingRepo.findById(pickingId)
+                .orElseThrow(() -> new EntityNotFoundException("Picking introuvable: " + pickingId));
+
+        if ("done".equals(picking.getState())) {
+            throw new IllegalStateException("Ce bordereau est déjà validé");
+        }
+
+        Long companyId = picking.getCompanyId();
+        // Emplacement source = Dépôt Achat (destination du picking incoming)
+        Long depotAchatLocationId = picking.getLocationDestId();
+
+        // Trouver l'entrepôt principal dont le depotAchatWarehouse a ce stockLocationId
+        List<Warehouse> allWarehouses = warehouseRepo.findByCompanyIdAndActiveTrue(companyId);
+        Warehouse mainWarehouse = allWarehouses.stream()
+                .filter(w -> w.getDepotAchatWarehouseId() != null)
+                .filter(w -> {
+                    Warehouse da = warehouseRepo.findById(w.getDepotAchatWarehouseId()).orElse(null);
+                    return da != null && depotAchatLocationId.equals(da.getStockLocationId());
+                })
+                .findFirst()
+                .orElse(allWarehouses.isEmpty() ? null : allWarehouses.get(0));
+
+        Long mainLocationId = mainWarehouse != null ? mainWarehouse.getStockLocationId() : depotAchatLocationId;
+        Long avarLocationId = null;
+        if (mainWarehouse != null && mainWarehouse.getAvarWarehouseId() != null) {
+            avarLocationId = warehouseRepo.findById(mainWarehouse.getAvarWarehouseId())
+                    .map(Warehouse::getStockLocationId).orElse(null);
+        }
+
+        // Mapper les quantités reçues par moveId
+        Map<Long, BigDecimal> qtesRecuesMap = new HashMap<>();
+        if (lignesRecues != null) {
+            for (ReceptionBordereauDTO.LigneBordereau l : lignesRecues) {
+                if (l.getMoveId() != null && l.getQteRecue() != null) {
+                    qtesRecuesMap.put(l.getMoveId(), l.getQteRecue());
+                }
+            }
+        }
+
+        // Trouver le picking type "internal" pour les transferts inter-dépôts
+        List<StockPickingType> internalTypes = mainWarehouse != null
+                ? pickingTypeRepo.findByCompanyIdAndCodeOrderByNameAsc(companyId, "internal")
+                : Collections.emptyList();
+        StockPickingType internalType = internalTypes.isEmpty() ? null : internalTypes.get(0);
+
+        // Construire les pickings de transfert inter-dépôts
+        StockPicking transferMain = null;
+        StockPicking transferAvar = null;
+
+        if (internalType != null) {
+            // Pré-calculer les noms de séquence pour éviter les doublons (les deux pickings
+            // sont construits avant d'être sauvegardés, donc on incrémente manuellement)
+            String intPrefix = internalType.getSequencePrefix() != null ? internalType.getSequencePrefix() : "INT";
+            Integer maxIntSeq = pickingRepo.findMaxSeq(companyId, intPrefix);
+            int nextIntSeq = (maxIntSeq != null ? maxIntSeq : 0) + 1;
+            String nameMain = String.format("%s/%05d", intPrefix, nextIntSeq);
+            String nameAvar = String.format("%s/%05d", intPrefix, nextIntSeq + 1);
+
+            // Transfert 1 : Dépôt Achat → Magasin principal
+            transferMain = StockPicking.builder()
+                    .name(nameMain)
+                    .pickingTypeId(internalType.getId())
+                    .pickingTypeCode("internal")
+                    .locationId(depotAchatLocationId)
+                    .locationDestId(mainLocationId)
+                    .partnerId(picking.getPartnerId())
+                    .partnerName(picking.getPartnerName())
+                    .state("done")
+                    .scheduledDate(picking.getScheduledDate())
+                    .dateDone(LocalDateTime.now())
+                    .origin(picking.getName())
+                    .notes("Transfert réception vers magasin principal - " + picking.getName())
+                    .companyId(companyId)
+                    .build();
+
+            // Transfert 2 : Dépôt Achat → Avaries (si avar configuré)
+            if (avarLocationId != null) {
+                transferAvar = StockPicking.builder()
+                        .name(nameAvar)
+                        .pickingTypeId(internalType.getId())
+                        .pickingTypeCode("internal")
+                        .locationId(depotAchatLocationId)
+                        .locationDestId(avarLocationId)
+                        .partnerId(picking.getPartnerId())
+                        .partnerName(picking.getPartnerName())
+                        .state("done")
+                        .scheduledDate(picking.getScheduledDate())
+                        .dateDone(LocalDateTime.now())
+                        .origin(picking.getName())
+                        .notes("Transfert avaries - " + picking.getName())
+                        .companyId(companyId)
+                        .build();
+            }
+        }
+
+        boolean hasMainMoves = false;
+        boolean hasAvarMoves = false;
+
+        for (StockMove move : picking.getMoves()) {
+            BigDecimal qteCommandee = move.getQtyDemanded() != null ? move.getQtyDemanded() : ZERO;
+            BigDecimal qteRecue = qtesRecuesMap.getOrDefault(move.getId(), ZERO);
+            BigDecimal reste = qteCommandee.subtract(qteRecue).max(ZERO);
+
+            move.setQtyDone(qteRecue);
+            move.setLocationDestId(mainLocationId);
+            move.setState("done");
+
+            // Transfert Dépôt Achat → Magasin principal
+            if (qteRecue.compareTo(ZERO) > 0 && transferMain != null) {
+                StockMove tm = StockMove.builder()
+                        .picking(transferMain)
+                        .productId(move.getProductId())
+                        .productCode(move.getProductCode())
+                        .productName(move.getProductName())
+                        .uomName(move.getUomName())
+                        .qtyDemanded(qteRecue)
+                        .qtyDone(qteRecue)
+                        .priceUnit(move.getPriceUnit())
+                        .locationId(depotAchatLocationId)
+                        .locationDestId(mainLocationId)
+                        .state("done")
+                        .companyId(companyId)
+                        .build();
+                transferMain.getMoves().add(tm);
+                hasMainMoves = true;
+
+                // Appliquer le mouvement de stock (typeCode "incoming" pour recalcul CMUP au MP)
+                applyStockMovement(move.getProductId(), depotAchatLocationId, mainLocationId,
+                        qteRecue, move.getPriceUnit(), companyId, picking.getName(), "incoming");
+            }
+
+            // Transfert Dépôt Achat → Avaries
+            if (reste.compareTo(ZERO) > 0 && transferAvar != null) {
+                StockMove ta = StockMove.builder()
+                        .picking(transferAvar)
+                        .productId(move.getProductId())
+                        .productCode(move.getProductCode())
+                        .productName(move.getProductName())
+                        .uomName(move.getUomName())
+                        .qtyDemanded(reste)
+                        .qtyDone(reste)
+                        .priceUnit(move.getPriceUnit())
+                        .locationId(depotAchatLocationId)
+                        .locationDestId(avarLocationId)
+                        .state("done")
+                        .companyId(companyId)
+                        .build();
+                transferAvar.getMoves().add(ta);
+                hasAvarMoves = true;
+
+                // Appliquer le mouvement de stock
+                applyStockMovement(move.getProductId(), depotAchatLocationId, avarLocationId,
+                        reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "internal");
+            }
+        }
+
+        // Sauvegarder les pickings de transfert inter-dépôts
+        if (transferMain != null && hasMainMoves) {
+            pickingRepo.save(transferMain);
+        }
+        if (transferAvar != null && hasAvarMoves) {
+            pickingRepo.save(transferAvar);
+        }
+
+        // Marquer le picking initial (Dépôt Achat) comme traité
+        picking.setState("done");
+        picking.setDateDone(LocalDateTime.now());
+        pickingRepo.save(picking);
+
+        return getBordereau(pickingId);
+    }
+
+    /** Applique un mouvement de stock (mise à jour quants + CMUP). */
+    private void applyStockMovement(Long productId, Long srcLocationId, Long destLocationId,
+                                     BigDecimal qty, BigDecimal priceUnit,
+                                     Long companyId, String ref, String typeCode) {
+        Product product = productRepo.findById(productId).orElse(null);
+        if (product == null || qty.compareTo(ZERO) <= 0) return;
+
+        // Source : diminuer si interne
+        StockLocation srcLoc = locationRepo.findById(srcLocationId).orElse(null);
+        if (srcLoc != null && "internal".equals(srcLoc.getUsage())) {
+            StockQuant srcQ = findOrCreateQuant(productId, srcLocationId, companyId);
+            srcQ.setQuantity(srcQ.getQuantity().subtract(qty).max(ZERO));
+            quantRepo.save(srcQ);
+        }
+
+        // Destination : augmenter + recalcul CMUP pour incoming
+        StockLocation destLoc = locationRepo.findById(destLocationId).orElse(null);
+        if (destLoc != null && "internal".equals(destLoc.getUsage())) {
+            StockQuant destQ = findOrCreateQuant(productId, destLocationId, companyId);
+            if ("incoming".equals(typeCode)) {
+                BigDecimal curQty = destQ.getQuantity();
+                BigDecimal curVal = curQty.multiply(product.getStandardPrice() != null ? product.getStandardPrice() : ZERO);
+                BigDecimal pu = priceUnit != null ? priceUnit : (product.getStandardPrice() != null ? product.getStandardPrice() : ZERO);
+                BigDecimal newQty = curQty.add(qty);
+                if (newQty.compareTo(ZERO) > 0) {
+                    BigDecimal newCmup = curVal.add(qty.multiply(pu)).divide(newQty, 4, RoundingMode.HALF_UP);
+                    product.setStandardPrice(newCmup);
+                    productRepo.save(product);
+                }
+            }
+            destQ.setQuantity(destQ.getQuantity().add(qty));
+            quantRepo.save(destQ);
+        }
     }
 
     private WarehouseDTO toWarehouseDTO(Warehouse w, boolean withLocations) {
@@ -299,6 +594,10 @@ public class StockService {
                 ? locationRepo.findById(w.getStockLocationId()).map(StockLocation::getName).orElse(null) : null;
         String journalName = w.getStockJournalId() != null
                 ? journalRepo.findById(w.getStockJournalId()).map(AccountJournal::getName).orElse(null) : null;
+        String depotAchatName = w.getDepotAchatWarehouseId() != null
+                ? warehouseRepo.findById(w.getDepotAchatWarehouseId()).map(Warehouse::getName).orElse(null) : null;
+        String avarName = w.getAvarWarehouseId() != null
+                ? warehouseRepo.findById(w.getAvarWarehouseId()).map(Warehouse::getName).orElse(null) : null;
 
         List<StockLocationDTO> locations = null;
         if (withLocations) {
@@ -309,6 +608,8 @@ public class StockService {
                 .id(w.getId()).name(w.getName()).code(w.getCode())
                 .stockLocationId(w.getStockLocationId()).stockLocationName(stockLocName)
                 .stockJournalId(w.getStockJournalId()).stockJournalName(journalName)
+                .depotAchatWarehouseId(w.getDepotAchatWarehouseId()).depotAchatWarehouseName(depotAchatName)
+                .avarWarehouseId(w.getAvarWarehouseId()).avarWarehouseName(avarName)
                 .companyId(w.getCompanyId()).active(w.isActive())
                 .locations(locations)
                 .build();
@@ -341,6 +642,13 @@ public class StockService {
         if (dto.getAccountCode() != null) l.setAccountCode(dto.getAccountCode());
         l.setActive(dto.isActive());
         return toLocationDTO(locationRepo.save(l), false);
+    }
+
+    public void deleteLocation(Long id) {
+        StockLocation l = locationRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Location not found: " + id));
+        l.setActive(false);
+        locationRepo.save(l);
     }
 
     StockLocationDTO toLocationDTO(StockLocation l, boolean withChildren) {
@@ -602,7 +910,7 @@ public class StockService {
         for (StockMove move : picking.getMoves()) {
             BigDecimal reserved = move.getQtyDemanded();
             if (reserved != null && reserved.compareTo(ZERO) > 0) {
-                quantRepo.findByProductIdAndLocationIdAndCompanyId(
+                quantRepo.findFirstByProductIdAndLocationIdAndCompanyId(
                         move.getProductId(), move.getLocationId(), picking.getCompanyId())
                         .ifPresent(q -> {
                             q.setReservedQuantity(q.getReservedQuantity().subtract(reserved).max(ZERO));
@@ -771,12 +1079,12 @@ public class StockService {
             // Compte stock (311xxx)
             String stockCode = resolveStockAccountCode(product.getCategoryId(), companyId);
             if (product.getStockAccountCode() != null) stockCode = product.getStockAccountCode();
-            AccountAccount stockAccount = accountRepo.findByCodeAndCompanyId(stockCode, companyId)
+            AccountAccount stockAccount = accountRepo.findFirstByCodeAndCompanyId(stockCode, companyId)
                     .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("311", companyId)
                             .stream().findFirst().orElse(null));
 
             // Compte perte/gain inventaire (6031 par défaut)
-            AccountAccount inventoryLossAccount = accountRepo.findByCodeAndCompanyId("6031", companyId)
+            AccountAccount inventoryLossAccount = accountRepo.findFirstByCodeAndCompanyId("6031", companyId)
                     .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("603", companyId)
                             .stream().findFirst().orElse(null));
 
@@ -939,7 +1247,7 @@ public class StockService {
     // ============================================================
 
     private StockQuant findOrCreateQuant(Long productId, Long locationId, Long companyId) {
-        return quantRepo.findByProductIdAndLocationIdAndCompanyId(productId, locationId, companyId)
+        return quantRepo.findFirstByProductIdAndLocationIdAndCompanyId(productId, locationId, companyId)
                 .orElseGet(() -> quantRepo.save(StockQuant.builder()
                         .productId(productId).locationId(locationId)
                         .quantity(ZERO).reservedQuantity(ZERO)
@@ -1050,7 +1358,7 @@ public class StockService {
 
     private AccountAccount findOrCreateAccount(String code, String name, String type, Long companyId,
                                                 AccountJournal journal, Company company) {
-        return accountRepo.findByCodeAndCompanyId(code, companyId)
+        return accountRepo.findFirstByCodeAndCompanyId(code, companyId)
                 .orElseGet(() -> {
                     AccountAccount acc = AccountAccount.builder()
                             .code(code).name(name).accountType(type)
@@ -1117,7 +1425,7 @@ public class StockService {
         BigDecimal subtotal = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
 
         Long cid = picking != null ? picking.getCompanyId() : m.getCompanyId();
-        BigDecimal available = quantRepo.findByProductIdAndLocationIdAndCompanyId(
+        BigDecimal available = quantRepo.findFirstByProductIdAndLocationIdAndCompanyId(
                 m.getProductId(), m.getLocationId(), cid)
                 .map(q -> q.getQuantity().subtract(q.getReservedQuantity()).max(ZERO))
                 .orElse(ZERO);

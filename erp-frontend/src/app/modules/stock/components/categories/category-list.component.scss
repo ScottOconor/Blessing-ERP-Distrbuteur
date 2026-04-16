@@ -37,7 +37,7 @@
 .mono { font-family: 'Roboto Mono', monospace; }
 .code-badge { display: inline-block; background: #e8f0fe; color: #1a68d1; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-family: monospace; }
 .empty-state { text-align: center; padding: 40px; color: #adb5bd; font-size: 14px; }
-.btn-icon { width: 30px; height: 30px; background: none; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6c757d; .material-icons { font-size: 16px; } &:hover { background: #e8f0fe; color: #2c7be5; } }
+.btn-icon { width: 30px; height: 30px; background: none; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6c757d; .material-icons { font-size: 16px; } &:hover { background: #e8f0fe; color: #2c7be5; } &.btn-icon-danger:hover { background: #fde8e8; color: #dc3545; } }
 .req { color: #dc3545; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; }
 .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 10px; width: 540px; max-width: calc(100vw - 32px); box-shadow: 0 20px 60px rgba(0,0,0,0.2); z-index: 1001; }

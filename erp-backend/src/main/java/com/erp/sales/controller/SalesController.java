@@ -2,6 +2,7 @@ package com.erp.sales.controller;
 
 import com.erp.accounting.dto.PartnerDTO;
 import com.erp.sales.dto.*;
+import com.erp.sales.service.RistourneService;
 import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.util.List;
 public class SalesController {
 
     private final SalesService salesService;
+    private final RistourneService ristourneService;
 
     // ===================== BONS DE COMMANDE =====================
 
@@ -84,6 +86,16 @@ public class SalesController {
         return ResponseEntity.ok(salesService.cancelInvoice(id));
     }
 
+    @PostMapping("/invoices/{id}/reverse-entries")
+    public ResponseEntity<SalesInvoiceDTO> reverseInvoiceEntries(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(salesService.reverseInvoiceEntries(id));
+    }
+
+    @PostMapping("/invoices/{id}/generate-ristournes")
+    public ResponseEntity<RistournePaiementDTO> generateRistournes(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(ristourneService.generateFromInvoice(id));
+    }
+
     // ===================== AVOIRS =====================
 
     @GetMapping("/avoirs")
@@ -133,5 +145,11 @@ public class SalesController {
     @PutMapping("/clients/{id}")
     public ResponseEntity<PartnerDTO> updateClient(@PathVariable("id") Long id, @RequestBody PartnerDTO dto) {
         return ResponseEntity.ok(salesService.updateClient(id, dto));
+    }
+
+    @DeleteMapping("/clients/{id}")
+    public ResponseEntity<Void> deleteClient(@PathVariable("id") Long id) {
+        salesService.deleteClient(id);
+        return ResponseEntity.noContent().build();
     }
 }

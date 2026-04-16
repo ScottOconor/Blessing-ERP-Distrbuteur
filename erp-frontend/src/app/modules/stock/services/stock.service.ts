@@ -41,6 +41,12 @@ export interface Warehouse {
   stockLocationName?: string;
   stockJournalId?: number;
   stockJournalName?: string;
+  /** ID de l'entrepôt Dépôt Achat (entrepôt séparé, zone de transit achats) */
+  depotAchatWarehouseId?: number;
+  depotAchatWarehouseName?: string;
+  /** ID de l'entrepôt Avaries (entrepôt séparé, reçoit les reliquats) */
+  avarWarehouseId?: number;
+  avarWarehouseName?: string;
   companyId: number;
   active: boolean;
   locations?: StockLocation[];
@@ -195,6 +201,31 @@ export interface StockQuant {
   companyId: number;
 }
 
+export interface BordereauLigne {
+  moveId: number;
+  productCode?: string;
+  productName?: string;
+  prixUnitaire: number;
+  qteCommandee: number;
+  qteRecue: number;
+  reste: number;
+}
+
+export interface ReceptionBordereauDTO {
+  pickingId: number;
+  pickingName?: string;
+  invoiceRef?: string;
+  supplierName?: string;
+  invoiceDate?: string;
+  companyId: number;
+  lignes: BordereauLigne[];
+}
+
+export interface BordereauLigneSaisie {
+  moveId: number;
+  qteRecue: number;
+}
+
 export interface StockDashboard {
   nbProducts: number;
   nbWarehouses: number;
@@ -208,7 +239,7 @@ export interface StockDashboard {
 
 @Injectable({ providedIn: 'root' })
 export class StockService {
-  private api = `http://${window.location.hostname}:8080/api/stock`;
+  private api = `http://${window.location.hostname}:8085/api/stock`;
 
   constructor(private http: HttpClient) {}
 
@@ -221,6 +252,9 @@ export class StockService {
   }
   updateCategory(id: number, dto: ProductCategory): Observable<ProductCategory> {
     return this.http.put<ProductCategory>(`${this.api}/categories/${id}`, dto);
+  }
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/categories/${id}`);
   }
 
   // Products
@@ -244,6 +278,9 @@ export class StockService {
   updateProduct(id: number, dto: Product): Observable<Product> {
     return this.http.put<Product>(`${this.api}/products/${id}`, dto);
   }
+  deleteProduct(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/products/${id}`);
+  }
 
   // Warehouses
   getWarehouses(companyId: number): Observable<Warehouse[]> {
@@ -258,6 +295,9 @@ export class StockService {
   updateWarehouse(id: number, dto: Warehouse): Observable<Warehouse> {
     return this.http.put<Warehouse>(`${this.api}/warehouses/${id}`, dto);
   }
+  deleteWarehouse(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/warehouses/${id}`);
+  }
 
   // Locations
   getLocations(companyId: number): Observable<StockLocation[]> {
@@ -268,6 +308,9 @@ export class StockService {
   }
   updateLocation(id: number, dto: StockLocation): Observable<StockLocation> {
     return this.http.put<StockLocation>(`${this.api}/locations/${id}`, dto);
+  }
+  deleteLocation(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/locations/${id}`);
   }
 
   // Picking types
@@ -340,6 +383,21 @@ export class StockService {
     let params = new HttpParams().set('companyId', companyId);
     if (productId) params = params.set('productId', productId);
     return this.http.get<ValuationLayer[]>(`${this.api}/valuation`, { params });
+  }
+
+  // Bordereau de réception (Dépôt Achat)
+  getPendingReceptions(companyId: number): Observable<StockPicking[]> {
+    return this.http.get<StockPicking[]>(`${this.api}/receptions/pending`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  getBordereau(pickingId: number): Observable<ReceptionBordereauDTO> {
+    return this.http.get<ReceptionBordereauDTO>(`${this.api}/receptions/${pickingId}/bordereau`);
+  }
+
+  validateBordereau(pickingId: number, lignes: BordereauLigneSaisie[]): Observable<ReceptionBordereauDTO> {
+    return this.http.post<ReceptionBordereauDTO>(`${this.api}/receptions/${pickingId}/bordereau/validate`, lignes);
   }
 
   // Agences distantes

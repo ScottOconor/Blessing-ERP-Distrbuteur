@@ -5,7 +5,7 @@ import { ReportRequest } from '../../../core/models/report.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReportService {
-  private apiUrl = `http://${window.location.hostname}:8080/api/reports`;
+  private apiUrl = `http://${window.location.hostname}:8085/api/reports`;
 
   constructor(private http: HttpClient) {}
 

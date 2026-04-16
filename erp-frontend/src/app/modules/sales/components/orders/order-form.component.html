@@ -116,9 +116,9 @@
                           class="input-cell product-search"
                           [placeholder]="allProducts.length === 0 ? 'Aucun article en stock' : 'Rechercher un article...'"
                           [(ngModel)]="lineSearches[i]"
-                          (focus)="openSuggestions(i)"
+                          (focus)="openSuggestions(i, $event)"
                           (blur)="closeSuggestions(i)"
-                          (input)="openSuggestions(i)"
+                          (input)="openSuggestions(i, $event)"
                           autocomplete="off"
                         />
                         @if (line.productCode) {
@@ -127,8 +127,11 @@
                           </button>
                         }
                       </div>
-                      @if (activeSuggestionIdx === i) {
-                        <div class="suggestions-panel">
+                      @if (activeSuggestionIdx === i && dropdownRect) {
+                        <div class="suggestions-panel"
+                          [style.top.px]="dropdownRect.top"
+                          [style.left.px]="dropdownRect.left"
+                          [style.width.px]="dropdownRect.width">
                           @for (p of getSuggestions(i); track p.id) {
                             <div class="suggestion-item" (mousedown)="selectProduct(i, p)">
                               <div class="suggestion-main">

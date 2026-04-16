@@ -191,22 +191,31 @@ textarea.form-control { resize: vertical; }
 }
 
 .sug-panel {
-  position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 999;
-  background: white; border: 1px solid #dee2e6; border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14); max-height: 220px; overflow-y: auto;
+  position: fixed; z-index: 9999;
+  background: white; border: 1px solid #c8d0da; border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+  max-height: 320px; overflow-y: auto;
 }
 
 .sug-item {
-  display: flex; align-items: center; gap: 7px; padding: 7px 12px;
-  cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.1s;
-  &:last-child { border-bottom: none; }
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.12s;
+  &:first-child { border-radius: 10px 10px 0 0; }
+  &:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
   &:hover { background: #f8f5ff; }
-  .sc { font-size: 11px; background: #f0ebff; color: #6f42c1; padding: 1px 5px; border-radius: 3px; font-weight: 600; flex-shrink: 0; }
-  .sn { flex: 1; font-size: 13px; color: #212529; }
-  .sp { font-size: 11px; color: #6c757d; font-family: monospace; flex-shrink: 0; }
+  .sc {
+    flex-shrink: 0; font-size: 11px; background: #f0ebff; color: #6f42c1;
+    padding: 2px 8px; border-radius: 4px; font-weight: 700; font-family: monospace;
+    min-width: 52px; text-align: center;
+  }
+  .sn { flex: 1; font-size: 13px; font-weight: 500; color: #212529; }
+  .sp {
+    flex-shrink: 0; font-size: 12px; color: #6c757d; font-family: monospace;
+    background: #f4f6f8; padding: 2px 7px; border-radius: 4px;
+  }
 }
 
-.sug-empty { padding: 12px; text-align: center; color: #adb5bd; font-size: 13px; }
+.sug-empty { padding: 14px 18px; text-align: center; color: #adb5bd; font-size: 13px; font-style: italic; }
 
 .btn-del {
   width: 26px; height: 26px; border: none; border-radius: 4px; background: transparent;

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -43,6 +43,11 @@ export class AvoirListComponent implements OnInit {
   lineSearchResults: Product[][] = [];
   activeSuggestionIdx: number | null = null;
   searchTimer: any = null;
+  dropdownRect: { top: number; left: number; width: number } | null = null;
+
+  @HostListener('window:scroll', [])
+  @HostListener('window:resize', [])
+  onWindowChange(): void { this.activeSuggestionIdx = null; }
 
   private companyId!: number;
 
@@ -205,8 +210,14 @@ export class AvoirListComponent implements OnInit {
     ).slice(0, 10);
   }
 
-  openSuggestions(i: number): void {
+  openSuggestions(i: number, event?: FocusEvent | Event): void {
     if (this.avoirForm.lines[i]?.productCode) this.lineSearches[i] = '';
+    if (event?.target) {
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      const dropdownWidth = Math.max(rect.width, 420);
+      const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8);
+      this.dropdownRect = { top: rect.bottom + 4, left, width: dropdownWidth };
+    }
     this.activeSuggestionIdx = i;
   }
 

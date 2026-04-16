@@ -58,6 +58,7 @@
 .btn-icon { background: none; border: none; color: #6c757d; cursor: pointer; padding: 4px; border-radius: 4px;
   .material-icons { font-size: 18px; }
   &:hover { color: #2c7be5; background: #e8f0fb; }
+  &.btn-icon-danger:hover { color: #dc3545; background: #fde8e8; }
 }
 
 /* Modal */

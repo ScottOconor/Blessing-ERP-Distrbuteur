@@ -68,9 +68,12 @@
                   <span [class]="(p.qtyOnHand || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyOnHand | number:'1.0-2' }}</span>
                 } @else { <span class="text-muted">—</span> }
               </td>
-              <td>
+              <td style="display:flex;gap:4px">
                 <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
                   <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon btn-icon-danger" (click)="deleteProduct(p)" title="Supprimer">
+                  <span class="material-icons">delete</span>
                 </button>
               </td>
             </tr>
@@ -91,17 +94,17 @@
       </div>
       <div style="overflow-x:auto;max-height:50vh">
         <table class="data-table">
-          <thead><tr><th>#</th><th>Nom</th><th>Code</th><th>Type</th><th>Catégorie</th><th class="text-right">Prix Achat</th><th class="text-right">Prix Vente</th></tr></thead>
+          <thead><tr><th>#</th><th>Nom</th><th>Référence interne</th><th>Catégorie</th><th class="text-right">Coût</th><th class="text-right">Prix vente</th><th>Unité</th></tr></thead>
           <tbody>
             @for (row of importRows; track $index; let i = $index) {
               <tr>
                 <td class="text-muted">{{ i+1 }}</td>
-                <td class="font-bold">{{ row['Nom*'] || row['Nom'] }}</td>
-                <td class="font-mono">{{ row['Code (Référence)'] || '—' }}</td>
-                <td>{{ row['Type (product/service/consu)'] || 'product' }}</td>
-                <td>{{ row['Catégorie'] || '—' }}</td>
-                <td class="text-right">{{ row['Prix Achat (FCFA)'] || '0' }}</td>
-                <td class="text-right">{{ row['Prix Vente (FCFA)'] || '0' }}</td>
+                <td class="font-bold">{{ row['Nom'] || row['Nom*'] }}</td>
+                <td class="font-mono">{{ row['Référence interne'] || row['Code (Référence)'] || '—' }}</td>
+                <td>{{ row["Catégorie d'article"] || row['Catégorie'] || '—' }}</td>
+                <td class="text-right">{{ row['Coût'] || row['Prix Achat (FCFA)'] || '0' }}</td>
+                <td class="text-right">{{ row['Prix de vente'] || row['Prix Vente (FCFA)'] || '0' }}</td>
+                <td>{{ row['Unité de mesure'] || row['Unité'] || 'Unité' }}</td>
               </tr>
             }
           </tbody>

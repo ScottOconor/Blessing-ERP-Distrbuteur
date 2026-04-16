@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AccountingService } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountJournal, AccountAccount } from '../../../../core/models/account.model';
@@ -37,7 +38,8 @@ export class JournalsComponent implements OnInit {
   constructor(
     private accountingService: AccountingService,
     private authService: AuthService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -134,6 +136,10 @@ export class JournalsComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     return this.journalTypes.find(t => t.value === type)?.label || type;
+  }
+
+  openDetail(journal: AccountJournal): void {
+    this.router.navigate(['/accounting/journals', journal.id]);
   }
 
   getAccountName(id?: number): string {

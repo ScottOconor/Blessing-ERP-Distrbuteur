@@ -15,6 +15,7 @@ export const purchasesRoutes: Routes = [
       { path: 'invoices', loadComponent: () => import('./components/invoices/invoice-list.component').then(m => m.PurchaseInvoiceListComponent) },
       { path: 'invoices/:id', loadComponent: () => import('./components/invoices/invoice-detail.component').then(m => m.PurchaseInvoiceDetailComponent) },
       { path: 'avoirs', loadComponent: () => import('./components/invoices/avoir-list.component').then(m => m.PurchaseAvoirListComponent) },
+      { path: 'remises', loadComponent: () => import('./components/remises/remise-list.component').then(m => m.RemiseListComponent) },
     ]
   }
 ];

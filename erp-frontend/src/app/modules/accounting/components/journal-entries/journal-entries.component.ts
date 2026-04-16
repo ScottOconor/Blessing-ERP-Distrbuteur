@@ -79,12 +79,15 @@ export class JournalEntriesComponent implements OnInit {
     });
   }
 
-  cancelMove(id: number, event: Event): void {
+  reverseMove(id: number, event: Event): void {
     event.stopPropagation();
-    if (!confirm('Annuler cette écriture ?')) return;
-    this.accountingService.cancelMove(id).subscribe({
-      next: () => this.loadMoves(),
-      error: (err) => alert(err.error?.message || 'Erreur lors de l\'annulation')
+    if (!confirm('Extourner cette écriture ? Une écriture inverse validée sera créée.')) return;
+    this.accountingService.reverseMove(id).subscribe({
+      next: (reversed) => {
+        this.loadMoves();
+        this.router.navigate(['/accounting/journal-entries', reversed.id]);
+      },
+      error: (err) => alert(err.error?.message || 'Erreur lors de l\'extourne')
     });
   }
 

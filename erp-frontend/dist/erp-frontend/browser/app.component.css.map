@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.component.ts"],
+  "sourcesContent": ["\n    :host { display: block; height: 100%; }\n  "],
+  "mappings": ";AACI;AAAQ,WAAA;AAAgB,UAAA;;",
+  "names": []
+}

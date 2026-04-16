@@ -8,6 +8,12 @@ import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
+import com.erp.stock.entity.StockLocation;
+import com.erp.stock.entity.StockPickingType;
+import com.erp.stock.entity.Warehouse;
+import com.erp.stock.repository.StockLocationRepository;
+import com.erp.stock.repository.StockPickingTypeRepository;
+import com.erp.stock.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -29,6 +35,9 @@ public class OhadaDataInitializer implements CommandLineRunner {
     private final AccountJournalRepository journalRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WarehouseRepository warehouseRepository;
+    private final StockLocationRepository stockLocationRepository;
+    private final StockPickingTypeRepository pickingTypeRepository;
 
     @Override
     @Transactional
@@ -36,6 +45,7 @@ public class OhadaDataInitializer implements CommandLineRunner {
         initCompanyAndUser();
         initChartOfAccounts();
         initDefaultJournals();
+        initDefaultWarehouses();
     }
 
     private void initCompanyAndUser() {
@@ -351,15 +361,15 @@ public class OhadaDataInitializer implements CommandLineRunner {
         }
 
         AccountAccount sales401 = accountRepository
-                .findByCodeAndCompanyId("701", company.getId()).orElse(null);
+                .findFirstByCodeAndCompanyId("701", company.getId()).orElse(null);
         AccountAccount client411 = accountRepository
-                .findByCodeAndCompanyId("411", company.getId()).orElse(null);
+                .findFirstByCodeAndCompanyId("411", company.getId()).orElse(null);
         AccountAccount fourn401 = accountRepository
-                .findByCodeAndCompanyId("401", company.getId()).orElse(null);
+                .findFirstByCodeAndCompanyId("401", company.getId()).orElse(null);
         AccountAccount caisse571 = accountRepository
-                .findByCodeAndCompanyId("571", company.getId()).orElse(null);
+                .findFirstByCodeAndCompanyId("571", company.getId()).orElse(null);
         AccountAccount banque521 = accountRepository
-                .findByCodeAndCompanyId("521", company.getId()).orElse(null);
+                .findFirstByCodeAndCompanyId("521", company.getId()).orElse(null);
 
         List<AccountJournal> journals = new ArrayList<>();
 
@@ -390,6 +400,83 @@ public class OhadaDataInitializer implements CommandLineRunner {
 
         journalRepository.saveAll(journals);
         log.info("Default journals initialized: {} journals created", journals.size());
+    }
+
+    private void initDefaultWarehouses() {
+        Company company = companyRepository.findAll().get(0);
+
+        if (!warehouseRepository.findByCompanyIdAndActiveTrue(company.getId()).isEmpty()) {
+            log.info("Warehouses already initialized, skipping.");
+            return;
+        }
+
+        log.info("Initializing default warehouses...");
+
+        // --- Emplacements système ---
+        StockLocation supplierLoc = stockLocationRepository.save(StockLocation.builder()
+                .name("Fournisseurs").usage("supplier").companyId(null).active(true).build());
+        StockLocation customerLoc = stockLocationRepository.save(StockLocation.builder()
+                .name("Clients").usage("customer").companyId(null).active(true).build());
+
+        // --- Dépôt Achat (entrepôt de transit des achats) ---
+        StockLocation daStock = stockLocationRepository.save(StockLocation.builder()
+                .name("DA/Stock").usage("internal").companyId(company.getId()).active(true).build());
+        Warehouse depotAchat = warehouseRepository.save(Warehouse.builder()
+                .name("Dépôt Achat").code("DA")
+                .stockLocationId(daStock.getId())
+                .companyId(company.getId()).active(true).build());
+        daStock.setWarehouseId(depotAchat.getId());
+        stockLocationRepository.save(daStock);
+
+        // --- Avaries (entrepôt des reliquats) ---
+        StockLocation avStock = stockLocationRepository.save(StockLocation.builder()
+                .name("AV/Stock").usage("internal").companyId(company.getId()).active(true).build());
+        Warehouse avaries = warehouseRepository.save(Warehouse.builder()
+                .name("Avaries").code("AV")
+                .stockLocationId(avStock.getId())
+                .companyId(company.getId()).active(true).build());
+        avStock.setWarehouseId(avaries.getId());
+        stockLocationRepository.save(avStock);
+
+        // --- Magasin Principal ---
+        StockLocation mainStock = stockLocationRepository.save(StockLocation.builder()
+                .name("MP/Stock").usage("internal").companyId(company.getId()).active(true)
+                .accountCode("311000").build());
+        Warehouse magasin = warehouseRepository.save(Warehouse.builder()
+                .name("Magasin Principal").code("MP")
+                .stockLocationId(mainStock.getId())
+                .depotAchatWarehouseId(depotAchat.getId())
+                .avarWarehouseId(avaries.getId())
+                .companyId(company.getId()).active(true).build());
+        mainStock.setWarehouseId(magasin.getId());
+        stockLocationRepository.save(mainStock);
+
+        // --- Picking types du Magasin Principal ---
+        // incoming : Fournisseurs → Dépôt Achat stock
+        pickingTypeRepository.save(StockPickingType.builder()
+                .name("Réceptions").code("incoming").warehouseId(magasin.getId())
+                .defaultLocationSrcId(supplierLoc.getId())
+                .defaultLocationDestId(daStock.getId())
+                .sequencePrefix("MP/IN")
+                .companyId(company.getId()).build());
+
+        // outgoing : Magasin Principal stock → Clients
+        pickingTypeRepository.save(StockPickingType.builder()
+                .name("Livraisons").code("outgoing").warehouseId(magasin.getId())
+                .defaultLocationSrcId(mainStock.getId())
+                .defaultLocationDestId(customerLoc.getId())
+                .sequencePrefix("MP/OUT")
+                .companyId(company.getId()).build());
+
+        // internal : Magasin Principal stock → Magasin Principal stock (transferts)
+        pickingTypeRepository.save(StockPickingType.builder()
+                .name("Transferts internes").code("internal").warehouseId(magasin.getId())
+                .defaultLocationSrcId(mainStock.getId())
+                .defaultLocationDestId(mainStock.getId())
+                .sequencePrefix("MP/INT")
+                .companyId(company.getId()).build());
+
+        log.info("Default warehouses initialized: Dépôt Achat, Avaries, Magasin Principal");
     }
 
     // ===== BUILDER HELPERS =====

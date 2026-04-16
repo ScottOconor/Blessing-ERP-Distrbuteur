@@ -10,6 +10,7 @@ import { AccountAccount, AccountJournal, Partner } from '../../../../core/models
 
 interface AnalyticDistributionForm {
   analyticAccountId: number | null;
+  parentAnalyticId: number | null;
   amount: number;
 }
 
@@ -59,6 +60,17 @@ export class JournalEntryFormComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
 
+  // Solde du compte lié au journal (caisse/banque uniquement)
+  currentJournal: AccountJournal | null = null;
+  journalAccountCode: string | null = null;
+  journalAccountName: string | null = null;
+  journalAccountId: number | null = null;
+  journalOpeningBalance: number | null = null;
+
+  get isBalanceJournal(): boolean {
+    return this.currentJournal?.type === 'cash' || this.currentJournal?.type === 'bank';
+  }
+
   // Fenêtre flottante de ventilation analytique
   analyticModalIndex: number | null = null;
 
@@ -84,6 +96,8 @@ export class JournalEntryFormComponent implements OnInit {
     } else {
       this.addLine();
       this.addLine();
+      // Charger le solde du journal par défaut
+      if (this.move.journalId) this.onJournalChange();
     }
   }
 
@@ -95,6 +109,7 @@ export class JournalEntryFormComponent implements OnInit {
         if (!this.move.journalId && this.journals.length > 0) {
           this.move.journalId = this.journals[0].id!;
         }
+        if (this.move.journalId) this.onJournalChange();
       },
       error: () => {}
     });
@@ -120,6 +135,7 @@ export class JournalEntryFormComponent implements OnInit {
         this.lines = move.lines.map(l => this.lineToForm(l));
         if (this.lines.length === 0) this.addLine();
         this.loading = false;
+        this.onJournalChange();
       },
       error: () => {
         this.loading = false;
@@ -131,10 +147,14 @@ export class JournalEntryFormComponent implements OnInit {
   lineToForm(line: AccountMoveLine): LineForm {
     const acc = this.accounts.find(a => a.id === line.accountId);
     const distributions: AnalyticDistributionForm[] = (line as any).analyticDistributions
-      ? (line as any).analyticDistributions.map((d: any) => ({
-          analyticAccountId: d.analyticAccountId,
-          amount: Number(d.amount)
-        }))
+      ? (line as any).analyticDistributions.map((d: any) => {
+          const analyticAcc = this.analyticAccounts.find(a => a.id === d.analyticAccountId);
+          return {
+            analyticAccountId: d.analyticAccountId,
+            parentAnalyticId: analyticAcc?.parentId || null,
+            amount: Number(d.amount)
+          };
+        })
       : [];
     return {
       id: line.id,
@@ -230,7 +250,42 @@ export class JournalEntryFormComponent implements OnInit {
     return Math.abs(this.totalDebit - this.totalCredit);
   }
 
+  onJournalChange(): void {
+    if (!this.move.journalId) return;
+    this.currentJournal = this.journals.find(j => j.id === this.move.journalId) || null;
+    this.journalOpeningBalance = null;
+    this.journalAccountId = null;
+    if (!this.isBalanceJournal) return;
+    this.accountingService.getJournalAccountBalance(this.move.journalId).subscribe({
+      next: (data) => {
+        this.journalAccountCode = data.accountCode;
+        this.journalAccountName = data.accountName;
+        this.journalAccountId = data.accountId;
+        this.journalOpeningBalance = data.balance;
+      },
+      error: () => { this.journalOpeningBalance = null; }
+    });
+  }
+
+  /** Impact de l'écriture en cours sur le compte du journal */
+  get journalAccountImpact(): number {
+    if (this.journalAccountId === null) return 0;
+    return this.lines.reduce((sum, l) => {
+      if (l.accountId === this.journalAccountId) {
+        sum += (Number(l.debit) || 0) - (Number(l.credit) || 0);
+      }
+      return sum;
+    }, 0);
+  }
+
+  get journalFinalBalance(): number | null {
+    if (this.journalOpeningBalance === null) return null;
+    return this.journalOpeningBalance + this.journalAccountImpact;
+  }
+
   get isBalanced(): boolean {
+    // Caisse/banque : pas d'obligation d'équilibre (contrepartie implicite du compte lié)
+    if (this.isBalanceJournal) return true;
     return Math.abs(this.totalDebit - this.totalCredit) < 0.001;
   }
 
@@ -263,9 +318,10 @@ export class JournalEntryFormComponent implements OnInit {
     if (line.analyticDistributions.length === 0) {
       const lineAmount = Number(line.debit) > 0 ? Number(line.debit) : Number(line.credit);
       if (line.analyticAccountId && lineAmount > 0) {
-        line.analyticDistributions = [{ analyticAccountId: line.analyticAccountId, amount: lineAmount }];
+        const analyticAcc = this.analyticAccounts.find(a => a.id === line.analyticAccountId);
+        line.analyticDistributions = [{ analyticAccountId: line.analyticAccountId, parentAnalyticId: analyticAcc?.parentId || null, amount: lineAmount }];
       } else {
-        line.analyticDistributions = [{ analyticAccountId: null, amount: lineAmount > 0 ? lineAmount : 0 }];
+        line.analyticDistributions = [{ analyticAccountId: null, parentAnalyticId: null, amount: lineAmount > 0 ? lineAmount : 0 }];
       }
     }
   }
@@ -279,8 +335,58 @@ export class JournalEntryFormComponent implements OnInit {
     this.analyticModalIndex = null;
   }
 
+  get parentAnalyticAccounts(): AnalyticAccount[] {
+    return this.analyticAccounts.filter(a => !a.parentId);
+  }
+
+  getChildAnalyticAccounts(parentId: number | null): AnalyticAccount[] {
+    if (!parentId) return [];
+    return this.analyticAccounts.filter(a => a.parentId === parentId);
+  }
+
+  onParentAnalyticChange(dist: AnalyticDistributionForm): void {
+    const children = this.getChildAnalyticAccounts(dist.parentAnalyticId);
+    if (children.length === 0) {
+      // Pas d'enfants : utiliser le compte parent directement
+      dist.analyticAccountId = dist.parentAnalyticId;
+    } else {
+      dist.analyticAccountId = null;
+    }
+  }
+
   addDistributionRow(line: LineForm): void {
-    line.analyticDistributions.push({ analyticAccountId: null, amount: 0 });
+    const remaining = this.getRemaining(line);
+    const lastRow = line.analyticDistributions[line.analyticDistributions.length - 1];
+    // Hériter du parent de la dernière ligne pour éviter de le re-sélectionner
+    const inheritedParentId = lastRow?.parentAnalyticId ?? null;
+    line.analyticDistributions.push({
+      analyticAccountId: null,
+      parentAnalyticId: inheritedParentId,
+      amount: remaining > 0 ? remaining : 0
+    });
+  }
+
+  splitEqually(line: LineForm): void {
+    const total = this.getLineAmount(line);
+    const count = line.analyticDistributions.length;
+    if (count === 0) return;
+    const share = Math.floor((total / count) * 100) / 100;
+    const remainder = Math.round((total - share * count) * 100) / 100;
+    line.analyticDistributions.forEach((d, i) => {
+      d.amount = i === count - 1 ? share + remainder : share;
+    });
+  }
+
+  getDistributionPercent(line: LineForm, dist: AnalyticDistributionForm): number {
+    const total = this.getLineAmount(line);
+    if (!total) return 0;
+    return Math.round((Number(dist.amount) / total) * 100);
+  }
+
+  getDistributedPercent(line: LineForm): number {
+    const total = this.getLineAmount(line);
+    if (!total) return 0;
+    return Math.min(100, Math.round((this.getDistributedTotal(line) / total) * 100));
   }
 
   removeDistributionRow(line: LineForm, i: number): void {
@@ -333,6 +439,11 @@ export class JournalEntryFormComponent implements OnInit {
     return `${line.analyticDistributions.length} comptes`;
   }
 
+  /** Seuls les comptes de charges (classe 6) peuvent avoir une ventilation analytique */
+  isChargeAccount(line: LineForm): boolean {
+    return line.accountCode?.startsWith('6') ?? false;
+  }
+
   getAnalyticLabel(id: number | null): string {
     if (!id) return '';
     const a = this.analyticAccounts.find(x => x.id === id);
@@ -368,7 +479,13 @@ export class JournalEntryFormComponent implements OnInit {
     if (!this.move.journalId) { this.errorMsg = 'Sélectionnez un journal'; return; }
     if (!this.move.date) { this.errorMsg = 'Sélectionnez une date'; return; }
     const lines = this.formToLines();
-    if (lines.length < 2) { this.errorMsg = "L'écriture doit avoir au moins 2 lignes"; return; }
+    const minLines = this.isBalanceJournal ? 1 : 2;
+    if (lines.length < minLines) {
+      this.errorMsg = this.isBalanceJournal
+        ? "L'écriture doit avoir au moins 1 ligne"
+        : "L'écriture doit avoir au moins 2 lignes";
+      return;
+    }
 
     this.saving = true;
     const moveData: AccountMove = { ...this.move, lines };
@@ -397,7 +514,10 @@ export class JournalEntryFormComponent implements OnInit {
   }
 
   post(): void {
-    if (!this.isBalanced) { this.errorMsg = "L'écriture doit être équilibrée (débit = crédit)"; return; }
+    if (!this.isBalanceJournal && !this.isBalanced) {
+      this.errorMsg = "L'écriture doit être équilibrée (débit = crédit)";
+      return;
+    }
     if (!this.move.id) { this.save(); return; }
     if (!confirm('Valider cette écriture ? Cette action est irréversible.')) return;
 
@@ -417,12 +537,15 @@ export class JournalEntryFormComponent implements OnInit {
     });
   }
 
-  cancel(): void {
+  reverse(): void {
     if (!this.move.id) return;
-    if (!confirm('Annuler cette écriture ?')) return;
-    this.accountingService.cancelMove(this.move.id!).subscribe({
-      next: (cancelled) => { this.move = cancelled; },
-      error: (err) => { this.errorMsg = err.error?.message || 'Erreur'; }
+    if (!confirm('Extourner cette écriture ? Une écriture inverse validée sera créée.')) return;
+    this.accountingService.reverseMove(this.move.id!).subscribe({
+      next: (reversed) => {
+        this.successMsg = `Extourne ${reversed.name} créée`;
+        setTimeout(() => this.router.navigate(['/accounting/journal-entries', reversed.id]), 800);
+      },
+      error: (err) => { this.errorMsg = err.error?.message || 'Erreur lors de l\'extourne'; }
     });
   }
 

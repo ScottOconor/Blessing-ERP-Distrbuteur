@@ -20,6 +20,10 @@ export const accountingRoutes: Routes = [
         loadComponent: () => import('./components/journals/journals.component').then(m => m.JournalsComponent)
       },
       {
+        path: 'journals/:id',
+        loadComponent: () => import('./components/journals/journal-detail/journal-detail.component').then(m => m.JournalDetailComponent)
+      },
+      {
         path: 'journal-entries',
         loadComponent: () => import('./components/journal-entries/journal-entries.component').then(m => m.JournalEntriesComponent)
       },

@@ -6,6 +6,7 @@ com\erp\stock\dto\StockPickingRequest$StockPickingRequestBuilder.class
 com\erp\purchases\entity\PurchaseOrderLine$PurchaseOrderLineBuilder.class
 com\erp\stock\entity\ProductCategory$ProductCategoryBuilder.class
 com\erp\stock\repository\ProductRepository.class
+com\erp\sales\controller\SalesStatsController.class
 com\erp\stock\service\StockService.class
 com\erp\accounting\dto\AnalyticLineDTO.class
 com\erp\accounting\entity\AnalyticLine.class
@@ -14,9 +15,11 @@ com\erp\purchases\entity\PurchaseInvoice.class
 com\erp\sales\dto\SalesInvoiceDTO$SalesInvoiceDTOBuilder.class
 com\erp\purchases\entity\PurchaseOrder$PurchaseOrderBuilder.class
 com\erp\stock\entity\StockMove.class
+com\erp\sales\service\SalesStatsService.class
 com\erp\accounting\dto\BalanceLine6ColsDTO.class
 com\erp\sales\dto\InvoicePaymentRequest.class
 com\erp\sales\entity\SalesOrderLine$SalesOrderLineBuilder.class
+com\erp\accounting\dto\JournalDailyBalanceDTO$JournalDailyBalanceDTOBuilder.class
 com\erp\accounting\dto\AccountMoveLineDTO$AccountMoveLineDTOBuilder.class
 com\erp\accounting\repository\AccountJournalRepository.class
 com\erp\stock\dto\StockAdjustmentDTO.class
@@ -43,18 +46,23 @@ com\erp\stock\repository\StockQuantRepository.class
 com\erp\stock\dto\StockDashboardDTO.class
 com\erp\stock\entity\Product$ProductBuilder.class
 com\erp\stock\dto\WarehouseDTO$WarehouseDTOBuilder.class
+com\erp\sales\dto\SalesStatsResponse.class
 com\erp\accounting\dto\AnalyticAccountDTO.class
 com\erp\stock\dto\StockAdjustmentDTO$StockAdjustmentDTOBuilder.class
 com\erp\sales\dto\SalesOrderDTO$LineDTO$LineDTOBuilder.class
 com\erp\stock\dto\AgencyDTO.class
 com\erp\stock\dto\StockQuantDTO.class
 com\erp\accounting\dto\AccountAccountDTO$AccountAccountDTOBuilder.class
+com\erp\stock\dto\ReceptionBordereauDTO$ReceptionBordereauDTOBuilder.class
+com\erp\sales\dto\SalesStatsClient$SalesStatsClientBuilder.class
+com\erp\stock\service\WarehouseDataInitializer.class
 com\erp\stock\dto\StockMoveDTO.class
 com\erp\accounting\service\AnalyticService$AnalyticBalanceLine.class
 com\erp\accounting\dto\JournalEntryRequest$AnalyticDistribution$AnalyticDistributionBuilder.class
 com\erp\purchases\repository\PurchaseInvoicePaymentRepository.class
 com\erp\sales\dto\SalesInvoiceRequest$LineRequest$LineRequestBuilder.class
 com\erp\accounting\service\AnalyticService.class
+com\erp\sales\dto\SalesStatsResponse$SalesStatsResponseBuilder.class
 com\erp\auth\dto\AuthRequest$AuthRequestBuilder.class
 com\erp\auth\entity\User$UserBuilder.class
 com\erp\stock\dto\StockMoveDTO$StockMoveDTOBuilder.class
@@ -71,6 +79,7 @@ com\erp\accounting\dto\BalanceLineDTO$BalanceLineDTOBuilder.class
 com\erp\sales\entity\SalesInvoice.class
 com\erp\stock\entity\ProductCategory.class
 com\erp\stock\entity\StockAdjustment.class
+com\erp\sales\dto\SalesStatsRequest.class
 com\erp\stock\dto\ProductCategoryDTO.class
 com\erp\stock\dto\StockPickingRequest.class
 com\erp\stock\dto\ProductCategoryDTO$ProductCategoryDTOBuilder.class
@@ -88,8 +97,10 @@ com\erp\auth\controller\AuthController$RegisterRequest.class
 com\erp\stock\dto\ProductDTO.class
 com\erp\accounting\service\ReportService.class
 com\erp\accounting\entity\AccountJournal.class
+com\erp\accounting\repository\JournalDailyBalanceRepository.class
 com\erp\accounting\dto\ReportRequest.class
 com\erp\accounting\entity\Partner$PartnerBuilder.class
+com\erp\config\SpaController.class
 com\erp\sales\controller\SalesController.class
 com\erp\auth\dto\AuthRequest.class
 com\erp\auth\service\UserDetailsServiceImpl.class
@@ -102,8 +113,10 @@ com\erp\accounting\entity\AccountAccount.class
 com\erp\sales\repository\SalesOrderRepository.class
 com\erp\auth\controller\AuthController.class
 com\erp\sales\entity\SalesInvoice$SalesInvoiceBuilder.class
+com\erp\accounting\dto\JournalDailyBalanceDTO.class
 com\erp\accounting\entity\Partner.class
 com\erp\stock\entity\ValuationLayer$ValuationLayerBuilder.class
+com\erp\stock\dto\ReceptionBordereauDTO.class
 com\erp\accounting\entity\AnalyticAccount$AnalyticAccountBuilder.class
 com\erp\accounting\service\ReportService$PartnerAggregation.class
 com\erp\purchases\repository\PurchaseOrderRepository.class
@@ -114,6 +127,7 @@ com\erp\purchases\dto\PurchaseOrderRequest$LineRequest.class
 com\erp\purchases\dto\PurchaseInvoiceRequest$LineRequest.class
 com\erp\purchases\dto\PurchaseOrderDTO.class
 com\erp\accounting\repository\AnalyticAccountRepository.class
+com\erp\stock\dto\ReceptionBordereauDTO$LigneBordereau$LigneBordereauBuilder.class
 com\erp\stock\dto\ValuationLayerDTO.class
 com\erp\accounting\entity\AnalyticDistributionItem.class
 com\erp\purchases\dto\PurchaseInvoicePaymentRequest$PurchaseInvoicePaymentRequestBuilder.class
@@ -170,6 +184,7 @@ com\erp\accounting\repository\AccountAccountRepository.class
 com\erp\sales\entity\SalesInvoiceLine$SalesInvoiceLineBuilder.class
 com\erp\accounting\dto\JournalEntryRequest.class
 com\erp\stock\entity\Warehouse$WarehouseBuilder.class
+com\erp\stock\dto\ReceptionBordereauDTO$LigneBordereau.class
 com\erp\stock\entity\StockPickingType$StockPickingTypeBuilder.class
 com\erp\purchases\dto\PurchaseInvoiceRequest$PurchaseInvoiceRequestBuilder.class
 com\erp\sales\entity\SalesOrderLine.class
@@ -187,6 +202,7 @@ com\erp\common\GlobalExceptionHandler.class
 com\erp\stock\dto\StockPickingDTO.class
 com\erp\sales\dto\SalesInvoiceRequest.class
 com\erp\stock\entity\StockPicking.class
+com\erp\sales\repository\SalesInvoiceLineRepository.class
 com\erp\stock\dto\StockPickingTypeDTO$StockPickingTypeDTOBuilder.class
 com\erp\accounting\dto\PartnerDTO.class
 com\erp\purchases\entity\PurchaseInvoicePayment$PurchaseInvoicePaymentBuilder.class
@@ -198,6 +214,8 @@ com\erp\accounting\entity\AccountAccount$AccountAccountBuilder.class
 com\erp\stock\dto\StockPickingDTO$StockPickingDTOBuilder.class
 com\erp\purchases\entity\PurchaseInvoice$PurchaseInvoiceBuilder.class
 com\erp\stock\repository\StockAdjustmentRepository.class
+com\erp\sales\dto\SalesStatsClient.class
+com\erp\accounting\entity\JournalDailyBalance$JournalDailyBalanceBuilder.class
 com\erp\purchases\dto\PurchaseInvoiceRequest.class
 com\erp\auth\service\JwtService.class
 com\erp\purchases\dto\PurchaseInvoiceRequest$LineRequest$LineRequestBuilder.class
@@ -205,6 +223,8 @@ com\erp\accounting\repository\AccountMoveLineRepository.class
 com\erp\stock\entity\StockPicking$StockPickingBuilder.class
 com\erp\purchases\entity\PurchaseOrderLine.class
 com\erp\stock\repository\WarehouseRepository.class
+com\erp\sales\dto\SalesStatsLine$SalesStatsLineBuilder.class
+com\erp\sales\dto\SalesStatsLine.class
 com\erp\accounting\service\ImportService.class
 com\erp\accounting\repository\PartnerRepository.class
 com\erp\sales\repository\SalesInvoiceRepository.class
@@ -217,4 +237,5 @@ com\erp\sales\dto\InvoicePaymentDTO.class
 com\erp\accounting\dto\AccountJournalDTO.class
 com\erp\auth\entity\User.class
 com\erp\purchases\service\PurchaseService.class
+com\erp\accounting\entity\JournalDailyBalance.class
 com\erp\accounting\dto\AccountMoveDTO$AccountMoveDTOBuilder.class

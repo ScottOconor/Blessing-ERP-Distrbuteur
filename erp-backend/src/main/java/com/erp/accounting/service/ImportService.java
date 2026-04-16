@@ -75,7 +75,7 @@ public class ImportService {
                 boolean deprecated = (colDeprecated != null) && parseBoolean(getString(row, colDeprecated));
                 boolean reconcile  = (colReconcile != null)  && parseBoolean(getString(row, colReconcile));
 
-                Optional<AccountAccount> existing = accountRepo.findByCodeAndCompanyId(code, companyId);
+                Optional<AccountAccount> existing = accountRepo.findFirstByCodeAndCompanyId(code, companyId);
                 if (existing.isPresent()) {
                     AccountAccount acc = existing.get();
                     acc.setName(name);
@@ -147,7 +147,7 @@ public class ImportService {
                 String parentCode  = (colParent != null) ? extractCode(getString(row, colParent)) : "";
                 codeToParentCode.put(code, parentCode);
 
-                Optional<AnalyticAccount> existing = analyticAccountRepo.findByCodeAndCompanyId(code, companyId);
+                Optional<AnalyticAccount> existing = analyticAccountRepo.findFirstByCodeAndCompanyId(code, companyId);
                 if (existing.isPresent()) {
                     AnalyticAccount acc = existing.get();
                     acc.setName(name);
@@ -170,8 +170,8 @@ public class ImportService {
                 String parentCode = entry.getValue();
                 if (parentCode.isEmpty()) continue;
                 final String fParentCode = parentCode;
-                analyticAccountRepo.findByCodeAndCompanyId(childCode, companyId).ifPresent(child -> {
-                    analyticAccountRepo.findByCodeAndCompanyId(fParentCode, companyId).ifPresent(parent -> {
+                analyticAccountRepo.findFirstByCodeAndCompanyId(childCode, companyId).ifPresent(child -> {
+                    analyticAccountRepo.findFirstByCodeAndCompanyId(fParentCode, companyId).ifPresent(parent -> {
                         child.setParent(parent);
                         analyticAccountRepo.save(child);
                     });
@@ -229,8 +229,8 @@ public class ImportService {
                 String partnerType  = resolvePartnerType(isCompanyStr, typeStr);
 
                 Optional<Partner> existing = ref.isEmpty()
-                        ? partnerRepo.findByNameAndCompanyId(name, companyId)
-                        : partnerRepo.findByRefAndCompanyId(ref, companyId);
+                        ? partnerRepo.findFirstByNameAndCompanyId(name, companyId)
+                        : partnerRepo.findFirstByRefAndCompanyId(ref, companyId);
 
                 if (existing.isPresent()) {
                     Partner p = existing.get();
@@ -309,14 +309,14 @@ public class ImportService {
                 String defaultAcctCode = extractCode(defaultAcctRaw);
                 AccountAccount defaultAcct = null;
                 if (!defaultAcctCode.isEmpty()) {
-                    defaultAcct = accountRepo.findByCodeAndCompanyId(defaultAcctCode, companyId).orElse(null);
+                    defaultAcct = accountRepo.findFirstByCodeAndCompanyId(defaultAcctCode, companyId).orElse(null);
                     if (defaultAcct == null) {
                         result.addError("Ligne " + (i + 1) + " [" + code + "] : compte '"
                                 + defaultAcctCode + "' introuvable");
                     }
                 }
 
-                Optional<AccountJournal> existing = journalRepo.findByCodeAndCompanyId(code, companyId);
+                Optional<AccountJournal> existing = journalRepo.findFirstByCodeAndCompanyId(code, companyId);
                 if (existing.isPresent()) {
                     AccountJournal j = existing.get();
                     j.setName(name);

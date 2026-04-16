@@ -50,6 +50,14 @@ export const salesRoutes: Routes = [
       {
         path: 'reports/rapport-consolide',
         loadComponent: () => import('./components/reports/rapport-consolide/rapport-consolide.component').then(m => m.RapportConsolideComponent)
+      },
+      {
+        path: 'ristournes',
+        loadComponent: () => import('./components/ristournes/ristourne-list.component').then(m => m.RistourneListComponent)
+      },
+      {
+        path: 'precomptes',
+        loadComponent: () => import('./components/precomptes/precompte-config.component').then(m => m.PrecompteConfigComponent)
       }
     ]
   }

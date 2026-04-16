@@ -47,9 +47,12 @@
         </thead>
         <tbody>
           @for (journal of journals; track journal.id) {
-            <tr>
+            <tr class="journal-row" (click)="openDetail(journal)" style="cursor:pointer">
               <td><strong class="journal-code">{{ journal.code }}</strong></td>
-              <td>{{ journal.name }}</td>
+              <td>
+                <span class="journal-name-link">{{ journal.name }}</span>
+                <span class="view-hint material-icons">arrow_forward</span>
+              </td>
               <td>
                 <span [class]="getTypeBadgeClass(journal.type)">{{ getTypeLabel(journal.type) }}</span>
               </td>
@@ -63,7 +66,7 @@
                 }
               </td>
               <td class="text-center">
-                <button class="btn btn-ghost btn-sm" (click)="openEdit(journal)" title="Modifier">
+                <button class="btn btn-ghost btn-sm" (click)="$event.stopPropagation(); openEdit(journal)" title="Modifier">
                   <span class="material-icons">edit</span>
                 </button>
               </td>

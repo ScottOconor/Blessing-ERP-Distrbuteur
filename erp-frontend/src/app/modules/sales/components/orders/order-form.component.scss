@@ -288,39 +288,48 @@
 }
 
 .suggestions-panel {
-  position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-  background: white; border: 1px solid #dee2e6; border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14); z-index: 999;
-  max-height: 280px; overflow-y: auto;
+  position: fixed;
+  background: white; border: 1px solid #c8d0da; border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+  z-index: 9999; max-height: 340px; overflow-y: auto;
 }
 
 .suggestion-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-  transition: background 0.1s;
-  &:last-child { border-bottom: none; }
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+  transition: background 0.12s; gap: 10px;
+  &:first-child { border-radius: 10px 10px 0 0; }
+  &:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
   &:hover { background: #e8f5f5; }
 }
 
-.suggestion-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.suggestion-main { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 
 .sug-code {
   flex-shrink: 0; font-family: monospace; font-size: 11px;
-  background: #eef6f6; color: #017E84; padding: 1px 6px; border-radius: 3px; font-weight: 600;
+  background: #e6f4f4; color: #017E84; padding: 2px 8px; border-radius: 4px;
+  font-weight: 700; min-width: 52px; text-align: center;
 }
 
-.sug-name { font-size: 13px; font-weight: 500; color: #212529; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sug-name {
+  font-size: 13px; font-weight: 500; color: #212529;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
-.suggestion-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 8px; }
+.suggestion-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .sug-stock {
-  font-size: 11px; color: #198754; font-weight: 600;
-  &.low { color: #dc3545; }
+  font-size: 11px; font-weight: 700; color: #198754;
+  background: #e8f5e9; padding: 2px 7px; border-radius: 4px;
+  &.low { color: #dc3545; background: #fde8e8; }
 }
 
-.sug-price { font-size: 11px; color: #6c757d; font-family: monospace; }
+.sug-price {
+  font-size: 12px; color: #495057; font-family: monospace; font-weight: 600;
+  background: #f4f6f8; padding: 2px 7px; border-radius: 4px;
+}
 
-.sug-empty { padding: 12px; text-align: center; color: #adb5bd; font-size: 13px; }
+.sug-empty { padding: 14px 18px; text-align: center; color: #adb5bd; font-size: 13px; font-style: italic; }
 
 .product-readonly {
   display: flex; align-items: center; gap: 6px; font-size: 13px;

@@ -38,6 +38,15 @@ export class SalesLayoutComponent implements OnInit {
     },
     { id: 'clients', label: 'Clients', icon: 'people', route: '/sales/clients' },
     {
+      id: 'commercial',
+      label: 'Commercial',
+      icon: 'local_offer',
+      children: [
+        { label: 'Ristournes', icon: 'redeem', route: '/sales/ristournes' },
+        { label: 'Précomptes & Enlèvements', icon: 'percent', route: '/sales/precomptes' }
+      ]
+    },
+    {
       id: 'reports',
       label: 'Rapports',
       icon: 'assessment',

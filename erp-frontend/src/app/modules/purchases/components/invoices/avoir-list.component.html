@@ -173,9 +173,9 @@
                           <div class="ac-row">
                             <input type="text" class="inp" [(ngModel)]="lineSearches[i]"
                               placeholder="Rechercher un article..."
-                              (focus)="openSuggestions(i)"
+                              (focus)="openSuggestions(i, $event)"
                               (blur)="closeSuggestions(i)"
-                              (input)="openSuggestions(i)"
+                              (input)="openSuggestions(i, $event)"
                               autocomplete="off" />
                             @if (line.productCode) {
                               <button class="btn-clr" (click)="clearLine(i)">
@@ -183,8 +183,11 @@
                               </button>
                             }
                           </div>
-                          @if (activeSuggestionIdx === i) {
-                            <div class="sug-panel">
+                          @if (activeSuggestionIdx === i && dropdownRect) {
+                            <div class="sug-panel"
+                              [style.top.px]="dropdownRect.top"
+                              [style.left.px]="dropdownRect.left"
+                              [style.width.px]="dropdownRect.width">
                               @for (p of getSuggestions(i); track p.id) {
                                 <div class="sug-item" (mousedown)="selectProduct(i, p)">
                                   @if (p.defaultCode) { <span class="sc">{{ p.defaultCode }}</span> }

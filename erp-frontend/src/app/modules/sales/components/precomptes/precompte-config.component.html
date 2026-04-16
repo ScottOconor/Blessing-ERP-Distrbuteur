@@ -1,0 +1,294 @@
+<div class="page-container">
+  <!-- Input file caché pour import -->
+  <input #importEnlInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportEnlFileChange($event)" />
+
+  <div class="page-header">
+    <div class="header-left">
+      <span class="material-icons page-icon">account_balance</span>
+      <div>
+        <h1 class="page-title">Précomptes & Enlèvements</h1>
+        <p class="page-subtitle">Configuration des retenues à la source et frais d'enlèvement</p>
+      </div>
+    </div>
+    <div class="header-right" style="display:flex;gap:8px;align-items:center">
+      @if (activeTab === 'precomptes') {
+        <button class="btn-new" (click)="openNewPc()"><span class="material-icons">add</span> Nouveau précompte</button>
+      } @else {
+        <button class="btn-outline" (click)="downloadEnlTemplate()">
+          <span class="material-icons">download</span> Modèle Excel
+        </button>
+        <button class="btn-import" (click)="triggerEnlImport()" [disabled]="importEnlLoading">
+          <span class="material-icons">upload_file</span> {{ importEnlLoading ? 'Lecture...' : 'Importer Excel' }}
+        </button>
+        <button class="btn-new" (click)="openNewEnl()"><span class="material-icons">add</span> Nouveau frais enlèvement</button>
+      }
+    </div>
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab-btn" [class.active]="activeTab === 'precomptes'" (click)="activeTab = 'precomptes'">
+      <span class="material-icons">percent</span> Précomptes
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'enlevements'" (click)="activeTab = 'enlevements'">
+      <span class="material-icons">local_shipping</span> Frais d'enlèvement
+    </button>
+  </div>
+
+  <!-- ===== PRÉCOMPTES ===== -->
+  @if (activeTab === 'precomptes') {
+    <div class="card">
+      @if (loadingPc) {
+        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
+      } @else if (precomptes.length === 0) {
+        <div class="empty-state">
+          <span class="material-icons">percent</span>
+          <p>Aucun précompte configuré.</p>
+          <button class="btn-new" (click)="openNewPc()"><span class="material-icons">add</span> Ajouter</button>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Partenaire</th>
+              <th>Type</th>
+              <th class="text-right">Taux (%)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of precomptes; track p.id) {
+              <tr>
+                <td class="font-bold">{{ p.partnerName }}</td>
+                <td><span class="badge" [class.badge-sale]="p.typePrecompte === 'sale'" [class.badge-purchase]="p.typePrecompte === 'purchase'">{{ typeLabel(p.typePrecompte) }}</span></td>
+                <td class="text-right font-mono font-bold">{{ p.tauxPrecompte }}%</td>
+                <td class="actions-cell">
+                  <button class="btn-icon" (click)="editPc(p)"><span class="material-icons">edit</span></button>
+                  <button class="btn-icon danger" (click)="deletePc(p.id!)"><span class="material-icons">delete</span></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- ===== ENLÈVEMENTS ===== -->
+  @if (activeTab === 'enlevements') {
+    <div class="card">
+      @if (loadingEnl) {
+        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
+      } @else if (enlevements.length === 0) {
+        <div class="empty-state">
+          <span class="material-icons">local_shipping</span>
+          <p>Aucun frais d'enlèvement configuré.</p>
+          <button class="btn-new" (click)="openNewEnl()"><span class="material-icons">add</span> Ajouter</button>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th class="text-right">Montant TTC (FCFA)</th>
+              <th class="text-right">Coût HT (FCFA)</th>
+              <th>Suppléments clients</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of enlevements; track e.id) {
+              <tr>
+                <td class="font-bold">{{ e.categoryName }}</td>
+                <td class="text-right font-mono">{{ e.montantFixe | number:'1.0-0' }}</td>
+                <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.2-2' }}</td>
+                <td>
+                  @if (e.clients && e.clients.length > 0) {
+                    <span class="clients-count">{{ e.clients.length }} supplément(s) client</span>
+                  } @else {
+                    <span class="text-muted">Montant uniforme</span>
+                  }
+                </td>
+                <td class="actions-cell">
+                  <button class="btn-icon" (click)="editEnl(e)"><span class="material-icons">edit</span></button>
+                  <button class="btn-icon danger" (click)="deleteEnl(e.id!)"><span class="material-icons">delete</span></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- ===== PRÉCOMPTE MODAL ===== -->
+@if (showPcModal) {
+  <div class="modal-overlay" (click.self)="showPcModal = false">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="material-icons">percent</span>
+        <h2>{{ editingPc ? 'Modifier précompte' : 'Nouveau précompte' }}</h2>
+        <button class="btn-close-modal" (click)="showPcModal = false"><span class="material-icons">close</span></button>
+      </div>
+      @if (pcError) { <div class="modal-error"><span class="material-icons">error</span>{{ pcError }}</div> }
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label>Partenaire <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="pcForm.partnerId">
+              <option [value]="0">-- Sélectionner --</option>
+              @for (c of clients; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Type <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="pcForm.typePrecompte">
+              @for (t of TYPE_OPTS; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Taux (%) <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="pcForm.tauxPrecompte">
+              @for (t of TAUX_OPTS; track t) { <option [value]="t">{{ t }}%</option> }
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showPcModal = false">Annuler</button>
+        <button class="btn-save" (click)="savePc()" [disabled]="savingPc">
+          <span class="material-icons">save</span> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== ENLÈVEMENT MODAL ===== -->
+@if (showEnlModal) {
+  <div class="modal-overlay" (click.self)="showEnlModal = false">
+    <div class="modal-box modal-wide">
+      <div class="modal-header">
+        <span class="material-icons">local_shipping</span>
+        <h2>{{ editingEnl ? 'Modifier enlèvement' : 'Nouveau frais d\'enlèvement' }}</h2>
+        <button class="btn-close-modal" (click)="showEnlModal = false"><span class="material-icons">close</span></button>
+      </div>
+      @if (enlError) { <div class="modal-error"><span class="material-icons">error</span>{{ enlError }}</div> }
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Catégorie de produit <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="enlForm.categoryId">
+              <option [value]="0">-- Sélectionner --</option>
+              @for (cat of categories; track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Montant facturé TTC / unité (FCFA) <span class="req">*</span></label>
+            <input type="number" class="form-control" [(ngModel)]="enlForm.montantFixe" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Coût d'enlèvement HT / unité (FCFA)</label>
+            <input type="number" class="form-control" [(ngModel)]="enlForm.coutEnlevement" min="0" step="0.01" />
+          </div>
+        </div>
+
+        <!-- Suppléments clients -->
+        <div class="section-separator">
+          <span>Suppléments clients (facultatif)</span>
+        </div>
+        <p style="font-size:12px;color:#6c757d;margin:0 0 8px">
+          Le montant supplémentaire s'<strong>ajoute</strong> au montant fixe lors de la facturation.
+          Il est comptabilisé dans un compte distinct (ex. surcharge logistique).
+        </p>
+        <div class="lines-header">
+          <span class="lines-title">Suppléments par client</span>
+          <button class="btn-add-line" (click)="addEnlClient()"><span class="material-icons">add</span> Ajouter client</button>
+        </div>
+        @if (enlForm.clients && enlForm.clients.length > 0) {
+          <table class="lines-table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th class="ar">Supplément (FCFA)</th>
+                <th class="ar">Total facturé</th>
+                <th>Compte supplément</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ec of enlForm.clients; track $index; let i = $index) {
+                <tr>
+                  <td>
+                    <select class="inp" [(ngModel)]="ec.partnerId">
+                      <option [value]="0">-- Client --</option>
+                      @for (c of clients; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+                    </select>
+                  </td>
+                  <td class="ar"><input type="number" class="inp ar" [(ngModel)]="ec.montant" min="0" /></td>
+                  <td class="ar amt">{{ (enlForm.montantFixe || 0) + (ec.montant || 0) | number:'1.0-0' }}</td>
+                  <td>
+                    <input type="text" class="inp" [(ngModel)]="ec.supplementAccountCode"
+                      placeholder="ex: 6134" style="width:90px" />
+                  </td>
+                  <td><button class="btn-del" (click)="removeEnlClient(i)"><span class="material-icons">delete</span></button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="text-muted" style="font-size:13px; padding: 8px 0;">Aucun supplément — le montant fixe s'applique uniformément.</p>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="showEnlModal = false">Annuler</button>
+        <button class="btn-save" (click)="saveEnl()" [disabled]="savingEnl">
+          <span class="material-icons">save</span> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Import Enlèvements Excel -->
+@if (showImportEnlModal) {
+  <div class="modal-overlay" (click)="closeImportEnlModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:650px">
+      <div class="modal-header">
+        <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span>
+          Aperçu import enlèvements ({{ importEnlRows.length }} ligne(s))
+        </h2>
+        <button class="btn-close" (click)="closeImportEnlModal()"><span class="material-icons">close</span></button>
+      </div>
+      <div style="overflow-x:auto;max-height:50vh">
+        <table class="cfg-table">
+          <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant TTC</th><th class="text-right">Coût HT</th><th>Résolu</th></tr></thead>
+          <tbody>
+            @for (row of importEnlRows; track $index; let i = $index) {
+              <tr>
+                <td class="text-muted">{{ i+1 }}</td>
+                <td class="font-bold">{{ row["Catégorie d'article"] || row['Catégorie'] }}</td>
+                <td class="text-right">{{ row["Montant de l'enlèvement"] ?? row["Montant de l'enl\u00e8vement"] ?? '0' }}</td>
+                <td class="text-right text-muted">{{ row["Cout enlevement"] ?? row["Co\u00fbt enl\u00e8vement"] ?? '0' }}</td>
+                <td>
+                  @if (getCategoryIdByName(row["Catégorie d'article"] || row['Catégorie'])) {
+                    <span style="color:#198754">✓</span>
+                  } @else {
+                    <span style="color:#dc3545" title="Catégorie introuvable">✗</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeImportEnlModal()">Annuler</button>
+        <button class="btn-save" (click)="confirmImportEnl()">
+          <span class="material-icons">check_circle</span> Importer ({{ importEnlRows.length }} lignes)
+        </button>
+      </div>
+    </div>
+  </div>
+}

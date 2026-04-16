@@ -35,5 +35,9 @@ public class PurchaseInvoiceRequest {
         private BigDecimal prixUnitaire;
         private BigDecimal tauxTVA;
         private String accountCode;
+        /** Catégorie produit (pour calcul précompte) */
+        private Long categoryId;
+        /** Produit consigne : exclut du précompte */
+        private boolean consigne;
     }
 }

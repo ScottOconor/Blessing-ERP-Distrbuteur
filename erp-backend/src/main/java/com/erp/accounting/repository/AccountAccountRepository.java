@@ -16,6 +16,11 @@ public interface AccountAccountRepository extends JpaRepository<AccountAccount, 
 
     List<AccountAccount> findByCompanyId(Long companyId);
 
+    /** Retourne le premier compte correspondant (résistant aux doublons en base). */
+    Optional<AccountAccount> findFirstByCodeAndCompanyId(String code, Long companyId);
+
+    /** @deprecated Utiliser findFirstByCodeAndCompanyId pour éviter NonUniqueResultException */
+    @Deprecated
     Optional<AccountAccount> findByCodeAndCompanyId(String code, Long companyId);
 
     long countByCompanyId(Long companyId);

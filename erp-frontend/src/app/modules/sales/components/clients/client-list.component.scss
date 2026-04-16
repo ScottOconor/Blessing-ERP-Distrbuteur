@@ -71,6 +71,7 @@
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
   transition: background 0.15s; .material-icons { font-size: 18px; }
   &.btn-edit { color: #0d6efd; &:hover { background: #e7f1ff; } }
+  &.btn-delete { color: #dc3545; &:hover { background: #fde8e8; } }
 }
 
 /* MODAL */
@@ -79,7 +80,7 @@
   display: flex; align-items: center; justify-content: center;
 }
 .modal {
-  background: white; border-radius: 10px; width: 680px; max-width: 95vw;
+  background: white; border-radius: 10px; width: 780px; max-width: 95vw;
   max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
 .modal-header {
@@ -114,4 +115,37 @@
   padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 4px; font-size: 14px;
   font-family: 'Roboto', sans-serif; outline: none; transition: border-color 0.15s;
   &:focus { border-color: #017E84; }
+}
+
+.btn-add-inline {
+  display: inline-flex; align-items: center; gap: 3px; float: right;
+  background: none; border: 1px dashed #017E84; color: #017E84; border-radius: 6px;
+  padding: 3px 10px; font-size: 12px; cursor: pointer; font-family: 'Roboto', sans-serif;
+  .material-icons { font-size: 14px; }
+  &:hover { background: rgba(1,126,132,0.08); }
+}
+
+.inline-table-wrap { overflow-x: auto; }
+.inline-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px;
+  th { padding: 7px 8px; background: #f4f6f8; font-size: 10px; font-weight: 700; color: #8c96a3;
+       text-transform: uppercase; border-bottom: 2px solid #e2e8ef; text-align: left; }
+  td { padding: 4px 4px; border-bottom: 1px solid #eef1f4; vertical-align: middle; }
+  tbody tr:hover td { background: #f8fbff; }
+  .ar { text-align: right; }
+  .ttc-val { font-family: monospace; font-weight: 600; color: #017E84; font-size: 13px; }
+}
+.inp-cell {
+  width: 100%; padding: 4px 6px; border: 1px solid transparent; border-radius: 3px;
+  font-size: 13px; font-family: 'Roboto', sans-serif; outline: none; background: transparent;
+  box-sizing: border-box;
+  &:hover { border-color: #dee2e6; background: #fff; }
+  &:focus { border-color: #017E84; background: #fff; }
+  &.ar { text-align: right; }
+}
+.btn-del-row {
+  background: none; border: none; cursor: pointer; color: #dee2e6; padding: 2px;
+  border-radius: 3px;
+  .material-icons { font-size: 15px; }
+  &:hover { color: #dc3545; background: #fde8e8; }
 }

@@ -42,9 +42,30 @@ public class SalesInvoiceDTO {
     private BigDecimal montantPaye;
     private BigDecimal montantDu;
 
+    /** Ristourne TTC déduite */
+    private BigDecimal totalRistourne;
+    /** Frais d'enlèvement TTC */
+    private BigDecimal fraisEnlevementTTC;
+    /** Précompte total (retenue source) */
+    private BigDecimal totalPrecompte;
+    /** Total liquide nu = base de calcul ristourne */
+    private BigDecimal totalLiquideNu;
+    /** Net à payer = TTC - ristourne + enlèvement */
+    private BigDecimal netAPayer;
+
     private List<LineDTO> lines;
+    private List<RistourneDetailDTO> ristourneDetails;
     private List<InvoicePaymentDTO> payments;
     private LocalDateTime createdAt;
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class RistourneDetailDTO {
+        private String categoryName;
+        private BigDecimal quantite;
+        private BigDecimal montantUnitaire;
+        private BigDecimal montantTotal;
+        private String typeRistourne;
+    }
 
     @Data
     @Builder
@@ -52,6 +73,7 @@ public class SalesInvoiceDTO {
     @AllArgsConstructor
     public static class LineDTO {
         private Long id;
+        private Long productId;
         private String productCode;
         private String description;
         private BigDecimal quantity;
@@ -59,8 +81,14 @@ public class SalesInvoiceDTO {
         private BigDecimal tauxRemise;
         private BigDecimal tauxTVA;
         private String accountCode;
+        private Long categoryId;
         private BigDecimal montantHT;
         private BigDecimal montantTVA;
         private BigDecimal montantTTC;
+        private BigDecimal precompte;
+        private BigDecimal fraisEnlevement;
+        private BigDecimal prixUnitaireTTC;
+        private boolean consigne;
+        private String categoryName;
     }
 }

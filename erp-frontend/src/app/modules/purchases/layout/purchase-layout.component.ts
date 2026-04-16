@@ -36,6 +36,14 @@ export class PurchaseLayoutComponent implements OnInit {
       ]
     },
     { id: 'suppliers', label: 'Fournisseurs', icon: 'store', route: '/purchases/suppliers' },
+    {
+      id: 'commercial',
+      label: 'Commercial',
+      icon: 'local_offer',
+      children: [
+        { label: 'Remises fournisseurs', icon: 'discount', route: '/purchases/remises' }
+      ]
+    }
   ];
 
   constructor(private authService: AuthService, public router: Router) {}

@@ -21,4 +21,9 @@ public interface StockPickingRepository extends JpaRepository<StockPicking, Long
     Integer findMaxSeq(@Param("cid") Long companyId, @Param("prefix") String prefix);
 
     long countByPickingTypeId(Long pickingTypeId);
+
+    /** Alias pour getPendingReceptions */
+    default List<StockPicking> findByCompanyIdAndPickingTypeCodeAndState(Long companyId, String code, String state) {
+        return findByCompanyTypeAndState(companyId, code, state);
+    }
 }

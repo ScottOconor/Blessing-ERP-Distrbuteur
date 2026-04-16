@@ -84,9 +84,12 @@
                 } @else { <span class="text-muted">—</span> }
               </td>
               <td class="font-mono text-muted">{{ client.receivableAccountCode || '4111' }}</td>
-              <td class="text-center">
+              <td class="text-center" style="display:flex;gap:4px;justify-content:center">
                 <button class="btn-icon btn-edit" (click)="openEdit(client)" title="Modifier">
                   <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon btn-delete" (click)="deleteClient(client)" title="Supprimer">
+                  <span class="material-icons">delete</span>
                 </button>
               </td>
             </tr>
@@ -194,29 +197,82 @@
           </div>
         </div>
 
-        <div class="section-title mt-16">Paramètres commerciaux</div>
+        <div class="section-title mt-16">Précompte</div>
         <div class="form-grid">
           <div class="form-group">
-            <label>Taux de ristourne (%)</label>
-            <input type="number" [(ngModel)]="form.tauxRistourne" class="form-control" min="0" max="100" step="0.01" placeholder="0.00" />
-            <span class="form-hint">Remise globale accordée au client</span>
+            <label>Type</label>
+            <input type="text" class="form-control" value="Vente" readonly style="background:#f8f9fa;color:#6c757d" />
           </div>
           <div class="form-group">
-            <label>Taux de précompte (%)</label>
-            <input type="number" [(ngModel)]="form.tauxPrecompte" class="form-control" min="0" max="100" step="0.01" placeholder="0.00" />
-            <span class="form-hint">Précompte retenu sur les factures</span>
+            <label>Taux précompte (%)</label>
+            <select class="form-control" [(ngModel)]="form.tauxPrecompte" (ngModelChange)="onTauxChange()">
+              <option [value]="undefined">-- Aucun --</option>
+              @for (t of TAUX_OPTS; track t) { <option [value]="t">{{ t }}%</option> }
+            </select>
           </div>
           <div class="form-group">
             <label>Limite de crédit (FCFA)</label>
             <input type="number" [(ngModel)]="form.creditLimit" class="form-control" min="0" placeholder="0" />
-            <span class="form-hint">Plafond d'encours autorisé</span>
           </div>
           <div class="form-group">
             <label>Compte client (411x)</label>
             <input type="text" [(ngModel)]="form.receivableAccountCode" class="form-control" placeholder="4111" />
-            <span class="form-hint">Compte de créance client par défaut</span>
           </div>
         </div>
+
+        <!-- Section Ristournes -->
+        <div class="section-title mt-16">
+          Ristournes
+          <button type="button" class="btn-add-inline" (click)="addRistourne()">
+            <span class="material-icons">add</span> Ajouter
+          </button>
+        </div>
+        @if (loadingRst) {
+          <p class="text-secondary" style="font-size:13px;padding:8px 0">Chargement des ristournes...</p>
+        } @else if (ristournes.length === 0) {
+          <p class="text-secondary" style="font-size:13px;padding:8px 0">Aucune ristourne configurée pour ce client.</p>
+        } @else {
+          <div class="inline-table-wrap">
+            <table class="inline-table">
+              <thead>
+                <tr>
+                  <th>Catégorie</th>
+                  <th>Type</th>
+                  <th class="ar">Montant HT</th>
+                  <th class="ar">Montant TTC</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of ristournes; track $index; let i = $index) {
+                  <tr>
+                    <td>
+                      <select class="inp-cell" [(ngModel)]="r.categoryId">
+                        <option [value]="0">-- Catégorie --</option>
+                        @for (cat of categories; track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
+                      </select>
+                    </td>
+                    <td>
+                      <select class="inp-cell" [(ngModel)]="r.typeRistourne" (ngModelChange)="onRistourneTypeChange(r)">
+                        @for (t of TYPE_OPTS; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+                      </select>
+                    </td>
+                    <td class="ar">
+                      <input type="number" class="inp-cell ar" [(ngModel)]="r.montantHT" min="0"
+                        (ngModelChange)="onRistourneHtChange(r)" />
+                    </td>
+                    <td class="ar ttc-val">{{ r.montantTTC | number:'1.0-2' }}</td>
+                    <td>
+                      <button type="button" class="btn-del-row" (click)="removeRistourne(i)">
+                        <span class="material-icons">close</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
 
       <div class="modal-footer">

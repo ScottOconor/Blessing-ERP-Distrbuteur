@@ -24,5 +24,7 @@ public class PurchaseOrderRequest {
         private BigDecimal prixUnitaire;
         private BigDecimal tauxTVA;
         private String accountCode;
+        private Long categoryId;   // catégorie produit (remise, précompte)
+        private boolean consigne;  // exclut PSA/remise
     }
 }

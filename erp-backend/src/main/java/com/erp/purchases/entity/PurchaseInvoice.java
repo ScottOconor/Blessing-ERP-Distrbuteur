@@ -67,6 +67,10 @@ public class PurchaseInvoice {
     @JoinColumn(name = "account_move_id")
     private AccountMove accountMove;
 
+    /** Bon de réception (StockPicking incoming vers Dépôt Achat) créé lors de la validation */
+    @Column(name = "picking_id")
+    private Long pickingId;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<PurchaseInvoiceLine> lines = new ArrayList<>();
@@ -89,6 +93,24 @@ public class PurchaseInvoice {
 
     @Column(precision = 20, scale = 2)
     private BigDecimal montantDu;
+
+    // ===== Champs remise / précompte =====
+
+    /** Total remise fournisseur TTC déduite sur cette facture */
+    @Column(name = "total_remise", precision = 20, scale = 2)
+    private BigDecimal totalRemise;
+
+    /** Total précompte (retenue à la source fournisseur) */
+    @Column(name = "total_precompte", precision = 20, scale = 2)
+    private BigDecimal totalPrecompte;
+
+    /** Total liquide nu = base ristourne/remise */
+    @Column(name = "total_liquide_nu", precision = 20, scale = 2)
+    private BigDecimal totalLiquideNu;
+
+    /** Net à payer = TTC - précompte (remise exclue de la facture) */
+    @Column(name = "net_a_payer", precision = 20, scale = 2)
+    private BigDecimal netAPayer;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

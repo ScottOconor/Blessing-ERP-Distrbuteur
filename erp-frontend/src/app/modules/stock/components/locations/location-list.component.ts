@@ -105,6 +105,14 @@ export class LocationListComponent implements OnInit {
     });
   }
 
+  deleteLocation(l: StockLocation): void {
+    if (!confirm(`Supprimer l'emplacement "${l.name}" ?`)) return;
+    this.stockService.deleteLocation(l.id!).subscribe({
+      next: () => { this.showSuccess('Emplacement supprimé'); this.load(); },
+      error: (e) => this.showSuccess('Erreur : ' + (e.error?.message || 'Impossible de supprimer'))
+    });
+  }
+
   private empty(): StockLocation {
     return { name: '', usage: 'internal', active: true };
   }

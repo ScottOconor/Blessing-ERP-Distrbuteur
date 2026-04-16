@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/modules/accounting/components/reports/partner-balance/partner-balance.component.scss"],
+  "sourcesContent": [".mono {\n  font-family: 'Courier New', monospace;\n  color: #714B67;\n}\n\n.alert-error {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 12px 16px;\n  background: #f8d7da;\n  border: 1px solid #f5c6cb;\n  border-radius: 8px;\n  color: #721c24;\n  font-size: 13px;\n  .material-icons { font-size: 18px; }\n}\n\n.spinner-sm {\n  display: inline-block;\n  width: 14px;\n  height: 14px;\n  border: 2px solid rgba(255,255,255,0.4);\n  border-top-color: white;\n  border-radius: 50%;\n  animation: spin 0.8s linear infinite;\n}\n\n@keyframes spin { to { transform: rotate(360deg); } }\n\n@media print {\n  .no-print { display: none !important; }\n}\n"],
+  "mappings": ";AAAA,CAAA;AACE,eAAA,aAAA,EAAA;AACA,SAAA;;AAGF,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,WAAA,KAAA;AACA,cAAA;AACA,UAAA,IAAA,MAAA;AACA,iBAAA;AACA,SAAA;AACA,aAAA;;AACA,CAVF,YAUE,CAAA;AAAkB,aAAA;;AAGpB,CAAA;AACE,WAAA;AACA,SAAA;AACA,UAAA;AACA,UAAA,IAAA,MAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AACA,oBAAA;AACA,iBAAA;AACA,aAAA,KAAA,KAAA,OAAA;;AAGF,WAHE;AAGgB;AAAK,eAAA,OAAA;;;AAEvB,OAAA;AACE,GAAA;AAAY,aAAA;;;",
+  "names": []
+}

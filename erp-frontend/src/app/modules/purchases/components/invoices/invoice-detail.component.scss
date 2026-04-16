@@ -18,7 +18,7 @@
   transition: all 0.15s; &:hover { background: #f0f0f0; } .material-icons { font-size: 20px; }
 }
 
-.btn-primary, .btn-secondary, .btn-danger, .btn-payment, .btn-avoir {
+.btn-primary, .btn-secondary, .btn-danger, .btn-payment, .btn-avoir, .btn-warning, .btn-remise {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
   border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;
   font-family: 'Roboto', sans-serif; transition: all 0.2s;
@@ -30,6 +30,8 @@
 .btn-danger { background: #dc3545; color: white; &:hover:not(:disabled) { background: #bb2d3b; } }
 .btn-payment { background: #0d6efd; color: white; &:hover:not(:disabled) { background: #0b5ed7; } }
 .btn-avoir { background: #6f42c1; color: white; &:hover:not(:disabled) { background: #5a32a3; } }
+.btn-warning { background: #fd7e14; color: white; &:hover:not(:disabled) { background: #e06912; } }
+.btn-remise { background: #e67e22; color: white; &:hover:not(:disabled) { background: #ca6f1e; } }
 
 .badge-type-avoir {
   display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
@@ -148,6 +150,22 @@
     span:first-child { color: #dc3545 !important; font-weight: 600; }
     span:last-child { color: #dc3545 !important; font-weight: 700; }
   }
+  &.total-precompte {
+    span:last-child { color: #856404; }
+  }
+  &.total-liquide {
+    border-top: 1px dashed #dee2e6; margin-top: 4px; padding-top: 8px;
+    span:first-child { font-weight: 600; color: #00A09D; }
+    span:last-child  { font-weight: 600; color: #00A09D; }
+  }
+  &.total-remise {
+    span:last-child { color: #198754; }
+  }
+  &.net-a-payer {
+    border-top: 2px solid #017E84; margin-top: 4px; padding-top: 10px;
+    span:first-child { font-size: 14px; font-weight: 700; color: #017E84; }
+    span:last-child { font-size: 16px; font-weight: 700; color: #017E84; }
+  }
 }
 
 .progress-section {
@@ -157,4 +175,44 @@
     .progress-fill { height: 100%; background: #00A09D; border-radius: 4px; transition: width 0.3s; }
   }
   .progress-label { font-size: 12px; color: #6c757d; margin-top: 4px; display: block; text-align: right; }
+}
+
+// ===== Récapitulatif & Remises =====
+.recap-header {
+  gap: 8px; display: flex; align-items: center; flex-wrap: wrap;
+  .material-icons { font-size: 18px; color: #00A09D; }
+}
+.recap-table {
+  tfoot td { background: #f4f8f9; font-size: 13px; padding: 10px 14px; }
+}
+.recap-total-row td { border-top: 2px solid #e9ecef; }
+.col-psa    { color: #6f42c1; }
+.col-enl    { color: #e67e22; }
+.col-net    { color: #00A09D; }
+.col-remise { color: #dc3545; }
+
+.recap-global-wrapper {
+  overflow-x: auto;
+}
+.recap-global-table {
+  min-width: 1200px;
+  th, td { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+  thead th { background: #f4f8f9; font-weight: 600; border-bottom: 2px solid #dee2e6; }
+  tbody tr { background: #fff; }
+  tbody tr:hover { background: #f8f9fa; }
+}
+
+.badge-info-only {
+  margin-left: auto;
+  font-size: 11px; font-weight: 500;
+  background: #fff3cd; color: #856404;
+  padding: 2px 10px; border-radius: 10px; border: 1px solid #ffc107;
+}
+
+.badge-type {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 600;
+  &.badge-brasserie { background: #fff3cd; color: #856404; }
+  &.badge-guinness  { background: #cff4fc; color: #055160; }
+  &.badge-brut      { background: #e9ecef; color: #495057; }
 }

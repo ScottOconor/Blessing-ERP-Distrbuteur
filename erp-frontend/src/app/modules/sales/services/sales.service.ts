@@ -13,6 +13,8 @@ export interface SalesOrderLine {
   tauxRemise?: number;   // default 0
   tauxTVA?: number;      // e.g. 19.25
   accountCode?: string;
+  categoryId?: number;   // catégorie produit (ristourne, enlèvement)
+  consigne?: boolean;    // exclut PSA/ristourne/enlèvement
   montantHT?: number;
   montantTVA?: number;
   montantTTC?: number;
@@ -42,6 +44,7 @@ export interface SalesOrder {
 
 export interface SalesInvoiceLine {
   id?: number;
+  productId?: number;
   productCode?: string;
   description: string;
   quantity: number;
@@ -49,9 +52,23 @@ export interface SalesInvoiceLine {
   tauxRemise?: number;
   tauxTVA?: number;
   accountCode?: string;
+  categoryId?: number;
+  categoryName?: string;
   montantHT?: number;
   montantTVA?: number;
   montantTTC?: number;
+  precompte?: number;
+  fraisEnlevement?: number;
+  prixUnitaireTTC?: number;
+  consigne?: boolean;
+}
+
+export interface RistourneDetail {
+  categoryName: string;
+  quantite: number;
+  montantUnitaire: number;
+  montantTotal: number;
+  typeRistourne?: string;
 }
 
 export interface SalesInvoice {
@@ -78,7 +95,13 @@ export interface SalesInvoice {
   totalTTC?: number;
   montantPaye?: number;
   montantDu?: number;
+  totalRistourne?: number;
+  fraisEnlevementTTC?: number;
+  totalPrecompte?: number;
+  totalLiquideNu?: number;
+  netAPayer?: number;
   lines: SalesInvoiceLine[];
+  ristourneDetails?: RistourneDetail[];
   payments?: InvoicePayment[];
   createdAt?: string;
 }
@@ -148,7 +171,7 @@ export interface SalesStatsResponse {
 
 @Injectable({ providedIn: 'root' })
 export class SalesService {
-  private apiUrl = `http://${window.location.hostname}:8080/api/sales`;
+  private apiUrl = `http://${window.location.hostname}:8085/api/sales`;
 
   constructor(private http: HttpClient) {}
 
@@ -196,6 +219,14 @@ export class SalesService {
     return this.http.post<SalesInvoice>(`${this.apiUrl}/invoices/${id}/cancel`, {});
   }
 
+  reverseInvoiceEntries(id: number): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(`${this.apiUrl}/invoices/${id}/reverse-entries`, {});
+  }
+
+  generateRistournes(id: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/invoices/${id}/generate-ristournes`, {});
+  }
+
   // Avoirs (credit notes)
   getAvoirs(companyId: number): Observable<SalesInvoice[]> {
     return this.http.get<SalesInvoice[]>(`${this.apiUrl}/avoirs`, {
@@ -228,6 +259,9 @@ export class SalesService {
   }
   updateClient(id: number, client: SalesClient): Observable<SalesClient> {
     return this.http.put<SalesClient>(`${this.apiUrl}/clients/${id}`, client);
+  }
+  deleteClient(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/clients/${id}`);
   }
 
   // Stats Reports

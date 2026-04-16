@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -34,6 +34,11 @@ export class OrderFormComponent implements OnInit {
   activeSuggestionIdx: number | null = null;
   lineSearchResults: Product[][] = [];
   searchTimer: any = null;
+  dropdownRect: { top: number; left: number; width: number } | null = null;
+
+  @HostListener('window:scroll', [])
+  @HostListener('window:resize', [])
+  onWindowChange(): void { this.activeSuggestionIdx = null; }
 
   constructor(
     private salesService: SalesService,
@@ -178,10 +183,15 @@ export class OrderFormComponent implements OnInit {
     }, 300);
   }
 
-  openSuggestions(i: number): void {
-    // Si un produit est déjà sélectionné, vider le champ pour laisser chercher
+  openSuggestions(i: number, event?: FocusEvent | Event): void {
     if (this.order.lines[i]?.productCode) {
       this.lineSearches[i] = '';
+    }
+    if (event?.target) {
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      const dropdownWidth = Math.max(rect.width, 420);
+      const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8);
+      this.dropdownRect = { top: rect.bottom + 4, left, width: dropdownWidth };
     }
     this.activeSuggestionIdx = i;
     this.onSearchInput(i);
@@ -211,6 +221,7 @@ export class OrderFormComponent implements OnInit {
     line.prixUnitaire = product.salePrice || 0;
     line.tauxTVA = this.TVA_DEFAULT;
     line.accountCode = '706100';
+    line.categoryId = product.categoryId;
     this.lineSearches[i] = product.defaultCode
       ? `[${product.defaultCode}] ${product.name}`
       : product.name;

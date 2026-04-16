@@ -101,11 +101,17 @@
                       <span class="material-icons">check_circle</span>
                     </button>
                   }
-                  @if (move.state === 'posted') {
-                    <button class="btn btn-ghost btn-sm" style="color:#dc3545"
-                      (click)="cancelMove(move.id!, $event)" title="Annuler">
-                      <span class="material-icons">cancel</span>
+                  @if (move.state === 'posted' && !move.reversalId && !move.isReversal) {
+                    <button class="btn btn-ghost btn-sm" style="color:#6f42c1"
+                      (click)="reverseMove(move.id!, $event)" title="Extourner">
+                      <span class="material-icons">swap_horiz</span>
                     </button>
+                  }
+                  @if (move.state === 'posted' && (move.reversalId || move.isReversal)) {
+                    <span title="{{ move.reversalId ? 'Déjà extournée' : 'Écriture d\'extourne' }}"
+                      style="color:#adb5bd;padding:4px 6px;display:inline-flex;align-items:center">
+                      <span class="material-icons" style="font-size:16px">block</span>
+                    </span>
                   }
                 </div>
               </td>

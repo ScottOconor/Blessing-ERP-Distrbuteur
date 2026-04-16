@@ -18,7 +18,7 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
 
     List<PurchaseInvoice> findByCompanyIdAndStateOrderByDateDescNameDesc(Long companyId, String state);
 
-    Optional<PurchaseInvoice> findByPurchaseOrderId(Long orderId);
+    Optional<PurchaseInvoice> findFirstByPurchaseOrderId(Long orderId);
 
     List<PurchaseInvoice> findByOriginalInvoiceId(Long originalInvoiceId);
 

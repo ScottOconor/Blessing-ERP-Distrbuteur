@@ -48,7 +48,10 @@
               <td>
                 <span class="status-dot" [class.active]="l.active" [class.inactive]="!l.active"></span>
               </td>
-              <td><button class="btn-icon" (click)="openEdit(l)"><span class="material-icons">edit</span></button></td>
+              <td style="display:flex;gap:4px">
+                <button class="btn-icon" (click)="openEdit(l)"><span class="material-icons">edit</span></button>
+                <button class="btn-icon btn-icon-danger" (click)="deleteLocation(l)" title="Supprimer"><span class="material-icons">delete</span></button>
+              </td>
             </tr>
           }
           @if (filtered.length === 0) {

@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface StockQuantRepository extends JpaRepository<StockQuant, Long> {
 
-    Optional<StockQuant> findByProductIdAndLocationIdAndCompanyId(Long productId, Long locationId, Long companyId);
+    Optional<StockQuant> findFirstByProductIdAndLocationIdAndCompanyId(Long productId, Long locationId, Long companyId);
 
     List<StockQuant> findByLocationIdAndCompanyId(Long locationId, Long companyId);
 

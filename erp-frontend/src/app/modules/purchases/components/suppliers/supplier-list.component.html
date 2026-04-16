@@ -56,9 +56,12 @@
               <td>{{ s.email || '—' }}</td>
               <td>{{ s.phone || '—' }}</td>
               <td>{{ s.address || '—' }}</td>
-              <td class="actions-cell">
+              <td class="actions-cell" style="display:flex;gap:4px">
                 <button class="btn-icon" (click)="openEdit(s)" title="Modifier">
                   <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon btn-icon-danger" (click)="deleteSupplier(s)" title="Supprimer">
+                  <span class="material-icons">delete</span>
                 </button>
               </td>
             </tr>
@@ -122,22 +125,96 @@
           <div class="alert alert-error"><span class="material-icons">error</span>{{ errorMsg }}<button (click)="errorMsg = ''">×</button></div>
         }
         <div class="modal-body">
+          <!-- Informations générales -->
+          <div class="section-lbl">Informations générales</div>
           <div class="form-group">
             <label>Nom <span class="required">*</span></label>
             <input type="text" [(ngModel)]="form.name" class="form-control" placeholder="Nom du fournisseur" />
           </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" [(ngModel)]="form.email" class="form-control" placeholder="email@exemple.com" />
-          </div>
-          <div class="form-group">
-            <label>Téléphone</label>
-            <input type="text" [(ngModel)]="form.phone" class="form-control" placeholder="+237 6XX XXX XXX" />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" [(ngModel)]="form.email" class="form-control" placeholder="email@exemple.com" />
+            </div>
+            <div class="form-group">
+              <label>Téléphone</label>
+              <input type="text" [(ngModel)]="form.phone" class="form-control" placeholder="+237 6XX XXX XXX" />
+            </div>
           </div>
           <div class="form-group">
             <label>Adresse</label>
             <input type="text" [(ngModel)]="form.address" class="form-control" placeholder="Rue, ville..." />
           </div>
+
+          <!-- Précompte -->
+          <div class="section-lbl" style="margin-top:16px">Précompte</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+              <label>Type</label>
+              <input type="text" class="form-control" value="Achat" readonly style="background:#f8f9fa;color:#6c757d" />
+            </div>
+            <div class="form-group">
+              <label>Taux précompte (%)</label>
+              <select class="form-control" [(ngModel)]="form.tauxPrecompte" (ngModelChange)="onTauxChange()">
+                <option [value]="undefined">-- Aucun --</option>
+                @for (t of TAUX_OPTS; track t) { <option [value]="t">{{ t }}%</option> }
+              </select>
+            </div>
+          </div>
+
+          <!-- Remises -->
+          <div class="section-lbl" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+            <span>Remises</span>
+            <button type="button" class="btn-add-inline" (click)="addRemise()">
+              <span class="material-icons">add</span> Ajouter
+            </button>
+          </div>
+          @if (loadingRms) {
+            <p class="text-muted" style="font-size:13px;padding:8px 0">Chargement des remises...</p>
+          } @else if (remises.length === 0) {
+            <p class="text-muted" style="font-size:13px;padding:8px 0">Aucune remise configurée pour ce fournisseur.</p>
+          } @else {
+            <div class="inline-table-wrap">
+              <table class="inline-table">
+                <thead>
+                  <tr>
+                    <th>Catégorie</th>
+                    <th>Type</th>
+                    <th class="ar">Montant HT</th>
+                    <th class="ar">Montant TTC</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of remises; track $index; let i = $index) {
+                    <tr>
+                      <td>
+                        <select class="inp-cell" [(ngModel)]="r.categoryId">
+                          <option [value]="0">-- Catégorie --</option>
+                          @for (cat of categories; track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
+                        </select>
+                      </td>
+                      <td>
+                        <select class="inp-cell" [(ngModel)]="r.typeRemise" (ngModelChange)="onRemiseTypeChange(r)">
+                          @for (t of TYPE_OPTS; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+                        </select>
+                      </td>
+                      <td class="ar">
+                        <input type="number" class="inp-cell ar" [(ngModel)]="r.montantHT" min="0"
+                          (ngModelChange)="onRemiseHtChange(r)" />
+                      </td>
+                      <td class="ar ttc-val">{{ r.montantTTC | number:'1.0-2' }}</td>
+                      <td>
+                        <button type="button" class="btn-del-row" (click)="removeRemise(i)">
+                          <span class="material-icons">close</span>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" (click)="showModal = false">Annuler</button>

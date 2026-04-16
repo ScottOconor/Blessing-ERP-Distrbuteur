@@ -54,4 +54,13 @@ public class SalesOrderLine {
 
     @Column(precision = 20, scale = 2)
     private BigDecimal montantTTC;
+
+    /** Catégorie de produit (pour calcul ristourne et frais d'enlèvement) */
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    /** Produit consigne : exclut du précompte, ristourne, enlèvement */
+    @Builder.Default
+    @Column(name = "is_consigne")
+    private boolean consigne = false;
 }

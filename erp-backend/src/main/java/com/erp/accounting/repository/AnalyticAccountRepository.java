@@ -21,5 +21,7 @@ public interface AnalyticAccountRepository extends JpaRepository<AnalyticAccount
 
     boolean existsByCodeAndCompanyId(String code, Long companyId);
 
-    java.util.Optional<AnalyticAccount> findByCodeAndCompanyId(String code, Long companyId);
+    java.util.Optional<AnalyticAccount> findFirstByCodeAndCompanyId(String code, Long companyId);
+    /** @deprecated Utiliser findFirstByCodeAndCompanyId */
+    @Deprecated java.util.Optional<AnalyticAccount> findByCodeAndCompanyId(String code, Long companyId);
 }

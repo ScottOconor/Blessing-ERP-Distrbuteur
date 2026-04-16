@@ -26,6 +26,21 @@ public class Warehouse {
     @Column(name = "stock_journal_id")
     private Long stockJournalId;
 
+    /**
+     * ID de l'entrepôt "Dépôt Achat" — entrepôt séparé représentant la zone de transit
+     * pour les marchandises en attente de réception physique.
+     * Les pickings incoming créés à la validation des factures fournisseurs arrivent ici.
+     */
+    @Column(name = "depot_achat_warehouse_id")
+    private Long depotAchatWarehouseId;
+
+    /**
+     * ID de l'entrepôt "Avaries" — entrepôt séparé qui reçoit les quantités
+     * commandées mais non reçues (reliquats) lors de la réception bordereau.
+     */
+    @Column(name = "avar_warehouse_id")
+    private Long avarWarehouseId;
+
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 

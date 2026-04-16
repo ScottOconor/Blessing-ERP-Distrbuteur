@@ -2,8 +2,10 @@ package com.erp.purchases.service;
 
 import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
+import com.erp.common.ConsigneCodes;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
+import com.erp.common.repository.PrecompteRepository;
 import com.erp.purchases.dto.*;
 import com.erp.purchases.entity.*;
 import com.erp.purchases.repository.*;
@@ -11,6 +13,7 @@ import com.erp.stock.entity.Product;
 import com.erp.stock.entity.StockMove;
 import com.erp.stock.entity.StockPicking;
 import com.erp.stock.entity.StockPickingType;
+import com.erp.stock.repository.ProductCategoryRepository;
 import com.erp.stock.repository.ProductRepository;
 import com.erp.stock.repository.StockPickingRepository;
 import com.erp.stock.repository.StockPickingTypeRepository;
@@ -25,6 +28,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,6 +55,9 @@ public class PurchaseService {
     private final StockPickingRepository pickingRepo;
     private final StockPickingTypeRepository pickingTypeRepo;
     private final StockService stockService;
+    private final PrecompteRepository precompteRepo;
+    private final com.erp.purchases.repository.RemiseRepository remiseRepo;
+    private final ProductCategoryRepository categoryRepo;
 
     // ===================== COMMANDES D'ACHAT =====================
 
@@ -115,9 +122,8 @@ public class PurchaseService {
     }
 
     /**
-     * Confirme la commande :
-     *  1. Génère le bon de réception (StockPicking incoming)
-     *  2. Génère la facture fournisseur (PurchaseInvoice) en brouillon
+     * Confirme la commande et crée directement la facture fournisseur en brouillon.
+     * (Le bon de réception est créé lors de la validation de la facture.)
      */
     public PurchaseOrderDTO confirmOrder(Long id) {
         PurchaseOrder order = orderRepo.findById(id)
@@ -127,62 +133,7 @@ public class PurchaseService {
             throw new IllegalStateException("Cette commande ne peut pas être confirmée");
         }
 
-        Long companyId = order.getCompany().getId();
-
-        // --- 1. Bon de réception ---
-        List<StockPickingType> incomingTypes = pickingTypeRepo
-                .findByCompanyIdAndCodeOrderByNameAsc(companyId, "incoming");
-        if (incomingTypes.isEmpty()) {
-            throw new IllegalStateException("Aucun type d'opération 'Réception' configuré. Créez un entrepôt d'abord.");
-        }
-        StockPickingType pt = incomingTypes.get(0);
-
-        StockPicking picking = StockPicking.builder()
-                .name(generatePickingName(pt, companyId))
-                .pickingTypeId(pt.getId())
-                .pickingTypeCode("incoming")
-                .locationId(pt.getDefaultLocationSrcId())
-                .locationDestId(pt.getDefaultLocationDestId())
-                .partnerId(order.getPartner().getId())
-                .partnerName(order.getPartner().getName())
-                .state("draft")
-                .scheduledDate(order.getDateExpected() != null ? order.getDateExpected() : order.getDate())
-                .origin(order.getName())
-                .notes(order.getNotes())
-                .companyId(companyId)
-                .build();
-
-        for (PurchaseOrderLine line : order.getLines()) {
-            if (line.getProductId() == null) continue;
-            Product product = productRepo.findById(line.getProductId()).orElse(null);
-            if (product == null) continue;
-
-            StockMove move = StockMove.builder()
-                    .picking(picking)
-                    .productId(product.getId())
-                    .productCode(product.getDefaultCode())
-                    .productName(product.getName())
-                    .uomName(product.getUomName())
-                    .qtyDemanded(line.getQuantity())
-                    .qtyDone(line.getQuantity())
-                    .priceUnit(line.getPrixUnitaire() != null ? line.getPrixUnitaire() : product.getStandardPrice())
-                    .locationId(pt.getDefaultLocationSrcId())
-                    .locationDestId(pt.getDefaultLocationDestId())
-                    .state("draft")
-                    .companyId(companyId)
-                    .build();
-            picking.getMoves().add(move);
-        }
-
-        if (picking.getMoves().isEmpty()) {
-            throw new IllegalStateException(
-                "Aucun article du catalogue sélectionné. Utilisez l'autocomplete pour choisir les articles du stock avant de confirmer.");
-        }
-
-        StockPicking savedPicking = pickingRepo.save(picking);
-        order.setPickingId(savedPicking.getId());
-
-        // --- 2. Facture fournisseur en brouillon ---
+        // Créer directement la facture fournisseur en brouillon
         PurchaseInvoice invoice = createInvoiceFromOrder(order);
         order.setInvoiceId(invoice.getId());
 
@@ -341,13 +292,13 @@ public class PurchaseService {
         LocalDate date = invoice.getDate();
 
         // Compte fournisseur 401x
-        AccountAccount payableAccount = accountRepo.findByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, companyId)
+        AccountAccount payableAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, companyId)
                 .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("401", companyId)
                         .stream().findFirst()
                         .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur 401x introuvable")));
 
         // Compte TVA déductible 4456
-        AccountAccount tvaAccount = accountRepo.findByCodeAndCompanyId(TVA_DEDUCTIBLE_ACCOUNT, companyId)
+        AccountAccount tvaAccount = accountRepo.findFirstByCodeAndCompanyId(TVA_DEDUCTIBLE_ACCOUNT, companyId)
                 .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("445", companyId)
                         .stream().findFirst().orElse(null));
 
@@ -383,7 +334,7 @@ public class PurchaseService {
             String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
                     ? line.getAccountCode() : DEFAULT_EXPENSE_ACCOUNT;
 
-            AccountAccount expenseAccount = accountRepo.findByCodeAndCompanyId(accCode, companyId)
+            AccountAccount expenseAccount = accountRepo.findFirstByCodeAndCompanyId(accCode, companyId)
                     .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("601", companyId)
                             .stream().findFirst()
                             .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("60", companyId)
@@ -423,20 +374,162 @@ public class PurchaseService {
         invoice.setAccountMove(savedMove);
         invoice.setState("posted");
         invoice.setMontantPaye(ZERO);
-        invoice.setMontantDu(invoice.getTotalTTC());
+        invoice.setMontantDu(invoice.getNetAPayer());
+        invoiceRepo.save(invoice);
+
+        // Créer l'entrée en stock vers le Dépôt Achat (picking incoming en attente de réception)
+        createDepotAchatPicking(invoice);
 
         return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
     }
 
+    /**
+     * Crée un bon de réception (StockPicking incoming) vers le Dépôt Achat
+     * lors de la validation d'une facture fournisseur.
+     * Ce picking représente la marchandise en transit jusqu'à la réception physique.
+     */
+    private void createDepotAchatPicking(PurchaseInvoice invoice) {
+        // Ne créer qu'une seule fois — si le picking existe déjà, on ne recrée pas
+        if (invoice.getPickingId() != null) return;
+
+        Long companyId = invoice.getCompany().getId();
+
+        List<StockPickingType> incomingTypes = pickingTypeRepo
+                .findByCompanyIdAndCodeOrderByNameAsc(companyId, "incoming");
+        if (incomingTypes.isEmpty()) return; // pas de type configuré, on ignore silencieusement
+
+        StockPickingType pt = incomingTypes.get(0);
+
+        StockPicking picking = StockPicking.builder()
+                .name(generatePickingName(pt, companyId))
+                .pickingTypeId(pt.getId())
+                .pickingTypeCode("incoming")
+                .locationId(pt.getDefaultLocationSrcId())
+                .locationDestId(pt.getDefaultLocationDestId())
+                .partnerId(invoice.getPartner() != null ? invoice.getPartner().getId() : null)
+                .partnerName(invoice.getPartner() != null ? invoice.getPartner().getName() : null)
+                .state("confirmed")
+                .scheduledDate(invoice.getDate())
+                .origin(invoice.getName())
+                .notes("Entrée Dépôt Achat - " + invoice.getName())
+                .companyId(companyId)
+                .build();
+
+        for (PurchaseInvoiceLine line : invoice.getLines()) {
+            if (line.getProductCode() == null || line.getProductCode().isBlank()) continue;
+            Product product = productRepo.findFirstByDefaultCodeAndCompanyId(line.getProductCode(), companyId)
+                    .orElse(null);
+            if (product == null) continue;
+
+            StockMove move = StockMove.builder()
+                    .picking(picking)
+                    .productId(product.getId())
+                    .productCode(product.getDefaultCode())
+                    .productName(product.getName())
+                    .uomName(product.getUomName())
+                    .qtyDemanded(line.getQuantity() != null ? line.getQuantity() : ZERO)
+                    .qtyDone(ZERO)
+                    .priceUnit(line.getPrixUnitaire() != null ? line.getPrixUnitaire() : product.getStandardPrice())
+                    .locationId(pt.getDefaultLocationSrcId())
+                    .locationDestId(pt.getDefaultLocationDestId())
+                    .state("confirmed")
+                    .companyId(companyId)
+                    .build();
+            picking.getMoves().add(move);
+        }
+
+        if (!picking.getMoves().isEmpty()) {
+            StockPicking saved = pickingRepo.save(picking);
+            invoice.setPickingId(saved.getId());
+        }
+    }
+
+    /**
+     * Annule une facture fournisseur (brouillon, validée ou payée).
+     * Pour les factures validées/payées, cela ne crée PAS d'écriture inverse.
+     * Utiliser reverseInvoiceEntries() pour extourner les écritures comptables.
+     */
     public PurchaseInvoiceDTO cancelInvoice(Long id) {
         PurchaseInvoice invoice = invoiceRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + id));
 
-        if (!"draft".equals(invoice.getState())) {
-            throw new IllegalStateException("Seules les factures en brouillon peuvent être annulées");
+        if ("cancelled".equals(invoice.getState())) {
+            throw new IllegalStateException("Cette facture est déjà annulée");
         }
+
         invoice.setState("cancelled");
         return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
+    /**
+     * Extourne les écritures comptables d'une facture annulée (et de ses paiements).
+     * À appeler manuellement après cancelInvoice().
+     */
+    public PurchaseInvoiceDTO reverseInvoiceEntries(Long id) {
+        PurchaseInvoice invoice = invoiceRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + id));
+
+        if (!"cancelled".equals(invoice.getState())) {
+            throw new IllegalStateException("La facture doit être annulée avant d'inverser les écritures");
+        }
+
+        LocalDate today = LocalDate.now();
+
+        // 1. Extourner l'écriture de la facture
+        if (invoice.getAccountMove() != null && "posted".equals(invoice.getAccountMove().getState())) {
+            createReversalMove(invoice.getAccountMove(), today);
+        }
+
+        // 2. Extourner les écritures de chaque paiement
+        for (PurchaseInvoicePayment payment : invoice.getPayments()) {
+            if (payment.getAccountMove() != null && "posted".equals(payment.getAccountMove().getState())) {
+                createReversalMove(payment.getAccountMove(), today);
+                payment.setState("cancelled");
+                paymentRepo.save(payment);
+            }
+        }
+
+        // Remettre le montant dû et payé à zéro
+        invoice.setMontantPaye(ZERO);
+        invoice.setMontantDu(ZERO);
+
+        return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
+    /** Crée et valide une écriture extourne (débit↔crédit inversés). */
+    private AccountMove createReversalMove(AccountMove original, LocalDate date) {
+        AccountMove reversal = AccountMove.builder()
+                .name("EXT-" + original.getName())
+                .date(date)
+                .ref("Extourne de " + original.getName())
+                .state("draft")
+                .journal(original.getJournal())
+                .company(original.getCompany())
+                .partner(original.getPartner())
+                .build();
+
+        List<AccountMoveLine> reversalLines = new ArrayList<>();
+        for (AccountMoveLine l : moveLineRepo.findByMoveId(original.getId())) {
+            reversalLines.add(AccountMoveLine.builder()
+                    .move(reversal)
+                    .account(l.getAccount())
+                    .partner(l.getPartner())
+                    .name("Extourne - " + (l.getName() != null ? l.getName() : ""))
+                    .date(date)
+                    .debit(l.getCredit() != null ? l.getCredit() : ZERO)
+                    .credit(l.getDebit() != null ? l.getDebit() : ZERO)
+                    .journal(original.getJournal())
+                    .company(original.getCompany())
+                    .build());
+        }
+        reversal.setLines(reversalLines);
+        AccountMove saved = moveRepo.save(reversal);
+        saved.setState("posted");
+        moveRepo.save(saved);
+
+        // L'écriture originale n'est pas modifiée
+
+        return saved;
     }
 
     // ===================== AVOIRS FOURNISSEURS =====================
@@ -539,7 +632,7 @@ public class PurchaseService {
         }
 
         // Compte fournisseur 401x (débit)
-        AccountAccount payableAccount = accountRepo.findByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, company.getId())
+        AccountAccount payableAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, company.getId())
                 .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("401", company.getId())
                         .stream().findFirst()
                         .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur 401x introuvable")));
@@ -590,7 +683,7 @@ public class PurchaseService {
         // Mise à jour des totaux de la facture
         BigDecimal totalPaye = paymentRepo.sumPostedPaymentsByInvoice(invoice.getId());
         invoice.setMontantPaye(totalPaye);
-        BigDecimal du = (invoice.getTotalTTC() != null ? invoice.getTotalTTC() : ZERO).subtract(totalPaye);
+        BigDecimal du = (invoice.getNetAPayer() != null ? invoice.getNetAPayer() : ZERO).subtract(totalPaye);
         invoice.setMontantDu(du.max(ZERO));
 
         if (du.compareTo(ZERO) <= 0) {
@@ -644,18 +737,38 @@ public class PurchaseService {
                 .montantPaye(ZERO)
                 .build();
 
+        Long partnerId = order.getPartner() != null ? order.getPartner().getId() : null;
+        BigDecimal tauxPrecompte = (partnerId != null)
+                ? getPartnerPurchasePrecompteTaux(partnerId, companyId)
+                : ZERO;
+
         for (PurchaseOrderLine ol : order.getLines()) {
+            BigDecimal ht = ol.getMontantHT() != null ? ol.getMontantHT() : ZERO;
+            boolean isConsigne = ConsigneCodes.isConsigne(ol.getProductCode());
+            BigDecimal pc = ZERO;
+            if (!isConsigne && tauxPrecompte.compareTo(ZERO) > 0) {
+                pc = ht.multiply(tauxPrecompte).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            }
+            BigDecimal tva = ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO;
+            BigDecimal puttc = (ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO)
+                    .multiply(BigDecimal.ONE.add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
+                    .setScale(4, RoundingMode.HALF_UP);
+
             PurchaseInvoiceLine line = PurchaseInvoiceLine.builder()
                     .invoice(invoice)
                     .productCode(ol.getProductCode())
                     .description(ol.getDescription())
                     .quantity(ol.getQuantity())
                     .prixUnitaire(ol.getPrixUnitaire())
-                    .tauxTVA(ol.getTauxTVA())
+                    .tauxTVA(tva)
                     .accountCode(ol.getAccountCode())
-                    .montantHT(ol.getMontantHT())
-                    .montantTVA(ol.getMontantTVA())
-                    .montantTTC(ol.getMontantTTC())
+                    .categoryId(ol.getCategoryId())
+                    .consigne(isConsigne)
+                    .montantHT(ht)
+                    .montantTVA(ol.getMontantTVA() != null ? ol.getMontantTVA() : ZERO)
+                    .montantTTC(ol.getMontantTTC() != null ? ol.getMontantTTC() : ZERO)
+                    .precompte(pc)
+                    .prixUnitaireTTC(puttc)
                     .build();
             invoice.getLines().add(line);
         }
@@ -666,7 +779,16 @@ public class PurchaseService {
 
     private void buildInvoiceLines(PurchaseInvoice invoice, List<PurchaseInvoiceRequest.LineRequest> reqs) {
         if (reqs == null) return;
+        Long partnerId = invoice.getPartner() != null ? invoice.getPartner().getId() : null;
+        Long companyId = invoice.getCompany() != null ? invoice.getCompany().getId() : null;
+
+        // Resolve precompte rate: Partner.tauxPrecompte first, then Precompte table
+        BigDecimal tauxPrecompte = (partnerId != null && companyId != null)
+                ? getPartnerPurchasePrecompteTaux(partnerId, companyId)
+                : ZERO;
+
         for (PurchaseInvoiceRequest.LineRequest req : reqs) {
+            boolean isConsigne = ConsigneCodes.isConsigne(req.getProductCode());
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : ZERO;
             BigDecimal pu  = req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO;
             BigDecimal tva = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
@@ -674,6 +796,15 @@ public class PurchaseService {
             BigDecimal montantHT  = qty.multiply(pu).setScale(2, RoundingMode.HALF_UP);
             BigDecimal montantTVA = montantHT.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             BigDecimal montantTTC = montantHT.add(montantTVA);
+
+            BigDecimal precompte = ZERO;
+            if (!isConsigne && tauxPrecompte.compareTo(ZERO) > 0) {
+                precompte = montantHT.multiply(tauxPrecompte)
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            }
+
+            BigDecimal puttc = pu.multiply(BigDecimal.ONE.add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
+                    .setScale(4, RoundingMode.HALF_UP);
 
             invoice.getLines().add(PurchaseInvoiceLine.builder()
                     .invoice(invoice)
@@ -686,20 +817,144 @@ public class PurchaseService {
                     .montantHT(montantHT)
                     .montantTVA(montantTVA)
                     .montantTTC(montantTTC)
+                    .precompte(precompte)
+                    .prixUnitaireTTC(puttc)
+                    .consigne(isConsigne)
+                    .categoryId(resolveCategoryId(req.getCategoryId(), req.getProductCode(), companyId))
                     .build());
         }
     }
 
     private void computeInvoiceTotals(PurchaseInvoice invoice) {
-        BigDecimal ht  = invoice.getLines().stream()
-                .map(l -> l.getMontantHT() != null ? l.getMontantHT() : ZERO)
+        // Accumulation sur lignes NON-consigne uniquement pour HT/TVA/PSA
+        BigDecimal totalHT = ZERO, totalTVA = ZERO, totalPrecompte = ZERO;
+        // Consignes : montant TTC positif / négatif
+        BigDecimal consigneMontant = ZERO, deconsigneMontant = ZERO;
+
+        for (PurchaseInvoiceLine l : invoice.getLines()) {
+            BigDecimal lHT  = l.getMontantHT()  != null ? l.getMontantHT()  : ZERO;
+            BigDecimal lTVA = l.getMontantTVA() != null ? l.getMontantTVA() : ZERO;
+            BigDecimal lTTC = l.getMontantTTC() != null ? l.getMontantTTC() : ZERO;
+            BigDecimal lPC  = l.getPrecompte()  != null ? l.getPrecompte()  : ZERO;
+            BigDecimal qty  = l.getQuantity()   != null ? l.getQuantity()   : ZERO;
+
+            if (ConsigneCodes.isConsigne(l.getProductCode())) {
+                if (qty.compareTo(ZERO) >= 0) {
+                    consigneMontant = consigneMontant.add(lTTC);
+                } else {
+                    deconsigneMontant = deconsigneMontant.add(lTTC.abs());
+                }
+            } else {
+                totalHT        = totalHT.add(lHT);
+                totalTVA       = totalTVA.add(lTVA);
+                totalPrecompte = totalPrecompte.add(lPC);
+            }
+        }
+
+        // Liquide Nu = HT + TVA + PSA
+        BigDecimal totalLiquideNu = totalHT.add(totalTVA).add(totalPrecompte).setScale(2, RoundingMode.HALF_UP);
+        // Total TTC = Liquide Nu (pas de frais d'enlèvement à l'achat)
+        BigDecimal totalTTC = totalLiquideNu.setScale(0, RoundingMode.HALF_UP);
+        // Net à payer = Total TTC + Consigne − Déconsigne
+        BigDecimal netAPayer = totalTTC.add(consigneMontant).subtract(deconsigneMontant).setScale(0, RoundingMode.HALF_UP);
+
+        // Remise calculée et conservée mais NON déduite de la facture
+        BigDecimal totalRemise = computeInvoiceRemise(invoice);
+
+        invoice.setTotalHT(totalHT);
+        invoice.setTotalTVA(totalTVA);
+        invoice.setTotalPrecompte(totalPrecompte);
+        invoice.setTotalLiquideNu(totalLiquideNu);
+        invoice.setTotalTTC(totalTTC);
+        invoice.setTotalRemise(totalRemise);
+        invoice.setNetAPayer(netAPayer);
+        if (invoice.getMontantDu() == null) {
+            invoice.setMontantDu(netAPayer);  // montant dû initial = net à payer
+        }
+    }
+
+    private BigDecimal computeInvoiceRemise(PurchaseInvoice invoice) {
+        if (invoice.getPartner() == null || invoice.getCompany() == null) return ZERO;
+        Long partnerId = invoice.getPartner().getId();
+        Long companyId = invoice.getCompany().getId();
+        BigDecimal tauxPrecompte = getPartnerPurchasePrecompteTaux(partnerId, companyId);
+        return remiseRepo.findByPartnerIdAndCompanyIdAndActiveTrue(partnerId, companyId)
+                .stream()
+                .map(r -> {
+                    if (r.getMontantFixe() == null) return ZERO;
+                    Long catId = r.getCategory().getId();
+                    BigDecimal totalQty = invoice.getLines().stream()
+                            .filter(l -> !ConsigneCodes.isConsigne(l.getProductCode()) && !l.isConsigne()
+                                    && catId.equals(resolveCategoryId(l.getCategoryId(), l.getProductCode(), companyId)))
+                            .map(l -> l.getQuantity() != null ? l.getQuantity() : ZERO)
+                            .reduce(ZERO, BigDecimal::add);
+                    if (totalQty.compareTo(ZERO) == 0) return ZERO;
+                    BigDecimal montantTTC = computeRemiseTTCUnit(r.getMontantFixe(), r.getTypeRemise(), tauxPrecompte);
+                    return totalQty.multiply(montantTTC).setScale(2, RoundingMode.HALF_UP);
+                })
                 .reduce(ZERO, BigDecimal::add);
-        BigDecimal tva = invoice.getLines().stream()
-                .map(l -> l.getMontantTVA() != null ? l.getMontantTVA() : ZERO)
-                .reduce(ZERO, BigDecimal::add);
-        invoice.setTotalHT(ht);
-        invoice.setTotalTVA(tva);
-        invoice.setTotalTTC(ht.add(tva));
+    }
+
+    /**
+     * Remise TTC par unité :
+     * - brasserie : montantFixe × (1 + tauxPrecompte/100)
+     * - guinness  : montantFixe (pas de précompte)
+     */
+    private BigDecimal computeRemiseTTCUnit(BigDecimal montantFixe, String type, BigDecimal tauxPrecompte) {
+        if (montantFixe == null) return ZERO;
+        if ("brasserie".equals(type)) {
+            BigDecimal coeff = BigDecimal.ONE.add(tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            // guinness et autres : pas de précompte ajouté
+            return montantFixe.setScale(2, RoundingMode.HALF_UP);
+        }
+    }
+
+    private Long resolveCategoryId(Long categoryId, String productCode, Long companyId) {
+        if (categoryId != null) return categoryId;
+        if (productCode != null && !productCode.isBlank() && companyId != null) {
+            return productRepo.findFirstByDefaultCodeAndCompanyId(productCode, companyId)
+                    .map(com.erp.stock.entity.Product::getCategoryId)
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    private BigDecimal getPartnerPurchasePrecompteTaux(Long partnerId, Long companyId) {
+        com.erp.accounting.entity.Partner p = partnerRepo.findById(partnerId).orElse(null);
+        if (p != null && p.getTauxPrecompte() != null) return p.getTauxPrecompte();
+        return precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(partnerId, "purchase", companyId)
+                .map(com.erp.common.entity.Precompte::getTauxPrecompte).orElse(ZERO);
+    }
+
+    private List<PurchaseInvoiceDTO.RemiseDetailDTO> buildRemiseDetails(PurchaseInvoice invoice) {
+        if (invoice.getPartner() == null || invoice.getCompany() == null) return java.util.List.of();
+        Long partnerId = invoice.getPartner().getId();
+        Long companyId = invoice.getCompany().getId();
+        BigDecimal tauxPrecompte = getPartnerPurchasePrecompteTaux(partnerId, companyId);
+        return remiseRepo.findByPartnerIdAndCompanyIdAndActiveTrue(partnerId, companyId)
+                .stream()
+                .map(r -> {
+                    if (r.getMontantFixe() == null) return null;
+                    Long catId = r.getCategory().getId();
+                    BigDecimal totalQty = invoice.getLines().stream()
+                            .filter(l -> !ConsigneCodes.isConsigne(l.getProductCode()) && !l.isConsigne()
+                                    && catId.equals(resolveCategoryId(l.getCategoryId(), l.getProductCode(), companyId)))
+                            .map(l -> l.getQuantity() != null ? l.getQuantity() : ZERO)
+                            .reduce(ZERO, BigDecimal::add);
+                    if (totalQty.compareTo(ZERO) == 0) return null;
+                    BigDecimal montantUnit = computeRemiseTTCUnit(r.getMontantFixe(), r.getTypeRemise(), tauxPrecompte);
+                    return PurchaseInvoiceDTO.RemiseDetailDTO.builder()
+                            .categoryName(r.getCategory().getName())
+                            .quantite(totalQty)
+                            .montantUnitaire(montantUnit)
+                            .montantTotal(totalQty.multiply(montantUnit).setScale(2, RoundingMode.HALF_UP))
+                            .typeRemise(r.getTypeRemise())
+                            .build();
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     // ===================== DTO MAPPING =====================
@@ -766,6 +1021,12 @@ public class PurchaseService {
     }
 
     private PurchaseInvoiceDTO toInvoiceDTOWithPayments(PurchaseInvoice invoice) {
+        Long companyId = invoice.getCompany() != null ? invoice.getCompany().getId() : null;
+        Map<Long, String> catNames = companyId != null
+                ? categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
+                    .collect(Collectors.toMap(c -> c.getId(), c -> c.getName(), (a, b) -> a))
+                : Map.of();
+
         List<PurchaseInvoiceDTO.LineDTO> lineDTOs = invoice.getLines().stream()
                 .map(l -> PurchaseInvoiceDTO.LineDTO.builder()
                         .id(l.getId())
@@ -775,9 +1036,14 @@ public class PurchaseService {
                         .prixUnitaire(l.getPrixUnitaire())
                         .tauxTVA(l.getTauxTVA())
                         .accountCode(l.getAccountCode())
+                        .categoryId(l.getCategoryId())
                         .montantHT(l.getMontantHT())
                         .montantTVA(l.getMontantTVA())
                         .montantTTC(l.getMontantTTC())
+                        .precompte(l.getPrecompte())
+                        .prixUnitaireTTC(l.getPrixUnitaireTTC())
+                        .consigne(ConsigneCodes.isConsigne(l.getProductCode()))
+                        .categoryName(l.getCategoryId() != null ? catNames.get(l.getCategoryId()) : null)
                         .build())
                 .collect(Collectors.toList());
 
@@ -804,12 +1070,21 @@ public class PurchaseService {
                 .purchaseOrderName(invoice.getPurchaseOrder() != null ? invoice.getPurchaseOrder().getName() : null)
                 .accountMoveId(invoice.getAccountMove() != null ? invoice.getAccountMove().getId() : null)
                 .accountMoveName(invoice.getAccountMove() != null ? invoice.getAccountMove().getName() : null)
+                .pickingId(invoice.getPickingId())
+                .pickingState(invoice.getPickingId() != null
+                        ? pickingRepo.findById(invoice.getPickingId()).map(p -> p.getState()).orElse(null)
+                        : null)
                 .totalHT(invoice.getTotalHT())
                 .totalTVA(invoice.getTotalTVA())
                 .totalTTC(invoice.getTotalTTC())
                 .montantPaye(invoice.getMontantPaye())
                 .montantDu(invoice.getMontantDu())
+                .totalRemise(invoice.getTotalRemise())
+                .totalPrecompte(invoice.getTotalPrecompte())
+                .totalLiquideNu(invoice.getTotalLiquideNu())
+                .netAPayer(invoice.getNetAPayer())
                 .lines(lineDTOs)
+                .remiseDetails(buildRemiseDetails(invoice))
                 .payments(paymentDTOs)
                 .createdAt(invoice.getCreatedAt())
                 .build();
@@ -853,6 +1128,8 @@ public class PurchaseService {
                     .description(req.getDescription())
                     .quantity(qty)
                     .prixUnitaire(pu)
+                    .categoryId(req.getCategoryId())
+                    .consigne(ConsigneCodes.isConsigne(productCode))
                     .tauxTVA(tva)
                     .accountCode(req.getAccountCode())
                     .montantHT(montantHT)

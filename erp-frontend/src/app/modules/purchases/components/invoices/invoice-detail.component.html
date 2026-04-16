@@ -42,6 +42,28 @@
           <span class="material-icons">undo</span>
           {{ creatingAvoir ? 'Création...' : 'Créer un avoir' }}
         </button>
+        <button class="btn-remise" (click)="generateRemises()" [disabled]="generatingRemises">
+          <span class="material-icons">local_offer</span>
+          {{ generatingRemises ? 'Génération...' : 'Générer remises' }}
+        </button>
+        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
+          <span class="material-icons">cancel</span> {{ cancelling ? 'Annulation...' : 'Annuler la facture' }}
+        </button>
+      }
+      @if (invoice?.state === 'paid' && isInvoice) {
+        <button class="btn-remise" (click)="generateRemises()" [disabled]="generatingRemises">
+          <span class="material-icons">local_offer</span>
+          {{ generatingRemises ? 'Génération...' : 'Générer remises' }}
+        </button>
+        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
+          <span class="material-icons">cancel</span> {{ cancelling ? 'Annulation...' : 'Annuler la facture' }}
+        </button>
+      }
+      @if (invoice?.state === 'cancelled') {
+        <button class="btn-warning" (click)="reverseEntries()" [disabled]="reversing">
+          <span class="material-icons">swap_horiz</span>
+          {{ reversing ? 'Inversion...' : 'Inverser les écritures' }}
+        </button>
       }
     </div>
   </div>
@@ -98,33 +120,118 @@
         <thead>
           <tr>
             <th>Code</th>
-            <th>Description</th>
+            <th>Désignation</th>
             <th class="text-right">Qté</th>
-            <th class="text-right">Prix U.</th>
+            <th class="text-right">Prix U. HT</th>
+            <th class="text-right">Prix U. TTC</th>
             <th class="text-right">TVA %</th>
-            <th>Compte</th>
-            <th class="text-right">HT</th>
-            <th class="text-right">TVA</th>
-            <th class="text-right">TTC</th>
+            <th class="text-right">Total HT</th>
+            <th class="text-right">Total TTC</th>
           </tr>
         </thead>
         <tbody>
           @for (line of invoice.lines; track line.id) {
             <tr>
-              <td class="text-muted">{{ line.productCode || '—' }}</td>
+              <td class="text-muted font-mono">{{ line.productCode || '—' }}</td>
               <td>{{ line.description }}</td>
-              <td class="text-right">{{ line.quantity }}</td>
+              <td class="text-right">{{ line.quantity | number:'1.0-2' }}</td>
               <td class="text-right">{{ line.prixUnitaire | number:'1.0-0' }}</td>
+              <td class="text-right">{{ (line.prixUnitaireTTC ?? 0) | number:'1.0-0' }}</td>
               <td class="text-right">{{ line.tauxTVA || 0 }}%</td>
-              <td class="font-mono text-muted">{{ line.accountCode || '—' }}</td>
               <td class="text-right">{{ line.montantHT | number:'1.0-0' }}</td>
-              <td class="text-right text-muted">{{ line.montantTVA | number:'1.0-0' }}</td>
               <td class="text-right font-bold">{{ line.montantTTC | number:'1.0-0' }}</td>
             </tr>
           }
         </tbody>
       </table>
     </div>
+
+    <!-- Récapitulatif global -->
+    @if (invoice.lines && invoice.lines.length > 0) {
+      <div class="card mb-16">
+        <div class="card-header recap-header">
+          <span class="material-icons">summarize</span> Récapitulatif
+        </div>
+        <div class="recap-global-wrapper">
+          <table class="lines-table recap-global-table">
+            <thead>
+              <tr>
+                <th class="text-right">Montant HT</th>
+                <th class="text-right">Total TVA</th>
+                <th class="text-right col-psa">PSA</th>
+                <th class="text-right">Total Colis</th>
+                <th class="text-right">Total PET</th>
+                <th class="text-right">Total Casier</th>
+                <th class="text-right">Total Liquide Nu</th>
+                <th class="text-right font-bold">Total TTC</th>
+                <th class="text-right">Consigne</th>
+                <th class="text-right">Déconsigne</th>
+                <th class="text-right">Qté Consigne</th>
+                <th class="text-right">Qté Déconsigne</th>
+                <th class="text-right col-net">Net à payer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="recap-total-row">
+                <td class="text-right">{{ (invoice.totalHT ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right">{{ (invoice.totalTVA ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right col-psa">{{ (invoice.totalPrecompte ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right">{{ totalColis | number:'1.0-2' }}</td>
+                <td class="text-right">{{ totalPET | number:'1.0-2' }}</td>
+                <td class="text-right">{{ totalCasier | number:'1.0-2' }}</td>
+                <td class="text-right">{{ (invoice.totalLiquideNu ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right font-bold">{{ (invoice.totalTTC ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right">{{ consigneMontant | number:'1.0-0' }}</td>
+                <td class="text-right">{{ deconsigneMontant | number:'1.0-0' }}</td>
+                <td class="text-right">{{ qteConsigne | number:'1.0-2' }}</td>
+                <td class="text-right">{{ qteDeconsigne | number:'1.0-2' }}</td>
+                <td class="text-right col-net"><strong>{{ (invoice.netAPayer ?? 0) | number:'1.0-0' }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Remises fournisseur — informatif, non incluses dans la facture -->
+    @if (invoice.remiseDetails && invoice.remiseDetails.length > 0) {
+      <div class="card mb-16">
+        <div class="card-header recap-header">
+          <span class="material-icons">local_offer</span> Remises fournisseur
+          <span class="badge-info-only">calculées &amp; conservées — non incluses dans la facture</span>
+        </div>
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th>Type</th>
+              <th class="text-right">Qté</th>
+              <th class="text-right">Montant/U. TTC</th>
+              <th class="text-right col-remise">Total remise</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of invoice.remiseDetails; track r.categoryName) {
+              <tr>
+                <td>{{ r.categoryName }}</td>
+                <td><span [class]="'badge-type badge-' + (r.typeRemise || 'brut')">
+                  {{ r.typeRemise === 'brasserie' ? 'Brasserie' : r.typeRemise === 'guinness' ? 'Guinness' : 'HT brut' }}
+                </span></td>
+                <td class="text-right">{{ r.quantite | number:'1.0-2' }}</td>
+                <td class="text-right font-mono">{{ r.montantUnitaire | number:'1.2-2' }}</td>
+                <td class="text-right col-remise"><strong>{{ r.montantTotal | number:'1.0-0' }}</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="recap-total-row">
+              <td colspan="4"><strong>Total remises (informatif)</strong></td>
+              <td class="text-right col-remise"><strong>{{ (invoice.totalRemise ?? 0) | number:'1.0-0' }} FCFA</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
 
     <!-- Totaux & paiements -->
     <div class="bottom-section">
@@ -208,16 +315,42 @@
       <div class="totals-section">
         <div class="totals-card">
           <div class="total-row">
-            <span>Total HT</span>
-            <span>{{ invoice.totalHT | number:'1.0-0' }} FCFA</span>
+            <span>Montant HT</span>
+            <span>{{ (invoice.totalHT ?? 0) | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row">
-            <span>TVA déductible</span>
-            <span>{{ invoice.totalTVA | number:'1.0-0' }} FCFA</span>
+            <span>+ TVA</span>
+            <span>{{ (invoice.totalTVA ?? 0) | number:'1.0-0' }} FCFA</span>
+          </div>
+          @if ((invoice.totalPrecompte ?? 0) > 0) {
+            <div class="total-row total-precompte">
+              <span>+ PSA (Précompte)</span>
+              <span>{{ invoice.totalPrecompte | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          <div class="total-row total-liquide">
+            <span>= Total Liquide Nu</span>
+            <span>{{ (invoice.totalLiquideNu ?? 0) | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row total-ttc">
-            <span>Total TTC</span>
-            <span>{{ invoice.totalTTC | number:'1.0-0' }} FCFA</span>
+            <span>= Total TTC</span>
+            <span>{{ (invoice.totalTTC ?? 0) | number:'1.0-0' }} FCFA</span>
+          </div>
+          @if (consigneMontant > 0) {
+            <div class="total-row">
+              <span>+ Consigne</span>
+              <span>{{ consigneMontant | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          @if (deconsigneMontant > 0) {
+            <div class="total-row">
+              <span>− Déconsigne</span>
+              <span>{{ deconsigneMontant | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          <div class="total-row net-a-payer">
+            <span>= Net à payer</span>
+            <span>{{ (invoice.netAPayer ?? 0) | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row text-success">
             <span>Montant payé</span>

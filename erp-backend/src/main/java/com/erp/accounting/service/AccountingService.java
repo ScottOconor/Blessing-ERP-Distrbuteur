@@ -31,6 +31,7 @@ public class AccountingService {
     private final CompanyRepository companyRepo;
     private final AnalyticAccountRepository analyticAccountRepo;
     private final AnalyticLineRepository analyticLineRepo;
+    private final JournalDailyBalanceRepository dailyBalanceRepo;
 
     // ===================== ACCOUNTS =====================
 
@@ -204,15 +205,18 @@ public class AccountingService {
 
         move.setLines(lines);
 
-        // Validate balance before saving
-        BigDecimal totalDebit = lines.stream()
-                .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalCredit = lines.stream()
-                .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (totalDebit.compareTo(totalCredit) != 0) {
-            throw new IllegalStateException("Entry is unbalanced on creation: debit=" + totalDebit + " credit=" + totalCredit);
+        // Caisse/banque : pas d'obligation d'équilibre (contrepartie implicite du compte lié)
+        boolean isCashOrBank = "cash".equals(journal.getType()) || "bank".equals(journal.getType());
+        if (!isCashOrBank) {
+            BigDecimal totalDebit = lines.stream()
+                    .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredit = lines.stream()
+                    .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (totalDebit.compareTo(totalCredit) != 0) {
+                throw new IllegalStateException("Entry is unbalanced on creation: debit=" + totalDebit + " credit=" + totalCredit);
+            }
         }
 
         AccountMove saved = moveRepo.save(move);
@@ -277,15 +281,18 @@ public class AccountingService {
 
         move.getLines().addAll(newLines);
 
-        // Validate balance before saving
-        BigDecimal totalDebit = newLines.stream()
-                .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalCredit = newLines.stream()
-                .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (totalDebit.compareTo(totalCredit) != 0) {
-            throw new IllegalStateException("Entry is unbalanced on update: debit=" + totalDebit + " credit=" + totalCredit);
+        // Caisse/banque : pas d'obligation d'équilibre
+        boolean isCashOrBankUpdate = "cash".equals(journal.getType()) || "bank".equals(journal.getType());
+        if (!isCashOrBankUpdate) {
+            BigDecimal totalDebit = newLines.stream()
+                    .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredit = newLines.stream()
+                    .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (totalDebit.compareTo(totalCredit) != 0) {
+                throw new IllegalStateException("Entry is unbalanced on update: debit=" + totalDebit + " credit=" + totalCredit);
+            }
         }
 
         return toMoveDTO(moveRepo.save(move));
@@ -299,21 +306,22 @@ public class AccountingService {
             throw new IllegalStateException("Only draft entries can be posted");
         }
 
-        BigDecimal totalDebit = move.getLines().stream()
-                .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalCredit = move.getLines().stream()
-                .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Detailed logging for debugging
-        if (totalDebit.compareTo(totalCredit) != 0) {
-            StringBuilder details = new StringBuilder("Unbalanced lines: ");
-            move.getLines().forEach(line -> details.append("(").append(line.getAccount().getCode())
-                    .append(": debit=").append(line.getDebit()).append(", credit=").append(line.getCredit()).append(") "));
-            log.error(details.toString());
-            throw new IllegalStateException("Entry is unbalanced: debit=" + totalDebit + " credit=" + totalCredit + ". Check lines above.");
+        // Caisse/banque : pas d'obligation d'équilibre à la validation
+        boolean isCashOrBankPost = "cash".equals(move.getJournal().getType()) || "bank".equals(move.getJournal().getType());
+        if (!isCashOrBankPost) {
+            BigDecimal totalDebit = move.getLines().stream()
+                    .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredit = move.getLines().stream()
+                    .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (totalDebit.compareTo(totalCredit) != 0) {
+                StringBuilder details = new StringBuilder("Unbalanced lines: ");
+                move.getLines().forEach(line -> details.append("(").append(line.getAccount().getCode())
+                        .append(": debit=").append(line.getDebit()).append(", credit=").append(line.getCredit()).append(") "));
+                log.error(details.toString());
+                throw new IllegalStateException("Entry is unbalanced: debit=" + totalDebit + " credit=" + totalCredit + ". Check lines above.");
+            }
         }
 
         move.setState("posted");
@@ -326,7 +334,13 @@ public class AccountingService {
             // Supprimer les éventuelles anciennes lignes analytiques
             analyticLineRepo.deleteByMoveLineId(line.getId());
 
-            BigDecimal lineAmount = line.getDebit().subtract(line.getCredit());
+            // L'analytique ne concerne que les comptes de charges (classe 6 en OHADA)
+            String accountCode = line.getAccount() != null ? line.getAccount().getCode() : "";
+            if (!accountCode.startsWith("6")) continue;
+
+            // Montant de la charge = débit (une charge débite un compte de classe 6)
+            BigDecimal chargeAmount = line.getDebit();
+            if (chargeAmount == null || chargeAmount.compareTo(BigDecimal.ZERO) == 0) continue;
 
             List<AnalyticDistributionItem> distributions = line.getAnalyticDistributions();
             if (distributions != null && !distributions.isEmpty()) {
@@ -336,7 +350,7 @@ public class AccountingService {
                     AnalyticLine al = AnalyticLine.builder()
                             .date(line.getDate())
                             .name(line.getName())
-                            .amount(lineAmount.signum() >= 0 ? dist.getAmount() : dist.getAmount().negate())
+                            .amount(dist.getAmount())
                             .analyticAccount(dist.getAnalyticAccount())
                             .moveLine(line)
                             .generalAccount(line.getAccount())
@@ -349,7 +363,7 @@ public class AccountingService {
                 AnalyticLine al = AnalyticLine.builder()
                         .date(line.getDate())
                         .name(line.getName())
-                        .amount(lineAmount)
+                        .amount(chargeAmount)
                         .analyticAccount(line.getAnalyticAccount())
                         .moveLine(line)
                         .generalAccount(line.getAccount())
@@ -365,7 +379,15 @@ public class AccountingService {
                                 (l.getAnalyticDistributions() != null && !l.getAnalyticDistributions().isEmpty()))
                         .count());
 
-        return toMoveDTO(saved);
+        // Recharger l'écriture depuis la DB : clearAutomatically=true sur deleteByMoveLineId
+        // vide le cache Hibernate, ce qui détache 'saved' et rend ses collections lazy inaccessibles.
+        AccountMove reloaded = moveRepo.findById(moveId)
+                .orElseThrow(() -> new EntityNotFoundException("Entry not found after post: " + moveId));
+
+        // Mettre à jour le solde journalier du journal concerné
+        updateDailyBalance(reloaded.getJournal().getId(), reloaded.getCompany().getId(), reloaded.getDate());
+
+        return toMoveDTO(reloaded);
     }
 
     public AccountMoveDTO cancelEntry(Long moveId) {
@@ -373,11 +395,116 @@ public class AccountingService {
                 .orElseThrow(() -> new EntityNotFoundException("Entry not found: " + moveId));
 
         if ("cancel".equals(move.getState())) {
-            throw new IllegalStateException("Entry is already cancelled");
+            throw new IllegalStateException("Cette écriture est déjà annulée");
+        }
+        if ("posted".equals(move.getState())) {
+            throw new IllegalStateException("Une écriture validée ne peut pas être annulée directement. Utilisez 'Extourner'.");
         }
 
         move.setState("cancel");
         return toMoveDTO(moveRepo.save(move));
+    }
+
+    /**
+     * Crée une écriture extourne avec les lignes inversées, immédiatement validée.
+     * L'écriture originale reste intacte mais est marquée comme déjà extournée.
+     * Ni l'originale ni l'extourne ne peuvent être extournées à nouveau.
+     */
+    public AccountMoveDTO reverseEntry(Long moveId) {
+        AccountMove move = moveRepo.findById(moveId)
+                .orElseThrow(() -> new EntityNotFoundException("Entry not found: " + moveId));
+
+        if (!"posted".equals(move.getState())) {
+            throw new IllegalStateException("Seules les écritures validées peuvent être extournées");
+        }
+        if (move.getReversalId() != null) {
+            throw new IllegalStateException("Cette écriture a déjà été extournée (extourne n°" + move.getReversalId() + ")");
+        }
+        if (move.isReversal()) {
+            throw new IllegalStateException("Une écriture d'extourne ne peut pas être extournée à son tour");
+        }
+
+        List<AccountMoveLine> lines = moveLineRepo.findByMoveIdWithAnalytic(move.getId());
+
+        AccountMove reversal = AccountMove.builder()
+                .name(generateReversalName(move))
+                .date(LocalDate.now())
+                .ref("Extourne de " + move.getName())
+                .state("posted")
+                .isReversal(true)
+                .journal(move.getJournal())
+                .company(move.getCompany())
+                .partner(move.getPartner())
+                .build();
+
+        List<AccountMoveLine> reversalLines = lines.stream()
+                .map(l -> AccountMoveLine.builder()
+                        .move(reversal)
+                        .account(l.getAccount())
+                        .partner(l.getPartner())
+                        .name("Extourne - " + (l.getName() != null ? l.getName() : ""))
+                        .date(LocalDate.now())
+                        .debit(l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                        .credit(l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                        .journal(move.getJournal())
+                        .company(move.getCompany())
+                        .build())
+                .collect(Collectors.toList());
+
+        reversal.setLines(reversalLines);
+        AccountMove savedReversal = moveRepo.save(reversal);
+
+        // Marquer l'originale comme déjà extournée
+        move.setReversalId(savedReversal.getId());
+        moveRepo.save(move);
+
+        AccountMove reloaded = moveRepo.findById(savedReversal.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Reversal entry not found"));
+        return toMoveDTO(reloaded);
+    }
+
+    /**
+     * Génère le nom de l'écriture extourne à partir de l'écriture originale.
+     */
+    private String generateReversalName(AccountMove original) {
+        return "EXT-" + original.getName();
+    }
+
+    /**
+     * Retourne le solde actuel du compte principal lié à un journal.
+     * Solde = total débit posté - total crédit posté sur ce compte.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getJournalAccountBalance(Long journalId) {
+        AccountJournal journal = journalRepo.findById(journalId)
+                .orElseThrow(() -> new EntityNotFoundException("Journal not found: " + journalId));
+
+        // Compte principal : débit en priorité, sinon crédit
+        AccountAccount account = journal.getDefaultDebitAccount() != null
+                ? journal.getDefaultDebitAccount()
+                : journal.getDefaultCreditAccount();
+
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("journalId", journalId);
+        result.put("journalCode", journal.getCode());
+
+        if (account == null) {
+            result.put("accountId", null);
+            result.put("accountCode", null);
+            result.put("accountName", null);
+            result.put("balance", java.math.BigDecimal.ZERO);
+            return result;
+        }
+
+        java.math.BigDecimal debit  = moveLineRepo.sumDebitByAccount(account.getId());
+        java.math.BigDecimal credit = moveLineRepo.sumCreditByAccount(account.getId());
+        java.math.BigDecimal balance = debit.subtract(credit);
+
+        result.put("accountId",   account.getId());
+        result.put("accountCode", account.getCode());
+        result.put("accountName", account.getName());
+        result.put("balance",     balance);
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -400,10 +527,17 @@ public class AccountingService {
 
     @Transactional(readOnly = true)
     public List<PartnerDTO> getAllPartners(Long companyId) {
-        return partnerRepo.findByCompanyId(companyId)
+        return partnerRepo.findByCompanyIdAndActiveTrue(companyId)
                 .stream()
                 .map(this::toPartnerDTO)
                 .collect(Collectors.toList());
+    }
+
+    public void deletePartner(Long id) {
+        Partner partner = partnerRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Partner not found: " + id));
+        partner.setActive(false);
+        partnerRepo.save(partner);
     }
 
     public PartnerDTO createPartner(PartnerDTO dto) {
@@ -418,7 +552,29 @@ public class AccountingService {
                 .email(dto.getEmail())
                 .address(dto.getAddress())
                 .company(company)
+                .tauxPrecompte(dto.getTauxPrecompte())
+                .tauxRistourne(dto.getTauxRistourne())
+                .creditLimit(dto.getCreditLimit())
+                .receivableAccountCode(dto.getReceivableAccountCode())
                 .build();
+
+        return toPartnerDTO(partnerRepo.save(partner));
+    }
+
+    public PartnerDTO updatePartner(Long id, PartnerDTO dto) {
+        Partner partner = partnerRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Partner not found: " + id));
+
+        if (dto.getName() != null) partner.setName(dto.getName());
+        if (dto.getRef() != null) partner.setRef(dto.getRef());
+        if (dto.getType() != null) partner.setType(dto.getType());
+        if (dto.getPhone() != null) partner.setPhone(dto.getPhone());
+        if (dto.getEmail() != null) partner.setEmail(dto.getEmail());
+        if (dto.getAddress() != null) partner.setAddress(dto.getAddress());
+        partner.setTauxPrecompte(dto.getTauxPrecompte());
+        partner.setTauxRistourne(dto.getTauxRistourne());
+        partner.setCreditLimit(dto.getCreditLimit());
+        if (dto.getReceivableAccountCode() != null) partner.setReceivableAccountCode(dto.getReceivableAccountCode());
 
         return toPartnerDTO(partnerRepo.save(partner));
     }
@@ -431,6 +587,83 @@ public class AccountingService {
         Integer maxSeq = moveRepo.findMaxSequenceByJournalAndYear(journal.getId(), year);
         int nextSeq = (maxSeq != null ? maxSeq : 0) + 1;
         return String.format("%s-%d-%05d", prefix, year, nextSeq);
+    }
+
+    // ===================== SOLDES JOURNALIERS =====================
+
+    /**
+     * Recalcule et sauvegarde le solde journalier d'un journal pour une date donnée.
+     * Le solde d'ouverture = solde de clôture du jour précédent.
+     * Le solde de clôture = ouverture + total_débit - total_crédit des écritures postées du jour.
+     */
+    public JournalDailyBalanceDTO updateDailyBalance(Long journalId, Long companyId, LocalDate date) {
+        // Solde d'ouverture = clôture du dernier jour enregistré avant cette date
+        List<JournalDailyBalance> previous = dailyBalanceRepo.findLatestBeforeDate(journalId, date);
+        BigDecimal openingBalance = previous.isEmpty()
+                ? BigDecimal.ZERO
+                : previous.get(0).getClosingBalance();
+
+        // Calculer les totaux débit/crédit des écritures postées du journal sur cette date
+        List<AccountMoveLine> dayLines = moveLineRepo.findPostedLinesByJournalAndDate(journalId, date);
+        BigDecimal totalDebit = dayLines.stream()
+                .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalCredit = dayLines.stream()
+                .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal closingBalance = openingBalance.add(totalDebit).subtract(totalCredit);
+
+        // Upsert
+        JournalDailyBalance balance = dailyBalanceRepo
+                .findByJournalIdAndDate(journalId, date)
+                .orElse(JournalDailyBalance.builder()
+                        .journalId(journalId)
+                        .companyId(companyId)
+                        .date(date)
+                        .build());
+
+        balance.setOpeningBalance(openingBalance);
+        balance.setTotalDebit(totalDebit);
+        balance.setTotalCredit(totalCredit);
+        balance.setClosingBalance(closingBalance);
+        JournalDailyBalance saved = dailyBalanceRepo.save(balance);
+
+        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
+        return toBalanceDTO(saved, journal);
+    }
+
+    @Transactional(readOnly = true)
+    public List<JournalDailyBalanceDTO> getDailyBalances(Long journalId) {
+        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
+        return dailyBalanceRepo.findByJournalIdOrderByDateDesc(journalId)
+                .stream().map(b -> toBalanceDTO(b, journal)).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public JournalDailyBalanceDTO getDailyBalance(Long journalId, LocalDate date) {
+        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
+        // Si pas encore de solde enregistré, le calculer à la volée
+        return dailyBalanceRepo.findByJournalIdAndDate(journalId, date)
+                .map(b -> toBalanceDTO(b, journal))
+                .orElseGet(() -> updateDailyBalance(journalId,
+                        journal != null && journal.getCompany() != null ? journal.getCompany().getId() : null,
+                        date));
+    }
+
+    private JournalDailyBalanceDTO toBalanceDTO(JournalDailyBalance b, AccountJournal journal) {
+        return JournalDailyBalanceDTO.builder()
+                .id(b.getId())
+                .journalId(b.getJournalId())
+                .journalName(journal != null ? journal.getName() : null)
+                .journalCode(journal != null ? journal.getCode() : null)
+                .companyId(b.getCompanyId())
+                .date(b.getDate())
+                .openingBalance(b.getOpeningBalance())
+                .totalDebit(b.getTotalDebit())
+                .totalCredit(b.getTotalCredit())
+                .closingBalance(b.getClosingBalance())
+                .build();
     }
 
     // ===================== MAPPING =====================
@@ -495,6 +728,8 @@ public class AccountingService {
                 .createdAt(move.getCreatedAt())
                 .totalDebit(totalDebit)
                 .totalCredit(totalCredit)
+                .reversalId(move.getReversalId())
+                .isReversal(move.isReversal())
                 .build();
     }
 

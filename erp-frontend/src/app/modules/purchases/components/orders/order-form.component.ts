@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -31,6 +31,11 @@ export class OrderFormComponent implements OnInit {
   activeSuggestionIdx: number | null = null;
   lineSearchResults: Product[][] = [];
   searchTimer: any = null;
+  dropdownRect: { top: number; left: number; width: number } | null = null;
+
+  @HostListener('window:scroll', [])
+  @HostListener('window:resize', [])
+  onWindowChange(): void { this.activeSuggestionIdx = null; }
 
   constructor(
     private purchaseService: PurchaseService,
@@ -38,7 +43,7 @@ export class OrderFormComponent implements OnInit {
     private stockService: StockService,
     private authService: AuthService,
     private route: ActivatedRoute,
-    private router: Router
+    public router: Router
   ) {}
 
   ngOnInit(): void {
@@ -166,10 +171,16 @@ export class OrderFormComponent implements OnInit {
     }, 300);
   }
 
-  openSuggestions(i: number): void {
-    // Clear search text so the user can type a new query
+  openSuggestions(i: number, event?: FocusEvent | Event): void {
     if (this.order.lines[i]?.productId) {
       this.lineSearches[i] = '';
+    }
+    if (event?.target) {
+      const rect = (event.target as HTMLElement).getBoundingClientRect();
+      const dropdownWidth = Math.max(rect.width, 420);
+      // S'assurer que le dropdown ne dépasse pas à droite
+      const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8);
+      this.dropdownRect = { top: rect.bottom + 4, left, width: dropdownWidth };
     }
     this.activeSuggestionIdx = i;
     this.onSearchInput(i);
@@ -196,6 +207,7 @@ export class OrderFormComponent implements OnInit {
     line.description = product.name;
     line.prixUnitaire = product.standardPrice ?? 0;
     line.tauxTVA = line.tauxTVA ?? this.TVA_DEFAULT;
+    line.categoryId = product.categoryId;
     this.lineSearches[i] = `[${product.defaultCode}] ${product.name}`;
     this.activeSuggestionIdx = null;
     this.computeLine(i);
@@ -246,7 +258,7 @@ export class OrderFormComponent implements OnInit {
 
   confirmOrder(): void {
     if (!this.orderId) return;
-    if (!confirm('Confirmer la commande ? Un bon de réception sera généré.')) return;
+    if (!confirm('Confirmer la commande ?')) return;
 
     this.confirming = true;
     this.errorMsg = '';
@@ -254,29 +266,16 @@ export class OrderFormComponent implements OnInit {
       next: updated => {
         this.confirming = false;
         this.order = updated;
-        this.successMsg = `Commande confirmée. Bon de réception ${updated.pickingName} créé.`;
+        if (updated.invoiceId) {
+          this.successMsg = `Commande confirmée. Redirection vers la facture...`;
+          setTimeout(() => this.router.navigate(['/purchases/invoices', updated.invoiceId]), 800);
+        } else {
+          this.successMsg = 'Commande confirmée.';
+        }
       },
       error: err => {
         this.confirming = false;
         this.errorMsg = err.error?.message || 'Erreur lors de la confirmation';
-      }
-    });
-  }
-
-  receiveOrder(): void {
-    if (!this.orderId) return;
-    if (!confirm('Réceptionner la commande ? Le stock sera mis à jour avec le CMUP.')) return;
-
-    this.saving = true;
-    this.purchaseService.receiveOrder(this.orderId).subscribe({
-      next: updated => {
-        this.saving = false;
-        this.order = updated;
-        this.successMsg = 'Marchandises réceptionnées. Stock mis à jour.';
-      },
-      error: err => {
-        this.saving = false;
-        this.errorMsg = err.error?.message || 'Erreur lors de la réception';
       }
     });
   }

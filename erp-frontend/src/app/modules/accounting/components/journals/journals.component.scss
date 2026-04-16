@@ -1,3 +1,19 @@
+.journal-row {
+  transition: background 0.1s;
+  &:hover td { background: #f9f3f8; }
+}
+
+.journal-name-link {
+  color: #714B67; font-weight: 500;
+}
+
+.view-hint {
+  font-size: 14px !important; color: #adb5bd; vertical-align: middle;
+  margin-left: 6px; opacity: 0; transition: opacity 0.15s;
+}
+
+.journal-row:hover .view-hint { opacity: 1; }
+
 .journal-code {
   font-family: 'Courier New', monospace;
   color: #714B67;

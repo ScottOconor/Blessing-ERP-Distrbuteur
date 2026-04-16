@@ -36,6 +36,21 @@ public class AccountMove {
      */
     private String state;
 
+    /**
+     * ID de l'écriture extourne générée depuis cette écriture.
+     * Non null = cette écriture a déjà été extournée, ne peut plus l'être.
+     */
+    @Column(name = "reversal_id")
+    private Long reversalId;
+
+    /**
+     * Vrai si cette écriture est elle-même une extourne.
+     * Une extourne ne peut pas être extournée à son tour.
+     */
+    @Column(name = "is_reversal")
+    @Builder.Default
+    private boolean isReversal = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "journal_id")
     private AccountJournal journal;

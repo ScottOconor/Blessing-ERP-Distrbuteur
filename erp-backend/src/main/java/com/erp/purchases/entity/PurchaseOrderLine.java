@@ -50,4 +50,13 @@ public class PurchaseOrderLine {
 
     @Column(precision = 20, scale = 2)
     private BigDecimal montantTTC;
+
+    /** Catégorie de produit (pour calcul remise fournisseur) */
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    /** Produit consigne : exclut du précompte et remise */
+    @Builder.Default
+    @Column(name = "is_consigne")
+    private boolean consigne = false;
 }

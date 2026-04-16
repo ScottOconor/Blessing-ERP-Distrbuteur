@@ -23,12 +23,6 @@
           {{ confirming ? 'Confirmation...' : 'Confirmer' }}
         </button>
       }
-      @if (order.state === 'confirmed') {
-        <button class="btn-receive" (click)="receiveOrder()" [disabled]="saving">
-          <span class="material-icons">inventory</span>
-          {{ saving ? '...' : 'Réceptionner' }}
-        </button>
-      }
       @if (order.state === 'draft' || order.state === 'confirmed') {
         <button class="btn-cancel-order" (click)="cancelOrder()">
           <span class="material-icons">cancel</span>
@@ -54,9 +48,14 @@
   @if (order.pickingName) {
     <div class="picking-banner">
       <span class="material-icons">inventory_2</span>
-      Bon de réception associé :
+      Réception en attente :
       <strong>{{ order.pickingName }}</strong>
       <span class="badge" [class]="'badge-picking-' + order.pickingState">{{ order.pickingState }}</span>
+      @if (order.pickingState !== 'done' && order.pickingId) {
+        <button class="btn-goto-reception" (click)="router.navigate(['/stock/receptions/bordereau', order.pickingId])">
+          <span class="material-icons">assignment</span> Saisir le bordereau
+        </button>
+      }
     </div>
   }
 
@@ -134,9 +133,9 @@
                             [(ngModel)]="lineSearches[i]"
                             [disabled]="isReadOnly"
                             placeholder="Rechercher un article..."
-                            (focus)="openSuggestions(i)"
+                            (focus)="openSuggestions(i, $event)"
                             (blur)="closeSuggestions(i)"
-                            (input)="activeSuggestionIdx = i"
+                            (input)="openSuggestions(i, $event)"
                           />
                           @if (line.productId && !isReadOnly) {
                             <button class="btn-clear-line" (mousedown)="clearLine(i)" title="Effacer">
@@ -144,8 +143,11 @@
                             </button>
                           }
                         </div>
-                        @if (activeSuggestionIdx === i) {
-                          <div class="suggestions-panel">
+                        @if (activeSuggestionIdx === i && dropdownRect) {
+                          <div class="suggestions-panel"
+                            [style.top.px]="dropdownRect.top"
+                            [style.left.px]="dropdownRect.left"
+                            [style.width.px]="dropdownRect.width">
                             @if (getSuggestions(i).length === 0) {
                               @if (allProducts.length === 0) {
                                 <div class="suggestion-empty">Aucun article dans le stock</div>

@@ -73,6 +73,14 @@ export class CategoryListComponent implements OnInit {
     });
   }
 
+  deleteCategory(c: ProductCategory): void {
+    if (!confirm(`Supprimer la catégorie "${c.name}" ?`)) return;
+    this.stockService.deleteCategory(c.id!).subscribe({
+      next: () => { this.showSuccess('Catégorie supprimée'); this.load(); },
+      error: (e) => this.showSuccess('Erreur : ' + (e.error?.message || 'Impossible de supprimer'))
+    });
+  }
+
   private empty(): ProductCategory {
     return { name: '', code: '', stockAccountCode: '311000', stockInAccountCode: '6031', cogsAccountCode: '60500', companyId: 0 };
   }

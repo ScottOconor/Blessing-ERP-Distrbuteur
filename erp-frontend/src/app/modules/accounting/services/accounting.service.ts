@@ -5,9 +5,23 @@ import { AccountAccount, AccountJournal, Partner } from '../../../core/models/ac
 import { ImportResult } from '../../../core/models/import-result.model';
 import { AccountMove } from '../../../core/models/move.model';
 
+export interface JournalDailyBalanceDTO {
+  id?: number;
+  journalId: number;
+  journalName?: string;
+  journalCode?: string;
+  companyId: number;
+  date: string;
+  openingBalance: number;
+  totalDebit: number;
+  totalCredit: number;
+  closingBalance: number;
+  closed?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccountingService {
-  private apiUrl = `http://${window.location.hostname}:8080/api/accounting`;
+  private apiUrl = `http://${window.location.hostname}:8085/api/accounting`;
 
   constructor(private http: HttpClient) {}
 
@@ -97,8 +111,41 @@ export class AccountingService {
     return this.http.put<Partner>(`${this.apiUrl}/partners/${id}`, partner);
   }
 
+  deletePartner(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/partners/${id}`);
+  }
+
+  // ===== JOURNAL DETAIL =====
+  getJournalAccountBalance(journalId: number): Observable<{ journalId: number; journalCode: string; accountId: number | null; accountCode: string | null; accountName: string | null; balance: number }> {
+    return this.http.get<any>(`${this.apiUrl}/journals/${journalId}/account-balance`);
+  }
+
+  getJournalMoves(journalId: number, companyId: number): Observable<AccountMove[]> {
+    return this.http.get<AccountMove[]>(`${this.apiUrl}/journals/${journalId}/moves`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  getDailyBalances(journalId: number): Observable<JournalDailyBalanceDTO[]> {
+    return this.http.get<JournalDailyBalanceDTO[]>(`${this.apiUrl}/journals/${journalId}/daily-balances`);
+  }
+
+  getDailyBalance(journalId: number, date: string): Observable<JournalDailyBalanceDTO> {
+    return this.http.get<JournalDailyBalanceDTO>(`${this.apiUrl}/journals/${journalId}/daily-balance`, {
+      params: new HttpParams().set('date', date)
+    });
+  }
+
+  closeDayBalance(journalId: number, date: string): Observable<JournalDailyBalanceDTO> {
+    return this.http.post<JournalDailyBalanceDTO>(`${this.apiUrl}/journals/${journalId}/close-day`, { date });
+  }
+
+  reverseMove(id: number): Observable<AccountMove> {
+    return this.http.post<AccountMove>(`${this.apiUrl}/moves/${id}/reverse`, {});
+  }
+
   // ===== IMPORT EXCEL =====
-  private importUrl = `http://${window.location.hostname}:8080/api/import`;
+  private importUrl = `http://${window.location.hostname}:8085/api/import`;
 
   importAccounts(file: File, companyId: number): Observable<ImportResult> {
     const fd = new FormData();

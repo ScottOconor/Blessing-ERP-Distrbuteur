@@ -13,7 +13,10 @@ import { AuthService } from '../../../../core/auth/auth.service';
 })
 export class ReceptionListComponent implements OnInit {
   pickings: StockPicking[] = [];
+  pendingPickings: StockPicking[] = [];
   loading = false;
+  loadingPending = false;
+  activeTab: 'all' | 'pending' = 'pending';
 
   constructor(
     private stockService: StockService,
@@ -22,14 +25,26 @@ export class ReceptionListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const companyId = this.authService.getCompanyId();
     this.loading = true;
-    this.stockService.getReceptions(this.authService.getCompanyId()).subscribe({
+    this.loadingPending = true;
+
+    this.stockService.getReceptions(companyId).subscribe({
       next: (p) => { this.pickings = p; this.loading = false; },
       error: () => { this.loading = false; }
     });
+
+    this.stockService.getPendingReceptions(companyId).subscribe({
+      next: (p) => { this.pendingPickings = p; this.loadingPending = false; },
+      error: () => { this.loadingPending = false; }
+    });
+  }
+
+  openBordereau(pickingId: number): void {
+    this.router.navigate(['/stock/receptions/bordereau', pickingId]);
   }
 
   stateLabel(s: string): string {
-    return { draft: 'Brouillon', confirmed: 'Confirmé', done: 'Validé', cancelled: 'Annulé' }[s] || s;
+    return { draft: 'Brouillon', confirmed: 'En attente', done: 'Validé', cancelled: 'Annulé' }[s] || s;
   }
 }

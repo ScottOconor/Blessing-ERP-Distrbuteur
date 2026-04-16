@@ -6,8 +6,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
 
-const PRODUCT_HEADERS = ['Nom*', 'Code (Référence)', 'Type (product/service/consu)', 'Catégorie', 'Prix Achat (FCFA)', 'Prix Vente (FCFA)', 'Unité', 'Description'];
-const PRODUCT_SAMPLE  = ['Ciment CPA 42.5', 'CIM001', 'product', 'Matériaux', '8500', '10000', 'Sac', ''];
+const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Prix de vente', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure'];
+const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '700', '500', 'Bières', '1000', 'Caisse'];
 
 @Component({
   selector: 'app-product-list',
@@ -74,6 +74,14 @@ export class ProductListComponent implements OnInit {
     this.filtered = list;
   }
 
+  deleteProduct(p: Product): void {
+    if (!confirm(`Supprimer l'article "${p.name}" ?`)) return;
+    this.stockService.deleteProduct(p.id!).subscribe({
+      next: () => { this.showSuccessMsg('Article supprimé'); this.load(); },
+      error: (e) => this.showSuccessMsg('Erreur : ' + (e.error?.message || 'Impossible de supprimer'))
+    });
+  }
+
   openCreate(): void {
     this.editingProduct = null;
     this.form = this.emptyForm();
@@ -129,9 +137,9 @@ export class ProductListComponent implements OnInit {
     this.importLoading = true;
     try {
       const rows = await parseExcelFile(file);
-      this.importRows = rows.filter(r => r['Nom*'] || r['Nom']);
+      this.importRows = rows.filter(r => r['Nom'] || r['Nom*']);
       if (this.importRows.length === 0) {
-        this.showSuccessMsg('Aucune ligne valide (colonne "Nom*" requise)');
+        this.showSuccessMsg('Aucune ligne valide (colonne "Nom" requise)');
         this.importLoading = false;
         return;
       }
@@ -150,18 +158,16 @@ export class ProductListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     let done = 0, errors = 0;
     for (const row of this.importRows) {
-      const type = ['product', 'service', 'consu'].includes(String(row['Type (product/service/consu)'] || '').trim())
-        ? String(row['Type (product/service/consu)']).trim() as 'product' | 'service' | 'consu'
-        : 'product';
+      const name = String(row['Nom'] || row['Nom*'] || '').trim();
+      if (!name) continue;
       const dto: Product = {
-        name: String(row['Nom*'] || row['Nom'] || '').trim(),
-        defaultCode: String(row['Code (Référence)'] || '').trim() || undefined,
-        type,
-        categoryId: this.getCategoryId(String(row['Catégorie'] || '')),
-        standardPrice: parseFloat(row['Prix Achat (FCFA)']) || 0,
-        salePrice: parseFloat(row['Prix Vente (FCFA)']) || 0,
-        uomName: String(row['Unité'] || 'Unité').trim(),
-        description: String(row['Description'] || '').trim() || undefined,
+        name,
+        defaultCode: String(row['Référence interne'] || row['Code (Référence)'] || '').trim() || undefined,
+        type: 'product',
+        categoryId: this.getCategoryId(String(row['Catégorie d\'article'] || row['Catégorie'] || '')),
+        standardPrice: parseFloat(row['Coût'] || row['Prix Achat (FCFA)']) || 0,
+        salePrice: parseFloat(row['Prix de vente'] || row['Prix Vente (FCFA)']) || 0,
+        uomName: String(row['Unité de mesure'] || row['Unité'] || 'Unité').trim(),
         active: true,
         companyId: this.companyId
       };

@@ -3,6 +3,7 @@ package com.erp.accounting.entity;
 import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "partners")
@@ -39,4 +40,8 @@ public class Partner {
     private java.math.BigDecimal tauxPrecompte;      // taux de précompte %
     private java.math.BigDecimal creditLimit;        // plafond de crédit
     private String receivableAccountCode;            // compte client (ex: 4111)
+
+    @Builder.Default
+    @ColumnDefault("true")
+    private boolean active = true;
 }

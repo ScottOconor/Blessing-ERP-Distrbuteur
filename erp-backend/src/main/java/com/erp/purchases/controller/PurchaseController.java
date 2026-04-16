@@ -2,6 +2,7 @@ package com.erp.purchases.controller;
 
 import com.erp.purchases.dto.*;
 import com.erp.purchases.service.PurchaseService;
+import com.erp.purchases.service.RemiseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.List;
 public class PurchaseController {
 
     private final PurchaseService purchaseService;
+    private final RemiseService remiseService;
 
     // ===================== COMMANDES D'ACHAT =====================
 
@@ -82,6 +84,16 @@ public class PurchaseController {
     @PostMapping("/invoices/{id}/cancel")
     public ResponseEntity<PurchaseInvoiceDTO> cancelInvoice(@PathVariable("id") Long id) {
         return ResponseEntity.ok(purchaseService.cancelInvoice(id));
+    }
+
+    @PostMapping("/invoices/{id}/reverse-entries")
+    public ResponseEntity<PurchaseInvoiceDTO> reverseInvoiceEntries(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(purchaseService.reverseInvoiceEntries(id));
+    }
+
+    @PostMapping("/invoices/{id}/generate-remises")
+    public ResponseEntity<RemisePaiementDTO> generateRemises(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(remiseService.generateFromInvoice(id));
     }
 
     // ===================== AVOIRS FOURNISSEURS =====================

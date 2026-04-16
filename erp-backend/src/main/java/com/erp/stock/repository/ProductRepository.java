@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
     List<Product> findByCompanyIdOrderByNameAsc(Long companyId);
-    Optional<Product> findByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
+    Optional<Product> findFirstByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
 
     @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND p.type = 'product' AND p.active = true ORDER BY p.name")
     List<Product> findStorableByCompanyId(@Param("cid") Long companyId);

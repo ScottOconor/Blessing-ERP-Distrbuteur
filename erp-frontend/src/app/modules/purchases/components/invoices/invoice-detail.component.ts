@@ -21,7 +21,9 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   loading = false;
   posting = false;
   cancelling = false;
+  reversing = false;
   creatingAvoir = false;
+  generatingRemises = false;
   successMsg = '';
   errorMsg = '';
 
@@ -94,18 +96,40 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   }
 
   cancelInvoice(): void {
-    if (!confirm('Annuler ce document ?')) return;
+    const hasEntries = this.invoice?.accountMoveId;
+    const msg = hasEntries
+      ? 'Annuler cette facture ? Les écritures comptables NE seront PAS automatiquement inversées. Vous devrez cliquer sur "Inverser les écritures" ensuite.'
+      : 'Annuler ce document ?';
+    if (!confirm(msg)) return;
 
     this.cancelling = true;
     this.purchaseService.cancelInvoice(this.invoiceId).subscribe({
       next: (updated) => {
         this.invoice = updated;
         this.cancelling = false;
-        this.showSuccess('Document annulé');
+        this.showSuccess('Document annulé. Cliquez sur "Inverser les écritures" pour extourner les écritures comptables.');
       },
       error: (err) => {
         this.cancelling = false;
         this.errorMsg = err.error?.message || 'Erreur lors de l\'annulation';
+      }
+    });
+  }
+
+  reverseEntries(): void {
+    if (!confirm('Inverser les écritures comptables de cette facture et de ses paiements ? Cette action est irréversible.')) return;
+
+    this.reversing = true;
+    this.errorMsg = '';
+    this.purchaseService.reverseInvoiceEntries(this.invoiceId).subscribe({
+      next: (updated) => {
+        this.invoice = updated;
+        this.reversing = false;
+        this.showSuccess('Écritures extournées avec succès');
+      },
+      error: (err) => {
+        this.reversing = false;
+        this.errorMsg = err.error?.message || 'Erreur lors de l\'inversion des écritures';
       }
     });
   }
@@ -145,6 +169,22 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
       error: (err) => {
         this.savingPayment = false;
         this.errorMsg = err.error?.message || 'Erreur lors du paiement';
+      }
+    });
+  }
+
+  generateRemises(): void {
+    if (!confirm('Générer un règlement remise à partir de cette facture ?')) return;
+    this.generatingRemises = true;
+    this.errorMsg = '';
+    this.purchaseService.generateRemises(this.invoiceId).subscribe({
+      next: (rms) => {
+        this.generatingRemises = false;
+        this.showSuccess(`Règlement remise ${rms.name} créé (brouillon)`);
+      },
+      error: (err) => {
+        this.generatingRemises = false;
+        this.errorMsg = err.error?.message || 'Erreur lors de la génération des remises';
       }
     });
   }
@@ -210,6 +250,82 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   getProgressPct(): number {
     if (!this.invoice?.totalTTC || this.invoice.totalTTC === 0) return 0;
     return Math.min(100, Math.round(((this.invoice.montantPaye || 0) / this.invoice.totalTTC) * 100));
+  }
+
+  // ===== Getters récapitulatif =====
+
+  // Codes produits consigne — identiques au module Odoo blessing_consulting
+  private readonly CONSIGNE_CODES = new Set([
+    'CB12','CB24','CB12M','CB24M','CV12','CV24',
+    'CBG12','CBG15','CBG24','VIP12','VIP24','VCP12','VCP24',
+    'VIPG12','VIPG15','VIPG24','CVG12','CVG15','CVG24',
+    'EGUI12','EGUI15','EGUI24','PP','PB','TT','BPM','BGM',
+    'CAIMET','CONS001','INPN33','EMB1','EMB2','EMB3','EMB4','EMB5',
+    'CAISMB','PALT-V','PALTPL','PRC01','ELV01'
+  ]);
+
+  isConsigneCode(code?: string): boolean {
+    if (!code) return false;
+    return this.CONSIGNE_CODES.has(code.trim().toUpperCase());
+  }
+
+  /** Total Colis = quantité totale de tous les produits non-consigne */
+  get totalColis(): number {
+    return this.invoice?.lines
+      .filter(l => !this.isConsigneCode(l.productCode))
+      .reduce((s, l) => s + (Number(l.quantity) || 0), 0) || 0;
+  }
+
+  /** Total PET = articles avec UOM Palette de 6, Palette de 12, Bidons */
+  get totalPET(): number {
+    return this.invoice?.lines
+      .filter(l => !this.isConsigneCode(l.productCode) && this.isPETCategory(l.categoryName))
+      .reduce((s, l) => s + (Number(l.quantity) || 0), 0) || 0;
+  }
+
+  isPETCategory(name?: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    // Palette de 6, Palette de 12, Bidons
+    return n.includes('palette') || n.includes('bidon');
+  }
+
+  /** Total Casier = articles avec UOM Casier de 12 ou Casier de 24 */
+  get totalCasier(): number {
+    return this.invoice?.lines
+      .filter(l => !this.isConsigneCode(l.productCode) && this.isCasierCategory(l.categoryName))
+      .reduce((s, l) => s + (Number(l.quantity) || 0), 0) || 0;
+  }
+
+  isCasierCategory(name?: string): boolean {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    // Casier de 12, Casier de 24
+    return n.includes('casier');
+  }
+
+  get consigneMontant(): number {
+    return this.invoice?.lines
+      .filter(l => this.isConsigneCode(l.productCode) && (Number(l.quantity) || 0) >= 0)
+      .reduce((s, l) => s + (Number(l.montantTTC) || 0), 0) || 0;
+  }
+
+  get deconsigneMontant(): number {
+    return this.invoice?.lines
+      .filter(l => this.isConsigneCode(l.productCode) && (Number(l.quantity) || 0) < 0)
+      .reduce((s, l) => s + Math.abs(Number(l.montantTTC) || 0), 0) || 0;
+  }
+
+  get qteConsigne(): number {
+    return this.invoice?.lines
+      .filter(l => this.isConsigneCode(l.productCode) && (Number(l.quantity) || 0) >= 0)
+      .reduce((s, l) => s + (Number(l.quantity) || 0), 0) || 0;
+  }
+
+  get qteDeconsigne(): number {
+    return this.invoice?.lines
+      .filter(l => this.isConsigneCode(l.productCode) && (Number(l.quantity) || 0) < 0)
+      .reduce((s, l) => s + Math.abs(Number(l.quantity) || 0), 0) || 0;
   }
 
   showSuccess(msg: string): void {

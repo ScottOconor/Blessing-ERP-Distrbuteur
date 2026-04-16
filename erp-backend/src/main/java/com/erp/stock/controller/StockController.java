@@ -31,6 +31,12 @@ public class StockController {
         return ResponseEntity.ok(stockService.updateCategory(id, dto));
     }
 
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable("id") Long id) {
+        stockService.deleteCategory(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ---- Products ----
     @GetMapping("/products")
     public ResponseEntity<List<ProductDTO>> getProducts(@RequestParam("companyId") Long companyId) {
@@ -50,6 +56,12 @@ public class StockController {
     @PutMapping("/products/{id}")
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable("id") Long id, @RequestBody ProductDTO dto) {
         return ResponseEntity.ok(stockService.updateProduct(id, dto));
+    }
+
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable("id") Long id) {
+        stockService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
     }
 
     // ---- Warehouses ----
@@ -73,6 +85,12 @@ public class StockController {
         return ResponseEntity.ok(stockService.updateWarehouse(id, dto));
     }
 
+    @DeleteMapping("/warehouses/{id}")
+    public ResponseEntity<Void> deleteWarehouse(@PathVariable("id") Long id) {
+        stockService.deleteWarehouse(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ---- Locations ----
     @GetMapping("/locations")
     public ResponseEntity<List<StockLocationDTO>> getLocations(@RequestParam("companyId") Long companyId) {
@@ -87,6 +105,12 @@ public class StockController {
     @PutMapping("/locations/{id}")
     public ResponseEntity<StockLocationDTO> updateLocation(@PathVariable("id") Long id, @RequestBody StockLocationDTO dto) {
         return ResponseEntity.ok(stockService.updateLocation(id, dto));
+    }
+
+    @DeleteMapping("/locations/{id}")
+    public ResponseEntity<Void> deleteLocation(@PathVariable("id") Long id) {
+        stockService.deleteLocation(id);
+        return ResponseEntity.noContent().build();
     }
 
     // ---- Picking Types ----
@@ -132,6 +156,26 @@ public class StockController {
     @GetMapping("/receptions")
     public ResponseEntity<List<StockPickingDTO>> getReceptions(@RequestParam("companyId") Long companyId) {
         return ResponseEntity.ok(stockService.getPickings(companyId, "incoming"));
+    }
+
+    /** Entrées Dépôt Achat en attente de réception physique (état confirmed) */
+    @GetMapping("/receptions/pending")
+    public ResponseEntity<List<StockPickingDTO>> getPendingReceptions(@RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(stockService.getPendingReceptions(companyId));
+    }
+
+    /** Obtenir le bordereau de réception pour un picking */
+    @GetMapping("/receptions/{id}/bordereau")
+    public ResponseEntity<ReceptionBordereauDTO> getBordereau(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(stockService.getBordereau(id));
+    }
+
+    /** Valider le bordereau : reçu → Magasin Principal, reste → Avaries */
+    @PostMapping("/receptions/{id}/bordereau/validate")
+    public ResponseEntity<ReceptionBordereauDTO> validateBordereau(
+            @PathVariable("id") Long id,
+            @RequestBody List<ReceptionBordereauDTO.LigneBordereau> lignes) {
+        return ResponseEntity.ok(stockService.validateBordereau(id, lignes));
     }
 
     @GetMapping("/livraisons")

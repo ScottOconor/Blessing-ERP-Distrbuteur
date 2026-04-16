@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/modules/accounting/components/dashboard/dashboard.component.ts"],
+  "sourcesContent": ["\n    .quick-actions h3 { font-size: 16px; color: #495057; }\n    .quick-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));\n      gap: 12px;\n    }\n    .quick-card {\n      background: white;\n      border: 1px solid #dee2e6;\n      border-radius: 8px;\n      padding: 16px;\n      display: flex;\n      align-items: center;\n      gap: 12px;\n      cursor: pointer;\n      transition: all 0.2s;\n      font-size: 13px;\n      font-weight: 500;\n      color: #495057;\n      .material-icons { font-size: 24px; }\n      &:hover { border-color: #714B67; color: #714B67; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }\n    }\n  "],
+  "mappings": ";AACI,CAAA,cAAA;AAAoB,aAAA;AAAiB,SAAA;;AACrC,CAAA;AACE,WAAA;AACA,yBAAA,OAAA,SAAA,EAAA,OAAA,KAAA,EAAA;AACA,OAAA;;AAEF,CAAA;AACE,cAAA;AACA,UAAA,IAAA,MAAA;AACA,iBAAA;AACA,WAAA;AACA,WAAA;AACA,eAAA;AACA,OAAA;AACA,UAAA;AACA,cAAA,IAAA;AACA,aAAA;AACA,eAAA;AACA,SAAA;;AACA,CAbF,WAaE,CAAA;AAAkB,aAAA;;AAClB,CAdF,UAcE;AAAU,gBAAA;AAAuB,SAAA;AAAgB,cAAA,EAAA,IAAA,KAAA,KAAA,CAAA,EAAA,CAAA,EAAA,CAAA,EAAA;AAAwC,aAAA,WAAA;;",
+  "names": []
+}
