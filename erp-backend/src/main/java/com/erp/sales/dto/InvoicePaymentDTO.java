@@ -26,6 +26,9 @@ public class InvoicePaymentDTO {
     private Long companyId;
     private Long accountMoveId;
     private String accountMoveName;
+    /** Présent si ce règlement est une compensation avec un avoir */
+    private Long creditNoteId;
+    private String creditNoteName;
 
     private LocalDateTime createdAt;
 }

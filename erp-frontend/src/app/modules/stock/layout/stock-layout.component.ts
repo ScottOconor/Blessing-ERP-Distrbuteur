@@ -14,6 +14,11 @@ export class StockLayoutComponent implements OnInit {
   userName = '';
   userInitials = '';
   activeDropdown: string | null = null;
+  showCompanyPicker = false;
+
+  get isCentralized() { return this.authService.isCentralized(); }
+  get companies() { return this.authService.getSession()?.companies ?? []; }
+  get activeCompany() { return this.authService.getActiveCompany(); }
 
   navItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/stock/dashboard' },
@@ -73,14 +78,21 @@ export class StockLayoutComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('.nav-item-dropdown')) {
-      this.activeDropdown = null;
-    }
+    const t = event.target as HTMLElement;
+    if (!t.closest('.nav-item-dropdown')) this.activeDropdown = null;
+    if (!t.closest('.company-selector')) this.showCompanyPicker = false;
   }
 
   navigateTo(route: string): void {
     this.activeDropdown = null;
     this.router.navigateByUrl(route);
+  }
+
+  switchCompany(id: number): void {
+    this.authService.setActiveCompanyId(id);
+    this.showCompanyPicker = false;
+    const url = this.router.url;
+    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
   goHome(): void { this.router.navigate(['/welcome']); }

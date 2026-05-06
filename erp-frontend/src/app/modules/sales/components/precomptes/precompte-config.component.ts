@@ -65,7 +65,7 @@ export class PrecompteConfigComponent implements OnInit {
   }
 
   get companyId(): number {
-    return this.auth.getCurrentUser()?.companyId ?? 1;
+    return this.auth.getCompanyId();
   }
 
   private loadAll(): void {

@@ -22,6 +22,7 @@ public class SalesInvoiceRequest {
     private LocalDate dateEcheance;
     private String notes;
     private Long companyId;
+    private Long warehouseId;
     private List<LineRequest> lines;
 
     @Data

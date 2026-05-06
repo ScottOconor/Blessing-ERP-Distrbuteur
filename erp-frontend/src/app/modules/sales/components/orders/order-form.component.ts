@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { SalesService, SalesOrder, SalesOrderLine, SalesClient } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
-import { StockService, Product } from '../../../stock/services/stock.service';
+import { StockService, Product, Warehouse } from '../../../stock/services/stock.service';
 import { AccountJournal } from '../../../../core/models/account.model';
 
 @Component({
@@ -20,6 +20,7 @@ export class OrderFormComponent implements OnInit {
   order: SalesOrder = this.emptyOrder();
   clients: SalesClient[] = [];
   journals: AccountJournal[] = [];
+  warehouses: Warehouse[] = [];
   allProducts: Product[] = [];
   loading = false;
   saving = false;
@@ -27,6 +28,10 @@ export class OrderFormComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   readonly TVA_DEFAULT = 19.25;
+
+  partnerBalance: number | null = null;
+  partnerCreditDisponible: number | null = null;
+  loadingBalance = false;
 
   // Autocomplete state per line
   lineSearches: string[] = [];
@@ -46,7 +51,7 @@ export class OrderFormComponent implements OnInit {
     private stockService: StockService,
     private authService: AuthService,
     private route: ActivatedRoute,
-    private router: Router
+    public router: Router
   ) {}
 
   ngOnInit(): void {
@@ -68,12 +73,29 @@ export class OrderFormComponent implements OnInit {
     };
   }
 
+  onClientChange(partnerId: number): void {
+    if (!partnerId) { this.partnerBalance = null; this.partnerCreditDisponible = null; return; }
+    this.loadingBalance = true;
+    this.salesService.getPartnerBalance(partnerId, this.authService.getCompanyId()).subscribe({
+      next: (b) => {
+        this.partnerBalance = b.balance;
+        this.partnerCreditDisponible = b.credit;
+        this.loadingBalance = false;
+      },
+      error: () => this.loadingBalance = false
+    });
+  }
+
   loadReferenceData(): void {
     const companyId = this.authService.getCompanyId();
     this.order.companyId = companyId;
 
     this.salesService.getClients(companyId).subscribe({
       next: (data) => this.clients = data
+    });
+
+    this.stockService.getWarehouses(companyId).subscribe({
+      next: (data) => { this.warehouses = data.filter(w => w.active !== false); }
     });
 
     this.accountingService.getJournals(companyId).subscribe({
@@ -86,7 +108,17 @@ export class OrderFormComponent implements OnInit {
     });
 
     this.stockService.getProducts(companyId).subscribe({
-      next: (data) => { this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu'); },
+      next: (data) => {
+        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu');
+        // Recalculate stock badges now that products are loaded (fixes race condition with loadOrder)
+        this.lineStockQty = this.order.lines.map(l => {
+          if (l.productId) {
+            const p = this.allProducts.find(p => p.id === l.productId);
+            return p?.qtyOnHand ?? 0;
+          }
+          return 0;
+        });
+      },
       error: () => { this.errorMsg = 'Impossible de charger les articles du stock'; }
     });
   }
@@ -96,6 +128,7 @@ export class OrderFormComponent implements OnInit {
     this.salesService.getOrder(id).subscribe({
       next: (data) => {
         this.order = data;
+        if (data.partnerId) this.onClientChange(data.partnerId);
         // Initialiser les recherches avec le code/nom existant
         this.lineSearches = data.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
         // Initialiser le stock disponible depuis les produits chargés
@@ -129,7 +162,7 @@ export class OrderFormComponent implements OnInit {
       prixUnitaire: 0,
       tauxRemise: 0,
       tauxTVA: this.TVA_DEFAULT,
-      accountCode: '706100'
+      accountCode: '7011'
     });
     this.lineSearches.push('');
     this.lineStockQty.push(0);
@@ -145,16 +178,26 @@ export class OrderFormComponent implements OnInit {
   // ---- Autocomplete ----
 
   getSuggestions(i: number): Product[] {
-    // Use search results if available, fallback to client-side filter
     if (this.lineSearchResults[i]?.length > 0) {
       return this.lineSearchResults[i];
     }
     const q = (this.lineSearches[i] || '').toLowerCase().trim();
-    if (!q || q.length < 1) return this.allProducts.slice(0, 8);
-    return this.allProducts.filter(p =>
+    if (!q) return this.allProducts.slice(0, 8);
+    const matches = this.allProducts.filter(p =>
       p.name.toLowerCase().includes(q) ||
       (p.defaultCode || '').toLowerCase().includes(q)
-    ).slice(0, 10);
+    );
+    // Rank: exact code match first, code starts-with second, name starts-with third, rest
+    matches.sort((a, b) => {
+      const codeA = (a.defaultCode || '').toLowerCase();
+      const codeB = (b.defaultCode || '').toLowerCase();
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      const rank = (code: string, name: string) =>
+        code === q ? 0 : code.startsWith(q) ? 1 : name.startsWith(q) ? 2 : 3;
+      return rank(codeA, nameA) - rank(codeB, nameB);
+    });
+    return matches.slice(0, 12);
   }
 
   onSearchInput(i: number): void {
@@ -184,7 +227,7 @@ export class OrderFormComponent implements OnInit {
   }
 
   openSuggestions(i: number, event?: FocusEvent | Event): void {
-    if (this.order.lines[i]?.productCode) {
+    if (event instanceof FocusEvent && this.order.lines[i]?.productCode) {
       this.lineSearches[i] = '';
     }
     if (event?.target) {
@@ -195,6 +238,19 @@ export class OrderFormComponent implements OnInit {
     }
     this.activeSuggestionIdx = i;
     this.onSearchInput(i);
+  }
+
+  onProductSearchEnter(i: number, event: Event): void {
+    event.preventDefault();
+    const suggestions = this.getSuggestions(i);
+    if (suggestions.length > 0) {
+      this.selectProduct(i, suggestions[0]);
+    }
+  }
+
+  onLineEnter(event: Event): void {
+    event.preventDefault();
+    this.addLine();
   }
 
   closeSuggestions(i?: number): void {
@@ -220,7 +276,7 @@ export class OrderFormComponent implements OnInit {
     line.description = product.name;
     line.prixUnitaire = product.salePrice || 0;
     line.tauxTVA = this.TVA_DEFAULT;
-    line.accountCode = '706100';
+    line.accountCode = '701100';
     line.categoryId = product.categoryId;
     this.lineSearches[i] = product.defaultCode
       ? `[${product.defaultCode}] ${product.name}`
@@ -284,26 +340,43 @@ export class OrderFormComponent implements OnInit {
   }
 
   save(): void {
-    if (!this.order.partnerId || !this.order.journalId || this.order.lines.length === 0) {
-      this.errorMsg = 'Veuillez renseigner le client, le journal et au moins une ligne';
+    const missing: string[] = [];
+    if (!this.order.partnerId) missing.push('Client');
+    if (!this.order.journalId) missing.push('Journal');
+    if (!this.order.warehouseId) missing.push('Entrepôt');
+    if (this.order.lines.length === 0) missing.push('Lignes');
+    if (missing.length > 0) {
+      this.errorMsg = `Champs manquants : ${missing.join(', ')}`;
       return;
     }
 
     this.saving = true;
     this.errorMsg = '';
 
-    const obs = this.orderId
-      ? this.salesService.updateOrder(this.orderId, this.order)
-      : this.salesService.createOrder(this.order);
+    const isNew = !this.orderId;
+    const obs = isNew
+      ? this.salesService.createOrder(this.order)
+      : this.salesService.updateOrder(this.orderId!, this.order);
 
     obs.subscribe({
       next: (saved) => {
         this.saving = false;
-        this.orderId = saved.id!;
         this.order = saved;
-        this.showSuccess('Bon sauvegardé');
-        if (!this.orderId) {
+        if (isNew) {
           this.router.navigate(['/sales/orders', saved.id]);
+        } else {
+          this.orderId = saved.id!;
+          // Re-sync searches and stock quantities from saved lines
+          this.lineSearches = saved.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
+          this.lineStockQty = saved.lines.map(l => {
+            if (l.productId) {
+              const p = this.allProducts.find(p => p.id === l.productId);
+              return p?.qtyOnHand ?? 0;
+            }
+            return 0;
+          });
+          this.lineSearchResults = saved.lines.map(() => []);
+          this.showSuccess('Bon sauvegardé');
         }
       },
       error: (err) => {
@@ -314,7 +387,7 @@ export class OrderFormComponent implements OnInit {
   }
 
   confirm(): void {
-    if (!this.orderId) { this.save(); return; }
+    if (!this.orderId) return;
     if (!confirm('Confirmer ce bon de commande ? Une facture sera créée automatiquement.')) return;
 
     this.confirming = true;
@@ -335,8 +408,28 @@ export class OrderFormComponent implements OnInit {
     });
   }
 
+  cancelOrder(): void {
+    if (!this.orderId) return;
+    if (!confirm('Annuler ce bon de commande ?')) return;
+
+    this.salesService.cancelOrder(this.orderId).subscribe({
+      next: (updated) => { this.order = updated; },
+      error: (err) => { this.errorMsg = err.error?.message || 'Erreur lors de l\'annulation'; }
+    });
+  }
+
   back(): void {
     this.router.navigate(['/sales/orders']);
+  }
+
+  stateLabel(s?: string): string {
+    const map: Record<string, string> = {
+      draft: 'Brouillon',
+      confirmed: 'Confirmé',
+      invoiced: 'Facturé',
+      cancelled: 'Annulé'
+    };
+    return map[s ?? ''] ?? s ?? '';
   }
 
   showSuccess(msg: string): void {

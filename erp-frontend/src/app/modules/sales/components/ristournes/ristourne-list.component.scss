@@ -48,6 +48,90 @@
 
 .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
 
+// Sub-tabs (Règlements)
+.sub-tabs-bar {
+  display: flex; gap: 4px; margin-bottom: 12px;
+}
+.sub-tab-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 16px; border: 1px solid #dee2e6; background: white;
+  font-size: 13px; color: #6c757d; cursor: pointer; border-radius: 6px;
+  font-family: 'Roboto', sans-serif; transition: all 0.15s;
+  &:hover { background: #f8f9fa; }
+  &.active { background: #6f42c1; color: white; border-color: #6f42c1; font-weight: 600; }
+}
+
+// Quarter accordion card
+.quarter-card {
+  background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 12px; overflow: hidden;
+}
+.quarter-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; cursor: pointer; background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  &:hover { background: #f3f0fa; }
+}
+.quarter-title {
+  display: flex; align-items: center; gap: 12px;
+  strong { font-size: 15px; color: #212529; }
+}
+.quarter-icon { font-size: 20px; color: #6f42c1; }
+.quarter-sub { font-size: 12px; color: #6c757d; }
+.quarter-total { font-size: 14px; font-weight: 700; color: #017E84; font-family: 'Roboto Mono', monospace; }
+.quarter-actions { display: flex; align-items: center; gap: 10px; }
+.expand-icon { font-size: 22px; color: #6c757d; }
+.badge-count {
+  background: #e9e3f8; color: #6f42c1; border-radius: 20px;
+  padding: 2px 10px; font-size: 12px; font-weight: 600;
+}
+
+.quarter-body { padding: 8px 0; }
+.empty-quarter { padding: 16px 24px; color: #6c757d; font-size: 13px; }
+
+// Partner rows inside quarter
+.partner-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 24px; cursor: pointer; border-bottom: 1px solid #f5f5f5;
+  &:hover { background: #f8f9fa; }
+}
+.partner-name { flex: 1; font-weight: 600; font-size: 14px; color: #212529; }
+.partner-count { font-size: 12px; color: #6c757d; }
+.partner-total { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 700; color: #017E84; margin-left: auto; }
+.partner-actions { display: flex; gap: 6px; }
+.partner-details { padding: 0 24px 12px 48px; background: #f9fafb; }
+
+// Generate button
+.btn-generate {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #6f42c1; color: white; border: none; border-radius: 6px;
+  padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif;
+  &:hover:not(:disabled) { background: #5a2d9c; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+// Confirm all button
+.btn-confirm-all {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif;
+  &:hover { background: #c8e6c9; }
+}
+
+// Alert banners
+.alert-success {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #d1fae5; border-radius: 6px;
+  color: #065f46; margin-bottom: 12px; font-size: 14px;
+  .material-icons { font-size: 18px; }
+}
+.alert-error {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #fee2e2; border-radius: 6px;
+  color: #991b1b; margin-bottom: 12px; font-size: 14px;
+  .material-icons { font-size: 18px; }
+}
+
 .loading-state, .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 60px 24px; color: #6c757d; gap: 12px;

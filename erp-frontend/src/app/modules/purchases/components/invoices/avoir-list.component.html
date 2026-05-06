@@ -176,6 +176,7 @@
                               (focus)="openSuggestions(i, $event)"
                               (blur)="closeSuggestions(i)"
                               (input)="openSuggestions(i, $event)"
+                              (keydown.enter)="onProductSearchEnter(i, $event)"
                               autocomplete="off" />
                             @if (line.productCode) {
                               <button class="btn-clr" (click)="clearLine(i)">
@@ -202,9 +203,9 @@
                           }
                         </div>
                       </td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" /></td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" min="0" /></td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
                       <td class="ar amt">{{ line.montantHT | number:'1.0-0' }}</td>
                       <td class="ar amt-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
                       <td>

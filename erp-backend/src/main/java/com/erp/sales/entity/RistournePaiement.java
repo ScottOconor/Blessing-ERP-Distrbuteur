@@ -66,6 +66,10 @@ public class RistournePaiement {
 
     private String notes;
 
+    /** Type de ristourne : brasserie | guinness */
+    @Column(name = "type_ristourne")
+    private String typeRistourne;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

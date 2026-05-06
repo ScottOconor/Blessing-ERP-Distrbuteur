@@ -53,6 +53,10 @@ public class InvoicePayment {
     @JoinColumn(name = "account_move_id")
     private AccountMove accountMove;
 
+    /** ID de l'avoir utilisé comme crédit (si paiement par compensation — pas de journal) */
+    @Column(name = "credit_note_id")
+    private Long creditNoteId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

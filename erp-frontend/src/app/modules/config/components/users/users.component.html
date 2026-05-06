@@ -1,0 +1,152 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><span class="material-icons">manage_accounts</span> Utilisateurs</h1>
+      <p class="page-sub">Créez et gérez les comptes utilisateurs</p>
+    </div>
+    <div class="header-actions">
+      <select class="form-control select-group" [(ngModel)]="filterGroupId" (ngModelChange)="onGroupChange()">
+        @for (g of groups; track g.id) {
+          <option [value]="g.id">{{ g.name }}</option>
+        }
+      </select>
+      <button class="btn-primary" (click)="openCreate()">
+        <span class="material-icons">person_add</span> Nouvel utilisateur
+      </button>
+    </div>
+  </div>
+
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+  @if (errorMsg)   { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }} <button (click)="errorMsg=''">×</button></div> }
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else {
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Affectation</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (users.length === 0) {
+            <tr><td colspan="6" class="empty-row">Aucun utilisateur dans ce groupe</td></tr>
+          }
+          @for (u of users; track u.id) {
+            <tr [class.inactive-row]="!u.active">
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar">{{ (u.fullName || u.username).slice(0,2).toUpperCase() }}</div>
+                  <div>
+                    <div class="user-name">{{ u.fullName || u.username }}</div>
+                    <div class="user-login">@{{ u.username }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-muted">{{ u.email || '—' }}</td>
+              <td>
+                <span class="role-badge" [class]="'role-' + (u.roleCode || 'custom')">
+                  {{ u.roleLabel || roleLabel(u.roleCode) }}
+                </span>
+              </td>
+              <td class="text-muted">
+                @if (u.groupName && !u.companyName) {
+                  <span class="material-icons" style="font-size:14px;vertical-align:middle">corporate_fare</span>
+                  {{ u.groupName }} (groupe entier)
+                } @else {
+                  <span class="material-icons" style="font-size:14px;vertical-align:middle">business</span>
+                  {{ u.companyName || '—' }}
+                }
+              </td>
+              <td>
+                <span class="status-badge" [class.active]="u.active">{{ u.active ? 'Actif' : 'Inactif' }}</span>
+                @if (u.mustChangePassword) {
+                  <span class="badge-warn" title="Doit changer son mot de passe">MDP</span>
+                }
+              </td>
+              <td class="actions-cell">
+                <button class="btn-icon" (click)="openEdit(u)" title="Modifier"><span class="material-icons">edit</span></button>
+                <button class="btn-icon" [class.btn-danger-icon]="u.active" (click)="toggle(u)"
+                        [title]="u.active ? 'Désactiver' : 'Activer'">
+                  <span class="material-icons">{{ u.active ? 'person_off' : 'person' }}</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}</h3>
+        <button class="btn-icon" (click)="showModal=false"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        @if (!editingUser) {
+          <div class="form-group">
+            <label>Nom d'utilisateur <span class="req">*</span></label>
+            <input type="text" [(ngModel)]="form.username" class="form-control" autocomplete="off" />
+          </div>
+        }
+        <div class="form-group">
+          <label>Nom complet</label>
+          <input type="text" [(ngModel)]="form.fullName" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" [(ngModel)]="form.email" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label>{{ editingUser ? 'Nouveau mot de passe (laisser vide = inchangé)' : 'Mot de passe *' }}</label>
+          <input type="password" [(ngModel)]="form.password" class="form-control" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label>Rôle <span class="req">*</span></label>
+          <select [(ngModel)]="form.roleId" (ngModelChange)="onRoleChange()" class="form-control">
+            <option [value]="undefined" disabled>— Sélectionner —</option>
+            @for (r of roles; track r.id) {
+              <option [value]="r.id">
+                {{ r.label }} {{ r.isSystem ? '(système)' : '(custom)' }}
+              </option>
+            }
+          </select>
+        </div>
+
+        @if (form.roleId && !isSystemRole) {
+          <div class="form-group">
+            <label>Entreprise <span class="req">*</span></label>
+            <select [(ngModel)]="form.companyId" class="form-control">
+              <option [value]="undefined" disabled>— Sélectionner —</option>
+              @for (c of companies; track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+        }
+        @if (form.roleId && isSystemRole) {
+          <div class="info-banner">
+            <span class="material-icons">info</span>
+            Cet utilisateur aura accès à toutes les entreprises du groupe.
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showModal=false">Annuler</button>
+        <button class="btn-primary" (click)="save()">
+          <span class="material-icons">save</span> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}

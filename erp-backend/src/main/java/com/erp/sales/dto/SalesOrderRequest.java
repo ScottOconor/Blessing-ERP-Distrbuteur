@@ -18,6 +18,7 @@ public class SalesOrderRequest {
     private LocalDate dateEcheance;
     private String notes;
     private Long companyId;
+    private Long warehouseId;
     private List<LineRequest> lines;
 
     @Data
@@ -32,7 +33,7 @@ public class SalesOrderRequest {
         private BigDecimal prixUnitaire;
         private BigDecimal tauxRemise;    // % remise, défaut 0
         private BigDecimal tauxTVA;       // % TVA, ex: 19.25
-        private String accountCode;       // compte de produit, ex: "706100"
+        private String accountCode;       // compte de produit, ex: "701100"
         private Long categoryId;          // catégorie produit (ristourne, enlèvement)
         private boolean consigne;         // exclut PSA/ristourne/enlèvement
     }

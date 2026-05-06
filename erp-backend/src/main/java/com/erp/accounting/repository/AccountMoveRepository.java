@@ -2,6 +2,7 @@ package com.erp.accounting.repository;
 
 import com.erp.accounting.entity.AccountMove;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -42,6 +43,10 @@ public interface AccountMoveRepository extends JpaRepository<AccountMove, Long> 
           AND l.analyticAccount IS NOT NULL
     """)
     List<AccountMove> findPostedWithAnalytic(@Param("companyId") Long companyId);
+
+    @Modifying
+    @Query("UPDATE AccountMove m SET m.state = :state WHERE m.id = :id")
+    void updateState(@Param("id") Long id, @Param("state") String state);
 
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(m.name, LENGTH(m.name) - 4) AS int)), 0) " +
            "FROM AccountMove m WHERE m.journal.id = :journalId " +

@@ -20,8 +20,12 @@ public class RistournePaiementDTO {
     /** Facture ristourne générée (FV-xxx) */
     private Long generatedInvoiceId;
     private String generatedInvoiceName;
+    /** Écriture comptable générée */
+    private Long accountMoveId;
+    private String accountMoveName;
     private Long companyId;
     private String notes;
+    private String typeRistourne;
     private LocalDateTime createdAt;
     private List<LineDTO> lines;
 

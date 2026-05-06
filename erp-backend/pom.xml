@@ -83,11 +83,18 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Apache POI - Excel import -->
+        <!-- Apache POI - Excel import/export -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
+        </dependency>
+
+        <!-- OpenPDF - PDF generation (LGPL) -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>1.3.43</version>
         </dependency>
 
         <!-- Spring Boot Test -->

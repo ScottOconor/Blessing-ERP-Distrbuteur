@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -45,8 +46,10 @@ public class RistourneController {
     // ===== Règlements ristournes =====
 
     @GetMapping("/paiements")
-    public ResponseEntity<List<RistournePaiementDTO>> getAllPaiements(@RequestParam Long companyId) {
-        return ResponseEntity.ok(service.getAllPaiements(companyId));
+    public ResponseEntity<List<RistournePaiementDTO>> getAllPaiements(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) String type) {
+        return ResponseEntity.ok(service.getAllPaiements(companyId, type));
     }
 
     @GetMapping("/paiements/{id}")
@@ -69,12 +72,13 @@ public class RistourneController {
         return ResponseEntity.ok(service.cancelPaiement(id));
     }
 
-    // ===== Règlements groupés par client =====
+    // ===== Règlements groupés par client (pour génération avoirs) =====
 
     @GetMapping("/paiements/grouped")
     public ResponseEntity<List<RistourneService.PartnerGroup>> getGrouped(
-            @RequestParam Long companyId) {
-        return ResponseEntity.ok(service.getGroupedPaiements(companyId));
+            @RequestParam Long companyId,
+            @RequestParam(required = false) String type) {
+        return ResponseEntity.ok(service.getGroupedPaiements(companyId, type));
     }
 
     @PostMapping("/paiements/generate-facture")
@@ -85,6 +89,24 @@ public class RistourneController {
         List<Long> ids = ((List<Number>) req.get("paiementIds"))
                 .stream().map(Number::longValue).toList();
         return ResponseEntity.ok(service.generateFacture(ids, companyId));
+    }
+
+    // ===== Génération groupée par trimestre / période =====
+
+    @PostMapping("/paiements/generate-by-quarter")
+    public ResponseEntity<Map<String, Object>> generateByQuarter(@RequestBody Map<String, Object> req) {
+        int quarter   = Integer.parseInt(req.get("quarter").toString());
+        int year      = Integer.parseInt(req.get("year").toString());
+        Long companyId = Long.valueOf(req.get("companyId").toString());
+        return ResponseEntity.ok(service.generateByQuarter(quarter, year, companyId));
+    }
+
+    @PostMapping("/paiements/generate-by-period")
+    public ResponseEntity<Map<String, Object>> generateByPeriod(@RequestBody Map<String, Object> req) {
+        LocalDate dateStart = LocalDate.parse(req.get("dateStart").toString());
+        LocalDate dateEnd   = LocalDate.parse(req.get("dateEnd").toString());
+        Long companyId      = Long.valueOf(req.get("companyId").toString());
+        return ResponseEntity.ok(service.generateByPeriod(dateStart, dateEnd, companyId));
     }
 
     // ===== Import Excel =====

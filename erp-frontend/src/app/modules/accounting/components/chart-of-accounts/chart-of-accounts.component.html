@@ -5,7 +5,11 @@
       Plan Comptable
     </h1>
     <div class="page-actions">
-      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel Odoo">
+      <button class="btn btn-outline" (click)="downloadTemplate()" [disabled]="downloadingTemplate" title="Télécharger le modèle Excel à remplir">
+        <span class="material-icons">download</span>
+        {{ downloadingTemplate ? 'Téléchargement...' : 'Modèle Excel' }}
+      </button>
+      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel">
         <span class="material-icons">upload_file</span>
         {{ importing ? 'Import...' : 'Importer' }}
         <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing">

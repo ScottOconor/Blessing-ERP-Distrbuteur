@@ -39,6 +39,10 @@ public class PurchaseInvoiceDTO {
     /** Bon de réception Dépôt Achat */
     private Long pickingId;
     private String pickingState;
+    private Long warehouseId;
+    private String warehouseName;
+    /** Solde courant du partenaire (débit - crédit sur comptes fournisseurs/clients) */
+    private BigDecimal partnerBalance;
 
     private BigDecimal totalHT;
     private BigDecimal totalTVA;

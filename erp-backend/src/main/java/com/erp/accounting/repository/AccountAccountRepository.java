@@ -2,6 +2,9 @@ package com.erp.accounting.repository;
 
 import com.erp.accounting.entity.AccountAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -24,4 +27,8 @@ public interface AccountAccountRepository extends JpaRepository<AccountAccount, 
     Optional<AccountAccount> findByCodeAndCompanyId(String code, Long companyId);
 
     long countByCompanyId(Long companyId);
+
+    @Modifying
+    @Query("DELETE FROM AccountAccount a WHERE a.company.id = :companyId")
+    void deleteByCompanyId(@Param("companyId") Long companyId);
 }

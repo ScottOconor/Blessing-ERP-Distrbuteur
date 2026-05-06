@@ -369,6 +369,8 @@ public class StockService {
                 .supplierName(picking.getPartnerName())
                 .invoiceDate(picking.getScheduledDate())
                 .companyId(picking.getCompanyId())
+                .state(picking.getState())
+                .dateDone(picking.getDateDone())
                 .lignes(lignes)
                 .build();
     }
@@ -1080,13 +1082,15 @@ public class StockService {
             String stockCode = resolveStockAccountCode(product.getCategoryId(), companyId);
             if (product.getStockAccountCode() != null) stockCode = product.getStockAccountCode();
             AccountAccount stockAccount = accountRepo.findFirstByCodeAndCompanyId(stockCode, companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("311", companyId)
-                            .stream().findFirst().orElse(null));
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("311", companyId))
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("31",  companyId))
+                    .orElse(null);
 
-            // Compte perte/gain inventaire (6031 par défaut)
+            // Compte variation de stocks (6031)
             AccountAccount inventoryLossAccount = accountRepo.findFirstByCodeAndCompanyId("6031", companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("603", companyId)
-                            .stream().findFirst().orElse(null));
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("6032", companyId))
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("603",  companyId))
+                    .orElse(null);
 
             if (stockAccount == null || inventoryLossAccount == null) return null;
 

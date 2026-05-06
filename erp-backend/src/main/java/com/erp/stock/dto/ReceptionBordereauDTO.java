@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -23,6 +24,10 @@ public class ReceptionBordereauDTO {
     private LocalDate invoiceDate;
 
     private Long companyId;
+
+    /** État du picking : confirmed / done */
+    private String state;
+    private LocalDateTime dateDone;
 
     private List<LigneBordereau> lignes;
 

@@ -127,4 +127,17 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     List<AccountMoveLine> findPostedLinesByJournalAndDate(
             @Param("journalId") Long journalId,
             @Param("date") LocalDate date);
+
+    /**
+     * Solde courant d'un partenaire : SUM(débit - crédit) sur tous les comptes
+     * clients (receivable) et fournisseurs (payable) des écritures validées.
+     * Positif = le partenaire nous doit ; négatif = on lui doit.
+     */
+    @Query("SELECT COALESCE(SUM(l.debit - l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.partner.id = :partnerId " +
+           "AND l.company.id = :companyId " +
+           "AND l.move.state = 'posted' " +
+           "AND l.account.internalType IN ('receivable', 'payable')")
+    BigDecimal computePartnerBalance(@Param("partnerId") Long partnerId,
+                                     @Param("companyId") Long companyId);
 }

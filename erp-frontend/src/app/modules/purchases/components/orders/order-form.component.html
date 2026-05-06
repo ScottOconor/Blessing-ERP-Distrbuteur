@@ -136,6 +136,7 @@
                             (focus)="openSuggestions(i, $event)"
                             (blur)="closeSuggestions(i)"
                             (input)="openSuggestions(i, $event)"
+                            (keydown.enter)="onProductSearchEnter(i, $event)"
                           />
                           @if (line.productId && !isReadOnly) {
                             <button class="btn-clear-line" (mousedown)="clearLine(i)" title="Effacer">
@@ -170,17 +171,17 @@
                     <td class="col-qty">
                       <input type="number" class="form-control text-right" [(ngModel)]="line.quantity"
                         [disabled]="isReadOnly" min="0.001" step="1"
-                        (ngModelChange)="computeLine(i)" />
+                        (ngModelChange)="computeLine(i)" (keydown.enter)="onLineEnter($event)" />
                     </td>
                     <td class="col-pu">
                       <input type="number" class="form-control text-right" [(ngModel)]="line.prixUnitaire"
                         [disabled]="isReadOnly" min="0" step="1"
-                        (ngModelChange)="computeLine(i)" />
+                        (ngModelChange)="computeLine(i)" (keydown.enter)="onLineEnter($event)" />
                     </td>
                     <td class="col-tva">
                       <input type="number" class="form-control text-right" [(ngModel)]="line.tauxTVA"
                         [disabled]="isReadOnly" min="0" max="100" step="0.01"
-                        (ngModelChange)="computeLine(i)" />
+                        (ngModelChange)="computeLine(i)" (keydown.enter)="onLineEnter($event)" />
                     </td>
                     <td class="col-ht text-right">{{ (line.montantHT ?? 0) | number:'1.0-0' }}</td>
                     <td class="col-ttc text-right">{{ (line.montantTTC ?? 0) | number:'1.0-0' }}</td>

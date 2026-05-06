@@ -159,7 +159,7 @@ export class PurchaseAvoirListComponent implements OnInit {
       quantity: 1,
       prixUnitaire: 0,
       tauxTVA: this.TVA_DEFAULT,
-      accountCode: '601000'
+      accountCode: '6011'
     });
     this.lineSearches.push('');
     this.lineSearchResults.push([]);
@@ -200,13 +200,23 @@ export class PurchaseAvoirListComponent implements OnInit {
     if (this.lineSearchResults[i]?.length > 0) return this.lineSearchResults[i];
     const q = (this.lineSearches[i] || '').toLowerCase().trim();
     if (!q) return this.allProducts.slice(0, 8);
-    return this.allProducts.filter(p =>
+    const matches = this.allProducts.filter(p =>
       p.name.toLowerCase().includes(q) || (p.defaultCode || '').toLowerCase().includes(q)
-    ).slice(0, 10);
+    );
+    matches.sort((a, b) => {
+      const codeA = (a.defaultCode || '').toLowerCase();
+      const codeB = (b.defaultCode || '').toLowerCase();
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      const rank = (code: string, name: string) =>
+        code === q ? 0 : code.startsWith(q) ? 1 : name.startsWith(q) ? 2 : 3;
+      return rank(codeA, nameA) - rank(codeB, nameB);
+    });
+    return matches.slice(0, 12);
   }
 
   openSuggestions(i: number, event?: FocusEvent | Event): void {
-    if (this.avoirForm.lines[i]?.productCode) this.lineSearches[i] = '';
+    if (event instanceof FocusEvent && this.avoirForm.lines[i]?.productCode) this.lineSearches[i] = '';
     if (event?.target) {
       const rect = (event.target as HTMLElement).getBoundingClientRect();
       const dropdownWidth = Math.max(rect.width, 420);
@@ -214,6 +224,17 @@ export class PurchaseAvoirListComponent implements OnInit {
       this.dropdownRect = { top: rect.bottom + 4, left, width: dropdownWidth };
     }
     this.activeSuggestionIdx = i;
+  }
+
+  onProductSearchEnter(i: number, event: Event): void {
+    event.preventDefault();
+    const suggestions = this.getSuggestions(i);
+    if (suggestions.length > 0) this.selectProduct(i, suggestions[0]);
+  }
+
+  onLineEnter(event: Event): void {
+    event.preventDefault();
+    this.addLine();
   }
 
   closeSuggestions(i: number): void {

@@ -7,18 +7,26 @@
     <div class="header-info">
       <h1 class="page-title">{{ pageTitle }}</h1>
       @if (order.state) {
-        <span class="state-badge state-{{ order.state }}">{{ order.state }}</span>
+        <span class="state-badge state-{{ order.state }}">{{ stateLabel(order.state) }}</span>
       }
     </div>
     <div class="header-actions">
-      @if (!isReadOnly) {
+      @if (order.state === 'draft' || !order.state) {
         <button class="btn-secondary" (click)="save()" [disabled]="saving">
           <span class="material-icons">save</span>
           {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
         </button>
-        <button class="btn-primary" (click)="confirm()" [disabled]="confirming || saving">
+      }
+      @if (order.state === 'draft' && orderId) {
+        <button class="btn-primary" (click)="confirm()" [disabled]="confirming">
           <span class="material-icons">check_circle</span>
-          {{ confirming ? 'Confirmation...' : 'Confirmer & Facturer' }}
+          {{ confirming ? 'Confirmation...' : 'Confirmer' }}
+        </button>
+      }
+      @if (order.state === 'draft' || order.state === 'confirmed') {
+        <button class="btn-danger" (click)="cancelOrder()">
+          <span class="material-icons">cancel</span>
+          Annuler
         </button>
       }
     </div>
@@ -35,6 +43,16 @@
     </div>
   }
 
+  @if (order.invoiceId) {
+    <div class="invoice-banner">
+      <span class="material-icons">receipt_long</span>
+      Facture associée : <strong>{{ order.invoiceName }}</strong>
+      <button class="btn-goto-invoice" (click)="router.navigate(['/sales/invoices', order.invoiceId])">
+        <span class="material-icons">open_in_new</span> Voir la facture
+      </button>
+    </div>
+  }
+
   @if (loading) {
     <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
   } @else {
@@ -45,12 +63,34 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Client <span class="required">*</span></label>
-            <select [(ngModel)]="order.partnerId" [disabled]="isReadOnly" class="form-control">
+            <select [(ngModel)]="order.partnerId" [disabled]="isReadOnly" class="form-control"
+              (ngModelChange)="onClientChange($event)">
               <option [value]="0" disabled>— Sélectionner un client —</option>
               @for (c of clients; track c.id) {
                 <option [value]="c.id">{{ c.name }}{{ c.ref ? ' (' + c.ref + ')' : '' }}</option>
               }
             </select>
+            @if (loadingBalance) {
+              <span style="font-size:12px;color:#888;margin-top:4px;display:block">Chargement solde…</span>
+            } @else if (partnerBalance !== null) {
+              <div style="margin-top:6px;padding:8px 10px;border-radius:6px;font-size:12px;font-weight:600;display:flex;flex-wrap:wrap;gap:12px"
+                [style.background]="(partnerBalance || 0) > 0 ? '#fff7ed' : (partnerBalance || 0) < 0 ? '#f0fdf4' : '#f8fafc'"
+                [style.border]="(partnerBalance || 0) > 0 ? '1px solid #f97316' : (partnerBalance || 0) < 0 ? '1px solid #22c55e' : '1px solid #cbd5e1'">
+                <span [style.color]="(partnerBalance || 0) > 0 ? '#c2410c' : (partnerBalance || 0) < 0 ? '#15803d' : '#64748b'">
+                  <span class="material-icons" style="font-size:13px;vertical-align:middle">account_balance_wallet</span>
+                  Solde : {{ (partnerBalance || 0) | number:'1.0-0' }} FCFA
+                  @if ((partnerBalance || 0) > 0) { <em>(doit)</em> }
+                  @else if ((partnerBalance || 0) < 0) { <em>(on lui doit)</em> }
+                  @else { <em>(soldé)</em> }
+                </span>
+                @if ((partnerCreditDisponible || 0) > 0) {
+                  <span style="color:#017E84">
+                    <span class="material-icons" style="font-size:13px;vertical-align:middle">redeem</span>
+                    Crédit dispo : {{ partnerCreditDisponible | number:'1.0-0' }} FCFA
+                  </span>
+                }
+              </div>
+            }
           </div>
           <div class="form-group">
             <label>Journal de vente <span class="required">*</span></label>
@@ -67,6 +107,19 @@
           <div class="form-group">
             <label>Date d'échéance</label>
             <input type="date" [(ngModel)]="order.dateEcheance" [disabled]="isReadOnly" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Entrepôt <span class="required">*</span></label>
+            @if (!isReadOnly) {
+              <select [(ngModel)]="order.warehouseId" class="form-control">
+                <option [ngValue]="undefined">— Sélectionner —</option>
+                @for (w of warehouses; track w.id) {
+                  <option [value]="w.id">{{ w.name }}</option>
+                }
+              </select>
+            } @else {
+              <div class="form-control-static">{{ order.warehouseName || '—' }}</div>
+            }
           </div>
           <div class="form-group form-full">
             <label>Notes</label>
@@ -119,6 +172,7 @@
                           (focus)="openSuggestions(i, $event)"
                           (blur)="closeSuggestions(i)"
                           (input)="openSuggestions(i, $event)"
+                          (keydown.enter)="onProductSearchEnter(i, $event)"
                           autocomplete="off"
                         />
                         @if (line.productCode) {
@@ -168,7 +222,8 @@
                   @if (!isReadOnly) {
                     <div class="qty-cell-wrap">
                       <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)"
-                             class="input-cell text-right" [class.qty-warning]="hasStockWarning(i)" min="0" />
+                             class="input-cell text-right" [class.qty-warning]="hasStockWarning(i)" min="0"
+                             (keydown.enter)="onLineEnter($event)" />
                       @if (line.productId) {
                         <span class="stock-badge" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
                           {{ lineStockQty[i] }} dispo
@@ -179,22 +234,26 @@
                 </td>
                 <td class="text-right">
                   @if (!isReadOnly) {
-                    <input type="number" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" />
+                    <input type="number" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0"
+                           (keydown.enter)="onLineEnter($event)" />
                   } @else { {{ line.prixUnitaire | number:'1.0-0' }} }
                 </td>
                 <td class="text-right">
                   @if (!isReadOnly) {
-                    <input type="number" [(ngModel)]="line.tauxRemise" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" max="100" />
+                    <input type="number" [(ngModel)]="line.tauxRemise" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" max="100"
+                           (keydown.enter)="onLineEnter($event)" />
                   } @else { {{ line.tauxRemise || 0 }} % }
                 </td>
                 <td class="text-right">
                   @if (!isReadOnly) {
-                    <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0" />
+                    <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" class="input-cell text-right" min="0"
+                           (keydown.enter)="onLineEnter($event)" />
                   } @else { {{ line.tauxTVA || 0 }} % }
                 </td>
                 <td>
                   @if (!isReadOnly) {
-                    <input type="text" [(ngModel)]="line.accountCode" class="input-cell" placeholder="706100" />
+                    <input type="text" [(ngModel)]="line.accountCode" class="input-cell" placeholder="701100"
+                           (keydown.enter)="onLineEnter($event)" />
                   } @else { {{ line.accountCode || '—' }} }
                 </td>
                 <td class="text-right amount-col">{{ line.montantHT | number:'1.0-0' }}</td>

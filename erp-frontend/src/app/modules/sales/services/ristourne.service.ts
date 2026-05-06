@@ -9,6 +9,7 @@ export interface Ristourne {
   categoryId: number;
   categoryName?: string;
   montantFixe: number;
+  montantTTCUnitaire?: number;
   typeRistourne?: string;  // 'brasserie' | 'guinness' | null
   companyId: number;
   active?: boolean;
@@ -38,6 +39,7 @@ export interface RistournePaiement {
   generatedInvoiceName?: string;
   companyId: number;
   notes?: string;
+  typeRistourne?: string;
   createdAt?: string;
   lines: RistournePaiementLine[];
 }
@@ -47,6 +49,14 @@ export interface PartnerGroup {
   partnerName: string;
   totalAmount: number;
   paiements: RistournePaiement[];
+}
+
+export interface QuarterGroup {
+  quarter: number;
+  year: number;
+  label: string;
+  totalAmount: number;
+  partners: PartnerGroup[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -80,10 +90,10 @@ export class RistourneService {
 
   // ===== Règlements =====
 
-  getAllPaiements(companyId: number): Observable<RistournePaiement[]> {
-    return this.http.get<RistournePaiement[]>(`${this.base}/paiements`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
+  getAllPaiements(companyId: number, type?: string): Observable<RistournePaiement[]> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (type) params = params.set('type', type);
+    return this.http.get<RistournePaiement[]>(`${this.base}/paiements`, { params });
   }
 
   getPaiement(id: number): Observable<RistournePaiement> {
@@ -102,16 +112,30 @@ export class RistourneService {
     return this.http.post<RistournePaiement>(`${this.base}/paiements/${id}/cancel`, {});
   }
 
-  getGroupedPaiements(companyId: number): Observable<PartnerGroup[]> {
-    return this.http.get<PartnerGroup[]>(`${this.base}/paiements/grouped`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
+  getGroupedPaiements(companyId: number, type?: string): Observable<PartnerGroup[]> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (type) params = params.set('type', type);
+    return this.http.get<PartnerGroup[]>(`${this.base}/paiements/grouped`, { params });
   }
 
   generateFacture(paiementIds: number[], companyId: number): Observable<{ invoiceId: number; invoiceName: string }> {
     return this.http.post<{ invoiceId: number; invoiceName: string }>(
       `${this.base}/paiements/generate-facture`,
       { paiementIds, companyId }
+    );
+  }
+
+  generateByQuarter(quarter: number, year: number, companyId: number): Observable<{ generated: number; skipped: number; total: number }> {
+    return this.http.post<{ generated: number; skipped: number; total: number }>(
+      `${this.base}/paiements/generate-by-quarter`,
+      { quarter, year, companyId }
+    );
+  }
+
+  generateByPeriod(dateStart: string, dateEnd: string, companyId: number): Observable<{ generated: number; skipped: number; total: number }> {
+    return this.http.post<{ generated: number; skipped: number; total: number }>(
+      `${this.base}/paiements/generate-by-period`,
+      { dateStart, dateEnd, companyId }
     );
   }
 }

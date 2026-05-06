@@ -79,12 +79,48 @@
     <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
   } @else if (invoice) {
 
+    <!-- Alertes champs manquants (brouillon uniquement) -->
+    @if (missingFields.length > 0) {
+      <div class="alert alert-warning mb-16">
+        <span class="material-icons">warning</span>
+        <strong>Champs obligatoires manquants avant validation :</strong>
+        {{ missingFields.join(', ') }}
+      </div>
+    }
+
     <!-- Infos facture -->
     <div class="info-grid mb-16">
       <div class="info-card">
         <div class="info-label">Client</div>
         <div class="info-value font-bold">{{ invoice.partnerName }}</div>
       </div>
+
+      <!-- Solde partenaire -->
+      @if (invoice.partnerBalance !== undefined && invoice.partnerBalance !== null) {
+        <div class="info-card" [class]="partnerBalanceClass">
+          <div class="info-label">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle">account_balance_wallet</span>
+            Solde client
+          </div>
+          <div class="info-value font-bold">
+            {{ (invoice.partnerBalance || 0) | number:'1.0-0' }} FCFA
+            @if ((invoice.partnerBalance || 0) > 0) {
+              <span class="balance-tag balance-tag-debit">Doit</span>
+            } @else if ((invoice.partnerBalance || 0) < 0) {
+              <span class="balance-tag balance-tag-credit">On lui doit</span>
+            } @else {
+              <span class="balance-tag balance-tag-zero">Soldé</span>
+            }
+          </div>
+          @if ((invoice.partnerCreditDisponible || 0) > 0) {
+            <div style="margin-top:6px;font-size:12px;color:#017E84;font-weight:500;display:flex;align-items:center;gap:4px">
+              <span class="material-icons" style="font-size:14px">redeem</span>
+              Crédit disponible : {{ invoice.partnerCreditDisponible | number:'1.0-2' }} FCFA
+            </div>
+          }
+        </div>
+      }
+
       <div class="info-card">
         <div class="info-label">Journal</div>
         <div class="info-value">{{ invoice.journalName }}</div>
@@ -97,6 +133,30 @@
         <div class="info-label">Échéance</div>
         <div class="info-value">{{ invoice.dateEcheance ? (invoice.dateEcheance | date:'dd/MM/yyyy') : '—' }}</div>
       </div>
+
+      <!-- Entrepôt -->
+      @if (isInvoice) {
+        <div class="info-card" [class.missing-field]="!invoice.warehouseId && invoice.state === 'draft'">
+          <div class="info-label">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle">warehouse</span>
+            Entrepôt <span class="required-star">*</span>
+          </div>
+          @if (invoice.state === 'draft') {
+            <div class="info-value">
+              <select class="form-select-inline" [ngModel]="invoice.warehouseId"
+                      (ngModelChange)="setWarehouse($event)" [disabled]="savingWarehouse">
+                <option [ngValue]="undefined">— Sélectionner —</option>
+                @for (wh of warehouses; track wh.id) {
+                  <option [ngValue]="wh.id">{{ wh.name }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div class="info-value">{{ invoice.warehouseName || '—' }}</div>
+          }
+        </div>
+      }
+
       @if (invoice.salesOrderName) {
         <div class="info-card clickable" (click)="viewOrder()">
           <div class="info-label">Bon de commande</div>
@@ -245,9 +305,16 @@
           <div class="card-header">
             <span>Paiements</span>
             @if (invoice.state === 'posted') {
-              <button class="btn-add-payment" (click)="openPaymentForm()">
-                <span class="material-icons">add</span> Ajouter
-              </button>
+              <div style="display:flex;gap:6px">
+                @if ((invoice.partnerCreditDisponible || 0) > 0 && (invoice.montantDu || 0) > 0) {
+                  <button class="btn-add-payment" style="background:#017E84" (click)="openCreditForm()">
+                    <span class="material-icons">redeem</span> Crédit ({{ invoice.partnerCreditDisponible | number:'1.0-0' }})
+                  </button>
+                }
+                <button class="btn-add-payment" (click)="openPaymentForm()">
+                  <span class="material-icons">add</span> Ajouter
+                </button>
+              </div>
             }
           </div>
           @if (!invoice.payments || invoice.payments.length === 0) {
@@ -258,7 +325,7 @@
                 <tr>
                   <th>Référence</th>
                   <th>Date</th>
-                  <th>Journal</th>
+                  <th>Source</th>
                   <th>Mémo</th>
                   <th class="text-right">Montant</th>
                 </tr>
@@ -268,7 +335,16 @@
                   <tr>
                     <td class="font-mono">{{ p.name }}</td>
                     <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
-                    <td>{{ p.journalName }}</td>
+                    <td>
+                      @if (p.creditNoteId) {
+                        <span style="color:#017E84;font-size:12px;display:flex;align-items:center;gap:3px">
+                          <span class="material-icons" style="font-size:14px">redeem</span>
+                          {{ p.creditNoteName || 'Avoir' }}
+                        </span>
+                      } @else {
+                        {{ p.journalName || '—' }}
+                      }
+                    </td>
                     <td class="text-muted">{{ p.memo || '—' }}</td>
                     <td class="text-right text-success font-bold">{{ p.amount | number:'1.0-0' }}</td>
                   </tr>
@@ -278,7 +354,7 @@
           }
         </div>
 
-        <!-- Formulaire de paiement inline -->
+        <!-- Formulaire paiement cash/banque -->
         @if (showPaymentForm) {
           <div class="payment-form card mt-12">
             <div class="card-header">Nouveau paiement</div>
@@ -308,6 +384,34 @@
                 <button class="btn-primary" (click)="savePayment()" [disabled]="savingPayment">
                   <span class="material-icons">save</span>
                   {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Formulaire compensation crédit -->
+        @if (showCreditForm) {
+          <div class="payment-form card mt-12" style="border-left:3px solid #017E84">
+            <div class="card-header" style="color:#017E84">
+              <span class="material-icons" style="font-size:16px">redeem</span>
+              Appliquer crédit disponible
+            </div>
+            <div class="payment-form-body">
+              <div style="margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:13px">
+                <div>Crédit disponible : <strong>{{ invoice.partnerCreditDisponible | number:'1.0-2' }} FCFA</strong></div>
+                <div>Reste dû sur cette facture : <strong>{{ invoice.montantDu | number:'1.0-2' }} FCFA</strong></div>
+              </div>
+              <div class="form-group">
+                <label>Montant à compenser <span class="required">*</span></label>
+                <input type="number" [(ngModel)]="creditAmount" class="form-control" min="0"
+                  [max]="Math.min(invoice.montantDu || 0, invoice.partnerCreditDisponible || 0)" step="1" />
+              </div>
+              <div class="payment-form-actions">
+                <button class="btn-secondary" (click)="showCreditForm = false">Annuler</button>
+                <button class="btn-primary" style="background:#017E84" (click)="applyCredit()" [disabled]="applyingCredit || creditAmount <= 0">
+                  <span class="material-icons">check_circle</span>
+                  {{ applyingCredit ? 'Application...' : 'Appliquer' }}
                 </button>
               </div>
             </div>

@@ -218,6 +218,8 @@ export interface ReceptionBordereauDTO {
   supplierName?: string;
   invoiceDate?: string;
   companyId: number;
+  state?: string;
+  dateDone?: string;
   lignes: BordereauLigne[];
 }
 
@@ -398,6 +400,14 @@ export class StockService {
 
   validateBordereau(pickingId: number, lignes: BordereauLigneSaisie[]): Observable<ReceptionBordereauDTO> {
     return this.http.post<ReceptionBordereauDTO>(`${this.api}/receptions/${pickingId}/bordereau/validate`, lignes);
+  }
+
+  downloadBordereauPdf(pickingId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/receptions/${pickingId}/bordereau/pdf`, { responseType: 'blob' });
+  }
+
+  downloadBordereauExcel(pickingId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/receptions/${pickingId}/bordereau/excel`, { responseType: 'blob' });
   }
 
   // Agences distantes

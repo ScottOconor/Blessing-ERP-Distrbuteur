@@ -1,0 +1,191 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><span class="material-icons">corporate_fare</span> Groupes & Entreprises</h1>
+      <p class="page-sub">Gérez les groupes et les entreprises/sites affiliés</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateGroup()">
+      <span class="material-icons">add</span> Nouveau groupe
+    </button>
+  </div>
+
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+  @if (errorMsg)   { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }} <button (click)="errorMsg=''">×</button></div> }
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (groups.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">corporate_fare</span>
+      <p>Aucun groupe créé. Commencez par créer un groupe.</p>
+    </div>
+  } @else {
+    <div class="groups-list">
+      @for (group of groups; track group.id) {
+        <div class="group-card" [class.expanded]="expandedGroup === group.id">
+          <div class="group-header" (click)="toggleGroup(group.id!)">
+            <div class="group-left">
+              <span class="material-icons expand-icon">{{ expandedGroup === group.id ? 'expand_less' : 'expand_more' }}</span>
+              <div class="group-icon"><span class="material-icons">corporate_fare</span></div>
+              <div>
+                <div class="group-name">{{ group.name }}</div>
+                <div class="group-meta">
+                  <span class="badge-code">{{ group.code }}</span>
+                  <span class="company-count">{{ group.companies?.length || 0 }} entreprise(s)</span>
+                </div>
+              </div>
+            </div>
+            <div class="group-actions">
+              <span class="badge-active" [class.inactive]="!group.active">{{ group.active ? 'Actif' : 'Inactif' }}</span>
+              <button class="btn-icon" (click)="openEditGroup(group, $event)" title="Modifier">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="btn-primary btn-sm" (click)="openCreateCompany(group.id!, $event)">
+                <span class="material-icons">add_business</span> Ajouter entreprise
+              </button>
+            </div>
+          </div>
+
+          @if (expandedGroup === group.id) {
+            <div class="companies-body">
+              @if (!group.companies || group.companies.length === 0) {
+                <div class="no-company">Aucune entreprise dans ce groupe.</div>
+              } @else {
+                <table class="companies-table">
+                  <thead>
+                    <tr>
+                      <th>Entreprise</th>
+                      <th>Sigle</th>
+                      <th>RCCM</th>
+                      <th>NIF</th>
+                      <th>Téléphone</th>
+                      <th>Email</th>
+                      <th>Statut</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of group.companies; track c.id) {
+                      <tr>
+                        <td class="company-name-cell"><span class="material-icons">business</span> {{ c.name }}</td>
+                        <td>{{ c.sigle || '—' }}</td>
+                        <td class="text-mono">{{ c.rccm || '—' }}</td>
+                        <td class="text-mono">{{ c.nif || '—' }}</td>
+                        <td>{{ c.telephone || '—' }}</td>
+                        <td>{{ c.email || '—' }}</td>
+                        <td><span class="badge-active" [class.inactive]="!c.active">{{ c.active ? 'Actif' : 'Inactif' }}</span></td>
+                        <td>
+                          <button class="btn-icon" (click)="openEditCompany(c, group.id!, $event)" title="Modifier">
+                            <span class="material-icons">edit</span>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Modal Groupe -->
+@if (showGroupModal) {
+  <div class="modal-backdrop" (click)="showGroupModal=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingGroup ? 'Modifier le groupe' : 'Nouveau groupe' }}</h3>
+        <button class="btn-icon" (click)="showGroupModal=false"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nom du groupe <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="groupForm.name" class="form-control" placeholder="Ex: Brasseries du Cameroun" />
+        </div>
+        <div class="form-group">
+          <label>Code <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="groupForm.code" class="form-control" placeholder="Ex: BRACAM" [disabled]="!!editingGroup" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="groupForm.description" class="form-control" rows="2"></textarea>
+        </div>
+        @if (editingGroup) {
+          <div class="form-group">
+            <label class="toggle-label">
+              <input type="checkbox" [(ngModel)]="groupForm.active" />
+              Groupe actif
+            </label>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showGroupModal=false">Annuler</button>
+        <button class="btn-primary" (click)="saveGroup()">
+          <span class="material-icons">save</span> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal Entreprise -->
+@if (showCompanyModal) {
+  <div class="modal-backdrop" (click)="showCompanyModal=false">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingCompany ? 'Modifier l\'entreprise' : 'Nouvelle entreprise' }}</h3>
+        <button class="btn-icon" (click)="showCompanyModal=false"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nom <span class="req">*</span></label>
+            <input type="text" [(ngModel)]="companyForm.name" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Sigle</label>
+            <input type="text" [(ngModel)]="companyForm.sigle" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>RCCM</label>
+            <input type="text" [(ngModel)]="companyForm.rccm" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>NIF</label>
+            <input type="text" [(ngModel)]="companyForm.nif" class="form-control" />
+          </div>
+          <div class="form-group form-full">
+            <label>Adresse</label>
+            <input type="text" [(ngModel)]="companyForm.adresse" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="text" [(ngModel)]="companyForm.telephone" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" [(ngModel)]="companyForm.email" class="form-control" />
+          </div>
+          @if (editingCompany) {
+            <div class="form-group">
+              <label class="toggle-label">
+                <input type="checkbox" [(ngModel)]="companyForm.active" />
+                Entreprise active
+              </label>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showCompanyModal=false">Annuler</button>
+        <button class="btn-primary" (click)="saveCompany()">
+          <span class="material-icons">save</span> Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -15,6 +15,11 @@ export class AccountingLayoutComponent implements OnInit {
   userInitials = '';
   companyName = 'Mon Entreprise';
   activeDropdown: string | null = null;
+  showCompanyPicker = false;
+
+  get isCentralized() { return this.authService.isCentralized(); }
+  get companies() { return this.authService.getSession()?.companies ?? []; }
+  get activeCompany() { return this.authService.getActiveCompany(); }
 
   navItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/accounting/dashboard' },
@@ -77,10 +82,9 @@ export class AccountingLayoutComponent implements OnInit {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.nav-item-dropdown')) {
-      this.activeDropdown = null;
-    }
+    const t = event.target as HTMLElement;
+    if (!t.closest('.nav-item-dropdown')) this.activeDropdown = null;
+    if (!t.closest('.company-selector')) this.showCompanyPicker = false;
   }
 
   navigateTo(route: string): void {
@@ -88,14 +92,15 @@ export class AccountingLayoutComponent implements OnInit {
     this.router.navigateByUrl(route);
   }
 
-  goHome(): void {
-    this.router.navigate(['/welcome']);
+  switchCompany(id: number): void {
+    this.authService.setActiveCompanyId(id);
+    this.showCompanyPicker = false;
+    const url = this.router.url;
+    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
-  logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
-  }
+  goHome(): void { this.router.navigate(['/welcome']); }
+  logout(): void { this.authService.logout(); this.router.navigate(['/login']); }
 
   isRouteActive(route: string): boolean {
     return this.router.url === route || this.router.url.startsWith(route + '/');

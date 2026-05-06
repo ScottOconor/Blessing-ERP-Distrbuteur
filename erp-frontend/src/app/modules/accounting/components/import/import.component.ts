@@ -10,7 +10,8 @@ interface ImportTab {
   icon: string;
   description: string;
   warning?: string;
-  action: (file: File, companyId: number) => any;
+  supportsReplace?: boolean;
+  action: (file: File, companyId: number, replace?: boolean) => any;
 }
 
 @Component({
@@ -27,6 +28,7 @@ export class ImportComponent {
   result: ImportResult | null = null;
   errorMsg = '';
   selectedFileName = '';
+  replaceAccounts = false;
 
   tabs: ImportTab[] = [
     {
@@ -34,7 +36,8 @@ export class ImportComponent {
       label: 'Plan comptable',
       icon: 'account_tree',
       description: 'Importez le plan comptable depuis un fichier Excel Odoo (Compte - account.account). À faire EN PREMIER.',
-      action: (f, c) => this.accountingService.importAccounts(f, c)
+      supportsReplace: true,
+      action: (f, c, replace) => this.accountingService.importAccounts(f, c, replace)
     },
     {
       id: 'analytic',
@@ -82,6 +85,7 @@ export class ImportComponent {
     this.result = null;
     this.errorMsg = '';
     this.selectedFileName = '';
+    this.replaceAccounts = false;
   }
 
   onFileSelected(event: Event): void {
@@ -106,7 +110,8 @@ export class ImportComponent {
     this.errorMsg = '';
 
     const companyId = this.authService.getCompanyId();
-    this.activeTabDef.action(file, companyId).subscribe({
+    const replace = this.activeTabDef.supportsReplace ? this.replaceAccounts : false;
+    this.activeTabDef.action(file, companyId, replace).subscribe({
       next: (res: ImportResult) => {
         this.result = res;
         this.importing = false;

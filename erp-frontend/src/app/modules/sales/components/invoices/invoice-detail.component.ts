@@ -6,6 +6,7 @@ import { SalesService, SalesInvoice, InvoicePayment } from '../../services/sales
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AccountJournal } from '../../../../core/models/account.model';
+import { StockService, Warehouse } from '../../../stock/services/stock.service';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -18,12 +19,14 @@ export class InvoiceDetailComponent implements OnInit {
   invoiceId!: number;
   invoice: SalesInvoice | null = null;
   cashBankJournals: AccountJournal[] = [];
+  warehouses: Warehouse[] = [];
   loading = false;
   posting = false;
   cancelling = false;
   reversing = false;
   creatingAvoir = false;
   generatingRistournes = false;
+  savingWarehouse = false;
   successMsg = '';
   errorMsg = '';
 
@@ -37,10 +40,16 @@ export class InvoiceDetailComponent implements OnInit {
   };
   savingPayment = false;
 
+  // Compensation crédit
+  showCreditForm = false;
+  creditAmount = 0;
+  applyingCredit = false;
+
   constructor(
     private salesService: SalesService,
     private accountingService: AccountingService,
     private authService: AuthService,
+    private stockService: StockService,
     private route: ActivatedRoute,
     public router: Router
   ) {}
@@ -49,6 +58,7 @@ export class InvoiceDetailComponent implements OnInit {
     this.invoiceId = +this.route.snapshot.paramMap.get('id')!;
     this.loadInvoice();
     this.loadJournals();
+    this.loadWarehouses();
   }
 
   loadInvoice(): void {
@@ -72,6 +82,47 @@ export class InvoiceDetailComponent implements OnInit {
         }
       }
     });
+  }
+
+  loadWarehouses(): void {
+    this.stockService.getWarehouses(this.authService.getCompanyId()).subscribe({
+      next: (data) => { this.warehouses = data.filter(w => w.active !== false); }
+    });
+  }
+
+  setWarehouse(warehouseId: number): void {
+    if (!warehouseId || !this.invoice?.id) return;
+    this.savingWarehouse = true;
+    this.salesService.setWarehouse(this.invoice.id, warehouseId).subscribe({
+      next: (updated) => {
+        this.invoice = updated;
+        this.savingWarehouse = false;
+        this.showSuccess('Entrepôt enregistré');
+      },
+      error: (err) => {
+        this.savingWarehouse = false;
+        this.showError(err.error?.message || 'Erreur lors de la mise à jour de l\'entrepôt');
+      }
+    });
+  }
+
+  get partnerBalanceClass(): string {
+    const b = this.invoice?.partnerBalance ?? 0;
+    if (b > 0) return 'balance-positive';
+    if (b < 0) return 'balance-negative';
+    return 'balance-zero';
+  }
+
+  get missingFields(): string[] {
+    if (!this.invoice || this.invoice.state !== 'draft') return [];
+    const isAvoir = this.invoice.type === 'credit_note';
+    const missing: string[] = [];
+    if (!this.invoice.partnerId) missing.push('Client');
+    if (!this.invoice.journalId) missing.push('Journal');
+    if (!this.invoice.date) missing.push('Date');
+    if (!isAvoir && !this.invoice.warehouseId) missing.push('Entrepôt');
+    if (!this.invoice.lines || this.invoice.lines.length === 0) missing.push('Lignes de facturation');
+    return missing;
   }
 
   postInvoice(): void {
@@ -171,6 +222,32 @@ export class InvoiceDetailComponent implements OnInit {
     });
   }
 
+  openCreditForm(): void {
+    this.creditAmount = Math.min(
+      this.invoice?.montantDu ?? 0,
+      this.invoice?.partnerCreditDisponible ?? 0
+    );
+    this.showCreditForm = true;
+  }
+
+  applyCredit(): void {
+    if (!this.creditAmount || this.creditAmount <= 0) return;
+    this.applyingCredit = true;
+    this.errorMsg = '';
+    this.salesService.applyCredit(this.invoiceId, this.creditAmount, this.authService.getCompanyId()).subscribe({
+      next: (updated) => {
+        this.invoice = updated;
+        this.applyingCredit = false;
+        this.showCreditForm = false;
+        this.showSuccess('Crédit appliqué — facture mise à jour');
+      },
+      error: (err) => {
+        this.applyingCredit = false;
+        this.errorMsg = err.error?.message || 'Erreur lors de la compensation';
+      }
+    });
+  }
+
   generateRistournes(): void {
     if (!confirm('Générer un règlement ristourne à partir de cette facture ?')) return;
     this.generatingRistournes = true;
@@ -247,6 +324,8 @@ export class InvoiceDetailComponent implements OnInit {
   }
 
   // ===== Getters récapitulatif =====
+
+  readonly Math = Math;
 
   // Codes produits consigne — identiques au module Odoo blessing_consulting
   private readonly CONSIGNE_CODES = new Set([
@@ -325,6 +404,11 @@ export class InvoiceDetailComponent implements OnInit {
   showSuccess(msg: string): void {
     this.successMsg = msg;
     setTimeout(() => this.successMsg = '', 4000);
+  }
+
+  showError(msg: string): void {
+    this.errorMsg = msg;
+    setTimeout(() => this.errorMsg = '', 6000);
   }
 
   goToOriginalInvoice(id: number): void {

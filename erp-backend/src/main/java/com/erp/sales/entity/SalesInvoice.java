@@ -115,6 +115,10 @@ public class SalesInvoice {
     @Column(name = "net_a_payer", precision = 20, scale = 2)
     private BigDecimal netAPayer;
 
+    /** Entrepôt de départ pour les mouvements de stock (obligatoire sur les factures) */
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

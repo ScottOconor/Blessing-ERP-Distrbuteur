@@ -36,7 +36,7 @@ public class PurchaseInvoiceLine {
     @Column(precision = 10, scale = 4)
     private BigDecimal tauxTVA;
 
-    /** Compte de charge (ex: 601000) */
+    /** Compte de charge (ex: 601100) */
     private String accountCode;
 
     @Column(precision = 20, scale = 2)

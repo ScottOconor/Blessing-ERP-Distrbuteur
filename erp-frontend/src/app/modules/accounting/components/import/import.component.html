@@ -78,6 +78,23 @@
         />
       </label>
 
+      <label *ngIf="activeTabDef.supportsReplace" class="replace-toggle" [class.active]="replaceAccounts">
+        <input
+          type="checkbox"
+          [checked]="replaceAccounts"
+          (change)="replaceAccounts = $any($event.target).checked"
+        />
+        <span class="material-icons">{{ replaceAccounts ? 'warning' : 'merge' }}</span>
+        <span>
+          <ng-container *ngIf="replaceAccounts">
+            <strong>Remplacement complet</strong> — les comptes existants seront supprimés avant l'import
+          </ng-container>
+          <ng-container *ngIf="!replaceAccounts">
+            Mise à jour uniquement (ajoute / modifie, ne supprime pas)
+          </ng-container>
+        </span>
+      </label>
+
       <button type="submit" class="btn-import" [disabled]="importing || !selectedFileName">
         <span *ngIf="!importing" class="material-icons">upload</span>
         <span *ngIf="importing" class="material-icons spinning">sync</span>

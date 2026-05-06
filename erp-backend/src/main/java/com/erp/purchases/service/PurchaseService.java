@@ -13,10 +13,12 @@ import com.erp.stock.entity.Product;
 import com.erp.stock.entity.StockMove;
 import com.erp.stock.entity.StockPicking;
 import com.erp.stock.entity.StockPickingType;
+import com.erp.stock.entity.Warehouse;
 import com.erp.stock.repository.ProductCategoryRepository;
 import com.erp.stock.repository.ProductRepository;
 import com.erp.stock.repository.StockPickingRepository;
 import com.erp.stock.repository.StockPickingTypeRepository;
+import com.erp.stock.repository.WarehouseRepository;
 import com.erp.stock.service.StockService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +39,11 @@ import java.util.stream.Collectors;
 public class PurchaseService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final String DEFAULT_EXPENSE_ACCOUNT = "601000";
-    private static final String DEFAULT_PAYABLE_ACCOUNT  = "4011";
-    private static final String TVA_DEDUCTIBLE_ACCOUNT   = "4456";
+    private static final String DEFAULT_EXPENSE_ACCOUNT   = "6011";
+    private static final String DEFAULT_PAYABLE_ACCOUNT   = "4011";
+    private static final String TVA_DEDUCTIBLE_ACCOUNT    = "4452";
+    private static final String PSA_PURCHASE_ACCOUNT      = "4421";
+    private static final String CONSIGNE_PURCHASE_ACCOUNT = "4094";
 
     private final PurchaseOrderRepository orderRepo;
     private final PurchaseInvoiceRepository invoiceRepo;
@@ -58,6 +62,7 @@ public class PurchaseService {
     private final PrecompteRepository precompteRepo;
     private final com.erp.purchases.repository.RemiseRepository remiseRepo;
     private final ProductCategoryRepository categoryRepo;
+    private final WarehouseRepository warehouseRepo;
 
     // ===================== COMMANDES D'ACHAT =====================
 
@@ -231,6 +236,7 @@ public class PurchaseService {
                 .partner(partner)
                 .journal(journal)
                 .company(company)
+                .warehouseId(req.getWarehouseId())
                 .montantPaye(ZERO)
                 .build();
 
@@ -258,6 +264,7 @@ public class PurchaseService {
         invoice.setNotes(req.getNotes());
         invoice.setPartner(partner);
         invoice.setJournal(journal);
+        if (req.getWarehouseId() != null) invoice.setWarehouseId(req.getWarehouseId());
 
         invoice.getLines().clear();
         buildInvoiceLines(invoice, req.getLines());
@@ -270,14 +277,13 @@ public class PurchaseService {
      * Valide une facture ou un avoir fournisseur et génère l'écriture comptable OHADA.
      *
      * Facture fournisseur (invoice) :
-     *   Dr 601xxx (Charges)         = HT par ligne
-     *   Dr 4456   (TVA déductible)  = TVA totale
-     *   Cr 401x   (Fournisseur)     = TTC
+     *   Dr 601100 (produits HT)  = Σ HT lignes non-consigne
+     *   Dr 442100 (PSA)          = Total précompte
+     *   Dr 445200 (TVA)          = Total TVA déductible
+     *   Dr/Cr 409400 (emballages)= Signe selon quantité consigne
+     *   Cr 401100 (Fournisseur)  = Net à payer (TTC + consignes)
      *
-     * Avoir fournisseur (credit_note) — écritures inversées :
-     *   Cr 601xxx (Charges)         = HT par ligne
-     *   Cr 4456   (TVA déductible)  = TVA totale
-     *   Dr 401x   (Fournisseur)     = TTC
+     * Avoir fournisseur (credit_note) — écritures inversées.
      */
     public PurchaseInvoiceDTO postInvoice(Long id) {
         PurchaseInvoice invoice = invoiceRepo.findById(id)
@@ -288,19 +294,31 @@ public class PurchaseService {
         }
 
         boolean isAvoir = "credit_note".equals(invoice.getType());
+
+        // Validation des champs obligatoires
+        List<String> missing = new ArrayList<>();
+        if (invoice.getPartner() == null) missing.add("Fournisseur");
+        if (invoice.getJournal() == null) missing.add("Journal");
+        if (invoice.getDate() == null) missing.add("Date");
+        if (invoice.getLines() == null || invoice.getLines().isEmpty()) missing.add("Lignes de facturation");
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("Champs obligatoires manquants : " + String.join(", ", missing));
+        }
+
         Long companyId = invoice.getCompany().getId();
         LocalDate date = invoice.getDate();
 
-        // Compte fournisseur 401x
+        // Compte fournisseur
         AccountAccount payableAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, companyId)
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("401", companyId)
-                        .stream().findFirst()
-                        .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur 401x introuvable")));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("401100", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("401",    companyId))
+                .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur introuvable (4011/401)"));
 
-        // Compte TVA déductible 4456
+        // Compte TVA déductible
         AccountAccount tvaAccount = accountRepo.findFirstByCodeAndCompanyId(TVA_DEDUCTIBLE_ACCOUNT, companyId)
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("445", companyId)
-                        .stream().findFirst().orElse(null));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("445200", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("445",    companyId))
+                .orElse(null);
 
         String libelle401 = isAvoir
                 ? "Avoir fournisseur " + invoice.getName() + " - " + invoice.getPartner().getName()
@@ -317,49 +335,90 @@ public class PurchaseService {
                 .partner(invoice.getPartner())
                 .build();
 
-        List<AccountMoveLine> moveLines = new ArrayList<>();
-        BigDecimal ttc = invoice.getTotalTTC() != null ? invoice.getTotalTTC() : ZERO;
+        // 401100 : crédit = net à payer (TTC + consignes net)
+        BigDecimal netAPayer = invoice.getNetAPayer() != null ? invoice.getNetAPayer() : ZERO;
 
-        // Ligne fournisseur 401x : crédit pour facture, débit pour avoir
+        List<AccountMoveLine> moveLines = new ArrayList<>();
+
+        // Ligne fournisseur 401100 : crédit pour facture, débit pour avoir
         moveLines.add(AccountMoveLine.builder()
                 .move(move).account(payableAccount).partner(invoice.getPartner())
                 .name(libelle401).date(date)
-                .debit(isAvoir ? ttc : ZERO)
-                .credit(isAvoir ? ZERO : ttc)
+                .debit(isAvoir ? netAPayer : ZERO)
+                .credit(isAvoir ? ZERO : netAPayer)
                 .journal(invoice.getJournal()).company(invoice.getCompany())
                 .build());
 
-        // Lignes charges 601xxx : débit pour facture, crédit pour avoir
+        // Comptes résolus une seule fois
+        AccountAccount expenseAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_EXPENSE_ACCOUNT, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("601100", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("601",    companyId))
+                .orElseThrow(() -> new EntityNotFoundException("Compte de charge introuvable (6011/601)"));
+
+        AccountAccount consigneAccount = accountRepo.findFirstByCodeAndCompanyId(CONSIGNE_PURCHASE_ACCOUNT, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("409400", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("409",    companyId))
+                .orElse(null);
+
+        // Lignes charges 601100 (non-consigne) et emballages 409400 (consigne, signe selon quantité)
         for (PurchaseInvoiceLine line : invoice.getLines()) {
-            String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
-                    ? line.getAccountCode() : DEFAULT_EXPENSE_ACCOUNT;
+            if (line.isConsigne()) {
+                BigDecimal ttcLine = line.getMontantTTC() != null ? line.getMontantTTC() : ZERO;
+                if (ttcLine.compareTo(ZERO) != 0 && consigneAccount != null) {
+                    boolean positif = ttcLine.compareTo(ZERO) > 0;
+                    BigDecimal absAmt = ttcLine.abs();
+                    // Consigne positive : Dr 409400 (facture) / Cr 409400 (avoir)
+                    // Déconsigne négative : Cr 409400 (facture) / Dr 409400 (avoir)
+                    moveLines.add(AccountMoveLine.builder()
+                            .move(move).account(consigneAccount).partner(invoice.getPartner())
+                            .name(line.getDescription()).date(date)
+                            .debit(isAvoir ? (positif ? ZERO : absAmt) : (positif ? absAmt : ZERO))
+                            .credit(isAvoir ? (positif ? absAmt : ZERO) : (positif ? ZERO : absAmt))
+                            .journal(invoice.getJournal()).company(invoice.getCompany())
+                            .build());
+                }
+            } else {
+                BigDecimal ht = line.getMontantHT() != null ? line.getMontantHT() : ZERO;
+                if (ht.compareTo(ZERO) != 0) {
+                    String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
+                            ? line.getAccountCode() : DEFAULT_EXPENSE_ACCOUNT;
+                    AccountAccount acc = accCode.equals(DEFAULT_EXPENSE_ACCOUNT) ? expenseAccount
+                            : accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(expenseAccount);
+                    moveLines.add(AccountMoveLine.builder()
+                            .move(move).account(acc).partner(invoice.getPartner())
+                            .name(line.getDescription()).date(date)
+                            .debit(isAvoir ? ZERO : ht)
+                            .credit(isAvoir ? ht : ZERO)
+                            .journal(invoice.getJournal()).company(invoice.getCompany())
+                            .build());
+                }
+            }
+        }
 
-            AccountAccount expenseAccount = accountRepo.findFirstByCodeAndCompanyId(accCode, companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("601", companyId)
-                            .stream().findFirst()
-                            .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("60", companyId)
-                                    .stream().findFirst()
-                                    .orElseThrow(() -> new EntityNotFoundException("Compte de charge 60x introuvable"))));
-
-            BigDecimal ht = line.getMontantHT() != null ? line.getMontantHT() : ZERO;
-            if (ht.compareTo(ZERO) != 0) {
+        // Ligne PSA 442100 : débit pour facture, crédit pour avoir
+        BigDecimal totalPrecompte = invoice.getTotalPrecompte() != null ? invoice.getTotalPrecompte() : ZERO;
+        if (totalPrecompte.compareTo(ZERO) != 0) {
+            AccountAccount psaAccount = accountRepo.findFirstByCodeAndCompanyId(PSA_PURCHASE_ACCOUNT, companyId)
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("442100", companyId))
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("442",    companyId))
+                    .orElse(null);
+            if (psaAccount != null) {
                 moveLines.add(AccountMoveLine.builder()
-                        .move(move).account(expenseAccount).partner(invoice.getPartner())
-                        .name(line.getDescription()).date(date)
-                        .debit(isAvoir ? ZERO : ht)
-                        .credit(isAvoir ? ht : ZERO)
+                        .move(move).account(psaAccount).partner(invoice.getPartner())
+                        .name("PSA - " + invoice.getName()).date(date)
+                        .debit(isAvoir ? ZERO : totalPrecompte)
+                        .credit(isAvoir ? totalPrecompte : ZERO)
                         .journal(invoice.getJournal()).company(invoice.getCompany())
                         .build());
             }
         }
 
-        // Ligne TVA 4456 : débit pour facture, crédit pour avoir
+        // Ligne TVA déductible 445200 : débit pour facture, crédit pour avoir
         BigDecimal totalTVA = invoice.getTotalTVA() != null ? invoice.getTotalTVA() : ZERO;
         if (totalTVA.compareTo(ZERO) != 0 && tvaAccount != null) {
-            String libelleTVA = (isAvoir ? "TVA avoir fournisseur " : "TVA déductible - ") + invoice.getName();
             moveLines.add(AccountMoveLine.builder()
                     .move(move).account(tvaAccount).partner(invoice.getPartner())
-                    .name(libelleTVA).date(date)
+                    .name((isAvoir ? "TVA avoir fournisseur " : "TVA déductible - ") + invoice.getName()).date(date)
                     .debit(isAvoir ? ZERO : totalTVA)
                     .credit(isAvoir ? totalTVA : ZERO)
                     .journal(invoice.getJournal()).company(invoice.getCompany())
@@ -368,8 +427,7 @@ public class PurchaseService {
 
         move.setLines(moveLines);
         AccountMove savedMove = moveRepo.save(move);
-        savedMove.setState("posted");
-        moveRepo.save(savedMove);
+        moveRepo.updateState(savedMove.getId(), "posted");
 
         invoice.setAccountMove(savedMove);
         invoice.setState("posted");
@@ -380,7 +438,86 @@ public class PurchaseService {
         // Créer l'entrée en stock vers le Dépôt Achat (picking incoming en attente de réception)
         createDepotAchatPicking(invoice);
 
+        // Écriture comptable de variation de stock (Dr 31 / Cr 6031)
+        createPurchaseStockValuationEntries(invoice, isAvoir);
+
         return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
+    /**
+     * Génère la pièce comptable de variation de stock (6031 / 31) pour chaque produit physique d'achat.
+     * Facture achat : Dr 31 (stocks) / Cr 6031 (variation de stocks)  — entrée en stock
+     * Avoir achat   : Dr 6031 (variation de stocks) / Cr 31 (stocks)  — sortie retour fournisseur
+     */
+    private void createPurchaseStockValuationEntries(PurchaseInvoice invoice, boolean isAvoir) {
+        Long companyId = invoice.getCompany().getId();
+
+        // Journal OD (opérations diverses / général)
+        AccountJournal stockJournal = journalRepo.findByCompanyIdAndActiveTrue(companyId).stream()
+                .filter(j -> "general".equals(j.getType()) || "misc".equals(j.getType()))
+                .findFirst()
+                .orElse(invoice.getJournal());
+
+        if (stockJournal == null) return;
+
+        // Comptes 6031 et 31 — pas de fallback non-déterministe, ensureEssentialAccounts() garantit leur existence
+        AccountAccount varStockAccount = accountRepo.findFirstByCodeAndCompanyId("6031", companyId).orElse(null);
+        AccountAccount stockAccount    = accountRepo.findFirstByCodeAndCompanyId("31",   companyId).orElse(null);
+
+        if (varStockAccount == null || stockAccount == null) {
+            return;
+        }
+
+        List<AccountMoveLine> moveLines = new ArrayList<>();
+
+        for (PurchaseInvoiceLine line : invoice.getLines()) {
+            if (ConsigneCodes.isConsigne(line.getProductCode())) continue;
+
+            // Utiliser le prix unitaire de la ligne comme coût d'entrée
+            BigDecimal cost = line.getPrixUnitaire() != null ? line.getPrixUnitaire() : ZERO;
+            if (cost.compareTo(ZERO) == 0) {
+                // Fallback : chercher le standard price du produit
+                if (line.getProductCode() != null && !line.getProductCode().isBlank()) {
+                    Product p = productRepo.findFirstByDefaultCodeAndCompanyId(line.getProductCode(), companyId).orElse(null);
+                    if (p != null && p.getStandardPrice() != null) cost = p.getStandardPrice();
+                }
+            }
+            if (cost.compareTo(ZERO) == 0) continue;
+
+            BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
+            BigDecimal amount = cost.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            if (amount.compareTo(ZERO) == 0) continue;
+
+            // Achat : Dr 31 (augmente stock) / Cr 6031 (réduit charge variation)
+            // Avoir  : Dr 6031 / Cr 31 (inversé — retour marchandise)
+            moveLines.add(AccountMoveLine.builder()
+                    .account(stockAccount).name("Stock - " + line.getDescription())
+                    .date(invoice.getDate())
+                    .debit(isAvoir ? ZERO : amount).credit(isAvoir ? amount : ZERO)
+                    .journal(stockJournal).company(invoice.getCompany())
+                    .build());
+            moveLines.add(AccountMoveLine.builder()
+                    .account(varStockAccount).name("Stock - " + line.getDescription())
+                    .date(invoice.getDate())
+                    .debit(isAvoir ? amount : ZERO).credit(isAvoir ? ZERO : amount)
+                    .journal(stockJournal).company(invoice.getCompany())
+                    .build());
+        }
+
+        if (moveLines.isEmpty()) return;
+
+        AccountMove stockMove = AccountMove.builder()
+                .name("STK/" + invoice.getName())
+                .date(invoice.getDate())
+                .ref("Variation stock achat - " + invoice.getName())
+                .state("posted")
+                .journal(stockJournal)
+                .company(invoice.getCompany())
+                .partner(invoice.getPartner())
+                .build();
+        for (AccountMoveLine l : moveLines) l.setMove(stockMove);
+        stockMove.setLines(moveLines);
+        moveRepo.save(stockMove);
     }
 
     /**
@@ -449,6 +586,16 @@ public class PurchaseService {
      * Pour les factures validées/payées, cela ne crée PAS d'écriture inverse.
      * Utiliser reverseInvoiceEntries() pour extourner les écritures comptables.
      */
+    public PurchaseInvoiceDTO setInvoiceWarehouse(Long invoiceId, Long warehouseId) {
+        PurchaseInvoice invoice = invoiceRepo.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + invoiceId));
+        if (!"draft".equals(invoice.getState())) {
+            throw new IllegalStateException("L'entrepôt ne peut être modifié que sur un document en brouillon");
+        }
+        invoice.setWarehouseId(warehouseId);
+        return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
     public PurchaseInvoiceDTO cancelInvoice(Long id) {
         PurchaseInvoice invoice = invoiceRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + id));
@@ -524,10 +671,7 @@ public class PurchaseService {
         }
         reversal.setLines(reversalLines);
         AccountMove saved = moveRepo.save(reversal);
-        saved.setState("posted");
-        moveRepo.save(saved);
-
-        // L'écriture originale n'est pas modifiée
+        moveRepo.updateState(saved.getId(), "posted");
 
         return saved;
     }
@@ -624,18 +768,16 @@ public class PurchaseService {
         // Compte trésorerie (crédit) = compte par défaut du journal
         AccountAccount treasuryAccount = journal.getDefaultCreditAccount();
         if (treasuryAccount == null) {
-            treasuryAccount = accountRepo.findByCodeStartingWithAndCompanyId("521", company.getId())
-                    .stream().findFirst()
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("571", company.getId())
-                            .stream().findFirst()
-                            .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable")));
+            treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("571", company.getId()))
+                    .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable (521/571)"));
         }
 
-        // Compte fournisseur 401x (débit)
+        // Compte fournisseur (débit)
         AccountAccount payableAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_PAYABLE_ACCOUNT, company.getId())
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("401", company.getId())
-                        .stream().findFirst()
-                        .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur 401x introuvable")));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("401100", company.getId()))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("401",    company.getId()))
+                .orElseThrow(() -> new EntityNotFoundException("Compte fournisseur introuvable (4011/401)"));
 
         String paymentName = generatePaymentName(company.getId(), date);
 
@@ -900,13 +1042,17 @@ public class PurchaseService {
      * - brasserie : montantFixe × (1 + tauxPrecompte/100)
      * - guinness  : montantFixe (pas de précompte)
      */
+    private static final BigDecimal TAUX_TVA = BigDecimal.valueOf(0.1925);
+
     private BigDecimal computeRemiseTTCUnit(BigDecimal montantFixe, String type, BigDecimal tauxPrecompte) {
         if (montantFixe == null) return ZERO;
         if ("brasserie".equals(type)) {
-            BigDecimal coeff = BigDecimal.ONE.add(tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            // Odoo: montant_fixe × (1 + taux_precompte + 0.1925)
+            BigDecimal pcRate = tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(TAUX_TVA);
             return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         } else {
-            // guinness et autres : pas de précompte ajouté
+            // guinness : pas de précompte ni TVA ajoutée
             return montantFixe.setScale(2, RoundingMode.HALF_UP);
         }
     }
@@ -1022,6 +1168,20 @@ public class PurchaseService {
 
     private PurchaseInvoiceDTO toInvoiceDTOWithPayments(PurchaseInvoice invoice) {
         Long companyId = invoice.getCompany() != null ? invoice.getCompany().getId() : null;
+
+        // Résoudre le nom de l'entrepôt
+        String warehouseName = null;
+        if (invoice.getWarehouseId() != null) {
+            warehouseName = warehouseRepo.findById(invoice.getWarehouseId())
+                    .map(Warehouse::getName).orElse(null);
+        }
+
+        // Solde du partenaire
+        BigDecimal partnerBalance = BigDecimal.ZERO;
+        if (invoice.getPartner() != null && companyId != null) {
+            partnerBalance = moveLineRepo.computePartnerBalance(invoice.getPartner().getId(), companyId);
+        }
+
         Map<Long, String> catNames = companyId != null
                 ? categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
                     .collect(Collectors.toMap(c -> c.getId(), c -> c.getName(), (a, b) -> a))
@@ -1074,6 +1234,9 @@ public class PurchaseService {
                 .pickingState(invoice.getPickingId() != null
                         ? pickingRepo.findById(invoice.getPickingId()).map(p -> p.getState()).orElse(null)
                         : null)
+                .warehouseId(invoice.getWarehouseId())
+                .warehouseName(warehouseName)
+                .partnerBalance(partnerBalance)
                 .totalHT(invoice.getTotalHT())
                 .totalTVA(invoice.getTotalTVA())
                 .totalTTC(invoice.getTotalTTC())

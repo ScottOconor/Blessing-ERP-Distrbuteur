@@ -3,22 +3,25 @@ package com.erp.auth.controller;
 import com.erp.auth.dto.AuthRequest;
 import com.erp.auth.dto.AuthResponse;
 import com.erp.auth.entity.User;
-import com.erp.auth.repository.UserRepository;
 import com.erp.auth.service.JwtService;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
+import com.erp.config.DataSeeder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,80 +29,63 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AuthController {
 
+    private static final Set<String> SYSTEM_ROLES = Set.of(
+            DataSeeder.SUPER_ADMIN, DataSeeder.ADMIN,
+            DataSeeder.SUPER_AUDITEUR, DataSeeder.AUDITEUR, DataSeeder.CONTROLEUR);
+
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
-    private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
-    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
-
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String token = jwtService.generateToken(userDetails);
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         User user = userDetailsService.findUserEntity(request.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
 
-        AuthResponse response = AuthResponse.builder()
+        String roleCode = user.getRole().getCode();
+        boolean centralized = SYSTEM_ROLES.contains(roleCode);
+
+        // Claims embarqués dans le JWT
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roleCode", roleCode);
+        claims.put("centralized", centralized);
+        if (centralized && user.getGroup() != null) {
+            claims.put("groupId", user.getGroup().getId());
+        } else if (user.getCompany() != null) {
+            claims.put("companyId", user.getCompany().getId());
+        }
+
+        String token = jwtService.generateToken(claims, userDetails);
+
+        // Construire la réponse
+        AuthResponse.AuthResponseBuilder resp = AuthResponse.builder()
                 .token(token)
                 .userId(user.getId())
                 .username(user.getUsername())
-                .role(user.getRole())
-                .companyId(user.getCompany() != null ? user.getCompany().getId() : null)
-                .companyName(user.getCompany() != null ? user.getCompany().getName() : null)
-                .build();
+                .fullName(user.getFullName())
+                .roleCode(roleCode)
+                .roleLabel(user.getRole().getLabel())
+                .centralized(centralized)
+                .mustChangePassword(user.isMustChangePassword());
 
-        log.info("User '{}' logged in successfully", request.getUsername());
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            return ResponseEntity.badRequest().build();
+        if (centralized && user.getGroup() != null) {
+            List<Company> companies = companyRepository.findByGroupId(user.getGroup().getId());
+            resp.groupId(user.getGroup().getId())
+                .groupName(user.getGroup().getName())
+                .companies(companies.stream()
+                    .map(c -> AuthResponse.CompanyInfo.builder()
+                            .id(c.getId()).name(c.getName()).sigle(c.getSigle()).build())
+                    .collect(Collectors.toList()));
+        } else if (user.getCompany() != null) {
+            resp.companyId(user.getCompany().getId())
+                .companyName(user.getCompany().getName());
         }
 
-        Company company = null;
-        if (request.getCompanyId() != null) {
-            company = companyRepository.findById(request.getCompanyId()).orElse(null);
-        }
-
-        User newUser = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole() != null ? request.getRole() : "USER")
-                .company(company)
-                .active(true)
-                .build();
-
-        userRepository.save(newUser);
-
-        UserDetails userDetails = userDetailsService.loadUserByUsername(newUser.getUsername());
-        String token = jwtService.generateToken(userDetails);
-
-        return ResponseEntity.ok(AuthResponse.builder()
-                .token(token)
-                .userId(newUser.getId())
-                .username(newUser.getUsername())
-                .role(newUser.getRole())
-                .companyId(company != null ? company.getId() : null)
-                .companyName(company != null ? company.getName() : null)
-                .build());
-    }
-
-    // Inner DTO for register
-    @lombok.Data
-    public static class RegisterRequest {
-        private String username;
-        private String email;
-        private String password;
-        private String role;
-        private Long companyId;
+        log.info("Connexion réussie : {} [{}]", user.getUsername(), roleCode);
+        return ResponseEntity.ok(resp.build());
     }
 }

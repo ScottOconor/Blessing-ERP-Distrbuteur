@@ -64,6 +64,9 @@ public class SalesOrder {
     @Column(precision = 20, scale = 2)
     private BigDecimal totalRemise;
 
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

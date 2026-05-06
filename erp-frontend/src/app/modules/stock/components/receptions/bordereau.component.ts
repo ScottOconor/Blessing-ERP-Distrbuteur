@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { StockService, ReceptionBordereauDTO, BordereauLigneSaisie } from '../../services/stock.service';
+import { StockService, ReceptionBordereauDTO, BordereauLigne, BordereauLigneSaisie } from '../../services/stock.service';
 
 @Component({
   selector: 'app-bordereau',
@@ -16,10 +16,10 @@ export class BordereauComponent implements OnInit {
   bordereau: ReceptionBordereauDTO | null = null;
   loading = false;
   validating = false;
+  exporting = false;
   errorMsg = '';
   successMsg = '';
 
-  // Saisie des quantités reçues
   saisie: Record<number, number> = {};
 
   constructor(
@@ -38,9 +38,12 @@ export class BordereauComponent implements OnInit {
     this.stockService.getBordereau(this.pickingId).subscribe({
       next: (data) => {
         this.bordereau = data;
-        // Initialiser saisie avec qteRecue (déjà reçue) ou qteCommandee
         for (const ligne of data.lignes) {
-          this.saisie[ligne.moveId] = ligne.qteRecue > 0 ? ligne.qteRecue : ligne.reste;
+          if (this.isReadOnly) {
+            this.saisie[ligne.moveId] = ligne.qteRecue;
+          } else {
+            this.saisie[ligne.moveId] = ligne.qteRecue > 0 ? ligne.qteRecue : ligne.reste;
+          }
         }
         this.loading = false;
       },
@@ -51,12 +54,30 @@ export class BordereauComponent implements OnInit {
     });
   }
 
+  get isReadOnly(): boolean {
+    return this.bordereau?.state === 'done';
+  }
+
   get totalQteCommandee(): number {
     return this.bordereau?.lignes.reduce((s, l) => s + l.qteCommandee, 0) ?? 0;
   }
 
   get totalQteSaisie(): number {
     return Object.values(this.saisie).reduce((s, v) => s + (v || 0), 0);
+  }
+
+  get totalAvaries(): number {
+    if (!this.bordereau) return 0;
+    if (this.isReadOnly) {
+      return this.bordereau.lignes.reduce((s, l) => s + l.reste, 0);
+    }
+    return this.bordereau.lignes.reduce((s, l) => s + this.avarieForLigne(l), 0);
+  }
+
+  avarieForLigne(ligne: BordereauLigne): number {
+    if (this.isReadOnly) return ligne.reste;
+    const saisi = this.saisie[ligne.moveId] ?? 0;
+    return Math.max(0, ligne.reste - saisi);
   }
 
   validate(): void {
@@ -67,8 +88,7 @@ export class BordereauComponent implements OnInit {
       qteRecue: this.saisie[l.moveId] ?? 0
     }));
 
-    const hasAnyQty = lignes.some(l => l.qteRecue > 0);
-    if (!hasAnyQty) {
+    if (!lignes.some(l => l.qteRecue > 0)) {
       this.errorMsg = 'Veuillez saisir au moins une quantité reçue';
       return;
     }
@@ -91,10 +111,43 @@ export class BordereauComponent implements OnInit {
   }
 
   receiveAll(): void {
-    if (!this.bordereau) return;
+    if (!this.bordereau || this.isReadOnly) return;
     for (const ligne of this.bordereau.lignes) {
       this.saisie[ligne.moveId] = ligne.reste;
     }
+  }
+
+  exportPdf(): void {
+    this.exporting = true;
+    this.stockService.downloadBordereauPdf(this.pickingId).subscribe({
+      next: (blob) => {
+        this.exporting = false;
+        const name = this.bordereau?.pickingName || 'bordereau';
+        this.triggerDownload(blob, `${name}.pdf`);
+      },
+      error: () => { this.exporting = false; this.errorMsg = 'Erreur export PDF'; }
+    });
+  }
+
+  exportExcel(): void {
+    this.exporting = true;
+    this.stockService.downloadBordereauExcel(this.pickingId).subscribe({
+      next: (blob) => {
+        this.exporting = false;
+        const name = this.bordereau?.pickingName || 'bordereau';
+        this.triggerDownload(blob, `${name}.xlsx`);
+      },
+      error: () => { this.exporting = false; this.errorMsg = 'Erreur export Excel'; }
+    });
+  }
+
+  private triggerDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   back(): void {

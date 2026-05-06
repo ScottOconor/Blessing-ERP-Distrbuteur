@@ -2,6 +2,7 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { AccountingService } from '../../services/accounting.service';
 import { AnalyticService, AnalyticAccount } from '../../services/analytic.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -87,16 +88,40 @@ export class JournalEntryFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.move.companyId = this.authService.getCompanyId();
-    this.loadReferenceData();
+    const idStr = this.route.snapshot.paramMap.get('id');
 
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id && id !== 'new') {
+    if (idStr && idStr !== 'new') {
       this.isNew = false;
-      this.loadMove(parseInt(id));
+      this.loading = true;
+      const companyId = this.authService.getCompanyId();
+      // Load reference data AND the move in parallel so accounts are ready before lineToForm() runs
+      forkJoin({
+        journals: this.accountingService.getJournals(companyId),
+        accounts: this.accountingService.getAccounts(companyId),
+        partners: this.accountingService.getPartners(companyId),
+        analyticAccounts: this.analyticService.getAccounts(companyId),
+        move: this.accountingService.getMove(parseInt(idStr))
+      }).subscribe({
+        next: ({ journals, accounts, partners, analyticAccounts, move }) => {
+          this.journals = journals.filter((x: any) => x.active);
+          this.accounts = accounts.filter((x: any) => !x.deprecated);
+          this.partners = partners;
+          this.analyticAccounts = analyticAccounts;
+          this.move = move;
+          this.lines = move.lines.map((l: any) => this.lineToForm(l));
+          if (this.lines.length === 0) this.addLine();
+          this.loading = false;
+          this.onJournalChange();
+        },
+        error: () => {
+          this.loading = false;
+          this.errorMsg = 'Écriture introuvable';
+        }
+      });
     } else {
+      this.loadReferenceData();
       this.addLine();
       this.addLine();
-      // Charger le solde du journal par défaut
       if (this.move.journalId) this.onJournalChange();
     }
   }

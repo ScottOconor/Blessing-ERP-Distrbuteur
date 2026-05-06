@@ -3,6 +3,7 @@
 .page-header {
   display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
   .header-info { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
   .page-title { font-size: 20px; font-weight: 600; color: #212529; margin: 0; }
 }
 
@@ -92,6 +93,24 @@
 .font-bold { font-weight: 600; }
 .text-success { color: #198754; }
 .text-warning { color: #fd7e14; }
+.text-danger { color: #dc3545; }
+
+.avaries-col { background: #fff5f5; }
+
+.state-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  &.done { background: #d1f0e8; color: #0a5c45; }
+}
+
+.btn-export {
+  display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px;
+  background: #0d6efd; color: white; border: none; border-radius: 4px;
+  font-size: 12px; cursor: pointer; font-family: 'Roboto', sans-serif;
+  .material-icons { font-size: 16px; }
+  &:hover:not(:disabled) { background: #0a58ca; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &.btn-export-pdf { background: #dc3545; &:hover:not(:disabled) { background: #b02a37; } }
+}
 
 .form-actions {
   display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;

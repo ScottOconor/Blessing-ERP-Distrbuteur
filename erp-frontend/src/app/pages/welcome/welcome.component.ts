@@ -26,7 +26,9 @@ export class WelcomeComponent implements OnInit {
   currentDate = new Date();
   showModules = true;
 
-  modules: Module[] = [
+  modules: Module[] = [];
+
+  private allModules: Module[] = [
     {
       id: 'accounting',
       name: 'Comptabilité',
@@ -64,6 +66,15 @@ export class WelcomeComponent implements OnInit {
       available: true
     },
     {
+      id: 'config',
+      name: 'Configuration',
+      description: 'Groupes, entreprises, utilisateurs, rôles & permissions',
+      icon: 'admin_panel_settings',
+      color: '#2c3e50',
+      route: '/config',
+      available: true
+    },
+    {
       id: 'hr',
       name: 'Ressources Humaines',
       description: 'Employés, congés, paie',
@@ -71,25 +82,20 @@ export class WelcomeComponent implements OnInit {
       color: '#16C79A',
       route: '/hr',
       available: false
-    },
-    {
-      id: 'settings',
-      name: 'Paramètres',
-      description: 'Configuration du système',
-      icon: 'settings',
-      color: '#6C757D',
-      route: '/settings',
-      available: false
     }
   ];
+
+  userRole = '';
 
   constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadUserInfo();
+    this.buildModules();
   }
 
   private loadUserInfo(): void {
+    const session = this.authService.getSession();
     const displayName = this.authService.getUserDisplayName();
     if (displayName && displayName !== 'Utilisateur') {
       this.userName = displayName;
@@ -99,6 +105,23 @@ export class WelcomeComponent implements OnInit {
     if (initials && initials.length > 0) {
       this.userInitials = initials;
     }
+
+    this.userRole = session?.roleLabel || session?.roleCode || '';
+  }
+
+  private buildModules(): void {
+    // Config module visible to all but description adapted; HR always coming soon
+    this.modules = this.allModules.map(m => {
+      if (m.id === 'config') {
+        return {
+          ...m,
+          description: this.authService.isAdmin()
+            ? 'Groupes, entreprises, utilisateurs, rôles & permissions'
+            : 'Paramètres & changement de mot de passe'
+        };
+      }
+      return m;
+    });
   }
 
   navigateTo(module: Module): void {

@@ -25,6 +25,7 @@ export class ChartOfAccountsComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   importing = false;
+  downloadingTemplate = false;
 
   accountForm!: FormGroup;
 
@@ -174,6 +175,25 @@ export class ChartOfAccountsComponent implements OnInit {
 
   getAccountTypeLabel(type: string): string {
     return this.accountTypes.find(t => t.value === type)?.label || type;
+  }
+
+  downloadTemplate(): void {
+    this.downloadingTemplate = true;
+    this.accountingService.downloadAccountsTemplate().subscribe({
+      next: (blob) => {
+        this.downloadingTemplate = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele_plan_comptable.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.downloadingTemplate = false;
+        this.showError('Erreur lors du téléchargement du modèle');
+      }
+    });
   }
 
   onImport(event: Event): void {

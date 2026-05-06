@@ -147,10 +147,15 @@ export class AccountingService {
   // ===== IMPORT EXCEL =====
   private importUrl = `http://${window.location.hostname}:8085/api/import`;
 
-  importAccounts(file: File, companyId: number): Observable<ImportResult> {
+  downloadAccountsTemplate(): Observable<Blob> {
+    return this.http.get(`${this.importUrl}/accounts/template`, { responseType: 'blob' });
+  }
+
+  importAccounts(file: File, companyId: number, replace = false): Observable<ImportResult> {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('companyId', String(companyId));
+    fd.append('replace', String(replace));
     return this.http.post<ImportResult>(`${this.importUrl}/accounts`, fd);
   }
 

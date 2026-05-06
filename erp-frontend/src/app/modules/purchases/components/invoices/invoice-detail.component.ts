@@ -74,6 +74,24 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
     });
   }
 
+  get partnerBalanceClass(): string {
+    const b = this.invoice?.partnerBalance ?? 0;
+    if (b > 0) return 'balance-positive';
+    if (b < 0) return 'balance-negative';
+    return 'balance-zero';
+  }
+
+  get missingFields(): string[] {
+    if (!this.invoice || this.invoice.state !== 'draft') return [];
+    const isAvoir = this.invoice.type === 'credit_note';
+    const missing: string[] = [];
+    if (!this.invoice.partnerId) missing.push('Fournisseur');
+    if (!this.invoice.journalId) missing.push('Journal');
+    if (!this.invoice.date) missing.push('Date');
+    if (!this.invoice.lines || this.invoice.lines.length === 0) missing.push('Lignes de facturation');
+    return missing;
+  }
+
   postInvoice(): void {
     const msg = this.isAvoir
       ? 'Valider cet avoir fournisseur ? Une écriture comptable sera générée.'
@@ -331,5 +349,10 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   showSuccess(msg: string): void {
     this.successMsg = msg;
     setTimeout(() => this.successMsg = '', 4000);
+  }
+
+  showError(msg: string): void {
+    this.errorMsg = msg;
+    setTimeout(() => this.errorMsg = '', 6000);
   }
 }

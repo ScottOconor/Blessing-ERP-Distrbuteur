@@ -91,6 +91,9 @@ export interface PurchaseInvoice {
   journalId?: number;
   journalName?: string;
   companyId: number;
+  warehouseId?: number;
+  warehouseName?: string;
+  partnerBalance?: number | null;
   purchaseOrderId?: number;
   purchaseOrderName?: string;
   originalInvoiceId?: number;
@@ -185,6 +188,12 @@ export class PurchaseService {
 
   generateRemises(id: number): Observable<any> {
     return this.http.post<any>(`${this.base}/invoices/${id}/generate-remises`, {});
+  }
+
+  setWarehouse(invoiceId: number, warehouseId: number): Observable<PurchaseInvoice> {
+    return this.http.patch<PurchaseInvoice>(`${this.base}/invoices/${invoiceId}/warehouse`, null, {
+      params: new HttpParams().set('warehouseId', warehouseId)
+    });
   }
 
   // ===================== AVOIRS FOURNISSEURS =====================

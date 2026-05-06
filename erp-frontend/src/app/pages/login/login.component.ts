@@ -29,29 +29,30 @@ export class LoginComponent {
       this.errorMessage = 'Veuillez saisir vos identifiants.';
       return;
     }
-
     this.loading = true;
     this.errorMessage = '';
 
     this.authService.login(this.username, this.password).subscribe({
-      next: () => {
+      next: (session) => {
         this.loading = false;
-        this.router.navigate(['/welcome']);
+        if (session.mustChangePassword) {
+          this.router.navigate(['/config/change-password']);
+        } else {
+          this.router.navigate(['/welcome']);
+        }
       },
       error: (err) => {
         this.loading = false;
         if (err.status === 401) {
           this.errorMessage = 'Identifiants incorrects. Veuillez réessayer.';
         } else if (err.status === 0) {
-          this.errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+          this.errorMessage = 'Impossible de contacter le serveur.';
         } else {
-          this.errorMessage = err.error?.message || 'Une erreur est survenue. Veuillez réessayer.';
+          this.errorMessage = err.error?.message || 'Une erreur est survenue.';
         }
       }
     });
   }
 
-  togglePassword(): void {
-    this.showPassword = !this.showPassword;
-  }
+  togglePassword(): void { this.showPassword = !this.showPassword; }
 }

@@ -37,6 +37,8 @@ export interface SalesOrder {
   totalTTC?: number;
   totalRemise?: number;
   lines: SalesOrderLine[];
+  warehouseId?: number;
+  warehouseName?: string;
   createdAt?: string;
   invoiceId?: number;
   invoiceName?: string;
@@ -84,6 +86,10 @@ export interface SalesInvoice {
   journalId: number;
   journalName?: string;
   companyId: number;
+  warehouseId?: number;
+  warehouseName?: string;
+  partnerBalance?: number | null;
+  partnerCreditDisponible?: number | null;
   salesOrderId?: number;
   salesOrderName?: string;
   originalInvoiceId?: number;
@@ -119,6 +125,8 @@ export interface InvoicePayment {
   journalName?: string;
   companyId: number;
   accountMoveId?: number;
+  creditNoteId?: number;
+  creditNoteName?: string;
   createdAt?: string;
 }
 
@@ -227,6 +235,12 @@ export class SalesService {
     return this.http.post<any>(`${this.apiUrl}/invoices/${id}/generate-ristournes`, {});
   }
 
+  setWarehouse(invoiceId: number, warehouseId: number): Observable<SalesInvoice> {
+    return this.http.patch<SalesInvoice>(`${this.apiUrl}/invoices/${invoiceId}/warehouse`, null, {
+      params: new HttpParams().set('warehouseId', warehouseId)
+    });
+  }
+
   // Avoirs (credit notes)
   getAvoirs(companyId: number): Observable<SalesInvoice[]> {
     return this.http.get<SalesInvoice[]>(`${this.apiUrl}/avoirs`, {
@@ -246,6 +260,21 @@ export class SalesService {
   }
   getPaymentsByInvoice(invoiceId: number): Observable<InvoicePayment[]> {
     return this.http.get<InvoicePayment[]>(`${this.apiUrl}/payments/invoice/${invoiceId}`);
+  }
+
+  applyCredit(invoiceId: number, amount: number, companyId: number): Observable<SalesInvoice> {
+    return this.http.post<SalesInvoice>(
+      `${this.apiUrl}/invoices/${invoiceId}/apply-credit`,
+      null,
+      { params: new HttpParams().set('amount', amount).set('companyId', companyId) }
+    );
+  }
+
+  getPartnerBalance(partnerId: number, companyId: number): Observable<{ balance: number; credit: number }> {
+    return this.http.get<{ balance: number; credit: number }>(
+      `${this.apiUrl}/partners/${partnerId}/balance`,
+      { params: new HttpParams().set('companyId', companyId) }
+    );
   }
 
   // Clients

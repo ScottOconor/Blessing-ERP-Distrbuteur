@@ -9,6 +9,7 @@ export interface Remise {
   categoryId: number;
   categoryName?: string;
   montantFixe: number;
+  montantTTCUnitaire?: number;
   typeRemise?: string;   // 'brasserie' | 'guinness'
   companyId: number;
   active?: boolean;

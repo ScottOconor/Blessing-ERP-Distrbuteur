@@ -4,8 +4,6 @@ import com.erp.accounting.entity.AccountAccount;
 import com.erp.accounting.entity.AccountJournal;
 import com.erp.accounting.repository.AccountAccountRepository;
 import com.erp.accounting.repository.AccountJournalRepository;
-import com.erp.auth.entity.User;
-import com.erp.auth.repository.UserRepository;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.stock.entity.StockLocation;
@@ -17,7 +15,6 @@ import com.erp.stock.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,8 +30,6 @@ public class OhadaDataInitializer implements CommandLineRunner {
     private final CompanyRepository companyRepository;
     private final AccountAccountRepository accountRepository;
     private final AccountJournalRepository journalRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final WarehouseRepository warehouseRepository;
     private final StockLocationRepository stockLocationRepository;
     private final StockPickingTypeRepository pickingTypeRepository;
@@ -42,13 +37,14 @@ public class OhadaDataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        initCompanyAndUser();
+        initDefaultCompany();
         initChartOfAccounts();
+        ensureEssentialAccounts();
         initDefaultJournals();
         initDefaultWarehouses();
     }
 
-    private void initCompanyAndUser() {
+    private void initDefaultCompany() {
         if (companyRepository.count() == 0) {
             Company company = Company.builder()
                     .name("Ma Société")
@@ -57,21 +53,8 @@ public class OhadaDataInitializer implements CommandLineRunner {
                     .telephone("+237 000 000 000")
                     .email("contact@masociete.cm")
                     .build();
-            company = companyRepository.save(company);
+            companyRepository.save(company);
             log.info("Default company created: {}", company.getName());
-
-            if (!userRepository.existsByUsername("admin")) {
-                User admin = User.builder()
-                        .username("admin")
-                        .email("admin@masociete.cm")
-                        .password(passwordEncoder.encode("admin123"))
-                        .role("ADMIN")
-                        .company(company)
-                        .active(true)
-                        .build();
-                userRepository.save(admin);
-                log.info("Default admin user created: admin / admin123");
-            }
         }
     }
 
@@ -350,6 +333,40 @@ public class OhadaDataInitializer implements CommandLineRunner {
 
         accountRepository.saveAll(accounts);
         log.info("OHADA chart of accounts initialized: {} accounts created", accounts.size());
+    }
+
+    /**
+     * Ensures accounts required by the ERP accounting engine exist.
+     * Runs as an upsert on every startup — safe even if accounts are already present.
+     * The user can override names/types via the plan comptable Excel import.
+     */
+    private void ensureEssentialAccounts() {
+        Company company = companyRepository.findAll().get(0);
+        Long cid = company.getId();
+
+        // Uniquement les comptes métier spécifiques non couverts par le plan comptable importé
+        upsertAccount(cid, "419800", "Ristournes à accorder - brasserie", "liability", "other", false, company);
+        upsertAccount(cid, "419801", "Ristournes à accorder - guinness",  "liability", "other", false, company);
+
+        log.info("Essential accounts ensured for company {}", cid);
+    }
+
+    private void upsertAccount(Long companyId, String code, String name,
+                               String accountType, String internalType,
+                               boolean reconcile, Company company) {
+        accountRepository.findFirstByCodeAndCompanyId(code, companyId).ifPresentOrElse(
+            acc -> {
+                if (!name.equals(acc.getName())) {
+                    acc.setName(name);
+                    accountRepository.save(acc);
+                }
+            },
+            () -> accountRepository.save(AccountAccount.builder()
+                    .code(code).name(name)
+                    .accountType(accountType).internalType(internalType)
+                    .reconcile(reconcile).deprecated(false)
+                    .company(company).build())
+        );
     }
 
     private void initDefaultJournals() {

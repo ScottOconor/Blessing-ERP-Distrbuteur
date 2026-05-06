@@ -20,19 +20,21 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur introuvable : " + username));
+
+        String roleCode = user.getRole() != null ? user.getRole().getCode() : "CUSTOM";
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
                 .authorities(Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + user.getRole())))
+                        new SimpleGrantedAuthority("ROLE_" + roleCode)))
                 .disabled(!user.isActive())
                 .build();
     }
 
     public User findUserEntity(String username) {
-        return userRepository.findByUsernameWithCompany(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        return userRepository.findByUsernameWithDetails(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur introuvable : " + username));
     }
 }

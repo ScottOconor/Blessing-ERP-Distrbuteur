@@ -112,6 +112,10 @@ public class PurchaseInvoice {
     @Column(name = "net_a_payer", precision = 20, scale = 2)
     private BigDecimal netAPayer;
 
+    /** Entrepôt de réception (obligatoire sur les factures fournisseurs) */
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(xargs -I {} bash -c 'echo \"{}\"; head -3 {}')",
+      "Bash(python3)"
     ]
   }
 }

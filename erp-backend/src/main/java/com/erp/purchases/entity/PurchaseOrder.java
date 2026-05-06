@@ -57,6 +57,10 @@ public class PurchaseOrder {
     @Column(precision = 20, scale = 2)
     private BigDecimal totalTTC;
 
+    /** Entrepôt sélectionné sur la commande (propagé à la facture) */
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     /** ID du picking de réception généré lors de la confirmation */
     @Column(name = "picking_id")
     private Long pickingId;

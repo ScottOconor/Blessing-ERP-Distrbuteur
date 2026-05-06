@@ -1,5 +1,4 @@
 <div class="page-container">
-  <!-- Input file caché pour import -->
   <input #importInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportFileChange($event)" />
 
   <!-- Header -->
@@ -22,9 +21,10 @@
         <button class="btn-new" (click)="openNewRst()">
           <span class="material-icons">add</span> Nouvelle ristourne
         </button>
-      } @else if (activeTab === 'paiements') {
-        <button class="btn-new" (click)="openNewPmt()">
-          <span class="material-icons">add</span> Nouveau règlement
+      }
+      @if (activeTab === 'guinness') {
+        <button class="btn-new" (click)="openGuinessModal()">
+          <span class="material-icons">autorenew</span> Générer ristournes Guinness
         </button>
       }
     </div>
@@ -32,14 +32,17 @@
 
   <!-- Tabs -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab === 'config'" (click)="activeTab = 'config'">
+    <button class="tab-btn" [class.active]="activeTab === 'config'" (click)="onTabChange('config')">
       <span class="material-icons">settings</span> Configuration
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'paiements'" (click)="activeTab = 'paiements'">
-      <span class="material-icons">payments</span> Règlements
+    <button class="tab-btn" [class.active]="activeTab === 'brasseries'" (click)="onTabChange('brasseries')">
+      <span class="material-icons">local_bar</span> Brasseries
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'reglements'" (click)="activeTab = 'reglements'; loadGroups()">
-      <span class="material-icons">account_balance_wallet</span> Paiement ristournes
+    <button class="tab-btn" [class.active]="activeTab === 'guinness'" (click)="onTabChange('guinness')">
+      <span class="material-icons">sports_bar</span> Guinness
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'reglements'" (click)="onTabChange('reglements')">
+      <span class="material-icons">account_balance_wallet</span> Règlements
     </button>
   </div>
 
@@ -60,8 +63,9 @@
             <tr>
               <th>Client</th>
               <th>Catégorie</th>
-              <th class="text-right">Montant fixe (FCFA)</th>
-              <th>Type calcul TTC</th>
+              <th class="text-right">Montant HT / unité</th>
+              <th class="text-right">TTC / unité</th>
+              <th>Type</th>
               <th></th>
             </tr>
           </thead>
@@ -70,23 +74,22 @@
               <tr>
                 <td class="font-bold">{{ r.partnerName }}</td>
                 <td>{{ r.categoryName }}</td>
-                <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-0' }}</td>
+                <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-2' }}</td>
+                <td class="text-right font-mono" style="color:#017E84;font-weight:600">
+                  {{ r.montantTTCUnitaire | number:'1.0-2' }}
+                </td>
                 <td>
                   @if (r.typeRistourne === 'brasserie') {
                     <span class="badge badge-brasserie">Brasserie</span>
                   } @else if (r.typeRistourne === 'guinness') {
                     <span class="badge badge-guinness">Guinness</span>
                   } @else {
-                    <span class="badge badge-ht">HT brut</span>
+                    <span class="badge badge-ht">Autre</span>
                   }
                 </td>
                 <td class="actions-cell">
-                  <button class="btn-icon" (click)="editRst(r)" title="Modifier">
-                    <span class="material-icons">edit</span>
-                  </button>
-                  <button class="btn-icon danger" (click)="deleteRst(r.id!)" title="Supprimer">
-                    <span class="material-icons">delete</span>
-                  </button>
+                  <button class="btn-icon" (click)="editRst(r)"><span class="material-icons">edit</span></button>
+                  <button class="btn-icon danger" (click)="deleteRst(r.id!)"><span class="material-icons">delete</span></button>
                 </td>
               </tr>
             }
@@ -96,66 +99,160 @@
     </div>
   }
 
-  <!-- ===================== RÈGLEMENTS GROUPÉS TAB ===================== -->
-  @if (activeTab === 'reglements') {
-    <div class="card">
-      @if (factureMsg) {
-        <div class="alert-success" style="margin-bottom:12px;padding:10px 16px;background:#d1fae5;border-radius:6px;color:#065f46;display:flex;align-items:center;gap:8px">
-          <span class="material-icons" style="font-size:18px">check_circle</span> {{ factureMsg }}
+  <!-- ===================== BRASSERIES TAB ===================== -->
+  @if (activeTab === 'brasseries') {
+    @if (quarterMsg) {
+      <div class="alert-success"><span class="material-icons">check_circle</span> {{ quarterMsg }}</div>
+    }
+    @if (quarterError) {
+      <div class="alert-error"><span class="material-icons">error</span> {{ quarterError }}</div>
+    }
+    @if (loadingBrasseries) {
+      <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+    } @else {
+      @for (qDef of QUARTERS; track qDef.q) {
+        @let qKey = 'Q' + qDef.q + '-' + currentYear;
+        @let qGroup = brasseriesByQuarter.find(g => g.quarter === qDef.q && g.year === currentYear);
+        <div class="quarter-card">
+          <div class="quarter-header" (click)="toggleQuarter(qKey)">
+            <div class="quarter-title">
+              <span class="material-icons quarter-icon">calendar_today</span>
+              <strong>Trimestre {{ qDef.q }} {{ currentYear }}</strong>
+              <span class="quarter-sub">{{ qDef.label }}</span>
+              @if (qGroup) {
+                <span class="badge-count">{{ qGroup.partners.length }} client(s)</span>
+                <span class="quarter-total">{{ qGroup.totalAmount | number:'1.0-2' }} FCFA</span>
+              }
+            </div>
+            <div class="quarter-actions" (click)="$event.stopPropagation()">
+              <button class="btn-generate"
+                [disabled]="generatingQuarter === qKey"
+                (click)="generateQuarter(qDef.q)">
+                <span class="material-icons" style="font-size:16px">
+                  {{ generatingQuarter === qKey ? 'hourglass_empty' : 'autorenew' }}
+                </span>
+                {{ generatingQuarter === qKey ? 'Génération…' : 'Générer ristournes' }}
+              </button>
+              <span class="material-icons expand-icon">
+                {{ expandedQuarters.has(qKey) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
+          </div>
+
+          @if (expandedQuarters.has(qKey)) {
+            <div class="quarter-body">
+              @if (!qGroup || qGroup.partners.length === 0) {
+                <div class="empty-quarter">Aucun règlement pour ce trimestre.</div>
+              } @else {
+                @for (pg of qGroup.partners; track pg.partnerId) {
+                  @let partnerKey = qKey + '-' + pg.partnerId;
+                  <div class="partner-row" (click)="toggleBrasseriePartner(partnerKey)">
+                    <span class="material-icons" style="font-size:16px;color:#666">
+                      {{ expandedBrasserieKeys.has(partnerKey) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                    <span class="partner-name">{{ pg.partnerName }}</span>
+                    <span class="partner-count">{{ pg.paiements.length }} règlement(s)</span>
+                    <span class="partner-total">{{ pg.totalAmount | number:'1.0-2' }} FCFA</span>
+                    @if (hasDrafts(pg.paiements)) {
+                      <span class="partner-actions" (click)="$event.stopPropagation()">
+                        <button class="btn-confirm-all" (click)="confirmAllBrasserie(pg.paiements)">
+                          <span class="material-icons" style="font-size:14px">done_all</span> Confirmer tout
+                        </button>
+                      </span>
+                    }
+                  </div>
+                  @if (expandedBrasserieKeys.has(partnerKey)) {
+                    <div class="partner-details">
+                      <table class="lines-table">
+                        <thead>
+                          <tr>
+                            <th>Référence</th>
+                            <th>Facture source</th>
+                            <th>Date</th>
+                            <th class="ar">Montant TTC</th>
+                            <th>État</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of pg.paiements; track p.id) {
+                            <tr>
+                              <td>{{ p.name }}</td>
+                              <td>{{ p.invoiceName ?? '—' }}</td>
+                              <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                              <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
+                              <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
+                              <td class="actions-cell">
+                                @if (p.state === 'draft') {
+                                  <button class="btn-action confirm" (click)="confirmBrasseriePmt(p.id!)">Confirmer</button>
+                                  <button class="btn-icon danger" (click)="cancelBrasseriePmt(p.id!)">
+                                    <span class="material-icons">close</span>
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                }
+              }
+            </div>
+          }
         </div>
       }
-      @if (factureError) {
-        <div class="alert-error" style="margin-bottom:12px;padding:10px 16px;background:#fee2e2;border-radius:6px;color:#991b1b;display:flex;align-items:center;gap:8px">
-          <span class="material-icons" style="font-size:18px">error</span> {{ factureError }}
-        </div>
-      }
-      @if (loadingGroups) {
-        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
-      } @else if (groups.length === 0) {
+    }
+  }
+
+  <!-- ===================== GUINNESS TAB ===================== -->
+  @if (activeTab === 'guinness') {
+    @if (guinessMsg) {
+      <div class="alert-success"><span class="material-icons">check_circle</span> {{ guinessMsg }}</div>
+    }
+    @if (guinessError && !showGuinessModal) {
+      <div class="alert-error"><span class="material-icons">error</span> {{ guinessError }}</div>
+    }
+    @if (loadingGuiness) {
+      <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+    } @else if (guinessByClient.length === 0) {
+      <div class="card">
         <div class="empty-state">
-          <span class="material-icons">account_balance_wallet</span>
-          <p>Aucun règlement confirmé à payer.</p>
+          <span class="material-icons">sports_bar</span>
+          <p>Aucun règlement Guinness. Utilisez le bouton "Générer ristournes Guinness".</p>
         </div>
-      } @else {
+      </div>
+    } @else {
+      <div class="card">
         <table class="data-table">
           <thead>
             <tr>
               <th style="width:32px"></th>
               <th>Client</th>
-              <th class="text-right">Total à payer (FCFA)</th>
+              <th class="text-right">Total (FCFA)</th>
               <th class="text-right">Règlements</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
-            @for (group of groups; track group.partnerId) {
-              <tr class="group-row" (click)="togglePartner(group.partnerId)" style="cursor:pointer">
+            @for (pg of guinessByClient; track pg.partnerId) {
+              <tr class="group-row" (click)="toggleGuinessPartner(pg.partnerId)" style="cursor:pointer">
                 <td>
-                  <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#666">
-                    {{ expandedPartners.has(group.partnerId) ? 'expand_less' : 'expand_more' }}
+                  <span class="material-icons" style="font-size:18px;color:#666">
+                    {{ expandedGuinessKeys.has(pg.partnerId) ? 'expand_less' : 'expand_more' }}
                   </span>
                 </td>
-                <td class="font-bold">{{ group.partnerName }}</td>
-                <td class="text-right font-mono font-bold" style="color:#017E84">{{ group.totalAmount | number:'1.0-2' }}</td>
-                <td class="text-right">{{ group.paiements.length }}</td>
+                <td class="font-bold">{{ pg.partnerName }}</td>
+                <td class="text-right font-mono font-bold" style="color:#017E84">{{ pg.totalAmount | number:'1.0-2' }}</td>
+                <td class="text-right">{{ pg.paiements.length }}</td>
                 <td class="actions-cell" (click)="$event.stopPropagation()">
-                  @if (group.paiements[0]?.generatedInvoiceId) {
-                    <button class="btn-action confirm" (click)="openFacture(group.paiements[0].generatedInvoiceId!)">
-                      <span class="material-icons" style="font-size:16px">open_in_new</span> Voir facture
-                    </button>
-                  } @else {
-                    <button class="btn-action confirm"
-                      [disabled]="generatingFacture === group.partnerId"
-                      (click)="generateFactureForPartner(group)">
-                      <span class="material-icons" style="font-size:16px">
-                        {{ generatingFacture === group.partnerId ? 'hourglass_empty' : 'receipt_long' }}
-                      </span>
-                      {{ generatingFacture === group.partnerId ? 'Génération…' : 'Générer facture' }}
+                  @if (hasDrafts(pg.paiements)) {
+                    <button class="btn-confirm-all" (click)="confirmAllGuiness(pg.paiements)">
+                      <span class="material-icons" style="font-size:14px">done_all</span> Confirmer tout
                     </button>
                   }
                 </td>
               </tr>
-              @if (expandedPartners.has(group.partnerId)) {
+              @if (expandedGuinessKeys.has(pg.partnerId)) {
                 <tr>
                   <td colspan="5" style="padding:0 0 8px 40px;background:#f9fafb">
                     <table class="lines-table" style="width:100%;margin-top:4px">
@@ -164,25 +261,26 @@
                           <th>Référence</th>
                           <th>Facture source</th>
                           <th>Date</th>
-                          <th class="ar">Montant (FCFA)</th>
+                          <th class="ar">Montant TTC</th>
                           <th>État</th>
-                          <th>Facture générée</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
-                        @for (p of group.paiements; track p.id) {
+                        @for (p of pg.paiements; track p.id) {
                           <tr>
                             <td>{{ p.name }}</td>
                             <td>{{ p.invoiceName ?? '—' }}</td>
                             <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
                             <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
                             <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
-                            <td>
-                              @if (p.generatedInvoiceId) {
-                                <a style="color:#017E84;cursor:pointer;text-decoration:underline" (click)="openFacture(p.generatedInvoiceId!)">
-                                  {{ p.generatedInvoiceName }}
-                                </a>
-                              } @else { — }
+                            <td class="actions-cell">
+                              @if (p.state === 'draft') {
+                                <button class="btn-action confirm" (click)="confirmGuinessPmt(p.id!)">Confirmer</button>
+                                <button class="btn-icon danger" (click)="cancelGuinessPmt(p.id!)">
+                                  <span class="material-icons">close</span>
+                                </button>
+                              }
                             </td>
                           </tr>
                         }
@@ -194,55 +292,218 @@
             }
           </tbody>
         </table>
-      }
-    </div>
+      </div>
+    }
   }
 
-  <!-- ===================== PAIEMENTS TAB ===================== -->
-  @if (activeTab === 'paiements') {
-    <div class="card">
-      @if (loadingPmt) {
-        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
-      } @else if (paiements.length === 0) {
-        <div class="empty-state">
-          <span class="material-icons">payments</span>
-          <p>Aucun règlement de ristourne.</p>
-          <button class="btn-new" (click)="openNewPmt()"><span class="material-icons">add</span> Créer</button>
+  <!-- ===================== RÈGLEMENTS TAB ===================== -->
+  @if (activeTab === 'reglements') {
+    @if (factureMsg) {
+      <div class="alert-success"><span class="material-icons">check_circle</span> {{ factureMsg }}</div>
+    }
+    @if (factureError) {
+      <div class="alert-error"><span class="material-icons">error</span> {{ factureError }}</div>
+    }
+
+    <!-- Sub-tabs -->
+    <div class="sub-tabs-bar">
+      <button class="sub-tab-btn" [class.active]="reglSubTab === 'brasseries'" (click)="reglSubTab = 'brasseries'">
+        <span class="material-icons" style="font-size:16px">local_bar</span> Brasseries
+      </button>
+      <button class="sub-tab-btn" [class.active]="reglSubTab === 'guinness'" (click)="reglSubTab = 'guinness'">
+        <span class="material-icons" style="font-size:16px">sports_bar</span> Guinness
+      </button>
+    </div>
+
+    <!-- Règlements Brasseries : par trimestre -->
+    @if (reglSubTab === 'brasseries') {
+      @if (loadingReglBrasseries) {
+        <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+      } @else if (reglBrasseriesGroups.length === 0) {
+        <div class="card">
+          <div class="empty-state">
+            <span class="material-icons">account_balance_wallet</span>
+            <p>Aucun règlement Brasseries confirmé à régler.</p>
+          </div>
         </div>
       } @else {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Référence</th>
-              <th>Client</th>
-              <th>Date</th>
-              <th class="text-right">Montant TTC</th>
-              <th>État</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (p of paiements; track p.id) {
-              <tr>
-                <td class="ref-col">{{ p.name }}</td>
-                <td class="font-bold">{{ p.partnerName }}</td>
-                <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
-                <td class="text-right font-mono font-bold">{{ p.totalAmount | number:'1.0-2' }}</td>
-                <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
-                <td class="actions-cell">
-                  @if (p.state === 'draft') {
-                    <button class="btn-action confirm" (click)="confirmPmt(p.id!)">Confirmer</button>
-                    <button class="btn-icon danger" (click)="cancelPmt(p.id!)"><span class="material-icons">close</span></button>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-  }
+        @for (qg of reglBrasseriesGroups; track qg.quarter) {
+          @let qKey = 'Q' + qg.quarter + '-' + qg.year;
+          <div class="quarter-card">
+            <div class="quarter-header" (click)="toggleReglQuarter(qKey)">
+              <div class="quarter-title">
+                <span class="material-icons quarter-icon">calendar_today</span>
+                <strong>{{ qg.label }}</strong>
+                <span class="badge-count">{{ qg.partners.length }} client(s)</span>
+                <span class="quarter-total">{{ qg.totalAmount | number:'1.0-2' }} FCFA</span>
+              </div>
+              <span class="material-icons expand-icon">
+                {{ expandedReglQuarters.has(qKey) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
 
+            @if (expandedReglQuarters.has(qKey)) {
+              <div class="quarter-body">
+                @for (pg of qg.partners; track pg.partnerId) {
+                  @let partnerKey = qKey + '-' + pg.partnerId;
+                  @let pIds = pg.paiements.map(p => p.id!);
+                  @let hasGenerated = pg.paiements[0]?.generatedInvoiceId;
+                  <div class="partner-row" (click)="toggleReglPartner(partnerKey)">
+                    <span class="material-icons" style="font-size:16px;color:#666">
+                      {{ expandedReglKeys.has(partnerKey) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                    <span class="partner-name">{{ pg.partnerName }}</span>
+                    <span class="partner-count">{{ pg.paiements.length }} règlement(s)</span>
+                    <span class="partner-total">{{ pg.totalAmount | number:'1.0-2' }} FCFA</span>
+                    <span class="partner-actions" (click)="$event.stopPropagation()">
+                      @if (hasGenerated) {
+                        <button class="btn-action confirm" (click)="openFacture(hasGenerated!)">
+                          <span class="material-icons" style="font-size:14px">open_in_new</span> Voir avoir
+                        </button>
+                      } @else {
+                        <button class="btn-action confirm"
+                          [disabled]="generatingFacture === partnerKey"
+                          (click)="generateFactureForGroup(pIds, partnerKey)">
+                          <span class="material-icons" style="font-size:14px">
+                            {{ generatingFacture === partnerKey ? 'hourglass_empty' : 'payments' }}
+                          </span>
+                          {{ generatingFacture === partnerKey ? 'Génération…' : 'Payer' }}
+                        </button>
+                      }
+                    </span>
+                  </div>
+                  @if (expandedReglKeys.has(partnerKey)) {
+                    <div class="partner-details">
+                      <table class="lines-table">
+                        <thead>
+                          <tr>
+                            <th>Référence</th>
+                            <th>Facture source</th>
+                            <th>Date</th>
+                            <th class="ar">Montant TTC</th>
+                            <th>Avoir généré</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of pg.paiements; track p.id) {
+                            <tr>
+                              <td>{{ p.name }}</td>
+                              <td>{{ p.invoiceName ?? '—' }}</td>
+                              <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                              <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
+                              <td>
+                                @if (p.generatedInvoiceId) {
+                                  <a style="color:#017E84;cursor:pointer;text-decoration:underline"
+                                    (click)="openFacture(p.generatedInvoiceId!)">{{ p.generatedInvoiceName }}</a>
+                                } @else { — }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    }
+
+    <!-- Règlements Guinness : par client -->
+    @if (reglSubTab === 'guinness') {
+      @if (loadingReglGuiness) {
+        <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+      } @else if (reglGuinessGroups.length === 0) {
+        <div class="card">
+          <div class="empty-state">
+            <span class="material-icons">sports_bar</span>
+            <p>Aucun règlement Guinness confirmé à régler.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:32px"></th>
+                <th>Client</th>
+                <th class="text-right">Total (FCFA)</th>
+                <th class="text-right">Règlements</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (group of reglGuinessGroups; track group.partnerId) {
+                @let gKey = 'guinness-' + group.partnerId;
+                @let gIds = group.paiements.map(p => p.id!);
+                <tr class="group-row" (click)="toggleReglPartner(gKey)" style="cursor:pointer">
+                  <td>
+                    <span class="material-icons" style="font-size:18px;color:#666">
+                      {{ expandedReglKeys.has(gKey) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                  </td>
+                  <td class="font-bold">{{ group.partnerName }}</td>
+                  <td class="text-right font-mono font-bold" style="color:#017E84">{{ group.totalAmount | number:'1.0-2' }}</td>
+                  <td class="text-right">{{ group.paiements.length }}</td>
+                  <td class="actions-cell" (click)="$event.stopPropagation()">
+                    @if (group.paiements[0]?.generatedInvoiceId) {
+                      <button class="btn-action confirm" (click)="openFacture(group.paiements[0].generatedInvoiceId!)">
+                        <span class="material-icons" style="font-size:16px">open_in_new</span> Voir avoir
+                      </button>
+                    } @else {
+                      <button class="btn-action confirm"
+                        [disabled]="generatingFacture === gKey"
+                        (click)="generateFactureForGroup(gIds, gKey)">
+                        <span class="material-icons" style="font-size:16px">
+                          {{ generatingFacture === gKey ? 'hourglass_empty' : 'payments' }}
+                        </span>
+                        {{ generatingFacture === gKey ? 'Génération…' : 'Payer' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+                @if (expandedReglKeys.has(gKey)) {
+                  <tr>
+                    <td colspan="5" style="padding:0 0 8px 40px;background:#f9fafb">
+                      <table class="lines-table" style="width:100%;margin-top:4px">
+                        <thead>
+                          <tr>
+                            <th>Référence</th>
+                            <th>Facture source</th>
+                            <th>Date</th>
+                            <th class="ar">Montant TTC</th>
+                            <th>Avoir généré</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of group.paiements; track p.id) {
+                            <tr>
+                              <td>{{ p.name }}</td>
+                              <td>{{ p.invoiceName ?? '—' }}</td>
+                              <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                              <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
+                              <td>
+                                @if (p.generatedInvoiceId) {
+                                  <a style="color:#017E84;cursor:pointer;text-decoration:underline"
+                                    (click)="openFacture(p.generatedInvoiceId!)">{{ p.generatedInvoiceName }}</a>
+                                } @else { — }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  }
 </div>
 
 <!-- ===================== RISTOURNE MODAL ===================== -->
@@ -301,92 +562,38 @@
   </div>
 }
 
-<!-- ===================== PAIEMENT MODAL ===================== -->
-@if (showPmtModal) {
-  <div class="modal-overlay" (click.self)="showPmtModal = false">
-    <div class="modal-box modal-wide">
+<!-- ===================== GUINNESS GÉNÉRATION MODAL ===================== -->
+@if (showGuinessModal) {
+  <div class="modal-overlay" (click.self)="showGuinessModal = false">
+    <div class="modal-box" style="max-width:460px">
       <div class="modal-header">
-        <span class="material-icons">payments</span>
-        <h2>Nouveau règlement ristourne</h2>
-        <button class="btn-close-modal" (click)="showPmtModal = false"><span class="material-icons">close</span></button>
+        <span class="material-icons">sports_bar</span>
+        <h2>Générer ristournes Guinness</h2>
+        <button class="btn-close-modal" (click)="showGuinessModal = false"><span class="material-icons">close</span></button>
       </div>
-      @if (pmtError) {
-        <div class="modal-error"><span class="material-icons">error</span>{{ pmtError }}</div>
+      @if (guinessError) {
+        <div class="modal-error"><span class="material-icons">error</span>{{ guinessError }}</div>
       }
       <div class="modal-body">
+        <p style="margin-bottom:16px;color:#555;font-size:14px">
+          Sélectionnez la période sur laquelle générer les règlements Guinness depuis toutes les factures de ventes validées.
+        </p>
         <div class="form-grid">
           <div class="form-group">
-            <label>Client <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="pmtForm.partnerId">
-              <option [value]="0">-- Sélectionner --</option>
-              @for (c of clients; track c.id) {
-                <option [value]="c.id">{{ c.name }}</option>
-              }
-            </select>
+            <label>Date de début <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="guinessDateStart" />
           </div>
           <div class="form-group">
-            <label>Date</label>
-            <input type="date" class="form-control" [(ngModel)]="pmtForm.date" />
-          </div>
-          <div class="form-group form-full">
-            <label>Notes</label>
-            <textarea class="form-control" [(ngModel)]="pmtForm.notes" rows="2"></textarea>
-          </div>
-        </div>
-
-        <!-- Lines -->
-        <div class="lines-section">
-          <div class="lines-header">
-            <span class="lines-title">Lignes de ristourne</span>
-            <button class="btn-add-line" (click)="addPmtLine()">
-              <span class="material-icons">add</span> Ajouter ligne
-            </button>
-          </div>
-          @if (pmtForm.lines.length > 0) {
-            <div class="lines-wrap">
-              <table class="lines-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Catégorie</th>
-                    <th class="ar">Quantité vendue</th>
-                    <th class="ar">Montant unit. (FCFA)</th>
-                    <th class="ar">Total</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (line of pmtForm.lines; track $index; let i = $index) {
-                    <tr>
-                      <td class="ln">{{ i + 1 }}</td>
-                      <td>
-                        <select class="inp" [(ngModel)]="line.categoryId">
-                          <option [value]="0">-- Catégorie --</option>
-                          @for (cat of categories; track cat.id) {
-                            <option [value]="cat.id">{{ cat.name }}</option>
-                          }
-                        </select>
-                      </td>
-                      <td class="ar"><input type="number" class="inp ar" [(ngModel)]="line.quantite" min="0" /></td>
-                      <td class="ar"><input type="number" class="inp ar" [(ngModel)]="line.montantUnitaire" min="0" /></td>
-                      <td class="ar amt">{{ getPmtLineMontantTotal(line) | number:'1.0-2' }}</td>
-                      <td><button class="btn-del" (click)="removePmtLine(i)"><span class="material-icons">delete</span></button></td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-          <div class="pmt-total">
-            <span>Total estimé :</span>
-            <span class="total-val">{{ getTotalPmt() | number:'1.0-2' }} FCFA</span>
+            <label>Date de fin <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="guinessDateEnd" />
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-cancel" (click)="showPmtModal = false">Annuler</button>
-        <button class="btn-save" (click)="savePmt()" [disabled]="savingPmt">
-          <span class="material-icons">save</span> Enregistrer
+        <button class="btn-cancel" (click)="showGuinessModal = false">Annuler</button>
+        <button class="btn-save" (click)="generateGuiness()" [disabled]="generatingGuiness">
+          <span class="material-icons">{{ generatingGuiness ? 'hourglass_empty' : 'autorenew' }}</span>
+          {{ generatingGuiness ? 'Génération…' : 'Générer' }}
         </button>
       </div>
     </div>
@@ -401,7 +608,7 @@
         <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span>
           Aperçu import ristournes ({{ importRows.length }} ligne(s))
         </h2>
-        <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
+        <button class="btn-close-modal" (click)="closeImportModal()"><span class="material-icons">close</span></button>
       </div>
       <div style="overflow-x:auto;max-height:50vh">
         <table class="rst-table">
@@ -418,7 +625,7 @@
                   @if (getClientId(row['Client']) && getCategoryId(row["Catégorie d'article"])) {
                     <span style="color:#198754">✓</span>
                   } @else {
-                    <span style="color:#dc3545" title="Client ou catégorie introuvable">✗</span>
+                    <span style="color:#dc3545">✗</span>
                   }
                 </td>
               </tr>

@@ -324,8 +324,8 @@ public class AccountingService {
             }
         }
 
-        move.setState("posted");
-        AccountMove saved = moveRepo.save(move);
+        moveRepo.updateState(move.getId(), "posted");
+        AccountMove saved = moveRepo.findById(move.getId()).orElse(move);
 
         // Recharger les lignes avec toutes les données analytiques (évite les problèmes de lazy loading)
         List<AccountMoveLine> linesWithAnalytic = moveLineRepo.findByMoveIdWithAnalytic(saved.getId());

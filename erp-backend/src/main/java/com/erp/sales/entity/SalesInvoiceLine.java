@@ -42,7 +42,7 @@ public class SalesInvoiceLine {
     @Column(precision = 10, scale = 4)
     private BigDecimal tauxTVA;
 
-    /** Compte de produit (ex: 706100) */
+    /** Compte de produit (ex: 701100) */
     private String accountCode;
 
     @Column(precision = 20, scale = 2)

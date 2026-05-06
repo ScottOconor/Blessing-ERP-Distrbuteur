@@ -81,6 +81,12 @@ public class SalesController {
         return ResponseEntity.ok(salesService.postInvoice(id));
     }
 
+    @PatchMapping("/invoices/{id}/warehouse")
+    public ResponseEntity<SalesInvoiceDTO> setWarehouse(@PathVariable Long id,
+                                                         @RequestParam Long warehouseId) {
+        return ResponseEntity.ok(salesService.setInvoiceWarehouse(id, warehouseId));
+    }
+
     @PostMapping("/invoices/{id}/cancel")
     public ResponseEntity<SalesInvoiceDTO> cancelInvoice(@PathVariable("id") Long id) {
         return ResponseEntity.ok(salesService.cancelInvoice(id));
@@ -113,15 +119,30 @@ public class SalesController {
         return ResponseEntity.ok(salesService.createAvoirManuel(request));
     }
 
+    @PostMapping("/invoices/{id}/apply-credit")
+    public ResponseEntity<SalesInvoiceDTO> applyCredit(
+            @PathVariable Long id,
+            @RequestParam java.math.BigDecimal amount,
+            @RequestParam Long companyId) {
+        return ResponseEntity.ok(salesService.applyCreditToInvoice(id, amount, companyId));
+    }
+
+    @GetMapping("/partners/{partnerId}/balance")
+    public ResponseEntity<java.util.Map<String, java.math.BigDecimal>> getPartnerBalance(
+            @PathVariable Long partnerId,
+            @RequestParam Long companyId) {
+        return ResponseEntity.ok(salesService.getPartnerBalanceInfo(partnerId, companyId));
+    }
+
     // ===================== PAIEMENTS =====================
 
     @GetMapping("/payments")
-    public ResponseEntity<List<InvoicePaymentDTO>> getPayments(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<List<InvoicePaymentDTO>> getPayments(@RequestParam Long companyId) {
         return ResponseEntity.ok(salesService.getAllPayments(companyId));
     }
 
     @GetMapping("/payments/invoice/{invoiceId}")
-    public ResponseEntity<List<InvoicePaymentDTO>> getPaymentsByInvoice(@PathVariable("invoiceId") Long invoiceId) {
+    public ResponseEntity<List<InvoicePaymentDTO>> getPaymentsByInvoice(@PathVariable Long invoiceId) {
         return ResponseEntity.ok(salesService.getPaymentsByInvoice(invoiceId));
     }
 
@@ -133,7 +154,7 @@ public class SalesController {
     // ===================== CLIENTS =====================
 
     @GetMapping("/clients")
-    public ResponseEntity<List<PartnerDTO>> getClients(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<List<PartnerDTO>> getClients(@RequestParam Long companyId) {
         return ResponseEntity.ok(salesService.getClients(companyId));
     }
 
@@ -143,12 +164,12 @@ public class SalesController {
     }
 
     @PutMapping("/clients/{id}")
-    public ResponseEntity<PartnerDTO> updateClient(@PathVariable("id") Long id, @RequestBody PartnerDTO dto) {
+    public ResponseEntity<PartnerDTO> updateClient(@PathVariable Long id, @RequestBody PartnerDTO dto) {
         return ResponseEntity.ok(salesService.updateClient(id, dto));
     }
 
     @DeleteMapping("/clients/{id}")
-    public ResponseEntity<Void> deleteClient(@PathVariable("id") Long id) {
+    public ResponseEntity<Void> deleteClient(@PathVariable Long id) {
         salesService.deleteClient(id);
         return ResponseEntity.noContent().build();
     }

@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { RistourneService, Ristourne, RistournePaiement, RistournePaiementLine, PartnerGroup } from '../../services/ristourne.service';
+import { RistourneService, Ristourne, RistournePaiement, RistournePaiementLine, PartnerGroup, QuarterGroup } from '../../services/ristourne.service';
 import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -37,29 +37,52 @@ export class RistourneListComponent implements OnInit {
   rstForm: Ristourne = this.emptyRst();
   rstError = '';
 
-  // ===== Paiements tab =====
-  paiements: RistournePaiement[] = [];
-  loadingPmt = false;
-  showPmtModal = false;
-  editingPmt: RistournePaiement | null = null;
-  savingPmt = false;
-  pmtForm: RistournePaiement = this.emptyPmt();
-  pmtError = '';
+  // ===== Tabs =====
+  activeTab: 'config' | 'brasseries' | 'guinness' | 'reglements' = 'config';
+  reglSubTab: 'brasseries' | 'guinness' = 'brasseries';
 
-  activeTab: 'config' | 'paiements' | 'reglements' = 'config';
+  // ===== Brasseries tab =====
+  brasseriesPaiements: RistournePaiement[] = [];
+  loadingBrasseries = false;
+  generatingQuarter: string | null = null;  // 'Q1-2026'
+  quarterMsg = '';
+  quarterError = '';
+  expandedBrasserieKeys = new Set<string>(); // 'Q1-2026-partnerId'
+  expandedQuarters = new Set<string>();       // 'Q1-2026'
 
-  // ===== Règlements groupés =====
-  groups: PartnerGroup[] = [];
-  loadingGroups = false;
-  expandedPartners = new Set<number>();
-  generatingFacture: number | null = null;
+  // ===== Guinness tab =====
+  guinessPaiements: RistournePaiement[] = [];
+  loadingGuiness = false;
+  showGuinessModal = false;
+  guinessDateStart = '';
+  guinessDateEnd   = '';
+  generatingGuiness = false;
+  guinessMsg = '';
+  guinessError = '';
+  expandedGuinessKeys = new Set<number>(); // partnerId
+
+  // ===== Règlements tab (génération avoirs) =====
+  reglBrasseriesGroups: QuarterGroup[] = [];
+  reglGuinessGroups: PartnerGroup[] = [];
+  loadingReglBrasseries = false;
+  loadingReglGuiness = false;
+  expandedReglKeys = new Set<string>(); // 'Q1-2026-partnerId' or 'guinness-partnerId'
+  expandedReglQuarters = new Set<string>();
+  generatingFacture: string | null = null;
   factureMsg = '';
   factureError = '';
 
   readonly TYPE_OPTS = [
-    { value: '', label: 'Ristourne HT brute' },
+    { value: '', label: 'Autre (HT × 1.1925)' },
     { value: 'brasserie', label: 'Brasserie (HT × (1 + précompte% + 19.25%))' },
-    { value: 'guinness', label: 'Guinness (HT × 1.1925)' }
+    { value: 'guinness',  label: 'Guinness (HT × 1.1925 — sans précompte)' }
+  ];
+
+  readonly QUARTERS = [
+    { q: 1, label: 'T1 (Jan–Mar)' },
+    { q: 2, label: 'T2 (Avr–Jun)' },
+    { q: 3, label: 'T3 (Jul–Sep)' },
+    { q: 4, label: 'T4 (Oct–Déc)' },
   ];
 
   constructor(
@@ -71,18 +94,17 @@ export class RistourneListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadAll();
+    this.salesSvc.getClients(this.companyId).subscribe(c => this.clients = c);
+    this.stockSvc.getCategories(this.companyId).subscribe(cats => this.categories = cats);
+    this.loadRistournes();
   }
 
   get companyId(): number {
-    return this.auth.getCurrentUser()?.companyId ?? 1;
+    return this.auth.getCompanyId();
   }
 
-  private loadAll(): void {
-    this.loadRistournes();
-    this.loadPaiements();
-    this.salesSvc.getClients(this.companyId).subscribe(c => this.clients = c);
-    this.stockSvc.getCategories(this.companyId).subscribe(cats => this.categories = cats);
+  get currentYear(): number {
+    return new Date().getFullYear();
   }
 
   // ===== Config =====
@@ -127,110 +149,182 @@ export class RistourneListComponent implements OnInit {
     this.svc.delete(id).subscribe(() => this.loadRistournes());
   }
 
-  // ===== Paiements =====
+  // ===== Brasseries tab =====
 
-  loadPaiements(): void {
-    this.loadingPmt = true;
-    this.svc.getAllPaiements(this.companyId).subscribe({
-      next: p => { this.paiements = p; this.loadingPmt = false; },
-      error: () => this.loadingPmt = false
+  loadBrasseries(): void {
+    this.loadingBrasseries = true;
+    this.svc.getAllPaiements(this.companyId, 'brasserie').subscribe({
+      next: p => { this.brasseriesPaiements = p; this.loadingBrasseries = false; },
+      error: () => this.loadingBrasseries = false
     });
   }
 
-  openNewPmt(): void {
-    this.editingPmt = null;
-    this.pmtForm = this.emptyPmt();
-    this.pmtError = '';
-    this.showPmtModal = true;
+  get brasseriesByQuarter(): QuarterGroup[] {
+    return this.groupByQuarter(this.brasseriesPaiements);
   }
 
-  addPmtLine(): void {
-    this.pmtForm.lines.push({ categoryId: 0, quantite: 0, montantUnitaire: 0 });
+  generateQuarter(q: number): void {
+    const key = `Q${q}-${this.currentYear}`;
+    this.generatingQuarter = key;
+    this.quarterMsg = '';
+    this.quarterError = '';
+    this.svc.generateByQuarter(q, this.currentYear, this.companyId).subscribe({
+      next: res => {
+        this.generatingQuarter = null;
+        this.quarterMsg = `T${q} : ${res.generated} règlement(s) créé(s), ${res.skipped} ignoré(s).`;
+        this.loadBrasseries();
+      },
+      error: err => {
+        this.generatingQuarter = null;
+        this.quarterError = err?.error?.message ?? 'Erreur lors de la génération.';
+      }
+    });
   }
 
-  removePmtLine(i: number): void {
-    this.pmtForm.lines.splice(i, 1);
+  toggleQuarter(key: string): void {
+    this.expandedQuarters.has(key) ? this.expandedQuarters.delete(key) : this.expandedQuarters.add(key);
   }
 
-  savePmt(): void {
-    if (!this.pmtForm.partnerId) {
-      this.pmtError = 'Veuillez sélectionner un client.';
+  toggleBrasseriePartner(key: string): void {
+    this.expandedBrasserieKeys.has(key) ? this.expandedBrasserieKeys.delete(key) : this.expandedBrasserieKeys.add(key);
+  }
+
+  confirmBrasseriePmt(id: number): void {
+    if (!confirm('Confirmer ce règlement ?')) return;
+    this.svc.confirmPaiement(id).subscribe(() => this.loadBrasseries());
+  }
+
+  cancelBrasseriePmt(id: number): void {
+    if (!confirm('Annuler ce règlement ?')) return;
+    this.svc.cancelPaiement(id).subscribe(() => this.loadBrasseries());
+  }
+
+  confirmAllBrasserie(paiements: RistournePaiement[]): void {
+    const drafts = paiements.filter(p => p.state === 'draft');
+    if (drafts.length === 0) return;
+    if (!confirm(`Confirmer les ${drafts.length} règlement(s) en brouillon ?`)) return;
+    let done = 0;
+    for (const p of drafts) {
+      this.svc.confirmPaiement(p.id!).subscribe(() => {
+        done++;
+        if (done === drafts.length) this.loadBrasseries();
+      });
+    }
+  }
+
+  // ===== Guinness tab =====
+
+  loadGuiness(): void {
+    this.loadingGuiness = true;
+    this.svc.getAllPaiements(this.companyId, 'guinness').subscribe({
+      next: p => { this.guinessPaiements = p; this.loadingGuiness = false; },
+      error: () => this.loadingGuiness = false
+    });
+  }
+
+  get guinessByClient(): PartnerGroup[] {
+    return this.groupByPartner(this.guinessPaiements);
+  }
+
+  openGuinessModal(): void {
+    this.guinessDateStart = '';
+    this.guinessDateEnd   = '';
+    this.guinessMsg   = '';
+    this.guinessError = '';
+    this.showGuinessModal = true;
+  }
+
+  generateGuiness(): void {
+    if (!this.guinessDateStart || !this.guinessDateEnd) {
+      this.guinessError = 'Veuillez saisir une date de début et de fin.';
       return;
     }
-    this.savingPmt = true;
-    this.pmtError = '';
-    this.svc.savePaiement({ ...this.pmtForm, companyId: this.companyId }).subscribe({
-      next: () => { this.showPmtModal = false; this.loadPaiements(); this.savingPmt = false; },
-      error: () => { this.pmtError = 'Erreur lors de la sauvegarde.'; this.savingPmt = false; }
+    this.generatingGuiness = true;
+    this.guinessError = '';
+    this.svc.generateByPeriod(this.guinessDateStart, this.guinessDateEnd, this.companyId).subscribe({
+      next: res => {
+        this.generatingGuiness = false;
+        this.guinessMsg = `${res.generated} règlement(s) créé(s), ${res.skipped} ignoré(s) sur ${res.total} facture(s).`;
+        this.showGuinessModal = false;
+        this.loadGuiness();
+      },
+      error: err => {
+        this.generatingGuiness = false;
+        this.guinessError = err?.error?.message ?? 'Erreur lors de la génération.';
+      }
     });
   }
 
-  confirmPmt(id: number): void {
-    if (!confirm('Confirmer ce règlement ristourne ?')) return;
-    this.svc.confirmPaiement(id!).subscribe(() => this.loadPaiements());
+  toggleGuinessPartner(pid: number): void {
+    this.expandedGuinessKeys.has(pid) ? this.expandedGuinessKeys.delete(pid) : this.expandedGuinessKeys.add(pid);
   }
 
-  cancelPmt(id: number): void {
-    if (!confirm('Annuler ce règlement ristourne ?')) return;
-    this.svc.cancelPaiement(id!).subscribe(() => this.loadPaiements());
+  confirmGuinessPmt(id: number): void {
+    if (!confirm('Confirmer ce règlement ?')) return;
+    this.svc.confirmPaiement(id).subscribe(() => this.loadGuiness());
   }
 
-  getPmtLineMontantTotal(line: RistournePaiementLine): number {
-    return (line.quantite ?? 0) * (line.montantUnitaire ?? 0);
+  cancelGuinessPmt(id: number): void {
+    if (!confirm('Annuler ce règlement ?')) return;
+    this.svc.cancelPaiement(id).subscribe(() => this.loadGuiness());
   }
 
-  getTotalPmt(): number {
-    return this.pmtForm.lines.reduce((s, l) => s + this.getPmtLineMontantTotal(l), 0);
-  }
-
-  stateBadge(state: string | undefined): string {
-    switch (state) {
-      case 'confirmed': return 'badge-confirmed';
-      case 'done': return 'badge-done';
-      case 'cancelled': return 'badge-cancelled';
-      default: return 'badge-draft';
+  confirmAllGuiness(paiements: RistournePaiement[]): void {
+    const drafts = paiements.filter(p => p.state === 'draft');
+    if (drafts.length === 0) return;
+    if (!confirm(`Confirmer les ${drafts.length} règlement(s) en brouillon ?`)) return;
+    let done = 0;
+    for (const p of drafts) {
+      this.svc.confirmPaiement(p.id!).subscribe(() => {
+        done++;
+        if (done === drafts.length) this.loadGuiness();
+      });
     }
   }
 
-  stateLabel(state: string | undefined): string {
-    switch (state) {
-      case 'confirmed': return 'Confirmé';
-      case 'done': return 'Fait';
-      case 'cancelled': return 'Annulé';
-      default: return 'Brouillon';
-    }
+  // ===== Règlements tab =====
+
+  loadReglements(): void {
+    this.loadReglBrasseries();
+    this.loadReglGuiness();
   }
 
-  // ===== Règlements groupés =====
-
-  loadGroups(): void {
-    this.loadingGroups = true;
-    this.factureMsg = '';
-    this.factureError = '';
-    this.svc.getGroupedPaiements(this.companyId).subscribe({
-      next: g => { this.groups = g; this.loadingGroups = false; },
-      error: () => this.loadingGroups = false
+  loadReglBrasseries(): void {
+    this.loadingReglBrasseries = true;
+    this.svc.getGroupedPaiements(this.companyId, 'brasserie').subscribe({
+      next: groups => {
+        this.reglBrasseriesGroups = this.groupPartnersByQuarter(groups);
+        this.loadingReglBrasseries = false;
+      },
+      error: () => this.loadingReglBrasseries = false
     });
   }
 
-  togglePartner(pid: number): void {
-    if (this.expandedPartners.has(pid)) {
-      this.expandedPartners.delete(pid);
-    } else {
-      this.expandedPartners.add(pid);
-    }
+  loadReglGuiness(): void {
+    this.loadingReglGuiness = true;
+    this.svc.getGroupedPaiements(this.companyId, 'guinness').subscribe({
+      next: groups => { this.reglGuinessGroups = groups; this.loadingReglGuiness = false; },
+      error: () => this.loadingReglGuiness = false
+    });
   }
 
-  generateFactureForPartner(group: PartnerGroup): void {
-    const ids = group.paiements.map(p => p.id!);
-    this.generatingFacture = group.partnerId;
-    this.factureMsg = '';
+  toggleReglQuarter(key: string): void {
+    this.expandedReglQuarters.has(key) ? this.expandedReglQuarters.delete(key) : this.expandedReglQuarters.add(key);
+  }
+
+  toggleReglPartner(key: string): void {
+    this.expandedReglKeys.has(key) ? this.expandedReglKeys.delete(key) : this.expandedReglKeys.add(key);
+  }
+
+  generateFactureForGroup(ids: number[], key: string): void {
+    this.generatingFacture = key;
+    this.factureMsg   = '';
     this.factureError = '';
     this.svc.generateFacture(ids, this.companyId).subscribe({
       next: res => {
         this.generatingFacture = null;
-        this.factureMsg = `Facture ${res.invoiceName} générée.`;
-        this.loadGroups();
+        this.factureMsg = `Avoir ${res.invoiceName} généré avec succès.`;
+        this.loadReglements();
       },
       error: err => {
         this.generatingFacture = null;
@@ -241,6 +335,80 @@ export class RistourneListComponent implements OnInit {
 
   openFacture(id: number): void {
     this.router.navigate(['/sales/invoices', id]);
+  }
+
+  // ===== Helpers =====
+
+  private groupByQuarter(paiements: RistournePaiement[]): QuarterGroup[] {
+    const map = new Map<string, QuarterGroup>();
+    for (const p of paiements) {
+      if (!p.date) continue;
+      const d = new Date(p.date);
+      const q = Math.floor(d.getMonth() / 3) + 1;
+      const y = d.getFullYear();
+      const key = `Q${q}-${y}`;
+      if (!map.has(key)) {
+        map.set(key, { quarter: q, year: y, label: `T${q} ${y}`, totalAmount: 0, partners: [] });
+      }
+      const qg = map.get(key)!;
+      let pg = qg.partners.find(x => x.partnerId === p.partnerId);
+      if (!pg) {
+        pg = { partnerId: p.partnerId, partnerName: p.partnerName!, totalAmount: 0, paiements: [] };
+        qg.partners.push(pg);
+      }
+      pg.paiements.push(p);
+      pg.totalAmount += p.totalAmount ?? 0;
+      qg.totalAmount += p.totalAmount ?? 0;
+    }
+    return Array.from(map.values()).sort((a, b) => b.year - a.year || b.quarter - a.quarter);
+  }
+
+  private groupByPartner(paiements: RistournePaiement[]): PartnerGroup[] {
+    const map = new Map<number, PartnerGroup>();
+    for (const p of paiements) {
+      if (!map.has(p.partnerId)) {
+        map.set(p.partnerId, { partnerId: p.partnerId, partnerName: p.partnerName!, totalAmount: 0, paiements: [] });
+      }
+      const pg = map.get(p.partnerId)!;
+      pg.paiements.push(p);
+      pg.totalAmount += p.totalAmount ?? 0;
+    }
+    return Array.from(map.values());
+  }
+
+  private groupPartnersByQuarter(groups: PartnerGroup[]): QuarterGroup[] {
+    // Groups already contain confirmed RSTs per partner; group those by quarter
+    const allPaiements: RistournePaiement[] = groups.flatMap(g => g.paiements);
+    return this.groupByQuarter(allPaiements);
+  }
+
+  hasDrafts(paiements: RistournePaiement[]): boolean {
+    return paiements.some(p => p.state === 'draft');
+  }
+
+  stateBadge(state: string | undefined): string {
+    switch (state) {
+      case 'confirmed': return 'badge-confirmed';
+      case 'done':      return 'badge-done';
+      case 'cancelled': return 'badge-cancelled';
+      default:          return 'badge-draft';
+    }
+  }
+
+  stateLabel(state: string | undefined): string {
+    switch (state) {
+      case 'confirmed': return 'Confirmé';
+      case 'done':      return 'Réglé';
+      case 'cancelled': return 'Annulé';
+      default:          return 'Brouillon';
+    }
+  }
+
+  onTabChange(tab: 'config' | 'brasseries' | 'guinness' | 'reglements'): void {
+    this.activeTab = tab;
+    if (tab === 'brasseries' && this.brasseriesPaiements.length === 0) this.loadBrasseries();
+    if (tab === 'guinness'   && this.guinessPaiements.length === 0)    this.loadGuiness();
+    if (tab === 'reglements') this.loadReglements();
   }
 
   // ===== Import Excel =====
@@ -262,12 +430,12 @@ export class RistourneListComponent implements OnInit {
       const rows = await parseExcelFile(file);
       this.importRows = rows.filter(r => r['Client']);
       if (this.importRows.length === 0) {
-        this.showError('Aucune ligne valide (colonne "Client" requise)');
+        this.rstError = 'Aucune ligne valide (colonne "Client" requise)';
         this.importLoading = false;
         return;
       }
       this.showImportModal = true;
-    } catch (e: any) { this.showError('Erreur : ' + e.message); }
+    } catch (e: any) { this.rstError = 'Erreur : ' + e.message; }
     this.importLoading = false;
   }
 
@@ -294,7 +462,7 @@ export class RistourneListComponent implements OnInit {
   normalizeType(raw: string): string {
     const v = this.norm(raw);
     if (v === 'brasserie') return 'brasserie';
-    if (v === 'guinness') return 'guinness';
+    if (v === 'guinness')  return 'guinness';
     return '';
   }
 
@@ -304,10 +472,7 @@ export class RistourneListComponent implements OnInit {
     if (existing) return existing;
     try {
       const created = await this.stockSvc.createCategory({ name, companyId: this.companyId }).toPromise();
-      if (created?.id) {
-        this.categories.push(created);
-        return created.id;
-      }
+      if (created?.id) { this.categories.push(created); return created.id; }
     } catch {}
     return undefined;
   }
@@ -326,16 +491,12 @@ export class RistourneListComponent implements OnInit {
       if (!partnerId) { noClient++; continue; }
       if (!categoryId) { noCat++; continue; }
       const dto: Ristourne = {
-        partnerId,
-        categoryId,
+        partnerId, categoryId,
         montantFixe: parseFloat(row['Montant de la ristourne']) || 0,
         typeRistourne: this.normalizeType(String(row['Type de ristourne'] || '')),
         companyId: this.companyId
       };
-      try {
-        await this.svc.save(dto).toPromise();
-        done++;
-      } catch { apiErr++; }
+      try { await this.svc.save(dto).toPromise(); done++; } catch { apiErr++; }
     }
     this.closeImportModal();
     this.loadRistournes();
@@ -346,15 +507,7 @@ export class RistourneListComponent implements OnInit {
     alert(msg.join('\n'));
   }
 
-  private showError(msg: string): void {
-    this.rstError = msg;
-  }
-
   private emptyRst(): Ristourne {
     return { partnerId: 0, categoryId: 0, montantFixe: 0, typeRistourne: '', companyId: this.companyId };
-  }
-
-  private emptyPmt(): RistournePaiement {
-    return { partnerId: 0, companyId: this.companyId, lines: [] };
   }
 }

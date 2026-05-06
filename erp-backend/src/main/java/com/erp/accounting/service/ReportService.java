@@ -170,8 +170,10 @@ public class ReportService {
                                                         List<Long> partnerIds) {
         List<AccountMoveLine> lines = moveLineRepo.findTiersLinesInPeriod(companyId, dateFrom, dateTo);
         Map<String, List<PartnerBalanceLineDTO>> groups = buildPartnerBalance4(lines, resultSelection, partnerIds);
+        List<PartnerBalanceLineDTO> flatLines = new ArrayList<>();
+        groups.values().forEach(flatLines::addAll);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("groups", groups); result.put("totals", computePartnerTotals4(groups));
+        result.put("lines", flatLines); result.put("groups", groups); result.put("totals", computePartnerTotals4(groups));
         return result;
     }
 
@@ -183,8 +185,10 @@ public class ReportService {
         List<AccountMoveLine> periodLines = moveLineRepo.findTiersLinesInPeriod(companyId, dateFrom, dateTo);
         List<AccountMoveLine> initLines = moveLineRepo.findTiersLinesBeforeDate(companyId, dateFrom);
         Map<String, List<PartnerBalanceLineDTO>> groups = buildPartnerBalance6(initLines, periodLines, resultSelection, partnerIds);
+        List<PartnerBalanceLineDTO> flatLines = new ArrayList<>();
+        groups.values().forEach(flatLines::addAll);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("groups", groups); result.put("totals", computePartnerTotals6(groups));
+        result.put("lines", flatLines); result.put("groups", groups); result.put("totals", computePartnerTotals6(groups));
         return result;
     }
 

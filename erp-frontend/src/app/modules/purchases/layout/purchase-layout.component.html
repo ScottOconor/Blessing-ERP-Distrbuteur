@@ -39,9 +39,32 @@
     </nav>
 
     <div class="nav-right">
+      @if (isCentralized) {
+        <div class="company-selector" [class.open]="showCompanyPicker">
+          <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
+            <span class="material-icons">business</span>
+            <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
+            <span class="material-icons arrow">expand_more</span>
+          </button>
+          @if (showCompanyPicker) {
+            <div class="company-dropdown">
+              @for (c of companies; track c.id) {
+                <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
+                  <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                  <span class="company-opt-name">{{ c.name }}</span>
+                  @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
       <div class="user-pill">
         <div class="user-avatar-sm">{{ userInitials }}</div>
         <span class="user-name-sm">{{ userName }}</span>
+        @if (!isCentralized) {
+          <span class="company-name">| {{ activeCompany?.name || '' }}</span>
+        }
       </div>
       <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
         <span class="material-icons">logout</span>

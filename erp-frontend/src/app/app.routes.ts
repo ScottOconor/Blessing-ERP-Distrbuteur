@@ -32,5 +32,10 @@ export const routes: Routes = [
     loadChildren: () => import('./modules/stock/stock.routes').then(m => m.stockRoutes),
     canActivate: [authGuard]
   },
+  {
+    path: 'config',
+    loadChildren: () => import('./modules/config/config.routes').then(m => m.configRoutes),
+    canActivate: [authGuard]
+  },
   { path: '**', redirectTo: '/welcome' }
 ];

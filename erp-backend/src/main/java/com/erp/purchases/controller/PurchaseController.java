@@ -81,6 +81,12 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.postInvoice(id));
     }
 
+    @PatchMapping("/invoices/{id}/warehouse")
+    public ResponseEntity<PurchaseInvoiceDTO> setWarehouse(@PathVariable Long id,
+                                                            @RequestParam Long warehouseId) {
+        return ResponseEntity.ok(purchaseService.setInvoiceWarehouse(id, warehouseId));
+    }
+
     @PostMapping("/invoices/{id}/cancel")
     public ResponseEntity<PurchaseInvoiceDTO> cancelInvoice(@PathVariable("id") Long id) {
         return ResponseEntity.ok(purchaseService.cancelInvoice(id));

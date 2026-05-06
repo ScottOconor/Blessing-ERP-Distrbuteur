@@ -242,13 +242,15 @@ public class RemiseService {
 
             BigDecimal montantUnit = r.getMontantFixe();
             BigDecimal montantHT = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP);
-            // brasserie : HT × (1 + tauxPrécompte/100) ; guinness : HT brut
+            // brasserie : HT × (1 + tauxPrécompte/100 + 0.1925) ; guinness et autres : HT × (1 + 0.1925)
             BigDecimal montantTTC;
             if ("brasserie".equals(r.getTypeRemise())) {
-                BigDecimal coeff = BigDecimal.ONE.add(tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+                BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                montantTTC = montantHT;
+                // guinness et autres : pas de précompte mais TVA 19.25%
+                montantTTC = montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
             }
 
             lines.add(RemisePaiementLine.builder()
@@ -360,18 +362,19 @@ public class RemiseService {
                 .map(j -> j.getId())
                 .orElseThrow(() -> new IllegalStateException("Aucun journal d'achats trouvé"));
 
-        // Construire les lignes de la facture
+        // Construire les lignes : quantity=1, prixUnitaire=montantTotal (TTC) comme Odoo
         List<PurchaseInvoiceRequest.LineRequest> lines = new ArrayList<>();
         for (RemisePaiement p : paiements) {
             for (RemisePaiementLine l : p.getLines()) {
+                BigDecimal montantTTC = l.getMontantTotal() != null ? l.getMontantTotal() : BigDecimal.ZERO;
                 lines.add(PurchaseInvoiceRequest.LineRequest.builder()
                         .description("Remise " + l.getCategory().getName()
                                 + " — " + p.getName()
                                 + (p.getInvoice() != null ? " / " + p.getInvoice().getName() : ""))
-                        .quantity(l.getQuantite() != null ? l.getQuantite() : BigDecimal.ONE)
-                        .prixUnitaire(l.getMontantUnitaire() != null ? l.getMontantUnitaire() : BigDecimal.ZERO)
+                        .quantity(BigDecimal.ONE)
+                        .prixUnitaire(montantTTC)
                         .tauxTVA(BigDecimal.ZERO)
-                        .categoryId(null)   // pas de remise sur une facture remise
+                        .categoryId(null)
                         .consigne(false)
                         .build());
             }
@@ -381,7 +384,7 @@ public class RemiseService {
             throw new IllegalStateException("Les règlements sélectionnés n'ont aucune ligne de détail");
         }
 
-        String notes = "Facture remises — "
+        String notes = "Avoir remises — "
                 + paiements.stream().map(RemisePaiement::getName).collect(Collectors.joining(", "));
 
         PurchaseInvoiceRequest req = PurchaseInvoiceRequest.builder()
@@ -389,12 +392,14 @@ public class RemiseService {
                 .journalId(journalId)
                 .date(LocalDate.now())
                 .companyId(companyId)
-                .type("invoice")
+                .type("credit_note")
                 .notes(notes)
                 .lines(lines)
                 .build();
 
-        com.erp.purchases.dto.PurchaseInvoiceDTO invoice = purchaseService.createInvoice(req);
+        com.erp.purchases.dto.PurchaseInvoiceDTO draft = purchaseService.createInvoice(req);
+        // Valider immédiatement l'avoir fournisseur (réduit la dette fournisseur dès la génération)
+        com.erp.purchases.dto.PurchaseInvoiceDTO invoice = purchaseService.postInvoice(draft.getId());
 
         // Marquer les règlements comme "done" et lier la facture
         for (RemisePaiement p : paiements) {
@@ -432,6 +437,9 @@ public class RemiseService {
     }
 
     private RemiseDTO toDTO(Remise r) {
+        BigDecimal taux = r.getPartner().getTauxPrecompte() != null
+                ? r.getPartner().getTauxPrecompte() : BigDecimal.ZERO;
+        BigDecimal ttcUnit = computeUnitTTC(r.getMontantFixe(), r.getTypeRemise(), taux);
         return RemiseDTO.builder()
                 .id(r.getId())
                 .partnerId(r.getPartner().getId())
@@ -439,10 +447,20 @@ public class RemiseService {
                 .categoryId(r.getCategory().getId())
                 .categoryName(r.getCategory().getName())
                 .montantFixe(r.getMontantFixe())
+                .montantTTCUnitaire(ttcUnit)
                 .typeRemise(r.getTypeRemise())
                 .companyId(r.getCompanyId())
                 .active(r.isActive())
                 .build();
+    }
+
+    private BigDecimal computeUnitTTC(BigDecimal montantFixe, String type, BigDecimal tauxPrecompte) {
+        if ("brasserie".equals(type)) {
+            BigDecimal pcRate = tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
+            return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+        }
+        return montantFixe.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
     }
 
     private RemisePaiementDTO toPaiementDTO(RemisePaiement p) {

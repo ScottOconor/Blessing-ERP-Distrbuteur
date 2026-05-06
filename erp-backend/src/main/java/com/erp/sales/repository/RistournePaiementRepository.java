@@ -10,4 +10,8 @@ public interface RistournePaiementRepository extends JpaRepository<RistournePaie
     List<RistournePaiement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
     List<RistournePaiement> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);
+
+    List<RistournePaiement> findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(Long companyId, String typeRistourne);
+
+    boolean existsByInvoice_IdAndTypeRistourne(Long invoiceId, String typeRistourne);
 }

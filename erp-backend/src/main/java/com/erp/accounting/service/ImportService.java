@@ -33,23 +33,71 @@ public class ImportService {
     // PLAN COMPTABLE (account.account)
     // =====================================================
 
-    public ImportResult importAccounts(MultipartFile file, Long companyId) throws IOException {
+    public ImportResult importAccounts(MultipartFile file, Long companyId, boolean replace) throws IOException {
         Company company = getCompany(companyId);
         ImportResult result = ImportResult.builder().build();
+
+        if (replace) {
+            // Détacher les journaux de leurs comptes par défaut avant suppression
+            List<AccountJournal> journals = journalRepo.findByCompanyId(companyId);
+            for (AccountJournal j : journals) {
+                j.setDefaultDebitAccount(null);
+                j.setDefaultCreditAccount(null);
+            }
+            journalRepo.saveAll(journals);
+
+            // Supprimer tous les comptes de la société
+            accountRepo.deleteByCompanyId(companyId);
+            accountRepo.flush();
+            log.info("Plan comptable remplacé : tous les comptes de la société {} supprimés", companyId);
+        }
 
         Workbook wb = new XSSFWorkbook(file.getInputStream());
         try {
             Sheet sheet = wb.getSheetAt(0);
             Map<String, Integer> headers = readHeaders(sheet);
 
-            Integer colCode       = findCol(headers, "code", "Code");
-            Integer colName       = findCol(headers, "name", "Intitulé", "Nom");
-            Integer colType       = findCol(headers, "account_type", "Type");
-            Integer colDeprecated = findCol(headers, "deprecated", "Obsolète", "Obsolete");
-            Integer colReconcile  = findCol(headers, "reconcile", "Réconciliation", "Reconciliation");
+            log.info("Colonnes détectées dans le fichier : {}", headers.keySet());
+
+            // Odoo 15 FR / EN : toutes les variantes connues
+            Integer colCode = findCol(headers,
+                    "code", "Code", "Code du compte", "account code",
+                    "code_compte", "numéro", "Numero");
+
+            Integer colName = findCol(headers,
+                    "name", "Intitulé", "intitule", "Intitule",
+                    "Libelle", "Libellé", "libellé", "libelle",
+                    "Nom", "nom", "Nom du compte", "Account Name",
+                    "account name", "Désignation", "designation");
+
+            Integer colType = findCol(headers,
+                    "account_type", "Type", "type",
+                    "Type de compte", "type de compte",
+                    "Account Type", "account type",
+                    "Internal Type", "internal type",
+                    "Type (vue)", "Nature");
+
+            Integer colDeprecated = findCol(headers,
+                    "deprecated", "Deprecated",
+                    "Obsolète", "obsolete", "Obsolete",
+                    "Désactivé", "desactive");
+
+            Integer colReconcile = findCol(headers,
+                    "reconcile", "Reconcile",
+                    "Réconciliation", "Reconciliation",
+                    "Autoriser la réconciliation",
+                    "autoriser la reconciliation",
+                    "Allow Reconciliation", "allow reconciliation",
+                    "Réconciliation sur les pièces",
+                    "Reconciliation sur les pieces");
 
             if (colCode == null || colName == null) {
-                result.addError("Colonnes obligatoires manquantes: 'code' et 'name'");
+                String detected = String.join(", ", headers.keySet().stream()
+                        .filter(k -> !k.equals(k.toLowerCase()) || headers.keySet().stream().noneMatch(k2 -> k2.equals(k.toLowerCase()) && !k2.equals(k)))
+                        .distinct().sorted().toList());
+                result.addError("Colonnes 'code' et/ou 'name' introuvables. " +
+                        "Colonnes détectées dans le fichier : [" + detected + "]. " +
+                        "Colonnes attendues : 'Code' et 'Intitulé' (ou 'Libelle', 'Nom', 'name').");
                 return result;
             }
 
@@ -57,17 +105,24 @@ public class ImportService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                String code = getString(row, colCode);
+                String code = getString(row, colCode).trim();
+                // Odoo external ID format: "account.account_101" → extraire "101"
+                if (code.contains(".") && !code.contains(" ") && !code.matches("\\d+\\.\\d+")) continue;
+                // Sauter les lignes de titre ou vides
                 if (code.isEmpty()) continue;
+                // Nettoyer les codes qui contiennent "account.account_" ou similaire
+                if (code.startsWith("__") || code.equalsIgnoreCase("false")) continue;
 
-                String name = getString(row, colName);
-                if (name.isEmpty()) {
+                String name = colName != null ? getString(row, colName).trim() : "";
+                if (name.isEmpty() || name.equalsIgnoreCase("false")) {
                     result.addError("Ligne " + (i + 1) + " ignorée : nom manquant pour le code " + code);
                     result.setSkipped(result.getSkipped() + 1);
                     continue;
                 }
 
                 String rawType = (colType != null) ? getString(row, colType) : "";
+                // Odoo stocke parfois le type sous forme "asset_receivable (Receivable)" → extraire la clé
+                if (rawType.contains("(")) rawType = rawType.substring(0, rawType.indexOf("(")).trim();
                 String[] mapped = mapOdooAccountType(rawType);
                 String accountType = mapped[0];
                 String internalType = mapped[1];

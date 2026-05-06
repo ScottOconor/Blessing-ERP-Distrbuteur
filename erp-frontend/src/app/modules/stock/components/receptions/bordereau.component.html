@@ -9,6 +9,19 @@
       @if (bordereau?.pickingName) {
         <span class="ref-badge">{{ bordereau!.pickingName }}</span>
       }
+      @if (isReadOnly) {
+        <span class="state-badge done">Validé</span>
+      }
+    </div>
+    <div class="header-actions">
+      @if (bordereau) {
+        <button class="btn-export" (click)="exportExcel()" [disabled]="exporting" title="Exporter Excel">
+          <span class="material-icons">table_chart</span> Excel
+        </button>
+        <button class="btn-export btn-export-pdf" (click)="exportPdf()" [disabled]="exporting" title="Exporter PDF">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+      }
     </div>
   </div>
 
@@ -22,6 +35,7 @@
   @if (loading) {
     <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
   } @else if (bordereau) {
+
     <!-- Infos -->
     <div class="info-grid mb-16">
       @if (bordereau.supplierName) {
@@ -42,15 +56,23 @@
           <div class="info-value">{{ bordereau.invoiceDate | date:'dd/MM/yyyy' }}</div>
         </div>
       }
+      @if (bordereau.dateDone) {
+        <div class="info-card">
+          <div class="info-label">Date validation</div>
+          <div class="info-value text-success">{{ bordereau.dateDone | date:'dd/MM/yyyy HH:mm' }}</div>
+        </div>
+      }
     </div>
 
     <!-- Tableau bordereau -->
     <div class="card mb-16">
       <div class="card-header">
         <span>Lignes de réception</span>
-        <button class="btn-receive-all" (click)="receiveAll()">
-          <span class="material-icons">done_all</span> Tout recevoir
-        </button>
+        @if (!isReadOnly) {
+          <button class="btn-receive-all" (click)="receiveAll()">
+            <span class="material-icons">done_all</span> Tout recevoir
+          </button>
+        }
       </div>
       <table class="bordereau-table">
         <thead>
@@ -60,8 +82,10 @@
             <th class="text-right">Prix unitaire</th>
             <th class="text-right">Qté commandée</th>
             <th class="text-right">Qté reçue</th>
-            <th class="text-right">Reste</th>
-            <th class="text-right">Qté à recevoir</th>
+            @if (!isReadOnly) {
+              <th class="text-right">Qté à recevoir</th>
+            }
+            <th class="text-right avaries-col">Qté → Avaries</th>
           </tr>
         </thead>
         <tbody>
@@ -72,22 +96,24 @@
               <td class="text-right">{{ ligne.prixUnitaire | number:'1.0-0' }}</td>
               <td class="text-right">{{ ligne.qteCommandee | number:'1.0-2' }}</td>
               <td class="text-right text-success">{{ ligne.qteRecue | number:'1.0-2' }}</td>
-              <td class="text-right" [class.text-warning]="ligne.reste > 0" [class.text-success]="ligne.reste === 0">
-                {{ ligne.reste | number:'1.0-2' }}
-              </td>
-              <td class="text-right">
-                @if (ligne.reste > 0) {
-                  <input
-                    type="number"
-                    class="qty-input"
-                    [(ngModel)]="saisie[ligne.moveId]"
-                    [max]="ligne.reste"
-                    min="0"
-                    step="0.01"
-                  />
-                } @else {
-                  <span class="badge-done">Complet</span>
-                }
+              @if (!isReadOnly) {
+                <td class="text-right">
+                  @if (ligne.reste > 0) {
+                    <input
+                      type="number"
+                      class="qty-input"
+                      [(ngModel)]="saisie[ligne.moveId]"
+                      [max]="ligne.reste"
+                      min="0"
+                      step="0.01"
+                    />
+                  } @else {
+                    <span class="badge-done">Complet</span>
+                  }
+                </td>
+              }
+              <td class="text-right avaries-col" [class.text-danger]="avarieForLigne(ligne) > 0">
+                {{ avarieForLigne(ligne) | number:'1.0-2' }}
               </td>
             </tr>
           }
@@ -96,8 +122,13 @@
           <tr>
             <td colspan="3"><strong>Totaux</strong></td>
             <td class="text-right font-mono"><strong>{{ totalQteCommandee | number:'1.0-2' }}</strong></td>
-            <td colspan="2"></td>
-            <td class="text-right font-mono"><strong>{{ totalQteSaisie | number:'1.0-2' }}</strong></td>
+            <td class="text-right font-mono text-success"><strong>{{ totalQteSaisie | number:'1.0-2' }}</strong></td>
+            @if (!isReadOnly) {
+              <td></td>
+            }
+            <td class="text-right font-mono" [class.text-danger]="totalAvaries > 0">
+              <strong>{{ totalAvaries | number:'1.0-2' }}</strong>
+            </td>
           </tr>
         </tfoot>
       </table>
@@ -106,10 +137,12 @@
     <!-- Actions -->
     <div class="form-actions">
       <button class="btn-secondary" (click)="back()">Retour</button>
-      <button class="btn-primary" (click)="validate()" [disabled]="validating">
-        <span class="material-icons">check_circle</span>
-        {{ validating ? 'Validation...' : 'Valider la réception' }}
-      </button>
+      @if (!isReadOnly) {
+        <button class="btn-primary" (click)="validate()" [disabled]="validating">
+          <span class="material-icons">check_circle</span>
+          {{ validating ? 'Validation...' : 'Valider la réception' }}
+        </button>
+      }
     </div>
   }
 </div>

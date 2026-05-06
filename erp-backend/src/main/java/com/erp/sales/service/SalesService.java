@@ -21,11 +21,13 @@ import com.erp.stock.entity.StockQuant;
 import com.erp.stock.repository.ProductCategoryRepository;
 import com.erp.stock.repository.ProductRepository;
 import com.erp.stock.entity.StockPickingType;
+import com.erp.stock.entity.Warehouse;
 import com.erp.stock.repository.StockLocationRepository;
 import com.erp.stock.repository.StockMoveRepository;
 import com.erp.stock.repository.StockPickingRepository;
 import com.erp.stock.repository.StockPickingTypeRepository;
 import com.erp.stock.repository.StockQuantRepository;
+import com.erp.stock.repository.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,15 +69,28 @@ public class SalesService {
     private final EnlevementClientRepository enlevementClientRepo;
     private final RistourneRepository ristourneRepo;
     private final ProductCategoryRepository categoryRepo;
+    private final WarehouseRepository warehouseRepo;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
-    private static final String DEFAULT_REVENUE_ACCOUNT = "706100";
+    private static final String DEFAULT_REVENUE_ACCOUNT    = "7011";
     private static final String DEFAULT_RECEIVABLE_ACCOUNT = "4111";
-    private static final String TVA_ACCOUNT = "4431";
-    /** Compte de produit principal pour les frais d'enlèvement (base) */
-    private static final String ENLEVEMENT_ACCOUNT = "706400";
-    /** Compte de produit par défaut pour les suppléments d'enlèvement non spécifiés */
-    private static final String ENLEVEMENT_SUPPLEMENT_DEFAULT_ACCOUNT = "706401";
+    private static final String TVA_ACCOUNT                = "4431";
+    private static final String ENLEVEMENT_ACCOUNT         = "7015";
+    private static final String PSA_ACCOUNT                = "4412";
+    private static final String CONSIGNE_ACCOUNT           = "4194";
+    private static final String RISTOURNE_CREDIT_ACCOUNT   = "419800";
+    private static final BigDecimal RISTOURNE_7019_FIXE    = new BigDecimal("201.00");
+    private static final BigDecimal TVA_RATE               = new BigDecimal("0.1925");
+
+    private static final java.util.Set<String> CATEGORIES_RISTOURNE_BRASSERIE = java.util.Set.of(
+        "bieres 24", "bieres 12", "alcools mixtes 12", "alcools mixtes 24"
+    );
+    private static final java.util.Set<String> CATEGORIES_RISTOURNE_GUINNESS = java.util.Set.of(
+        "bouteille guinness", "autre bierre guinness",
+        "famille guinness bouteille 12",
+        "famille guinness bouteille de 15",
+        "famille guinness bouteille de 24"
+    );
 
     // ===================== BONS DE COMMANDE =====================
 
@@ -111,6 +126,7 @@ public class SalesService {
                 .partner(partner)
                 .journal(journal)
                 .company(company)
+                .warehouseId(req.getWarehouseId())
                 .build();
 
         buildOrderLines(order, req.getLines());
@@ -137,6 +153,7 @@ public class SalesService {
         order.setNotes(req.getNotes());
         order.setPartner(partner);
         order.setJournal(journal);
+        if (req.getWarehouseId() != null) order.setWarehouseId(req.getWarehouseId());
 
         order.getLines().clear();
         buildOrderLines(order, req.getLines());
@@ -296,6 +313,7 @@ public class SalesService {
                 .partner(partner)
                 .journal(journal)
                 .company(company)
+                .warehouseId(req.getWarehouseId())
                 .montantPaye(ZERO)
                 .build();
 
@@ -323,6 +341,7 @@ public class SalesService {
         invoice.setNotes(req.getNotes());
         invoice.setPartner(partner);
         invoice.setJournal(journal);
+        if (req.getWarehouseId() != null) invoice.setWarehouseId(req.getWarehouseId());
 
         invoice.getLines().clear();
         buildInvoiceLines(invoice, req.getLines());
@@ -335,14 +354,14 @@ public class SalesService {
      * Valide une facture ou un avoir et génère l'écriture comptable OHADA.
      *
      * Facture (invoice):
-     *   Dr 411x (client)  = Total TTC
-     *   Cr 70x (produits) = Total HT par ligne
-     *   Cr 4431 (TVA)     = Total TVA
+     *   Dr 411100 (client)       = Net à payer (TTC + consignes)
+     *   Cr 701100 (produits HT)  = Σ HT lignes non-consigne
+     *   Cr 441200 (PSA)          = Total précompte
+     *   Cr 443100 (TVA)          = Total TVA
+     *   Cr 701500 (enlèvement)   = Total frais d'enlèvement
+     *   Cr/Dr 419400 (emballages)= Signe selon quantité consigne
      *
-     * Avoir (credit_note) — écritures inversées :
-     *   Cr 411x (client)  = Total TTC
-     *   Dr 70x (produits) = Total HT par ligne
-     *   Dr 4431 (TVA)     = Total TVA
+     * Avoir (credit_note) — écritures inversées.
      */
     public SalesInvoiceDTO postInvoice(Long id) {
         SalesInvoice invoice = invoiceRepo.findById(id)
@@ -353,6 +372,17 @@ public class SalesService {
         }
 
         boolean isAvoir = "credit_note".equals(invoice.getType());
+
+        // Validation des champs obligatoires
+        List<String> missing = new ArrayList<>();
+        if (invoice.getPartner() == null) missing.add("Client");
+        if (invoice.getJournal() == null) missing.add("Journal");
+        if (invoice.getDate() == null) missing.add("Date");
+        if (!isAvoir && invoice.getWarehouseId() == null) missing.add("Entrepôt");
+        if (invoice.getLines() == null || invoice.getLines().isEmpty()) missing.add("Lignes de facturation");
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("Champs obligatoires manquants : " + String.join(", ", missing));
+        }
         Long companyId = invoice.getCompany().getId();
         LocalDate date = invoice.getDate();
 
@@ -363,13 +393,15 @@ public class SalesService {
                 : DEFAULT_RECEIVABLE_ACCOUNT;
 
         AccountAccount receivableAccount = accountRepo.findFirstByCodeAndCompanyId(receivableCode, companyId)
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("411", companyId)
-                        .stream().findFirst()
-                        .orElseThrow(() -> new EntityNotFoundException("Compte client 411x introuvable")));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("4111", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("411",  companyId))
+                .orElseThrow(() -> new EntityNotFoundException("Compte client introuvable : " + receivableCode));
 
         AccountAccount tvaAccount = accountRepo.findFirstByCodeAndCompanyId(TVA_ACCOUNT, companyId)
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("443", companyId)
-                        .stream().findFirst().orElse(null));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("443100", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("4431",   companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("443",    companyId))
+                .orElse(null);
 
         String docRef = isAvoir ? "Avoir " : "Facture ";
         String libelle411 = isAvoir
@@ -387,47 +419,12 @@ public class SalesService {
                 .partner(invoice.getPartner())
                 .build();
 
-        // Calculer enlèvement base et supplément pour l'écriture comptable
-        BigDecimal totalEnlBase = ZERO, totalEnlSupplements = ZERO;
-        java.util.Map<String, BigDecimal> supplementByAccount = new java.util.LinkedHashMap<>();
-        Long partnerId = invoice.getPartner().getId();
-
-        for (SalesInvoiceLine line : invoice.getLines()) {
-            if (ConsigneCodes.isConsigne(line.getProductCode())) continue;
-            BigDecimal enlTotal = line.getFraisEnlevement() != null ? line.getFraisEnlevement() : ZERO;
-            if (enlTotal.compareTo(ZERO) == 0) continue;
-
-            // Chercher le supplément pour ce client/catégorie
-            Long catId = line.getCategoryId();
-            if (catId != null) {
-                var clientRate = enlevementClientRepo
-                        .findByEnlevement_CategoryIdAndPartnerId(catId, partnerId);
-                if (clientRate.isPresent()) {
-                    BigDecimal suppQty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
-                    BigDecimal suppUnit = clientRate.get().getMontant() != null ? clientRate.get().getMontant() : ZERO;
-                    BigDecimal suppLine = suppUnit.multiply(suppQty).setScale(2, RoundingMode.HALF_UP);
-                    BigDecimal baseLine = enlTotal.subtract(suppLine);
-                    totalEnlBase = totalEnlBase.add(baseLine);
-                    totalEnlSupplements = totalEnlSupplements.add(suppLine);
-                    // Compte du supplément
-                    String suppAcc = clientRate.get().getSupplementAccountCode();
-                    if (suppAcc == null || suppAcc.isBlank()) suppAcc = ENLEVEMENT_SUPPLEMENT_DEFAULT_ACCOUNT;
-                    supplementByAccount.merge(suppAcc, suppLine, BigDecimal::add);
-                } else {
-                    totalEnlBase = totalEnlBase.add(enlTotal);
-                }
-            } else {
-                totalEnlBase = totalEnlBase.add(enlTotal);
-            }
-        }
-        BigDecimal totalEnlGlobal = totalEnlBase.add(totalEnlSupplements);
+        // 411100 : débit = net à payer (TTC + consignes net)
+        BigDecimal debit411 = invoice.getNetAPayer() != null ? invoice.getNetAPayer() : ZERO;
 
         List<AccountMoveLine> moveLines = new ArrayList<>();
-        // Montant 411x = TTC produits + frais d'enlèvement total
-        BigDecimal ttc = invoice.getTotalTTC() != null ? invoice.getTotalTTC() : ZERO;
-        BigDecimal debit411 = ttc.add(totalEnlGlobal);
 
-        // Ligne client 411x : débit pour facture, crédit pour avoir
+        // Ligne client 411100 : débit pour facture, crédit pour avoir
         moveLines.add(AccountMoveLine.builder()
                 .move(move).account(receivableAccount).partner(invoice.getPartner())
                 .name(libelle411).date(date)
@@ -436,72 +433,96 @@ public class SalesService {
                 .journal(invoice.getJournal()).company(invoice.getCompany())
                 .build());
 
-        // Lignes produit 70x : crédit pour facture, débit pour avoir
+        // Comptes résolus une seule fois
+        AccountAccount revenueAccount = accountRepo.findFirstByCodeAndCompanyId(DEFAULT_REVENUE_ACCOUNT, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("701100", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("701",    companyId))
+                .orElseThrow(() -> new EntityNotFoundException("Compte de produit introuvable (7011/701)"));
+
+        AccountAccount consigneAccount = accountRepo.findFirstByCodeAndCompanyId(CONSIGNE_ACCOUNT, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("4194",  companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("419400", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("419",   companyId))
+                .orElse(null);
+
+        // Lignes produits 701100 (non-consigne) et emballages 419400 (consigne, signe selon quantité)
         for (SalesInvoiceLine line : invoice.getLines()) {
-            String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
-                    ? line.getAccountCode() : DEFAULT_REVENUE_ACCOUNT;
+            if (line.isConsigne()) {
+                BigDecimal ttcLine = line.getMontantTTC() != null ? line.getMontantTTC() : ZERO;
+                if (ttcLine.compareTo(ZERO) != 0 && consigneAccount != null) {
+                    boolean positif = ttcLine.compareTo(ZERO) > 0;
+                    BigDecimal absAmt = ttcLine.abs();
+                    // Consigne positive : Cr 419400 (facture) / Dr 419400 (avoir)
+                    // Déconsigne négative : Dr 419400 (facture) / Cr 419400 (avoir)
+                    moveLines.add(AccountMoveLine.builder()
+                            .move(move).account(consigneAccount).partner(invoice.getPartner())
+                            .name(line.getDescription()).date(date)
+                            .debit(isAvoir ? (positif ? absAmt : ZERO) : (positif ? ZERO : absAmt))
+                            .credit(isAvoir ? (positif ? ZERO : absAmt) : (positif ? absAmt : ZERO))
+                            .journal(invoice.getJournal()).company(invoice.getCompany())
+                            .build());
+                }
+            } else {
+                BigDecimal ht = line.getMontantHT() != null ? line.getMontantHT() : ZERO;
+                if (ht.compareTo(ZERO) != 0) {
+                    String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
+                            ? line.getAccountCode() : DEFAULT_REVENUE_ACCOUNT;
+                    AccountAccount acc = accCode.equals(DEFAULT_REVENUE_ACCOUNT) ? revenueAccount
+                            : accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(revenueAccount);
+                    moveLines.add(AccountMoveLine.builder()
+                            .move(move).account(acc).partner(invoice.getPartner())
+                            .name(line.getDescription()).date(date)
+                            .debit(isAvoir ? ht : ZERO)
+                            .credit(isAvoir ? ZERO : ht)
+                            .journal(invoice.getJournal()).company(invoice.getCompany())
+                            .build());
+                }
+            }
+        }
 
-            AccountAccount revenueAccount = accountRepo.findFirstByCodeAndCompanyId(accCode, companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("706", companyId)
-                            .stream().findFirst()
-                            .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("70", companyId)
-                                    .stream().findFirst()
-                                    .orElseThrow(() -> new EntityNotFoundException("Compte de produit 70x introuvable"))));
-
-            BigDecimal ht = line.getMontantHT() != null ? line.getMontantHT() : ZERO;
-            if (ht.compareTo(ZERO) != 0) {
+        // Ligne PSA 441200 : crédit pour facture, débit pour avoir
+        BigDecimal totalPrecompte = invoice.getTotalPrecompte() != null ? invoice.getTotalPrecompte() : ZERO;
+        if (totalPrecompte.compareTo(ZERO) != 0) {
+            AccountAccount psaAccount = accountRepo.findFirstByCodeAndCompanyId(PSA_ACCOUNT, companyId)
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("4412",  companyId))
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("441200", companyId))
+                    .orElse(null);
+            if (psaAccount != null) {
                 moveLines.add(AccountMoveLine.builder()
-                        .move(move).account(revenueAccount).partner(invoice.getPartner())
-                        .name(line.getDescription()).date(date)
-                        .debit(isAvoir ? ht : ZERO)
-                        .credit(isAvoir ? ZERO : ht)
+                        .move(move).account(psaAccount).partner(invoice.getPartner())
+                        .name("PSA - " + invoice.getName()).date(date)
+                        .debit(isAvoir ? totalPrecompte : ZERO)
+                        .credit(isAvoir ? ZERO : totalPrecompte)
                         .journal(invoice.getJournal()).company(invoice.getCompany())
                         .build());
             }
         }
 
-        // Ligne TVA 4431 : crédit pour facture, débit pour avoir
+        // Ligne TVA collectée 443100 : crédit pour facture, débit pour avoir
         BigDecimal totalTVA = invoice.getTotalTVA() != null ? invoice.getTotalTVA() : ZERO;
         if (totalTVA.compareTo(ZERO) != 0 && tvaAccount != null) {
-            String libelleTVA = (isAvoir ? "TVA avoir " : "TVA collectée - ") + invoice.getName();
             moveLines.add(AccountMoveLine.builder()
                     .move(move).account(tvaAccount).partner(invoice.getPartner())
-                    .name(libelleTVA).date(date)
+                    .name((isAvoir ? "TVA avoir " : "TVA collectée - ") + invoice.getName()).date(date)
                     .debit(isAvoir ? totalTVA : ZERO)
                     .credit(isAvoir ? ZERO : totalTVA)
                     .journal(invoice.getJournal()).company(invoice.getCompany())
                     .build());
         }
 
-        // Ligne enlèvement BASE → compte ENLEVEMENT_ACCOUNT (706400)
-        if (totalEnlBase.compareTo(ZERO) != 0) {
+        // Ligne frais d'enlèvement 701500 (total = base + surplus client)
+        BigDecimal totalEnlevement = invoice.getFraisEnlevementTTC() != null ? invoice.getFraisEnlevementTTC() : ZERO;
+        if (totalEnlevement.compareTo(ZERO) != 0) {
             AccountAccount enlAccount = accountRepo.findFirstByCodeAndCompanyId(ENLEVEMENT_ACCOUNT, companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("706", companyId)
-                            .stream().findFirst().orElse(null));
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("7015",  companyId))
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("701500", companyId))
+                    .orElse(null);
             if (enlAccount != null) {
                 moveLines.add(AccountMoveLine.builder()
                         .move(move).account(enlAccount).partner(invoice.getPartner())
-                        .name("Frais d'enlèvement base - " + invoice.getName()).date(date)
-                        .debit(isAvoir ? totalEnlBase : ZERO)
-                        .credit(isAvoir ? ZERO : totalEnlBase)
-                        .journal(invoice.getJournal()).company(invoice.getCompany())
-                        .build());
-            }
-        }
-
-        // Lignes supplément enlèvement → comptes spécifiques par client
-        for (java.util.Map.Entry<String, BigDecimal> entry : supplementByAccount.entrySet()) {
-            if (entry.getValue().compareTo(ZERO) == 0) continue;
-            AccountAccount suppAccount = accountRepo.findFirstByCodeAndCompanyId(entry.getKey(), companyId)
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId(
-                            entry.getKey().substring(0, Math.min(3, entry.getKey().length())), companyId)
-                            .stream().findFirst().orElse(null));
-            if (suppAccount != null) {
-                moveLines.add(AccountMoveLine.builder()
-                        .move(move).account(suppAccount).partner(invoice.getPartner())
-                        .name("Supplément enlèvement - " + invoice.getName()).date(date)
-                        .debit(isAvoir ? entry.getValue() : ZERO)
-                        .credit(isAvoir ? ZERO : entry.getValue())
+                        .name("Frais d'enlèvement - " + invoice.getName()).date(date)
+                        .debit(isAvoir ? totalEnlevement : ZERO)
+                        .credit(isAvoir ? ZERO : totalEnlevement)
                         .journal(invoice.getJournal()).company(invoice.getCompany())
                         .build());
             }
@@ -509,8 +530,7 @@ public class SalesService {
 
         move.setLines(moveLines);
         AccountMove savedMove = moveRepo.save(move);
-        savedMove.setState("posted");
-        moveRepo.save(savedMove);
+        moveRepo.updateState(savedMove.getId(), "posted");
 
         // Lier l'écriture au document
         invoice.setAccountMove(savedMove);
@@ -523,6 +543,11 @@ public class SalesService {
         // Créer les mouvements de stock physiques
         createStockMovementsOnInvoicePost(invoice, isAvoir);
 
+        // Écriture ristourne brasserie (BIERES 24/12, Alcools mixtes 12/24) — factures seulement
+        if (!isAvoir) {
+            generateRistourneEcriture(invoice, companyId);
+        }
+
         return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
     }
 
@@ -531,6 +556,16 @@ public class SalesService {
      * Pour les factures validées/payées, cela ne crée PAS d'écriture inverse.
      * Utiliser reverseInvoiceEntries() pour extourner les écritures comptables.
      */
+    public SalesInvoiceDTO setInvoiceWarehouse(Long invoiceId, Long warehouseId) {
+        SalesInvoice invoice = invoiceRepo.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + invoiceId));
+        if (!"draft".equals(invoice.getState())) {
+            throw new IllegalStateException("L'entrepôt ne peut être modifié que sur un document en brouillon");
+        }
+        invoice.setWarehouseId(warehouseId);
+        return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
     public SalesInvoiceDTO cancelInvoice(Long id) {
         SalesInvoice invoice = invoiceRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Facture introuvable: " + id));
@@ -605,10 +640,7 @@ public class SalesService {
         }
         reversal.setLines(reversalLines);
         AccountMove saved = moveRepo.save(reversal);
-        saved.setState("posted");
-        moveRepo.save(saved);
-
-        // L'écriture originale n'est pas modifiée
+        moveRepo.updateState(saved.getId(), "posted");
 
         return saved;
     }
@@ -639,11 +671,9 @@ public class SalesService {
         AccountAccount treasuryAccount = journal.getDefaultDebitAccount();
         if (treasuryAccount == null) {
             // Fallback: chercher un compte 521 ou 571
-            treasuryAccount = accountRepo.findByCodeStartingWithAndCompanyId("521", company.getId())
-                    .stream().findFirst()
-                    .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("571", company.getId())
-                            .stream().findFirst()
-                            .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable")));
+            treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("571", company.getId()))
+                    .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable (521/571)"));
         }
 
         // Compte client (crédit)
@@ -653,9 +683,9 @@ public class SalesService {
                 : DEFAULT_RECEIVABLE_ACCOUNT;
 
         AccountAccount receivableAccount = accountRepo.findFirstByCodeAndCompanyId(receivableCode, company.getId())
-                .orElseGet(() -> accountRepo.findByCodeStartingWithAndCompanyId("411", company.getId())
-                        .stream().findFirst()
-                        .orElseThrow(() -> new EntityNotFoundException("Compte client 411x introuvable")));
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("4111", company.getId()))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("411",  company.getId()))
+                .orElseThrow(() -> new EntityNotFoundException("Compte client introuvable : " + receivableCode));
 
         // ---- Créer l'écriture de paiement ----
         String paymentName = generatePaymentName(company.getId(), date);
@@ -724,6 +754,83 @@ public class SalesService {
         invoiceRepo.save(invoice);
 
         return toPaymentDTO(payment);
+    }
+
+    /**
+     * Utilise les avoirs disponibles du client pour compenser partiellement ou totalement une facture.
+     * Aucune écriture comptable n'est créée (les avoirs ont déjà Cr 411100 lors de leur validation).
+     */
+    @Transactional
+    public SalesInvoiceDTO applyCreditToInvoice(Long invoiceId, java.math.BigDecimal amount, Long companyId) {
+        SalesInvoice invoice = invoiceRepo.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Facture introuvable"));
+        if (!"posted".equals(invoice.getState())) {
+            throw new IllegalStateException("Seules les factures validées acceptent une compensation");
+        }
+        if (!companyId.equals(invoice.getCompany().getId())) {
+            throw new IllegalArgumentException("Société incohérente");
+        }
+        Long partnerId = invoice.getPartner().getId();
+        java.math.BigDecimal montantDu = invoice.getMontantDu() != null ? invoice.getMontantDu() : ZERO;
+
+        if (amount.compareTo(ZERO) <= 0 || amount.compareTo(montantDu) > 0) {
+            throw new IllegalArgumentException(
+                "Montant invalide — doit être > 0 et ≤ " + montantDu + " FCFA (reste dû)");
+        }
+
+        List<SalesInvoice> credits = invoiceRepo.findAvailableCreditNotes(partnerId, companyId);
+        java.math.BigDecimal totalAvailable = credits.stream()
+                .map(c -> c.getMontantDu() != null ? c.getMontantDu() : ZERO)
+                .reduce(ZERO, java.math.BigDecimal::add);
+
+        if (amount.compareTo(totalAvailable) > 0) {
+            throw new IllegalArgumentException(
+                "Crédit disponible insuffisant — disponible : " + totalAvailable + " FCFA");
+        }
+
+        java.math.BigDecimal remaining = amount;
+        for (SalesInvoice credit : credits) {
+            if (remaining.compareTo(ZERO) <= 0) break;
+            java.math.BigDecimal creditDu = credit.getMontantDu() != null ? credit.getMontantDu() : ZERO;
+            java.math.BigDecimal toApply = remaining.min(creditDu);
+
+            // Réduire le montant disponible de l'avoir
+            credit.setMontantPaye((credit.getMontantPaye() != null ? credit.getMontantPaye() : ZERO).add(toApply));
+            credit.setMontantDu(creditDu.subtract(toApply).setScale(2, RoundingMode.HALF_UP));
+            if (credit.getMontantDu().compareTo(ZERO) == 0) credit.setState("paid");
+            invoiceRepo.save(credit);
+
+            // Enregistrer la compensation comme paiement sur la facture (traçabilité)
+            String pmtName = generatePaymentName(invoice.getCompany().getId(), LocalDate.now());
+            paymentRepo.save(InvoicePayment.builder()
+                    .name(pmtName).date(LocalDate.now()).amount(toApply)
+                    .memo("Crédit " + credit.getName())
+                    .state("posted")
+                    .invoice(invoice)
+                    .company(invoice.getCompany())
+                    .creditNoteId(credit.getId())
+                    .build());
+
+            remaining = remaining.subtract(toApply);
+        }
+
+        // Recalculer la facture à partir du total de tous ses paiements
+        java.math.BigDecimal totalPaye = paymentRepo.sumPostedPaymentsByInvoice(invoice.getId());
+        invoice.setMontantPaye(totalPaye);
+        java.math.BigDecimal newDu = (invoice.getNetAPayer() != null ? invoice.getNetAPayer() : ZERO)
+                .subtract(totalPaye).max(ZERO);
+        invoice.setMontantDu(newDu);
+        if (newDu.compareTo(ZERO) == 0) invoice.setState("paid");
+
+        return toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+    }
+
+    /** Retourne le solde net et le crédit disponible d'un partenaire. */
+    @Transactional(readOnly = true)
+    public Map<String, java.math.BigDecimal> getPartnerBalanceInfo(Long partnerId, Long companyId) {
+        java.math.BigDecimal balance = moveLineRepo.computePartnerBalance(partnerId, companyId);
+        java.math.BigDecimal credit  = invoiceRepo.sumAvailableCredits(partnerId, companyId);
+        return Map.of("balance", balance, "credit", credit);
     }
 
     @Transactional(readOnly = true)
@@ -817,6 +924,7 @@ public class SalesService {
                 .journal(order.getJournal())
                 .company(order.getCompany())
                 .salesOrder(order)
+                .warehouseId(order.getWarehouseId())
                 .montantPaye(ZERO)
                 .build();
 
@@ -934,6 +1042,191 @@ public class SalesService {
      * Facture (vente) : sortie stock interne → emplacement client virtuel
      * Avoir (crédit)  : retour stock emplacement client virtuel → interne
      */
+    /**
+     * Génère l'écriture comptable de ristourne lors de la validation d'une facture vente.
+     *
+     * Catégories éligibles : BIERES 24, BIERES 12, Alcools mixtes 12, Alcools mixtes 24.
+     * Pour le total HT ristourne des lignes éligibles :
+     *   Débit  7019    : 201 FCFA (fixe)
+     *   Débit  7015    : HT - 201
+     *   Débit  4412    : tauxPrecompte% × HT
+     *   Débit  4431    : 19,25% × HT
+     *   Crédit 419800  : somme des débits = TTC ristourne
+     *
+     * Si aucune ristourne n'est configurée pour le client, la méthode est sans effet.
+     */
+    private void generateRistourneEcriture(SalesInvoice invoice, Long companyId) {
+        Long partnerId = invoice.getPartner().getId();
+        log.info("[RISTOURNE] Facture {} - client {} - société {}", invoice.getName(), partnerId, companyId);
+
+        List<Ristourne> toutesRistournes = ristourneRepo.findByPartnerIdAndCompanyIdAndActiveTrue(partnerId, companyId);
+        if (toutesRistournes.isEmpty()) {
+            log.info("[RISTOURNE] Aucune ristourne configurée pour ce client");
+            return;
+        }
+
+        // Séparer en groupes par catégorie
+        List<Ristourne> brasserie = new ArrayList<>();
+        List<Ristourne> autres    = new ArrayList<>();
+        for (Ristourne r : toutesRistournes) {
+            if (r.getCategory().getName() == null) continue;
+            String norm = normalizeCategorie(r.getCategory().getName());
+            if (CATEGORIES_RISTOURNE_BRASSERIE.contains(norm))  brasserie.add(r);
+            else if (!CATEGORIES_RISTOURNE_GUINNESS.contains(norm)) autres.add(r);
+            // Guinness → ignoré pour l'instant
+        }
+
+        Partner partner = invoice.getPartner();
+        BigDecimal tauxPc = partner.getTauxPrecompte() != null
+                ? partner.getTauxPrecompte()
+                : precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(partnerId, "sale", companyId)
+                        .map(com.erp.common.entity.Precompte::getTauxPrecompte).orElse(ZERO);
+        BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+        // ── Groupe BRASSERIE : 7019 = qty×201/article, 7015 = reste HT ──
+        BigDecimal total7019Brasserie = ZERO;
+        BigDecimal totalHtBrasserie   = ZERO;
+        for (Ristourne r : brasserie) {
+            BigDecimal qty = getQtyFromInvoice(r.getCategory().getId(), invoice, companyId);
+            log.info("[RISTOURNE] Brasserie '{}' qty={} montantFixe={}", r.getCategory().getName(), qty, r.getMontantFixe());
+            if (qty.compareTo(ZERO) > 0) {
+                BigDecimal htLine = qty.multiply(r.getMontantFixe());
+                totalHtBrasserie   = totalHtBrasserie.add(htLine);
+                total7019Brasserie = total7019Brasserie.add(
+                        qty.multiply(RISTOURNE_7019_FIXE).min(htLine));
+            }
+        }
+
+        // ── Groupe AUTRES : HT complet → 7019 ──
+        BigDecimal totalHtAutres = ZERO;
+        for (Ristourne r : autres) {
+            BigDecimal qty = getQtyFromInvoice(r.getCategory().getId(), invoice, companyId);
+            log.info("[RISTOURNE] Autres '{}' qty={} montantFixe={}", r.getCategory().getName(), qty, r.getMontantFixe());
+            if (qty.compareTo(ZERO) > 0) {
+                totalHtAutres = totalHtAutres.add(qty.multiply(r.getMontantFixe()));
+            }
+        }
+
+        log.info("[RISTOURNE] HT brasserie={} (7019={}) HT autres={}", totalHtBrasserie, total7019Brasserie, totalHtAutres);
+
+        if (totalHtBrasserie.compareTo(ZERO) <= 0 && totalHtAutres.compareTo(ZERO) <= 0) {
+            log.info("[RISTOURNE] Aucune quantité trouvée sur la facture pour les catégories éligibles");
+            return;
+        }
+
+        // Résolution des comptes
+        AccountAccount acct7019 = accountRepo.findFirstByCodeAndCompanyId("701900", companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("7019", companyId)).orElse(null);
+        AccountAccount acct7015 = accountRepo.findFirstByCodeAndCompanyId("701500", companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId(ENLEVEMENT_ACCOUNT, companyId)).orElse(null);
+        AccountAccount acct4412 = accountRepo.findFirstByCodeAndCompanyId("441200", companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId(PSA_ACCOUNT, companyId)).orElse(null);
+        AccountAccount acct4431 = accountRepo.findFirstByCodeAndCompanyId("443100", companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId(TVA_ACCOUNT, companyId)).orElse(null);
+        AccountAccount acct4198 = accountRepo.findFirstByCodeAndCompanyId(RISTOURNE_CREDIT_ACCOUNT, companyId)
+                .orElse(null);
+
+        if (acct7019 == null || acct4431 == null || acct4198 == null) {
+            log.warn("[RISTOURNE] Écriture non générée pour {} : comptes manquants (701900/443100/419800)", invoice.getName());
+            return;
+        }
+
+        AccountJournal journal = invoice.getJournal();
+        LocalDate date = invoice.getDate();
+        String labelBr  = "Ristourne brasserie " + invoice.getName();
+        String labelAut = "Ristourne " + invoice.getName();
+
+        int year = date.getYear();
+        Integer maxSeq = moveRepo.findMaxSequenceByJournalAndYear(journal.getId(), year);
+        String moveName = String.format("%s-%d-%05d", journal.getCode().toUpperCase(), year,
+                (maxSeq != null ? maxSeq : 0) + 1);
+
+        AccountMove move = AccountMove.builder()
+                .name(moveName).date(date)
+                .ref("Ristourne " + invoice.getName())
+                .state("posted").journal(journal)
+                .company(invoice.getCompany()).partner(partner)
+                .build();
+
+        List<AccountMoveLine> lines = new ArrayList<>();
+        BigDecimal totalDebits = ZERO;
+
+        // ── Brasserie : 7019 (qty×201) + 7015 (reste HT) ──
+        if (totalHtBrasserie.compareTo(ZERO) > 0) {
+            BigDecimal d7019br = total7019Brasserie.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal d7015br = totalHtBrasserie.subtract(total7019Brasserie).setScale(2, RoundingMode.HALF_UP);
+            lines.add(ristourneLine(move, acct7019, partner, labelBr, date, d7019br, ZERO, journal, invoice.getCompany()));
+            totalDebits = totalDebits.add(d7019br);
+            if (d7015br.compareTo(ZERO) > 0 && acct7015 != null) {
+                lines.add(ristourneLine(move, acct7015, partner, labelBr, date, d7015br, ZERO, journal, invoice.getCompany()));
+                totalDebits = totalDebits.add(d7015br);
+            }
+        }
+
+        // ── Autres : HT complet dans 7019 ──
+        if (totalHtAutres.compareTo(ZERO) > 0) {
+            BigDecimal d7019aut = totalHtAutres.setScale(2, RoundingMode.HALF_UP);
+            lines.add(ristourneLine(move, acct7019, partner, labelAut, date, d7019aut, ZERO, journal, invoice.getCompany()));
+            totalDebits = totalDebits.add(d7019aut);
+        }
+
+        // ── Précompte sur HT total ──
+        BigDecimal totalHT = totalHtBrasserie.add(totalHtAutres);
+        BigDecimal debitPrecompte = totalHT.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
+        if (acct4412 != null && debitPrecompte.compareTo(ZERO) > 0) {
+            lines.add(ristourneLine(move, acct4412, partner, labelAut, date, debitPrecompte, ZERO, journal, invoice.getCompany()));
+            totalDebits = totalDebits.add(debitPrecompte);
+        }
+
+        // ── TVA sur HT total ──
+        BigDecimal debitTVA = totalHT.multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
+        lines.add(ristourneLine(move, acct4431, partner, labelAut, date, debitTVA, ZERO, journal, invoice.getCompany()));
+        totalDebits = totalDebits.add(debitTVA);
+
+        // ── Crédit 419800 = somme de tous les débits ──
+        lines.add(ristourneLine(move, acct4198, partner, labelAut, date, ZERO,
+                totalDebits.setScale(2, RoundingMode.HALF_UP), journal, invoice.getCompany()));
+
+        move.setLines(lines);
+        moveRepo.save(move);
+        log.info("[RISTOURNE] Écriture {} générée — HT total={} | crédit={}", moveName, totalHT, totalDebits);
+    }
+
+    private BigDecimal getQtyFromInvoice(Long catId, SalesInvoice invoice, Long companyId) {
+        return invoice.getLines().stream()
+                .filter(l -> !l.isConsigne())
+                .filter(l -> catId.equals(resolveLineCategoryId(l, companyId)))
+                .map(l -> l.getQuantity() != null ? l.getQuantity() : ZERO)
+                .reduce(ZERO, BigDecimal::add);
+    }
+
+    private Long resolveLineCategoryId(SalesInvoiceLine line, Long companyId) {
+        if (line.getCategoryId() != null) return line.getCategoryId();
+        if (line.getProductCode() != null && !line.getProductCode().isBlank()) {
+            return stockProductRepo.findFirstByDefaultCodeAndCompanyId(line.getProductCode(), companyId)
+                    .map(Product::getCategoryId).orElse(null);
+        }
+        return null;
+    }
+
+    private AccountMoveLine ristourneLine(AccountMove move, AccountAccount account, Partner partner,
+                                          String name, LocalDate date,
+                                          BigDecimal debit, BigDecimal credit,
+                                          AccountJournal journal, Company company) {
+        return AccountMoveLine.builder()
+                .move(move).account(account).partner(partner)
+                .name(name).date(date)
+                .debit(debit).credit(credit)
+                .journal(journal).company(company)
+                .build();
+    }
+
+    /** Supprime les accents et met en minuscules pour comparaison insensible à la casse et aux accents. */
+    private String normalizeCategorie(String name) {
+        String nfd = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD);
+        return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase();
+    }
+
     private void createStockMovementsOnInvoicePost(SalesInvoice invoice, boolean isAvoir) {
         Long companyId = invoice.getCompany().getId();
 
@@ -946,7 +1239,17 @@ public class SalesService {
             return;
         }
 
+        // Utiliser l'emplacement de l'entrepôt sélectionné si disponible
         StockLocation internalLoc = internalLocs.get(0);
+        if (invoice.getWarehouseId() != null) {
+            Long whLocId = warehouseRepo.findById(invoice.getWarehouseId())
+                    .map(Warehouse::getStockLocationId).orElse(null);
+            if (whLocId != null) {
+                internalLoc = internalLocs.stream()
+                        .filter(l -> l.getId().equals(whLocId)).findFirst()
+                        .orElse(stockLocationRepo.findById(whLocId).orElse(internalLocs.get(0)));
+            }
+        }
         StockLocation customerLoc = customerLocs.isEmpty() ? internalLocs.get(0) : customerLocs.get(0);
 
         // Source et destination selon le type de document
@@ -1053,6 +1356,99 @@ public class SalesService {
         picking.setMoves(moves);
         stockPickingRepo.save(picking);
         log.info("Mouvement de stock créé : {} ({} lignes) pour facture {}", pickingName, moves.size(), invoice.getName());
+
+        // Créer les écritures comptables de variation de stock
+        createStockValuationEntries(invoice, isAvoir, productLines.stream()
+                .map(lp -> new java.util.AbstractMap.SimpleEntry<>(lp.line(), lp.product()))
+                .collect(java.util.stream.Collectors.toList()));
+    }
+
+    /**
+     * Génère la pièce comptable de variation de stock (6031 / 31) pour chaque produit physique.
+     * Vente : Dr 6031 / Cr 31  (coût de sortie de stock)
+     * Avoir : Dr 31   / Cr 6031 (entrée de retour en stock)
+     */
+    private void createStockValuationEntries(SalesInvoice invoice, boolean isAvoir,
+            List<java.util.Map.Entry<SalesInvoiceLine, com.erp.stock.entity.Product>> productLines) {
+        Long companyId = invoice.getCompany().getId();
+
+        // Journal OD (opérations diverses / général)
+        AccountJournal stockJournal = journalRepo.findByCompanyIdAndActiveTrue(companyId).stream()
+                .filter(j -> "general".equals(j.getType()) || "misc".equals(j.getType()))
+                .findFirst()
+                .orElse(invoice.getJournal());
+
+        if (stockJournal == null) {
+            log.warn("Aucun journal OD trouvé — écritures de stock ignorées pour {}", invoice.getName());
+            return;
+        }
+
+        // Comptes 6031 (variation stocks marchandises) et 31 (stocks marchandises)
+        // Pas de fallback non-déterministe — ensureEssentialAccounts() garantit leur existence
+        AccountAccount varStockAccount = accountRepo.findFirstByCodeAndCompanyId("6031", companyId).orElse(null);
+        AccountAccount stockAccount    = accountRepo.findFirstByCodeAndCompanyId("31",   companyId).orElse(null);
+
+        if (varStockAccount == null || stockAccount == null) {
+            log.warn("Comptes 6031 ou 31 introuvables — écritures de stock ignorées pour {}", invoice.getName());
+            return;
+        }
+
+        List<AccountMoveLine> moveLines = new ArrayList<>();
+        BigDecimal totalCost = ZERO;
+
+        for (java.util.Map.Entry<SalesInvoiceLine, com.erp.stock.entity.Product> entry : productLines) {
+            SalesInvoiceLine line = entry.getKey();
+            com.erp.stock.entity.Product product = entry.getValue();
+
+            if (ConsigneCodes.isConsigne(product.getDefaultCode())) continue;
+
+            BigDecimal cost = product.getStandardPrice() != null ? product.getStandardPrice() : ZERO;
+            if (cost.compareTo(ZERO) == 0) continue;
+
+            BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
+            BigDecimal amount = cost.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            if (amount.compareTo(ZERO) == 0) continue;
+
+            totalCost = totalCost.add(amount);
+
+            String libelle = (line.getDescription() != null && !line.getDescription().isBlank())
+                    ? line.getDescription()
+                    : (product.getDefaultCode() != null ? product.getDefaultCode() : product.getName());
+            // Dr 6031 / Cr 31 pour vente — inversé pour avoir
+            moveLines.add(AccountMoveLine.builder()
+                    .account(varStockAccount).name("Var.Stock - " + libelle)
+                    .date(invoice.getDate())
+                    .debit(isAvoir ? ZERO : amount).credit(isAvoir ? amount : ZERO)
+                    .journal(stockJournal).company(invoice.getCompany())
+                    .partner(invoice.getPartner())
+                    .build());
+            moveLines.add(AccountMoveLine.builder()
+                    .account(stockAccount).name("Var.Stock - " + libelle)
+                    .date(invoice.getDate())
+                    .debit(isAvoir ? amount : ZERO).credit(isAvoir ? ZERO : amount)
+                    .journal(stockJournal).company(invoice.getCompany())
+                    .partner(invoice.getPartner())
+                    .build());
+        }
+
+        if (moveLines.isEmpty()) {
+            log.info("Aucune ligne de coût standard — pas d'écriture de stock pour {}", invoice.getName());
+            return;
+        }
+
+        AccountMove stockMove = AccountMove.builder()
+                .name("STK/" + invoice.getName())
+                .date(invoice.getDate())
+                .ref("Variation stock - " + invoice.getName())
+                .state("posted")
+                .journal(stockJournal)
+                .company(invoice.getCompany())
+                .partner(invoice.getPartner())
+                .build();
+        for (AccountMoveLine l : moveLines) l.setMove(stockMove);
+        stockMove.setLines(moveLines);
+        moveRepo.save(stockMove);
+        log.info("Écriture de variation de stock STK/{} créée (coût total: {})", invoice.getName(), totalCost);
     }
 
     private void buildOrderLines(SalesOrder order, List<SalesOrderRequest.LineRequest> lineRequests) {
@@ -1169,15 +1565,14 @@ public class SalesService {
                 })
                 .orElse(ZERO);
 
-        // Supplément client (s'ajoute au montant de base, ne le remplace PAS)
+        // Surplus client : s'ajoute au montant fixe de base
         if (partnerId != null) {
             var clientRate = enlevementClientRepo
                     .findByEnlevement_CategoryIdAndPartnerId(catId, partnerId);
-            if (clientRate.isPresent()) {
-                BigDecimal suppMontant = clientRate.get().getMontant() != null
-                        ? clientRate.get().getMontant() : ZERO;
-                BigDecimal supplement = suppMontant.multiply(qty).setScale(2, RoundingMode.HALF_UP);
-                return base.add(supplement);  // base 600 + supplément 300 = 900
+            if (clientRate.isPresent() && clientRate.get().getMontant() != null) {
+                BigDecimal surplus = clientRate.get().getMontant()
+                        .multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                return base.add(surplus);
             }
         }
         return base;
@@ -1329,14 +1724,19 @@ public class SalesService {
                 .reduce(ZERO, BigDecimal::add);
     }
 
+    private static final BigDecimal TAUX_TVA = BigDecimal.valueOf(0.1925);
+
     private BigDecimal computeRistourneTTCUnit(BigDecimal montantHT, String type, BigDecimal tauxPrecompte) {
         if ("brasserie".equals(type)) {
-            BigDecimal coeff = BigDecimal.ONE.add(tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            // Odoo: montant_fixe × (1 + taux_precompte + 0.1925)
+            BigDecimal pcRate = tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(TAUX_TVA);
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         } else if ("guinness".equals(type)) {
-            return montantHT.setScale(2, RoundingMode.HALF_UP);
+            // guinness: pas de précompte mais TVA s'applique
+            return montantHT.multiply(BigDecimal.ONE.add(TAUX_TVA)).setScale(2, RoundingMode.HALF_UP);
         }
-        return montantHT.setScale(2, RoundingMode.HALF_UP);
+        return montantHT.multiply(BigDecimal.ONE.add(TAUX_TVA)).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal getPartnerSalePrecompteTaux(Long partnerId, Long companyId) {
@@ -1417,6 +1817,12 @@ public class SalesService {
                         .build())
                 .collect(Collectors.toList());
 
+        String warehouseName = null;
+        if (order.getWarehouseId() != null) {
+            warehouseName = warehouseRepo.findById(order.getWarehouseId())
+                    .map(com.erp.stock.entity.Warehouse::getName).orElse(null);
+        }
+
         return SalesOrderDTO.builder()
                 .id(order.getId()).name(order.getName())
                 .date(order.getDate()).dateEcheance(order.getDateEcheance())
@@ -1426,6 +1832,8 @@ public class SalesService {
                 .journalId(order.getJournal() != null ? order.getJournal().getId() : null)
                 .journalName(order.getJournal() != null ? order.getJournal().getName() : null)
                 .companyId(order.getCompany() != null ? order.getCompany().getId() : null)
+                .warehouseId(order.getWarehouseId())
+                .warehouseName(warehouseName)
                 .totalHT(order.getTotalHT()).totalTVA(order.getTotalTVA())
                 .totalTTC(order.getTotalTTC()).totalRemise(order.getTotalRemise())
                 .lines(lines).createdAt(order.getCreatedAt())
@@ -1446,6 +1854,22 @@ public class SalesService {
 
     private SalesInvoiceDTO buildInvoiceDTO(SalesInvoice invoice, List<InvoicePaymentDTO> payments) {
         Long companyId = invoice.getCompany() != null ? invoice.getCompany().getId() : null;
+
+        // Résoudre le nom de l'entrepôt
+        String warehouseName = null;
+        if (invoice.getWarehouseId() != null) {
+            warehouseName = warehouseRepo.findById(invoice.getWarehouseId())
+                    .map(com.erp.stock.entity.Warehouse::getName).orElse(null);
+        }
+
+        // Calculer le solde du partenaire
+        java.math.BigDecimal partnerBalance = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal partnerCreditDisponible = java.math.BigDecimal.ZERO;
+        if (invoice.getPartner() != null && companyId != null) {
+            partnerBalance = moveLineRepo.computePartnerBalance(invoice.getPartner().getId(), companyId);
+            partnerCreditDisponible = invoiceRepo.sumAvailableCredits(invoice.getPartner().getId(), companyId);
+        }
+
         Map<Long, String> catNames = companyId != null
                 ? categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
                     .collect(Collectors.toMap(c -> c.getId(), c -> c.getName(), (a, b) -> a))
@@ -1481,6 +1905,10 @@ public class SalesService {
                 .salesOrderName(invoice.getSalesOrder() != null ? invoice.getSalesOrder().getName() : null)
                 .accountMoveId(invoice.getAccountMove() != null ? invoice.getAccountMove().getId() : null)
                 .accountMoveName(invoice.getAccountMove() != null ? invoice.getAccountMove().getName() : null)
+                .warehouseId(invoice.getWarehouseId())
+                .warehouseName(warehouseName)
+                .partnerBalance(partnerBalance)
+                .partnerCreditDisponible(partnerCreditDisponible)
                 .totalHT(invoice.getTotalHT()).totalTVA(invoice.getTotalTVA()).totalTTC(invoice.getTotalTTC())
                 .montantPaye(invoice.getMontantPaye()).montantDu(invoice.getMontantDu())
                 .totalRistourne(invoice.getTotalRistourne())
@@ -1495,6 +1923,11 @@ public class SalesService {
     }
 
     private InvoicePaymentDTO toPaymentDTO(InvoicePayment p) {
+        String creditNoteName = null;
+        if (p.getCreditNoteId() != null) {
+            creditNoteName = invoiceRepo.findById(p.getCreditNoteId())
+                    .map(SalesInvoice::getName).orElse(null);
+        }
         return InvoicePaymentDTO.builder()
                 .id(p.getId()).name(p.getName()).date(p.getDate())
                 .amount(p.getAmount()).memo(p.getMemo()).state(p.getState())
@@ -1505,6 +1938,8 @@ public class SalesService {
                 .companyId(p.getCompany() != null ? p.getCompany().getId() : null)
                 .accountMoveId(p.getAccountMove() != null ? p.getAccountMove().getId() : null)
                 .accountMoveName(p.getAccountMove() != null ? p.getAccountMove().getName() : null)
+                .creditNoteId(p.getCreditNoteId())
+                .creditNoteName(creditNoteName)
                 .createdAt(p.getCreatedAt())
                 .build();
     }

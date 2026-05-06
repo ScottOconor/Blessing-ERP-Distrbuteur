@@ -128,8 +128,15 @@ public class RistourneService {
 
     @Transactional(readOnly = true)
     public List<RistournePaiementDTO> getAllPaiements(Long companyId) {
-        return paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId)
-                .stream().map(this::toPaiementDTO).collect(Collectors.toList());
+        return getAllPaiements(companyId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RistournePaiementDTO> getAllPaiements(Long companyId, String type) {
+        List<com.erp.sales.entity.RistournePaiement> list = (type != null && !type.isBlank())
+                ? paiementRepo.findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(companyId, type)
+                : paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        return list.stream().map(this::toPaiementDTO).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -245,15 +252,16 @@ public class RistourneService {
 
             if (qty.compareTo(BigDecimal.ZERO) == 0) continue;
 
-            // montantUnitaire = montantFixe (HT), montantTTC = HT × (1 + tauxPc/100) pour brasserie, HT pour guinness
             BigDecimal montantUnit = r.getMontantFixe();
             BigDecimal montantTotal = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP);
             BigDecimal montantTTC;
             if ("brasserie".equals(r.getTypeRistourne())) {
-                BigDecimal coeff = BigDecimal.ONE.add(tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+                BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                montantTTC = montantTotal;
+                // guinness et autres : pas de précompte mais TVA 19.25%
+                montantTTC = montantTotal.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
             }
 
             lines.add(RistournePaiementLine.builder()
@@ -290,6 +298,135 @@ public class RistourneService {
         return toPaiementDTO(paiementRepo.save(entity));
     }
 
+    // ======================== GÉNÉRATION PAR TYPE / PÉRIODE ========================
+
+    /**
+     * Génère les règlements ristourne de type brasserie pour toutes les factures du trimestre donné.
+     */
+    public Map<String, Object> generateByQuarter(int quarter, int year, Long companyId) {
+        LocalDate start = LocalDate.of(year, (quarter - 1) * 3 + 1, 1);
+        LocalDate end   = start.plusMonths(3).minusDays(1);
+        return generateByDateRange(start, end, "brasserie", companyId);
+    }
+
+    /**
+     * Génère les règlements ristourne de type guinness pour toutes les factures de la période donnée.
+     */
+    public Map<String, Object> generateByPeriod(java.time.LocalDate dateStart, java.time.LocalDate dateEnd, Long companyId) {
+        return generateByDateRange(dateStart, dateEnd, "guinness", companyId);
+    }
+
+    private Map<String, Object> generateByDateRange(LocalDate start, LocalDate end, String type, Long companyId) {
+        List<SalesInvoice> invoices = salesInvoiceRepo.findPostedByCompanyAndDateRange(companyId, start, end);
+        int generated = 0, skipped = 0;
+        for (SalesInvoice invoice : invoices) {
+            if (paiementRepo.existsByInvoice_IdAndTypeRistourne(invoice.getId(), type)) {
+                skipped++;
+                continue;
+            }
+            try {
+                generateFromInvoiceForType(invoice.getId(), type);
+                generated++;
+            } catch (Exception e) {
+                skipped++;
+            }
+        }
+        return Map.of("generated", generated, "skipped", skipped, "total", invoices.size());
+    }
+
+    /**
+     * Comme generateFromInvoice mais filtre sur un type de ristourne (brasserie ou guinness).
+     */
+    public RistournePaiementDTO generateFromInvoiceForType(Long invoiceId, String typeRistourne) {
+        SalesInvoice invoice = salesInvoiceRepo.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Facture introuvable"));
+
+        if (!"posted".equals(invoice.getState()) && !"paid".equals(invoice.getState())) {
+            throw new IllegalStateException("Seules les factures validées peuvent générer des règlements");
+        }
+
+        Long partnerId = invoice.getPartner().getId();
+        Long companyId = invoice.getCompany().getId();
+
+        Partner partner = partnerRepo.findById(partnerId)
+                .orElseThrow(() -> new IllegalArgumentException("Partenaire introuvable"));
+
+        BigDecimal tauxPc = partner.getTauxPrecompte() != null
+                ? partner.getTauxPrecompte()
+                : precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(partnerId, "sale", companyId)
+                        .map(Precompte::getTauxPrecompte).orElse(BigDecimal.ZERO);
+
+        List<Ristourne> ristournesFiltres = ristourneRepo.findByPartnerIdAndCompanyIdAndActiveTrue(partnerId, companyId)
+                .stream()
+                .filter(r -> typeRistourne.equals(r.getTypeRistourne()))
+                .collect(Collectors.toList());
+
+        if (ristournesFiltres.isEmpty()) {
+            throw new IllegalStateException(
+                "Aucune ristourne " + typeRistourne + " configurée pour ce client");
+        }
+
+        List<RistournePaiementLine> lines = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (Ristourne r : ristournesFiltres) {
+            Long catId = r.getCategory().getId();
+            BigDecimal qty = invoice.getLines().stream()
+                    .filter(l -> !l.isConsigne())
+                    .filter(l -> catId.equals(resolveCategoryId(l.getCategoryId(), l.getProductCode(), companyId)))
+                    .map(l -> l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (qty.compareTo(BigDecimal.ZERO) == 0) continue;
+
+            BigDecimal montantUnit  = r.getMontantFixe();
+            BigDecimal montantTotal = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal montantTTC;
+            if ("brasserie".equals(r.getTypeRistourne())) {
+                BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
+                montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                // guinness et autres : pas de précompte mais TVA 19.25%
+                montantTTC = montantTotal.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+            }
+
+            lines.add(RistournePaiementLine.builder()
+                    .category(r.getCategory())
+                    .quantite(qty)
+                    .montantUnitaire(montantUnit)
+                    .montantTotal(montantTotal)
+                    .montantTTC(montantTTC)
+                    .build());
+            total = total.add(montantTTC);
+        }
+
+        if (lines.isEmpty()) {
+            throw new IllegalStateException(
+                "Aucune ligne " + typeRistourne + " applicable sur cette facture (vérifiez les catégories)");
+        }
+
+        RistournePaiement entity = RistournePaiement.builder()
+                .name(generateRstName(companyId))
+                .partner(partner)
+                .invoice(invoice)
+                .date(invoice.getDate())
+                .state("draft")
+                .companyId(companyId)
+                .typeRistourne(typeRistourne)
+                .notes("Généré depuis " + invoice.getName())
+                .totalAmount(total)
+                .lines(new ArrayList<>())
+                .build();
+
+        for (RistournePaiementLine line : lines) {
+            line.setPaiement(entity);
+            entity.getLines().add(line);
+        }
+
+        return toPaiementDTO(paiementRepo.save(entity));
+    }
+
     // ======================== HELPERS ========================
 
     /**
@@ -308,9 +445,8 @@ public class RistourneService {
 
     /**
      * Calcule le montant TTC de ristourne à partir du type et du tauxPrecompte du client.
-     * brasserie : montantHT × (1 + tauxPrecompte/100)
-     * guinness  : montantHT = montantTTC (pas de précompte)
-     * null/autre: montantHT brut
+     * brasserie : montantHT × (1 + tauxPrecompte/100 + 0.1925)
+     * guinness  : montantHT × (1 + 0.1925) — pas de précompte mais TVA s'applique
      */
     public BigDecimal computeRistourneTTC(BigDecimal montantHT, Long partnerId, Long companyId) {
         Partner partner = partnerRepo.findById(partnerId).orElse(null);
@@ -327,21 +463,30 @@ public class RistourneService {
                     ? partner.getTauxPrecompte()
                     : precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(partnerId, "sale", companyId)
                             .map(Precompte::getTauxPrecompte).orElse(BigDecimal.ZERO);
-            BigDecimal coeff = BigDecimal.ONE.add(taux.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            BigDecimal pcRate = taux.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         } else if ("guinness".equals(type)) {
-            return montantHT.setScale(2, RoundingMode.HALF_UP);
+            // guinness : pas de précompte mais TVA 19.25%
+            return montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
         }
-        return montantHT.setScale(2, RoundingMode.HALF_UP);
+        return montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
     }
 
     // ======================== RÈGLEMENTS GROUPÉS ========================
 
-    /** Retourne les règlements confirmés groupés par client. */
+    /** Retourne les règlements confirmés groupés par client (filtrés par type si fourni). */
     @Transactional(readOnly = true)
     public List<PartnerGroup> getGroupedPaiements(Long companyId) {
-        List<RistournePaiement> confirmed = paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId)
-                .stream()
+        return getGroupedPaiements(companyId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PartnerGroup> getGroupedPaiements(Long companyId, String type) {
+        List<RistournePaiement> source = (type != null && !type.isBlank())
+                ? paiementRepo.findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(companyId, type)
+                : paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        List<RistournePaiement> confirmed = source.stream()
                 .filter(p -> "confirmed".equals(p.getState()))
                 .collect(Collectors.toList());
 
@@ -390,6 +535,18 @@ public class RistourneService {
             }
         }
 
+        // Valider que tous les règlements sont du même type (brasserie ou guinness)
+        Set<String> types = paiements.stream()
+                .map(p -> p.getTypeRistourne() != null ? p.getTypeRistourne() : "")
+                .collect(Collectors.toSet());
+        if (types.size() > 1) {
+            throw new IllegalArgumentException(
+                "Tous les règlements doivent être du même type. Séparez les ristournes brasserie et guinness.");
+        }
+        String typeRistourne = types.iterator().next();
+        // Compte comptable Odoo : 419800 = brasserie, 419801 = guinness
+        String accountCode = "guinness".equals(typeRistourne) ? "419801" : "419800";
+
         // Trouver le journal de ventes
         Long journalId = journalRepo.findByCompanyIdAndActiveTrue(companyId)
                 .stream()
@@ -398,19 +555,21 @@ public class RistourneService {
                 .map(j -> j.getId())
                 .orElseThrow(() -> new IllegalStateException("Aucun journal de ventes trouvé"));
 
-        // Construire les lignes de la facture
+        // Construire les lignes : quantity=1, prixUnitaire=montantTTC total de la ligne (comme Odoo)
         List<SalesInvoiceRequest.LineRequest> lines = new ArrayList<>();
         for (RistournePaiement p : paiements) {
             for (RistournePaiementLine l : p.getLines()) {
+                BigDecimal montantTTC = l.getMontantTTC() != null ? l.getMontantTTC() : BigDecimal.ZERO;
                 lines.add(SalesInvoiceRequest.LineRequest.builder()
                         .description("Ristourne " + l.getCategory().getName()
                                 + " — " + p.getName()
                                 + (p.getInvoice() != null ? " / " + p.getInvoice().getName() : ""))
-                        .quantity(l.getQuantite() != null ? l.getQuantite() : BigDecimal.ONE)
-                        .prixUnitaire(l.getMontantUnitaire() != null ? l.getMontantUnitaire() : BigDecimal.ZERO)
+                        .quantity(BigDecimal.ONE)
+                        .prixUnitaire(montantTTC)
                         .tauxRemise(BigDecimal.ZERO)
                         .tauxTVA(BigDecimal.ZERO)
-                        .categoryId(null)   // pas de ristourne sur une facture ristourne
+                        .accountCode(accountCode)
+                        .categoryId(null)
                         .consigne(false)
                         .build());
             }
@@ -420,7 +579,7 @@ public class RistourneService {
             throw new IllegalStateException("Les règlements sélectionnés n'ont aucune ligne de détail");
         }
 
-        String notes = "Facture ristournes — "
+        String notes = "Avoir ristournes " + typeRistourne + " — "
                 + paiements.stream().map(RistournePaiement::getName).collect(Collectors.joining(", "));
 
         SalesInvoiceRequest req = SalesInvoiceRequest.builder()
@@ -428,14 +587,14 @@ public class RistourneService {
                 .journalId(journalId)
                 .date(LocalDate.now())
                 .companyId(companyId)
-                .type("invoice")
+                .type("credit_note")
                 .notes(notes)
                 .lines(lines)
                 .build();
 
-        com.erp.sales.dto.SalesInvoiceDTO invoice = salesService.createInvoice(req);
+        com.erp.sales.dto.SalesInvoiceDTO draft = salesService.createInvoice(req);
+        com.erp.sales.dto.SalesInvoiceDTO invoice = salesService.postInvoice(draft.getId());
 
-        // Marquer les règlements comme "done" et lier la facture
         for (RistournePaiement p : paiements) {
             p.setState("done");
             p.setGeneratedInvoiceId(invoice.getId());
@@ -471,6 +630,9 @@ public class RistourneService {
     }
 
     private RistourneDTO toDTO(Ristourne r) {
+        BigDecimal taux = r.getPartner().getTauxPrecompte() != null
+                ? r.getPartner().getTauxPrecompte() : BigDecimal.ZERO;
+        BigDecimal ttcUnit = computeUnitTTC(r.getMontantFixe(), r.getTypeRistourne(), taux);
         return RistourneDTO.builder()
                 .id(r.getId())
                 .partnerId(r.getPartner().getId())
@@ -478,10 +640,20 @@ public class RistourneService {
                 .categoryId(r.getCategory().getId())
                 .categoryName(r.getCategory().getName())
                 .montantFixe(r.getMontantFixe())
+                .montantTTCUnitaire(ttcUnit)
                 .typeRistourne(r.getTypeRistourne())
                 .companyId(r.getCompanyId())
                 .active(r.isActive())
                 .build();
+    }
+
+    private BigDecimal computeUnitTTC(BigDecimal montantFixe, String type, BigDecimal tauxPrecompte) {
+        if ("brasserie".equals(type)) {
+            BigDecimal pcRate = tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
+            return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+        }
+        return montantFixe.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
     }
 
     private RistournePaiementDTO toPaiementDTO(RistournePaiement p) {
@@ -509,8 +681,11 @@ public class RistourneService {
                 .invoiceName(p.getInvoice() != null ? p.getInvoice().getName() : null)
                 .generatedInvoiceId(p.getGeneratedInvoiceId())
                 .generatedInvoiceName(p.getGeneratedInvoiceName())
+                .accountMoveId(p.getAccountMove() != null ? p.getAccountMove().getId() : null)
+                .accountMoveName(p.getAccountMove() != null ? p.getAccountMove().getName() : null)
                 .companyId(p.getCompanyId())
                 .notes(p.getNotes())
+                .typeRistourne(p.getTypeRistourne())
                 .createdAt(p.getCreatedAt())
                 .lines(lines)
                 .build();

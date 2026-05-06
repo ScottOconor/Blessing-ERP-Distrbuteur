@@ -157,7 +157,8 @@
               <th>Fournisseur</th>
               <th>Catégorie</th>
               <th>Type</th>
-              <th class="text-right">Montant HT (FCFA)</th>
+              <th class="text-right">Montant HT / unité</th>
+              <th class="text-right">TTC / unité</th>
               <th></th>
             </tr>
           </thead>
@@ -167,7 +168,10 @@
                 <td class="font-bold">{{ r.partnerName }}</td>
                 <td>{{ r.categoryName }}</td>
                 <td><span class="badge" [class.badge-brasserie]="r.typeRemise==='brasserie'" [class.badge-guinness]="r.typeRemise==='guinness'">{{ r.typeRemise || '—' }}</span></td>
-                <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-0' }}</td>
+                <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-2' }}</td>
+                <td class="text-right font-mono" style="color:#017E84;font-weight:600">
+                  {{ r.montantTTCUnitaire | number:'1.0-2' }}
+                </td>
                 <td class="actions-cell">
                   <button class="btn-icon" (click)="editRms(r)"><span class="material-icons">edit</span></button>
                   <button class="btn-icon danger" (click)="deleteRms(r.id!)"><span class="material-icons">delete</span></button>

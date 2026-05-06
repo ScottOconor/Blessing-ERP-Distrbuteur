@@ -135,15 +135,24 @@ export class OrderFormComponent implements OnInit {
   // ===== AUTOCOMPLETE =====
 
   getSuggestions(i: number): Product[] {
-    // Use search results if available, fallback to client-side filter
     if (this.lineSearchResults[i]?.length > 0) {
       return this.lineSearchResults[i];
     }
-    const search = (this.lineSearches[i] ?? '').toLowerCase();
-    if (!search) return this.allProducts.slice(0, 8);
-    return this.allProducts.filter(p =>
-      p.name.toLowerCase().includes(search) || (p.defaultCode ?? '').toLowerCase().includes(search)
-    ).slice(0, 10);
+    const q = (this.lineSearches[i] ?? '').toLowerCase().trim();
+    if (!q) return this.allProducts.slice(0, 8);
+    const matches = this.allProducts.filter(p =>
+      p.name.toLowerCase().includes(q) || (p.defaultCode ?? '').toLowerCase().includes(q)
+    );
+    matches.sort((a, b) => {
+      const codeA = (a.defaultCode || '').toLowerCase();
+      const codeB = (b.defaultCode || '').toLowerCase();
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      const rank = (code: string, name: string) =>
+        code === q ? 0 : code.startsWith(q) ? 1 : name.startsWith(q) ? 2 : 3;
+      return rank(codeA, nameA) - rank(codeB, nameB);
+    });
+    return matches.slice(0, 12);
   }
 
   onSearchInput(i: number): void {
@@ -172,18 +181,30 @@ export class OrderFormComponent implements OnInit {
   }
 
   openSuggestions(i: number, event?: FocusEvent | Event): void {
-    if (this.order.lines[i]?.productId) {
+    if (event instanceof FocusEvent && this.order.lines[i]?.productId) {
       this.lineSearches[i] = '';
     }
     if (event?.target) {
       const rect = (event.target as HTMLElement).getBoundingClientRect();
       const dropdownWidth = Math.max(rect.width, 420);
-      // S'assurer que le dropdown ne dépasse pas à droite
       const left = Math.min(rect.left, window.innerWidth - dropdownWidth - 8);
       this.dropdownRect = { top: rect.bottom + 4, left, width: dropdownWidth };
     }
     this.activeSuggestionIdx = i;
     this.onSearchInput(i);
+  }
+
+  onProductSearchEnter(i: number, event: Event): void {
+    event.preventDefault();
+    const suggestions = this.getSuggestions(i);
+    if (suggestions.length > 0) {
+      this.selectProduct(i, suggestions[0]);
+    }
+  }
+
+  onLineEnter(event: Event): void {
+    event.preventDefault();
+    this.addLine();
   }
 
   closeSuggestions(i?: number): void {

@@ -1,8 +1,11 @@
 package com.erp.stock.controller;
 
 import com.erp.stock.dto.*;
+import com.erp.stock.service.BordereauExportService;
 import com.erp.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +17,7 @@ import java.util.List;
 public class StockController {
 
     private final StockService stockService;
+    private final BordereauExportService bordereauExportService;
 
     // ---- Categories ----
     @GetMapping("/categories")
@@ -168,6 +172,30 @@ public class StockController {
     @GetMapping("/receptions/{id}/bordereau")
     public ResponseEntity<ReceptionBordereauDTO> getBordereau(@PathVariable("id") Long id) {
         return ResponseEntity.ok(stockService.getBordereau(id));
+    }
+
+    /** Télécharger le bordereau en PDF */
+    @GetMapping("/receptions/{id}/bordereau/pdf")
+    public ResponseEntity<byte[]> getBordereauPdf(@PathVariable("id") Long id) {
+        ReceptionBordereauDTO dto = stockService.getBordereau(id);
+        byte[] pdf = bordereauExportService.generatePdf(dto);
+        String filename = (dto.getPickingName() != null ? dto.getPickingName() : "bordereau") + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    /** Télécharger le bordereau en Excel */
+    @GetMapping("/receptions/{id}/bordereau/excel")
+    public ResponseEntity<byte[]> getBordereauExcel(@PathVariable("id") Long id) {
+        ReceptionBordereauDTO dto = stockService.getBordereau(id);
+        byte[] excel = bordereauExportService.generateExcel(dto);
+        String filename = (dto.getPickingName() != null ? dto.getPickingName() : "bordereau") + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
     }
 
     /** Valider le bordereau : reçu → Magasin Principal, reste → Avaries */

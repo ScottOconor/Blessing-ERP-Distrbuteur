@@ -97,7 +97,15 @@
                 <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
                 <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
                 <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
-                <td><span class="material-icons chevron">chevron_right</span></td>
+                <td (click)="$event.stopPropagation()">
+                  @if (p.state === 'done') {
+                    <button class="btn-bordereau" (click)="openBordereau(p.id!)">
+                      <span class="material-icons">assignment</span> Bordereau
+                    </button>
+                  } @else {
+                    <span class="material-icons chevron">chevron_right</span>
+                  }
+                </td>
               </tr>
             }
           </tbody>
