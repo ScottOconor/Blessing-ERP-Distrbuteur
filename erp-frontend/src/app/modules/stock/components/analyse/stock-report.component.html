@@ -1,149 +1,159 @@
 <div class="page-container">
+
+  <!-- ── En-tête ──────────────────────────────────────────────────────────── -->
   <div class="page-header">
     <div>
-      <h1 class="page-title">Rapport de stock</h1>
-      <p class="page-subtitle">État des stocks valorisés par article et emplacement</p>
+      <h1 class="page-title">Rapport de Stock Valorisé</h1>
+      <p class="page-subtitle">État des stocks par article, catégorie ou entrepôt</p>
     </div>
-    <div class="header-actions">
-      <div class="view-toggle">
-        <button [class.active]="viewMode === 'product'" (click)="viewMode = 'product'">Par article</button>
-        <button [class.active]="viewMode === 'location'" (click)="viewMode = 'location'">Par emplacement</button>
-      </div>
-      <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
-      <button class="btn-secondary" (click)="printReport()"><span class="material-icons">print</span> Imprimer</button>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="load()">
+        <span class="material-icons">refresh</span>
+      </button>
+      <button class="btn-secondary" (click)="exportPdf()">
+        <span class="material-icons">picture_as_pdf</span> PDF
+      </button>
+      <button class="btn-secondary" (click)="printReport()">
+        <span class="material-icons">print</span> Imprimer
+      </button>
     </div>
   </div>
 
-  <!-- KPIs -->
+  <!-- ── KPIs ──────────────────────────────────────────────────────────────── -->
   <div class="kpi-row">
     <div class="kpi-card">
       <span class="kpi-icon material-icons">category</span>
       <div>
-        <div class="kpi-value">{{ byProduct.length }}</div>
-        <div class="kpi-label">Articles en stock</div>
+        <div class="kpi-value">{{ groups.length }}</div>
+        <div class="kpi-label">{{ groupBy === 'product' ? 'Articles' : groupBy === 'category' ? 'Catégories' : groupBy === 'warehouse' ? 'Entrepôts' : 'Emplacements' }}</div>
       </div>
     </div>
     <div class="kpi-card">
       <span class="kpi-icon material-icons">inventory_2</span>
       <div>
-        <div class="kpi-value">{{ filtered.length }}</div>
-        <div class="kpi-label">Lignes de stock</div>
+        <div class="kpi-value">{{ fmt(totalQtyLines, 0) }}</div>
+        <div class="kpi-label">Quantité totale</div>
       </div>
     </div>
     <div class="kpi-card accent">
       <span class="kpi-icon material-icons">price_check</span>
       <div>
-        <div class="kpi-value">{{ totalValue | number:'1.0-0' }} FCFA</div>
+        <div class="kpi-value">{{ fmt(totalValue) }} <span class="kpi-currency">FCFA</span></div>
         <div class="kpi-label">Valeur totale du stock</div>
       </div>
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="toolbar">
+  <!-- ── Toolbar ───────────────────────────────────────────────────────────── -->
+  <div class="toolbar no-print">
     <div class="search-box">
       <span class="material-icons">search</span>
-      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Rechercher un article..." />
+      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()"
+             placeholder="Rechercher un article, catégorie, emplacement..." />
+      @if (search) {
+        <span class="material-icons clear-icon" (click)="search = ''; applyFilter()">close</span>
+      }
+    </div>
+
+    <!-- Group By -->
+    <div class="groupby-bar">
+      <span class="groupby-label">Regrouper par :</span>
+      <div class="groupby-btns">
+        <button [class.active]="groupBy === 'product'"   (click)="groupBy = 'product';   applyFilter()">
+          <span class="material-icons">category</span> Article
+        </button>
+        <button [class.active]="groupBy === 'category'"  (click)="groupBy = 'category';  applyFilter()">
+          <span class="material-icons">label</span> Catégorie
+        </button>
+        <button [class.active]="groupBy === 'warehouse'" (click)="groupBy = 'warehouse'; applyFilter()">
+          <span class="material-icons">warehouse</span> Entrepôt
+        </button>
+        <button [class.active]="groupBy === 'location'"  (click)="groupBy = 'location';  applyFilter()">
+          <span class="material-icons">place</span> Emplacement
+        </button>
+      </div>
+      <div class="expand-btns">
+        <button class="btn-link" (click)="expandAll()">Tout développer</button>
+        <span class="sep">|</span>
+        <button class="btn-link" (click)="collapseAll()">Tout réduire</button>
+      </div>
     </div>
   </div>
 
   @if (loading) {
-    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement du stock...</div>
+  } @else if (groups.length === 0) {
+    <div class="empty-card">Aucun stock disponible</div>
   } @else {
-    @if (viewMode === 'product') {
-      <div class="card">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th>Article</th>
-              <th>Catégorie</th>
-              <th class="text-right">Quantité totale</th>
-              <th class="text-right">CMUP</th>
-              <th class="text-right">Valeur totale</th>
-              <th>Emplacements</th>
+
+    <div class="report-card">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-group">
+              @if (groupBy === 'product')   { Article / Emplacement }
+              @if (groupBy === 'category')  { Catégorie / Article }
+              @if (groupBy === 'warehouse') { Entrepôt / Article }
+              @if (groupBy === 'location')  { Emplacement / Article }
+            </th>
+            <th class="col-center no-print">UDM</th>
+            <th class="col-num">P.U. (CMUP)</th>
+            <th class="col-num">Quantité</th>
+            <th class="col-num">Valeur (FCFA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (grp of groups; track grp.key) {
+
+            <!-- Ligne de groupe -->
+            <tr class="group-header-row" (click)="toggleGroup(grp.key)">
+              <td colspan="2" class="group-header-cell">
+                <span class="expand-icon material-icons no-print">
+                  {{ isExpanded(grp.key) ? 'expand_more' : 'chevron_right' }}
+                </span>
+                <span class="group-icon material-icons">
+                  @if (groupBy === 'product')   { inventory_2 }
+                  @if (groupBy === 'category')  { label }
+                  @if (groupBy === 'warehouse') { warehouse }
+                  @if (groupBy === 'location')  { place }
+                </span>
+                <span class="group-label">{{ grp.label }}</span>
+                <span class="group-count no-print">{{ grp.rows.length }} article(s)</span>
+              </td>
+              <td class="col-num group-num">{{ fmt(grp.subtotalQty, 2) }}</td>
+              <td class="col-num group-num">{{ fmt(grp.subtotalValue) }}</td>
             </tr>
-          </thead>
-          <tbody>
-            @for (row of byProduct; track row.productId) {
-              <tr>
-                <td>
-                  <div class="product-cell">
-                    @if (row.productCode) { <span class="code-badge">{{ row.productCode }}</span> }
-                    <span class="product-name">{{ row.productName }}</span>
-                  </div>
-                </td>
-                <td class="text-muted small">{{ row.uomName }}</td>
-                <td class="text-right mono">
-                  <span [class.low-stock]="row.totalQty <= 0">{{ row.totalQty | number:'1.0-2' }}</span>
-                </td>
-                <td class="text-right mono text-muted">
-                  {{ row.locations[0]?.standardPrice | number:'1.0-0' }} FCFA
-                </td>
-                <td class="text-right mono fw-bold">{{ row.totalValue | number:'1.0-0' }} FCFA</td>
-                <td class="text-muted small">
-                  @for (loc of row.locations; track loc.locationId) {
-                    <span class="loc-chip">{{ loc.locationName }}: {{ loc.quantity | number:'1.0-0' }}</span>
-                  }
-                </td>
-              </tr>
+
+            <!-- Lignes détail (expandées) -->
+            @if (isExpanded(grp.key)) {
+              @for (q of grp.rows; track q.id) {
+                <tr class="detail-row">
+                  <td class="detail-label-cell">
+                    <span class="indent-icon material-icons">subdirectory_arrow_right</span>
+                    @if (groupBy !== 'product' && q.productCode) {
+                      <span class="code-badge">{{ q.productCode }}</span>
+                    }
+                    {{ rowLabel(q) }}
+                  </td>
+                  <td class="col-center text-muted small no-print">{{ q.uomName }}</td>
+                  <td class="col-num mono text-muted">{{ q.standardPrice ? fmt(q.standardPrice) : '—' }}</td>
+                  <td class="col-num mono" [class.low-stock]="q.quantity <= 0">{{ fmt(q.quantity, 2) }}</td>
+                  <td class="col-num mono">{{ fmt(q.totalValue || 0) }}</td>
+                </tr>
+              }
             }
-            @if (byProduct.length === 0) {
-              <tr><td colspan="6" class="empty-state">Aucun stock disponible</td></tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td colspan="4"><strong>TOTAL GÉNÉRAL</strong></td>
-              <td class="text-right mono fw-bold">{{ totalValue | number:'1.0-0' }} FCFA</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    } @else {
-      <!-- Vue par emplacement -->
-      <div class="card">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th>Emplacement</th>
-              <th>Article</th>
-              <th class="text-right">Quantité</th>
-              <th class="text-right">Réservé</th>
-              <th class="text-right">Disponible</th>
-              <th class="text-right">CMUP</th>
-              <th class="text-right">Valeur</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (q of filtered; track q.id) {
-              <tr>
-                <td class="text-muted small">{{ q.locationCompleteName || q.locationName }}</td>
-                <td>
-                  <div class="product-cell">
-                    @if (q.productCode) { <span class="code-badge">{{ q.productCode }}</span> }
-                    <span class="product-name">{{ q.productName }}</span>
-                  </div>
-                </td>
-                <td class="text-right mono">{{ q.quantity | number:'1.0-2' }}</td>
-                <td class="text-right mono text-muted">{{ q.reservedQuantity | number:'1.0-2' }}</td>
-                <td class="text-right mono" [class.low-stock]="q.availableQuantity <= 0">{{ q.availableQuantity | number:'1.0-2' }}</td>
-                <td class="text-right mono text-muted">{{ q.standardPrice | number:'1.0-0' }}</td>
-                <td class="text-right mono fw-bold">{{ q.totalValue | number:'1.0-0' }} FCFA</td>
-              </tr>
-            }
-            @if (filtered.length === 0) {
-              <tr><td colspan="7" class="empty-state">Aucun stock disponible</td></tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td colspan="6"><strong>TOTAL GÉNÉRAL</strong></td>
-              <td class="text-right mono fw-bold">{{ totalValue | number:'1.0-0' }} FCFA</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    }
+
+          }
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2"><strong>TOTAL GÉNÉRAL DU STOCK</strong></td>
+            <td class="col-num mono fw-bold">{{ fmt(totalQtyLines, 2) }}</td>
+            <td class="col-num mono fw-bold">{{ fmt(totalValue) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
   }
 </div>

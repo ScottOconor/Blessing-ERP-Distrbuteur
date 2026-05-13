@@ -5,6 +5,7 @@ import { AccountingService } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountAccount } from '../../../../core/models/account.model';
 import { ImportResult } from '../../../../core/models/import-result.model';
+import { parseExcelFile } from '../../../../core/utils/excel-import.util';
 
 @Component({
   selector: 'app-chart-of-accounts',
@@ -26,6 +27,21 @@ export class ChartOfAccountsComponent implements OnInit {
   errorMsg = '';
   importing = false;
   downloadingTemplate = false;
+
+  // ── Prévisualisation import ───────────────────────────────────────────────
+  showPreview    = false;
+  previewRows    : Record<string, any>[] = [];
+  previewHeaders : string[] = [];
+  pendingFile    : File | null = null;
+  previewLoading = false;
+  readonly PREVIEW_MAX = 100;
+  readonly previewCols = [
+    { key: 'code',         label: 'Code' },
+    { key: 'name',         label: 'Intitulé' },
+    { key: 'account_type', label: 'Type' },
+    { key: 'deprecated',   label: 'Obsolète' },
+    { key: 'reconcile',    label: 'Lettrage' },
+  ];
 
   accountForm!: FormGroup;
 
@@ -196,25 +212,66 @@ export class ChartOfAccountsComponent implements OnInit {
     });
   }
 
-  onImport(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
+  async onImport(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0];
     if (!file) return;
-    this.importing = true;
-    this.accountingService.importAccounts(file, this.authService.getCompanyId()).subscribe({
+    input.value = '';
+
+    this.previewLoading = true;
+    this.pendingFile    = file;
+    this.errorMsg       = '';
+
+    try {
+      const allRows = await parseExcelFile(file);
+      const colSet  = new Set<string>();
+      allRows.forEach(r => Object.keys(r).forEach(k => colSet.add(k)));
+      this.previewHeaders = Array.from(colSet);
+      this.previewRows    = allRows.slice(0, this.PREVIEW_MAX);
+      this.showPreview    = true;
+    } catch (e: any) {
+      this.showError('Impossible de lire le fichier : ' + e.message);
+      this.pendingFile = null;
+    }
+
+    this.previewLoading = false;
+  }
+
+  confirmImport(): void {
+    if (!this.pendingFile) return;
+    this.showPreview = false;
+    this.importing   = true;
+    this.errorMsg    = '';
+
+    this.accountingService.importAccounts(this.pendingFile, this.authService.getCompanyId(), true).subscribe({
       next: (res: ImportResult) => {
-        this.importing = false;
-        (event.target as HTMLInputElement).value = '';
-        const msg = `Import terminé : ${res.created} créés, ${res.updated} mis à jour`;
-        this.showSuccess(msg);
+        this.importing   = false;
+        this.pendingFile = null;
+        this.showSuccess(`Import terminé : ${res.created} créés, ${res.updated} mis à jour`);
         if (res.errors.length > 0) this.showError(res.errors.join(' | '));
         this.loadAccounts();
       },
       error: (err: any) => {
-        this.importing = false;
-        (event.target as HTMLInputElement).value = '';
+        this.importing   = false;
+        this.pendingFile = null;
         this.showError(err?.error?.message || 'Erreur lors de l\'import');
       }
     });
+  }
+
+  closePreview(): void {
+    this.showPreview  = false;
+    this.previewRows  = [];
+    this.previewHeaders = [];
+    this.pendingFile  = null;
+  }
+
+  isActiveCol(header: string): boolean {
+    return this.previewCols.some(c => c.key.toLowerCase() === header.toLowerCase());
+  }
+
+  getCellValue(row: Record<string, any>, col: { key: string }): string {
+    return String(row[col.key] ?? row[col.key.toLowerCase()] ?? '');
   }
 
   showSuccess(msg: string): void {

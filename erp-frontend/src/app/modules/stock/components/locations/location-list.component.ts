@@ -157,6 +157,7 @@ export class LocationListComponent implements OnInit {
   }
 
   async confirmImport(): Promise<void> {
+    this.importLoading = true;
     const cid = this.authService.getCompanyId();
     let done = 0, errors = 0;
     const validUsages = ['internal', 'view', 'supplier', 'customer', 'inventory', 'transit'];
@@ -174,6 +175,7 @@ export class LocationListComponent implements OnInit {
         done++;
       } catch { errors++; }
     }
+    this.importLoading = false;
     this.closeImportModal();
     this.load();
     this.showSuccess(`Import terminé : ${done} créé(s), ${errors} erreur(s)`);

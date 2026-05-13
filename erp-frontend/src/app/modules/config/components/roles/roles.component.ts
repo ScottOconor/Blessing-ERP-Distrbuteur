@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ConfigService, RoleInfo, CompanyGroup, Permission, MODULES, ACTIONS } from '../../services/config.service';
+import {
+  ConfigService, RoleInfo, CompanyGroup, Permission,
+  MODULES, ACTIONS, RESOURCES, MODULE_LABELS, RESOURCE_LABELS
+} from '../../services/config.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
@@ -21,10 +24,15 @@ export class RolesComponent implements OnInit {
   showModal = false;
   editingRole: RoleInfo | null = null;
   form: Partial<RoleInfo> = {};
-  permMatrix: Record<string, Record<string, boolean>> = {};
+
+  // matrice 3 niveaux : permMatrix[module][resource][action] = boolean
+  permMatrix: Record<string, Record<string, Record<string, boolean>>> = {};
 
   readonly MODULES = MODULES;
   readonly ACTIONS = ACTIONS;
+  readonly RESOURCES = RESOURCES;
+  readonly MODULE_LABELS = MODULE_LABELS;
+  readonly RESOURCE_LABELS = RESOURCE_LABELS;
   readonly ACTION_LABELS: Record<string, string> = {
     VIEW: 'Voir', CREATE: 'Créer', EDIT: 'Modifier',
     DELETE: 'Supprimer', IMPORT: 'Importer', EXPORT: 'Exporter'
@@ -56,8 +64,13 @@ export class RolesComponent implements OnInit {
     this.permMatrix = {};
     for (const mod of MODULES) {
       this.permMatrix[mod] = {};
-      for (const act of ACTIONS) {
-        this.permMatrix[mod][act] = perms.some(p => p.module === mod && p.action === act);
+      for (const res of RESOURCES[mod] ?? []) {
+        this.permMatrix[mod][res] = {};
+        for (const act of ACTIONS) {
+          this.permMatrix[mod][res][act] = perms.some(
+            p => p.module === mod && p.resource === res && p.action === act
+          );
+        }
       }
     }
   }
@@ -79,17 +92,46 @@ export class RolesComponent implements OnInit {
   getPermissions(): Permission[] {
     const perms: Permission[] = [];
     for (const mod of MODULES)
-      for (const act of ACTIONS)
-        if (this.permMatrix[mod]?.[act]) perms.push({ module: mod, action: act });
+      for (const res of RESOURCES[mod] ?? [])
+        for (const act of ACTIONS)
+          if (this.permMatrix[mod]?.[res]?.[act])
+            perms.push({ module: mod, resource: res, action: act });
     return perms;
   }
 
-  toggleAll(mod: string): void {
-    const allChecked = ACTIONS.every(a => this.permMatrix[mod]?.[a]);
-    ACTIONS.forEach(a => { if (!this.permMatrix[mod]) this.permMatrix[mod] = {}; this.permMatrix[mod][a] = !allChecked; });
+  toggleAllActions(mod: string, res: string): void {
+    const allChecked = ACTIONS.every(a => this.permMatrix[mod]?.[res]?.[a]);
+    ACTIONS.forEach(a => { this.permMatrix[mod][res][a] = !allChecked; });
   }
 
-  isAllChecked(mod: string): boolean { return ACTIONS.every(a => this.permMatrix[mod]?.[a]); }
+  toggleAllModule(mod: string): void {
+    const allChecked = this.isAllModuleChecked(mod);
+    for (const res of RESOURCES[mod] ?? [])
+      for (const act of ACTIONS)
+        this.permMatrix[mod][res][act] = !allChecked;
+  }
+
+  isAllActionsChecked(mod: string, res: string): boolean {
+    return ACTIONS.every(a => this.permMatrix[mod]?.[res]?.[a]);
+  }
+
+  isAllModuleChecked(mod: string): boolean {
+    return (RESOURCES[mod] ?? []).every(res => ACTIONS.every(a => this.permMatrix[mod]?.[res]?.[a]));
+  }
+
+  isPartialModule(mod: string): boolean {
+    const resources = RESOURCES[mod] ?? [];
+    const total = resources.length * ACTIONS.length;
+    const checked = resources.reduce(
+      (sum, res) => sum + ACTIONS.filter(a => this.permMatrix[mod]?.[res]?.[a]).length, 0
+    );
+    return checked > 0 && checked < total;
+  }
+
+  getModulePermCount(perms: Permission[], mod: string): number {
+    const resources = new Set(perms.filter(p => p.module === mod).map(p => p.resource));
+    return resources.size;
+  }
 
   save(): void {
     if (!this.form.label) { this.errorMsg = 'Le libellé est requis'; return; }

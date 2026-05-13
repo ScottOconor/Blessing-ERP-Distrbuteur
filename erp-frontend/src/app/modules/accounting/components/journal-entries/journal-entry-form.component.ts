@@ -281,7 +281,11 @@ export class JournalEntryFormComponent implements OnInit {
     this.journalOpeningBalance = null;
     this.journalAccountId = null;
     if (!this.isBalanceJournal) return;
-    this.accountingService.getJournalAccountBalance(this.move.journalId).subscribe({
+    // Pour une pièce existante (move.id défini), on exclut ses lignes du solde
+    // → on obtient le solde AVANT cette pièce (= solde initial correct).
+    // Pour une nouvelle pièce (move.id undefined), pas d'exclusion → solde courant.
+    const excludeMoveId = this.move.id ?? undefined;
+    this.accountingService.getJournalAccountBalance(this.move.journalId, excludeMoveId).subscribe({
       next: (data) => {
         this.journalAccountCode = data.accountCode;
         this.journalAccountName = data.accountName;

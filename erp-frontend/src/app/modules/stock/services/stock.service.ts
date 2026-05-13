@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface ProductCategory {
   id?: number;
@@ -84,10 +85,13 @@ export interface StockPickingType {
 export interface StockMove {
   id?: number;
   pickingId?: number;
+  pickingRef?: string;
   productId: number;
   productCode?: string;
   productName?: string;
   uomName?: string;
+  categoryId?: number;
+  categoryName?: string;
   qtyDemanded: number;
   qtyDone?: number;
   priceUnit?: number;
@@ -98,6 +102,9 @@ export interface StockMove {
   locationDestName?: string;
   state?: string;
   companyId?: number;
+  pickingTypeCode?: string;
+  dateDone?: string;
+  partnerName?: string;
   availableQty?: number;
 }
 
@@ -190,6 +197,8 @@ export interface StockQuant {
   productCode?: string;
   productName?: string;
   uomName?: string;
+  categoryId?: number;
+  categoryName?: string;
   locationId: number;
   locationName?: string;
   locationCompleteName?: string;
@@ -228,6 +237,24 @@ export interface BordereauLigneSaisie {
   qteRecue: number;
 }
 
+export interface InventorySheetLine {
+  productCode?: string;
+  productName: string;
+  locationName: string;
+  uomName?: string;
+  systemQty?: number;
+  countedQty?: number;
+  diff?: number;
+  unitCost?: number;
+  valueDiff?: number;
+}
+
+export interface InventorySheetRequest {
+  companyName?: string;
+  date?: string;
+  lines: InventorySheetLine[];
+}
+
 export interface StockDashboard {
   nbProducts: number;
   nbWarehouses: number;
@@ -241,7 +268,7 @@ export interface StockDashboard {
 
 @Injectable({ providedIn: 'root' })
 export class StockService {
-  private api = `http://${window.location.hostname}:8085/api/stock`;
+  private api = `${environment.apiUrl}/api/stock`;
 
   constructor(private http: HttpClient) {}
 
@@ -371,14 +398,25 @@ export class StockService {
   createAdjustment(req: StockAdjustmentRequest): Observable<StockAdjustment> {
     return this.http.post<StockAdjustment>(`${this.api}/adjustments`, req);
   }
+  createAdjustmentsBulk(requests: StockAdjustmentRequest[]): Observable<StockAdjustment[]> {
+    return this.http.post<StockAdjustment[]>(`${this.api}/adjustments/bulk`, requests);
+  }
+  downloadCountingSheetPdf(dto: InventorySheetRequest): Observable<Blob> {
+    return this.http.post(`${this.api}/adjustments/counting-sheet/pdf`, dto, { responseType: 'blob' });
+  }
+  downloadInventoryReportPdf(dto: InventorySheetRequest): Observable<Blob> {
+    return this.http.post(`${this.api}/adjustments/inventory-report/pdf`, dto, { responseType: 'blob' });
+  }
 
   // Analyse
   getStockReport(companyId: number): Observable<StockQuant[]> {
     return this.http.get<StockQuant[]>(`${this.api}/report`, { params: new HttpParams().set('companyId', companyId) });
   }
-  getMovements(companyId: number, productId?: number, limit = 100): Observable<StockMove[]> {
-    let params = new HttpParams().set('companyId', companyId).set('limit', limit);
-    if (productId) params = params.set('productId', productId);
+  getMovements(companyId: number, opts: { productId?: number; dateFrom?: string; dateTo?: string; limit?: number } = {}): Observable<StockMove[]> {
+    let params = new HttpParams().set('companyId', companyId).set('limit', opts.limit ?? 1000);
+    if (opts.productId) params = params.set('productId', opts.productId);
+    if (opts.dateFrom)  params = params.set('dateFrom', opts.dateFrom);
+    if (opts.dateTo)    params = params.set('dateTo', opts.dateTo);
     return this.http.get<StockMove[]>(`${this.api}/movements`, { params });
   }
   getValuation(companyId: number, productId?: number): Observable<ValuationLayer[]> {

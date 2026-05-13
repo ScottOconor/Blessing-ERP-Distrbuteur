@@ -160,7 +160,13 @@ export class RistourneListComponent implements OnInit {
   }
 
   get brasseriesByQuarter(): QuarterGroup[] {
-    return this.groupByQuarter(this.brasseriesPaiements);
+    const grouped = this.groupByQuarter(this.brasseriesPaiements);
+    for (const qDef of this.QUARTERS) {
+      if (!grouped.find(g => g.quarter === qDef.q && g.year === this.currentYear)) {
+        grouped.push({ quarter: qDef.q, year: this.currentYear, label: `T${qDef.q} ${this.currentYear}`, totalAmount: 0, partners: [] });
+      }
+    }
+    return grouped.sort((a, b) => b.year - a.year || b.quarter - a.quarter);
   }
 
   generateQuarter(q: number): void {
@@ -466,45 +472,33 @@ export class RistourneListComponent implements OnInit {
     return '';
   }
 
-  async getOrCreateCategoryId(name: string): Promise<number | undefined> {
-    if (!name) return undefined;
-    const existing = this.getCategoryId(name);
-    if (existing) return existing;
-    try {
-      const created = await this.stockSvc.createCategory({ name, companyId: this.companyId }).toPromise();
-      if (created?.id) { this.categories.push(created); return created.id; }
-    } catch {}
-    return undefined;
-  }
+  confirmImport(): void {
+    this.importLoading = true;
 
-  async confirmImport(): Promise<void> {
-    if (this.clients.length === 0) {
-      alert('Impossible d\'importer : liste des clients vide.\nVérifiez que le serveur est démarré et rechargez la page.');
-      return;
-    }
-    let done = 0, noClient = 0, noCat = 0, apiErr = 0;
-    for (const row of this.importRows) {
-      const clientName = String(row['Client'] || '');
-      const catName    = String(row["Catégorie d'article"] || '');
-      const partnerId  = this.getClientId(clientName);
-      const categoryId = await this.getOrCreateCategoryId(catName);
-      if (!partnerId) { noClient++; continue; }
-      if (!categoryId) { noCat++; continue; }
-      const dto: Ristourne = {
-        partnerId, categoryId,
-        montantFixe: parseFloat(row['Montant de la ristourne']) || 0,
+    const rows = this.importRows
+      .map(row => ({
+        clientName:    String(row['Client'] || ''),
+        categoryName:  String(row["Catégorie d'article"] || ''),
         typeRistourne: this.normalizeType(String(row['Type de ristourne'] || '')),
-        companyId: this.companyId
-      };
-      try { await this.svc.save(dto).toPromise(); done++; } catch { apiErr++; }
-    }
-    this.closeImportModal();
-    this.loadRistournes();
-    const msg = [`Import terminé : ${done} créé(s)`];
-    if (noClient > 0) msg.push(`${noClient} client(s) introuvable(s)`);
-    if (noCat > 0)    msg.push(`${noCat} catégorie(s) introuvable(s)`);
-    if (apiErr > 0)   msg.push(`${apiErr} erreur(s) serveur`);
-    alert(msg.join('\n'));
+        montantFixe:   parseFloat(row['Montant de la ristourne']) || 0
+      }))
+      .filter(r => r.clientName);
+
+    this.svc.importBatch(rows, this.companyId).subscribe({
+      next: saved => {
+        this.importLoading = false;
+        this.closeImportModal();
+        this.loadRistournes();
+        const skipped = rows.length - saved.length;
+        const msg = [`Import terminé : ${saved.length} ristourne(s) sauvegardée(s)`];
+        if (skipped > 0) msg.push(`${skipped} ligne(s) ignorée(s) (client ou catégorie introuvable)`);
+        alert(msg.join('\n'));
+      },
+      error: err => {
+        this.importLoading = false;
+        alert('Erreur lors de l\'import : ' + (err?.error?.message ?? err.message ?? 'Erreur serveur'));
+      }
+    });
   }
 
   private emptyRst(): Ristourne {

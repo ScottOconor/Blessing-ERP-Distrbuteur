@@ -76,4 +76,9 @@ public class SalesInvoiceLine {
     /** Catégorie de produit pour le calcul des frais d'enlèvement */
     @Column(name = "category_id")
     private Long categoryId;
+
+    /** Taxe Guinness appliquée sur cette ligne (300 fixe si catégorie Guinness éligible, sinon 0) */
+    @Builder.Default
+    @Column(name = "guinness_taxe", precision = 20, scale = 2)
+    private BigDecimal guinessTaxe = BigDecimal.ZERO;
 }

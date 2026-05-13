@@ -19,4 +19,6 @@ public class StockQuantDTO {
     private BigDecimal standardPrice;
     private BigDecimal totalValue;
     private Long companyId;
+    private Long categoryId;
+    private String categoryName;
 }

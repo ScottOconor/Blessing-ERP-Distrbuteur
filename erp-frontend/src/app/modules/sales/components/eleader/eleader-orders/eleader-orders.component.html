@@ -1,0 +1,126 @@
+<div class="orders-page">
+  <div class="page-header">
+    <div>
+      <h2>Bons de commande eLeader</h2>
+      <p class="subtitle">Bons importés depuis les factures PDF eLeader</p>
+    </div>
+    <button class="btn-primary" (click)="goToImport()">
+      <span class="material-icons">upload_file</span>
+      Nouvel import
+    </button>
+  </div>
+
+  <div *ngIf="successMsg" class="alert alert-success">
+    <span class="material-icons">check_circle</span> {{ successMsg }}
+  </div>
+  <div *ngIf="errorMsg" class="alert alert-error">
+    <span class="material-icons">error</span> {{ errorMsg }}
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-bar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input [(ngModel)]="searchText" (ngModelChange)="applyFilters()"
+             placeholder="Rechercher par BC, client, réf. eLeader…" />
+    </div>
+    <div class="state-tabs">
+      <button *ngFor="let f of STATE_FILTERS"
+              class="tab-btn" [class.active]="stateFilter === f.value"
+              (click)="stateFilter = f.value; applyFilters()">
+        {{ f.label }}
+      </button>
+    </div>
+    <button class="btn-refresh" (click)="loadOrders()" title="Rafraîchir">
+      <span class="material-icons" [class.spin]="loading">refresh</span>
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrapper" *ngIf="!loading">
+    <table *ngIf="filteredOrders.length > 0; else noOrders">
+      <thead>
+        <tr>
+          <th>Bon de commande</th>
+          <th>Réf. eLeader</th>
+          <th>Client</th>
+          <th>Date</th>
+          <th>Total TTC</th>
+          <th>Statut</th>
+          <th>Facture</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let o of filteredOrders">
+          <td class="mono fw">{{ o.name }}</td>
+          <td class="mono ref">{{ o.eleaderReference || '—' }}</td>
+          <td class="partner">{{ o.partnerName }}</td>
+          <td>{{ o.date | date:'dd/MM/yyyy' }}</td>
+          <td class="amount">{{ o.totalTTC | number:'1.0-0' }} FCFA</td>
+          <td><span class="badge" [ngClass]="stateClass(o.state || '')">{{ stateLabel(o.state || '') }}</span></td>
+          <td class="mono">{{ o.invoiceName || '—' }}</td>
+          <td class="actions">
+            <button *ngIf="o.state === 'draft'"
+                    class="btn-confirm" (click)="askConfirm(o)"
+                    [disabled]="confirming === o.id"
+                    [title]="confirming === o.id ? 'Confirmation…' : 'Confirmer et créer la facture'">
+              <span class="material-icons" *ngIf="confirming !== o.id">check_circle</span>
+              <span class="material-icons spin" *ngIf="confirming === o.id">refresh</span>
+              Confirmer
+            </button>
+            <button *ngIf="o.state === 'draft'"
+                    class="btn-cancel" (click)="cancelOrder(o)"
+                    [disabled]="cancelling === o.id"
+                    title="Annuler">
+              <span class="material-icons">cancel</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #noOrders>
+      <div class="empty-state">
+        <span class="material-icons">inbox</span>
+        <p>Aucun bon de commande eLeader trouvé.</p>
+        <button class="btn-primary small" (click)="goToImport()">
+          <span class="material-icons">upload_file</span>
+          Importer un PDF eLeader
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="loading-state" *ngIf="loading">
+    <span class="material-icons spin">refresh</span> Chargement des bons de commande…
+  </div>
+
+  <!-- Modal confirmation -->
+  <div class="modal-overlay" *ngIf="showConfirmModal" (click)="showConfirmModal = false">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span class="material-icons">check_circle</span>
+        <h4>Confirmer le bon de commande</h4>
+      </div>
+      <div class="modal-body" *ngIf="confirmTarget">
+        <p>Voulez-vous confirmer le bon <strong>{{ confirmTarget.name }}</strong> ?</p>
+        <p class="sub">
+          Client : <strong>{{ confirmTarget.partnerName }}</strong><br/>
+          Total TTC : <strong>{{ confirmTarget.totalTTC | number:'1.0-0' }} FCFA</strong>
+        </p>
+        <div class="info-box">
+          <span class="material-icons">info</span>
+          La confirmation va créer automatiquement la facture correspondante avec le journal eLeader configuré.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showConfirmModal = false">Annuler</button>
+        <button class="btn-confirm-modal" (click)="confirmOrder()">
+          <span class="material-icons">check_circle</span>
+          Confirmer et facturer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

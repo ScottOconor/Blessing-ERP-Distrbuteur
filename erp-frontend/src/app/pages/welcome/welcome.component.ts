@@ -87,7 +87,7 @@ export class WelcomeComponent implements OnInit {
 
   userRole = '';
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(public authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     this.loadUserInfo();
@@ -110,24 +110,47 @@ export class WelcomeComponent implements OnInit {
   }
 
   private buildModules(): void {
-    // Config module visible to all but description adapted; HR always coming soon
-    this.modules = this.allModules.map(m => {
-      if (m.id === 'config') {
-        return {
-          ...m,
-          description: this.authService.isAdmin()
-            ? 'Groupes, entreprises, utilisateurs, rôles & permissions'
-            : 'Paramètres & changement de mot de passe'
-        };
-      }
-      return m;
-    });
+    // Correspondance id module → code permission
+    const modulePermMap: Record<string, string> = {
+      accounting: 'COMPTABILITE',
+      sales:      'VENTES',
+      purchases:  'ACHATS',
+      stock:      'STOCK'
+    };
+
+    this.modules = this.allModules
+      .filter(m => {
+        if (!m.available) return false;
+        // CONFIG : toujours visible (au moins le changement de mot de passe)
+        if (m.id === 'config') return true;
+        const permModule = modulePermMap[m.id];
+        if (!permModule) return true;
+        // Rôles système (centralisés) : accès total
+        if (this.authService.isCentralized()) return true;
+        // Rôles custom : doit avoir au moins une permission dans le module
+        return this.authService.hasAnyModulePermission(permModule);
+      })
+      .map(m => {
+        if (m.id === 'config') {
+          return {
+            ...m,
+            description: this.authService.canManageUsers()
+              ? 'Groupes, entreprises, utilisateurs, rôles & permissions'
+              : 'Paramètres & changement de mot de passe'
+          };
+        }
+        return m;
+      });
   }
 
   navigateTo(module: Module): void {
     if (module.available) {
       this.router.navigate([module.route]);
     }
+  }
+
+  goToGroupHome(): void {
+    this.router.navigate(['/group-home']);
   }
 
   logout(): void {

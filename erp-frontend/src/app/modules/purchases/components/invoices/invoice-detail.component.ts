@@ -6,11 +6,12 @@ import { PurchaseService, PurchaseInvoice } from '../../services/purchase.servic
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AccountJournal } from '../../../../core/models/account.model';
+import { PrintPreviewComponent, PrintDocType } from '../../../../shared/components/print-preview/print-preview.component';
 
 @Component({
   selector: 'app-purchase-invoice-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintPreviewComponent],
   templateUrl: './invoice-detail.component.html',
   styleUrl: './invoice-detail.component.scss'
 })
@@ -26,6 +27,9 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   generatingRemises = false;
   successMsg = '';
   errorMsg = '';
+
+  // Impression
+  showPrintModal = false;
 
   // Paiement
   showPaymentForm = false;
@@ -231,6 +235,11 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
   get isAvoir(): boolean {
     return this.invoice?.type === 'credit_note';
   }
+
+  get printDocType(): PrintDocType { return 'purchase_invoice'; }
+  get printCompanyName(): string { return this.authService.getActiveCompany()?.name ?? ''; }
+  openPrint(): void { this.showPrintModal = true; }
+  closePrint(): void { this.showPrintModal = false; }
 
   back(): void {
     if (this.isAvoir) {

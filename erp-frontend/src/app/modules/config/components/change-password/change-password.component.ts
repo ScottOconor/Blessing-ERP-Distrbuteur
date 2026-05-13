@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-change-password',
@@ -80,7 +81,7 @@ export class ChangePasswordComponent {
     }
     this.saving = true;
     this.errorMsg = '';
-    const api = `http://${window.location.hostname}:8085/api/config/change-password`;
+    const api = `${environment.apiUrl}/api/config/change-password`;
     this.http.post(api, { currentPassword: this.current, newPassword: this.newPwd }).subscribe({
       next: () => {
         this.saving = false;

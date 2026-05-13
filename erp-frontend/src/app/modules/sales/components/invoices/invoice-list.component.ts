@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SalesService, SalesInvoice } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -7,7 +8,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 @Component({
   selector: 'app-invoice-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './invoice-list.component.html',
   styleUrl: './invoice-list.component.scss'
 })
@@ -16,6 +17,8 @@ export class InvoiceListComponent implements OnInit {
   filteredInvoices: SalesInvoice[] = [];
   loading = false;
   stateFilter = 'all';
+  dateFrom = '';
+  dateTo = '';
 
   stateFilters = [
     { value: 'all', label: 'Toutes' },
@@ -48,13 +51,22 @@ export class InvoiceListComponent implements OnInit {
   }
 
   applyFilter(): void {
-    this.filteredInvoices = this.stateFilter === 'all'
-      ? this.invoices
-      : this.invoices.filter(i => i.state === this.stateFilter);
+    this.filteredInvoices = this.invoices.filter(i => {
+      if (this.stateFilter !== 'all' && i.state !== this.stateFilter) return false;
+      if (this.dateFrom && i.date < this.dateFrom) return false;
+      if (this.dateTo && i.date > this.dateTo) return false;
+      return true;
+    });
   }
 
   setFilter(state: string): void {
     this.stateFilter = state;
+    this.applyFilter();
+  }
+
+  clearDateFilter(): void {
+    this.dateFrom = '';
+    this.dateTo = '';
     this.applyFilter();
   }
 

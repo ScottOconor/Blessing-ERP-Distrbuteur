@@ -19,6 +19,12 @@
 
     <div class="cfg-user">
       @if (isCentralized) {
+        <button class="btn-group-home" (click)="router.navigate(['/group-home'])" title="Espace groupe">
+          <span class="material-icons">corporate_fare</span>
+          <span>Groupe</span>
+        </button>
+      }
+      @if (isCentralized) {
         <div class="company-selector" [class.open]="showCompanyPicker">
           <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
             <span class="material-icons">business</span>

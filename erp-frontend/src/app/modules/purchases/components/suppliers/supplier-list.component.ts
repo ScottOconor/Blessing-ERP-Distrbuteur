@@ -39,6 +39,10 @@ export class SupplierListComponent implements OnInit {
   saving = false;
   errorMsg = '';
   successMsg = '';
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
+  canImport = false;
 
   form: any = this.emptyForm();
 
@@ -65,6 +69,10 @@ export class SupplierListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.canCreate = this.authService.hasPermission('ACHATS', 'FOURNISSEURS', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('ACHATS', 'FOURNISSEURS', 'EDIT');
+    this.canDelete = this.authService.hasPermission('ACHATS', 'FOURNISSEURS', 'DELETE');
+    this.canImport = this.authService.hasPermission('ACHATS', 'FOURNISSEURS', 'IMPORT');
     this.loadSuppliers();
     this.stockSvc.getCategories(this.authService.getCompanyId() ?? 1).subscribe(c => this.categories = c);
   }
@@ -251,6 +259,7 @@ export class SupplierListComponent implements OnInit {
   closeImportModal(): void { this.showImportModal = false; this.importRows = []; }
 
   async confirmImport(): Promise<void> {
+    this.importLoading = true;
     let done = 0, errors = 0;
     for (const row of this.importRows) {
       const dto = {
@@ -267,6 +276,7 @@ export class SupplierListComponent implements OnInit {
         done++;
       } catch { errors++; }
     }
+    this.importLoading = false;
     this.closeImportModal();
     this.loadSuppliers();
     this.successMsg = `Import terminé : ${done} créé(s), ${errors} erreur(s)`;

@@ -1,0 +1,178 @@
+<div class="journal-page">
+  <div class="page-header">
+    <div>
+      <h2>Journaux d'importation eLeader</h2>
+      <p class="subtitle">Historique complet de tous les imports PDF eLeader</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-refresh" (click)="load()" title="Rafraîchir">
+        <span class="material-icons" [class.spin]="loading">refresh</span>
+      </button>
+      <button class="btn-primary" (click)="goToImport()">
+        <span class="material-icons">upload_file</span>
+        Nouvel import
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-bar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input [(ngModel)]="searchText" (ngModelChange)="applyFilters()"
+             placeholder="Référence, facture eLeader, client, fichier, BC…" />
+    </div>
+    <div class="status-tabs">
+      <button *ngFor="let f of STATUS_FILTERS"
+              class="tab-btn" [class.active]="statusFilter === f.value"
+              (click)="statusFilter = f.value; applyFilters()">
+        {{ f.label }}
+        <span class="count" *ngIf="f.value !== 'all'">
+          {{ countByStatus(f.value) }}
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="loading">
+    <span class="material-icons spin">refresh</span> Chargement des journaux…
+  </div>
+
+  <!-- Tableau principal -->
+  <div class="table-card" *ngIf="!loading">
+    <table *ngIf="filtered.length > 0; else empty">
+      <thead>
+        <tr>
+          <th>Référence</th>
+          <th>Fichier</th>
+          <th>Modèle</th>
+          <th>N° Facture eLeader</th>
+          <th>Client</th>
+          <th>BC créé</th>
+          <th>Statut</th>
+          <th>Date d'import</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of filtered" [class.row-error]="log.status === 'error'"
+            (click)="openDetail(log)" class="clickable">
+          <td class="mono ref">{{ log.reference }}</td>
+          <td class="filename" [title]="log.filename">{{ log.filename }}</td>
+          <td>
+            <span class="model-badge" [ngClass]="modelBadge(log.invoiceModel)">
+              {{ log.invoiceModel }}
+            </span>
+          </td>
+          <td class="mono">{{ log.eleaderReference || '—' }}</td>
+          <td class="partner">{{ log.clientName || '—' }}</td>
+          <td class="mono fw" (click)="$event.stopPropagation(); log.salesOrderName && goToOrder(log.salesOrderName)">
+            <span class="order-link" *ngIf="log.salesOrderName">
+              {{ log.salesOrderName }}
+              <span class="material-icons tiny">open_in_new</span>
+            </span>
+            <span *ngIf="!log.salesOrderName">—</span>
+          </td>
+          <td>
+            <span class="badge" [ngClass]="statusClass(log.status)">
+              {{ statusLabel(log.status) }}
+            </span>
+          </td>
+          <td class="date">{{ log.importDate | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            <button class="btn-detail" (click)="$event.stopPropagation(); openDetail(log)">
+              <span class="material-icons">info</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #empty>
+      <div class="empty-state">
+        <span class="material-icons">history</span>
+        <p>Aucun import enregistré.</p>
+        <button class="btn-primary small" (click)="goToImport()">
+          <span class="material-icons">upload_file</span> Importer un PDF eLeader
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Panneau de détail -->
+  <div class="detail-overlay" *ngIf="selectedLog" (click)="selectedLog = null">
+    <div class="detail-panel" (click)="$event.stopPropagation()">
+      <div class="detail-header">
+        <div class="detail-title">
+          <span class="mono">{{ selectedLog.reference }}</span>
+          <span class="badge ml-8" [ngClass]="statusClass(selectedLog.status)">
+            {{ statusLabel(selectedLog.status) }}
+          </span>
+        </div>
+        <button class="btn-icon" (click)="selectedLog = null">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="detail-body">
+        <div class="detail-grid">
+          <div class="detail-row">
+            <span class="detail-lbl">Fichier</span>
+            <span class="detail-val">{{ selectedLog.filename }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-lbl">Modèle</span>
+            <span class="detail-val">
+              <span class="model-badge" [ngClass]="modelBadge(selectedLog.invoiceModel)">
+                {{ selectedLog.invoiceModel }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-lbl">N° eLeader</span>
+            <span class="detail-val mono">{{ selectedLog.eleaderReference || '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-lbl">Client</span>
+            <span class="detail-val">{{ selectedLog.clientName || '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-lbl">Bon de commande</span>
+            <span class="detail-val mono fw">{{ selectedLog.salesOrderName || '—' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-lbl">Date d'import</span>
+            <span class="detail-val">{{ selectedLog.importDate | date:'dd/MM/yyyy à HH:mm:ss' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-message" *ngIf="selectedLog.message"
+             [class.is-error]="selectedLog.status === 'error'">
+          <p class="msg-label">
+            <span class="material-icons">{{ selectedLog.status === 'error' ? 'error' : 'info' }}</span>
+            Message
+          </p>
+          <pre class="msg-text">{{ selectedLog.message }}</pre>
+        </div>
+
+        <!-- Texte brut extrait -->
+        <div class="raw-text-section" *ngIf="selectedLog.rawText">
+          <div class="raw-text-header" (click)="showRawText = !showRawText">
+            <span class="material-icons">text_snippet</span>
+            <span>Texte extrait du PDF</span>
+            <span class="material-icons toggle-icon">{{ showRawText ? 'expand_less' : 'expand_more' }}</span>
+          </div>
+          <pre class="raw-text" *ngIf="showRawText">{{ selectedLog.rawText }}</pre>
+        </div>
+      </div>
+
+      <div class="detail-footer" *ngIf="selectedLog.salesOrderName">
+        <button class="btn-primary" (click)="goToOrder(selectedLog.salesOrderName!)">
+          <span class="material-icons">open_in_new</span>
+          Voir le bon de commande
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

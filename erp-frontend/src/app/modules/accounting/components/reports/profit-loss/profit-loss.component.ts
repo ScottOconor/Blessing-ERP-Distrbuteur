@@ -62,7 +62,10 @@ export class ProfitLossComponent implements OnInit {
   print(): void { window.print(); }
 
   exportPdf(): void {
-    this.pdfExport.exportCompteResultat(this.lines, this.dateFrom, this.dateTo);
+    this.pdfExport.exportCompteResultat(
+      this.lines, this.dateFrom, this.dateTo,
+      this.authService.getActiveCompany()?.name
+    );
   }
 
   exportExcel(): void {

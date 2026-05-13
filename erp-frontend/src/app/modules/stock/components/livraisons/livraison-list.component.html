@@ -8,6 +8,18 @@
       <span class="material-icons">add</span> Nouvelle livraison
     </button>
   </div>
+  <div class="filter-bar">
+    <div class="filter-date-group">
+      <label>Du</label>
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom" (ngModelChange)="applyFilter()">
+    </div>
+    <div class="filter-date-group">
+      <label>Au</label>
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo" (ngModelChange)="applyFilter()">
+    </div>
+    <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
+  </div>
+
   <div class="card">
     @if (loading) {
       <div class="empty"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>

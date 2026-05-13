@@ -1,3 +1,8 @@
+.btn-danger-ghost {
+  color: #dc3545 !important;
+  &:hover { background: #fff0f0 !important; }
+}
+
 .journal-row {
   transition: background 0.1s;
   &:hover td { background: #f9f3f8; }

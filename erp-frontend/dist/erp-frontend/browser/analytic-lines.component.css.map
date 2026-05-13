@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/modules/accounting/components/analytic/analytic-lines.component.scss"],
-  "sourcesContent": [".totals-row td {\n  background: #f5f5f5;\n  border-top: 2px solid #e0e0e0;\n}\n"],
-  "mappings": ";AAAA,CAAA,WAAA;AACE,cAAA;AACA,cAAA,IAAA,MAAA;;",
-  "names": []
-}

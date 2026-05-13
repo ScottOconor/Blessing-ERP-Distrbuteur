@@ -2,10 +2,13 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrecompteService, Precompte, Enlevement, EnlevementClient } from '../../../../shared/services/precompte.service';
+
 import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+
+
 
 const ENL_HEADERS = ["Catégorie d'article", "Montant de l'enlèvement", "Cout enlevement", "Date de l'enlèvement", 'Actif', 'Clients spécifiques'];
 const ENL_SAMPLE  = ['Alcools mixtes 12', '600', '528.45', '', 'OUI', 'NON'];
@@ -20,10 +23,24 @@ const ENL_SAMPLE  = ['Alcools mixtes 12', '600', '528.45', '', 'OUI', 'NON'];
 export class PrecompteConfigComponent implements OnInit {
   @ViewChild('importEnlInput') importEnlInput!: ElementRef<HTMLInputElement>;
 
+  // ===== Import Excel Précomptes =====
+  showImportPcModal = false;
+  importPcRows: Record<string, any>[] = [];
+  importPcLoading = false;
+
+  @ViewChild('importPcInput') importPcInput!: ElementRef<HTMLInputElement>;
+
+  readonly PC_HEADERS = ['partnerId', 'typePrecompte', 'tauxPrecompte'];
+  // NOTE: aperçu seulement côté client; l'import réel est fait par le backend.
+
+  private pcFile: File | null = null;
+
+
   // ===== Import Excel Enlèvements =====
   showImportEnlModal = false;
   importEnlRows: Record<string, any>[] = [];
   importEnlLoading = false;
+
 
   activeTab: 'precomptes' | 'enlevements' = 'precomptes';
 
@@ -143,7 +160,7 @@ export class PrecompteConfigComponent implements OnInit {
 
   addEnlClient(): void {
     if (!this.enlForm.clients) this.enlForm.clients = [];
-    this.enlForm.clients.push({ partnerId: 0, montant: 0, supplementAccountCode: '' });
+    this.enlForm.clients.push({ partnerId: 0, montant: 0 });
   }
 
   removeEnlClient(i: number): void {
@@ -174,9 +191,85 @@ export class PrecompteConfigComponent implements OnInit {
 
   // ===== Import Excel Enlèvements =====
 
+
+  downloadPcTemplate(): void {
+    this.svc.downloadPrecompteTemplate().subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'modele_precomptes.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    });
+  }
+
+  triggerPcImport(): void {
+    this.importPcInput.nativeElement.value = '';
+    this.importPcInput.nativeElement.click();
+  }
+
+  async onImportPcFileChange(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.pcFile = file;
+    this.importPcLoading = true;
+
+    try {
+      const rows = await parseExcelFile(file);
+      // Accepter nom ou ID numérique dans toutes les variantes de colonne Odoo/interne
+      this.importPcRows = rows.filter(r =>
+        r['partner_id'] || r['Partner_ID'] ||
+        r['partnerId']  || r['PartnerId']  ||
+        r['Partenaire'] || r['partenaire'] ||
+        r['ID partenaire'] || r['id partenaire'] ||
+        r['partner_name'] || r['Nom du partenaire']
+      );
+      if (this.importPcRows.length === 0) {
+        alert('Aucune ligne valide. Colonne attendue : "partner_id" ou "Partenaire"');
+        this.importPcLoading = false;
+        return;
+      }
+      this.showImportPcModal = true;
+    } catch (e: any) {
+      alert('Erreur : ' + e.message);
+    }
+    this.importPcLoading = false;
+  }
+
+  closeImportPcModal(): void {
+    this.showImportPcModal = false;
+    this.importPcRows = [];
+  }
+
+  async confirmImportPc(): Promise<void> {
+    if (!this.pcFile) {
+      alert('Fichier introuvable.');
+      return;
+    }
+
+    this.importPcLoading = true;
+    this.svc.importPrecomptes(this.pcFile, this.companyId).subscribe({
+
+      next: (res: any) => {
+        this.importPcLoading = false;
+        this.closeImportPcModal();
+        this.loadPrecomptes();
+        const msg = res?.message || 'Import terminé';
+        alert(msg + (res?.errors?.length ? (`\n\n${res.errors.join('\n')}`) : ''));
+      },
+      error: () => {
+        this.importPcLoading = false;
+        alert('Erreur import précomptes');
+      }
+    });
+  }
+
+  // ===== Import Excel Enlèvements =====
+
   downloadEnlTemplate(): void {
     downloadExcelTemplate(ENL_HEADERS, ENL_SAMPLE, 'modele_enlevements.xlsx');
   }
+
 
   triggerEnlImport(): void {
     this.importEnlInput.nativeElement.value = '';
@@ -229,6 +322,7 @@ export class PrecompteConfigComponent implements OnInit {
   }
 
   async confirmImportEnl(): Promise<void> {
+    this.importEnlLoading = true;
     let done = 0, noCat = 0, apiErr = 0;
     for (const row of this.importEnlRows) {
       const catName = String(row["Catégorie d'article"] || row['Catégorie'] || '').trim();
@@ -248,12 +342,37 @@ export class PrecompteConfigComponent implements OnInit {
         done++;
       } catch { apiErr++; }
     }
+    this.importEnlLoading = false;
     this.closeImportEnlModal();
     this.loadEnlevements();
     const msg = [`Import terminé : ${done} créé(s)`];
     if (noCat > 0)  msg.push(`${noCat} catégorie(s) introuvable(s)`);
     if (apiErr > 0) msg.push(`${apiErr} erreur(s) serveur`);
     alert(msg.join('\n'));
+  }
+
+  getPartnerFromRow(row: Record<string, any>): string {
+    return String(
+      row['partner_id'] ?? row['Partner_ID'] ??
+      row['partnerId']  ?? row['PartnerId']  ??
+      row['Partenaire'] ?? row['partenaire'] ??
+      row['ID partenaire'] ?? row['partner_name'] ??
+      row['Nom du partenaire'] ?? ''
+    ).trim();
+  }
+
+  getTypeFromRow(row: Record<string, any>): string {
+    return String(
+      row['type_precompte'] ?? row['typePrecompte'] ??
+      row['type'] ?? row['Type'] ?? row['Type de précompte'] ?? ''
+    ).trim();
+  }
+
+  getTauxFromRow(row: Record<string, any>): string {
+    return String(
+      row['taux_precompte'] ?? row['tauxPrecompte'] ??
+      row['Taux (%)'] ?? row['Taux'] ?? row['taux'] ?? ''
+    ).trim();
   }
 
   private emptyPc(): Precompte {

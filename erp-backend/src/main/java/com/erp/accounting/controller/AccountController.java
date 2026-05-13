@@ -66,6 +66,16 @@ public class AccountController {
         return ResponseEntity.ok(accountingService.updateJournal(id, dto));
     }
 
+    @DeleteMapping("/journals/{id}")
+    public ResponseEntity<Void> deleteJournal(@PathVariable("id") Long id) {
+        try {
+            accountingService.deleteJournal(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).build();
+        }
+    }
+
     // ===================== MOVES =====================
 
     @GetMapping("/moves")
@@ -110,8 +120,9 @@ public class AccountController {
 
     @GetMapping("/journals/{id}/account-balance")
     public ResponseEntity<java.util.Map<String, Object>> getJournalAccountBalance(
-            @PathVariable("id") Long journalId) {
-        return ResponseEntity.ok(accountingService.getJournalAccountBalance(journalId));
+            @PathVariable("id") Long journalId,
+            @RequestParam(required = false) Long excludeMoveId) {
+        return ResponseEntity.ok(accountingService.getJournalAccountBalance(journalId, excludeMoveId));
     }
 
     @GetMapping("/journals/{id}/moves")

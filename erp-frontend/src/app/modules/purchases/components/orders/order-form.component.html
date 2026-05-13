@@ -11,6 +11,11 @@
       }
     </div>
     <div class="header-actions">
+      @if (orderId && order.state) {
+        <button class="btn-print" (click)="openPrint()">
+          <span class="material-icons">print</span> Imprimer
+        </button>
+      }
       @if (order.state === 'draft' || !order.state) {
         <button class="btn-save" (click)="saveOrder()" [disabled]="saving">
           <span class="material-icons">save</span>
@@ -220,3 +225,12 @@
     </div>
   }
 </div>
+
+@if (showPrintModal && orderId) {
+  <app-print-preview
+    [purchaseOrder]="order"
+    docType="purchase_order"
+    [companyName]="printCompanyName"
+    (closed)="closePrint()">
+  </app-print-preview>
+}

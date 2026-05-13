@@ -1,0 +1,220 @@
+<div class="page-container">
+
+  <!-- ── En-tête ──────────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Analyse des Mouvements de Stock</h1>
+      <p class="page-subtitle">Entrées, sorties et transferts par période</p>
+    </div>
+    <div class="header-actions no-print">
+      <button class="btn-secondary" (click)="exportPdf()">
+        <span class="material-icons">print</span> Imprimer
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtres ───────────────────────────────────────────────────────────── -->
+  <div class="filter-bar no-print">
+    <div class="filter-group">
+      <label>Du</label>
+      <input type="date" [(ngModel)]="dateFrom" />
+    </div>
+    <div class="filter-group">
+      <label>Au</label>
+      <input type="date" [(ngModel)]="dateTo" />
+    </div>
+    <div class="filter-group">
+      <label>Type</label>
+      <select [(ngModel)]="typeFilter" (ngModelChange)="applyFilter()">
+        <option value="">Tous les types</option>
+        <option value="incoming">Réceptions</option>
+        <option value="outgoing">Livraisons</option>
+        <option value="internal">Transferts internes</option>
+      </select>
+    </div>
+    <button class="btn-primary" (click)="load()">
+      <span class="material-icons">search</span> Analyser
+    </button>
+  </div>
+
+  <!-- ── KPIs ──────────────────────────────────────────────────────────────── -->
+  @if (!loading && filtered.length > 0) {
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <span class="kpi-icon material-icons">arrow_downward</span>
+        <div>
+          <div class="kpi-value">{{ fmt(grandEntrees) }} <span class="kpi-currency">FCFA</span></div>
+          <div class="kpi-label">Valeur des entrées</div>
+        </div>
+      </div>
+      <div class="kpi-card red">
+        <span class="kpi-icon material-icons">arrow_upward</span>
+        <div>
+          <div class="kpi-value">{{ fmt(grandSorties) }} <span class="kpi-currency">FCFA</span></div>
+          <div class="kpi-label">Valeur des sorties</div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-icon material-icons">swap_horiz</span>
+        <div>
+          <div class="kpi-value">{{ totalMoves }}</div>
+          <div class="kpi-label">Mouvement(s) {{ typeFilter ? 'filtrés' : 'au total' }}</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Toolbar GroupBy + Recherche ──────────────────────────────────────── -->
+  <div class="toolbar no-print">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()"
+             placeholder="Rechercher un article, catégorie, tiers..." />
+      @if (search) {
+        <span class="material-icons clear-icon" (click)="search=''; applyFilter()">close</span>
+      }
+    </div>
+
+    <div class="groupby-bar">
+      <span class="groupby-label">Regrouper par :</span>
+      <div class="groupby-btns">
+        <button [class.active]="groupBy === 'product'"  (click)="groupBy='product';  applyFilter()">
+          <span class="material-icons">category</span> Article
+        </button>
+        <button [class.active]="groupBy === 'category'" (click)="groupBy='category'; applyFilter()">
+          <span class="material-icons">label</span> Catégorie
+        </button>
+        <button [class.active]="groupBy === 'type'"     (click)="groupBy='type';     applyFilter()">
+          <span class="material-icons">sync_alt</span> Type
+        </button>
+        <button [class.active]="groupBy === 'month'"    (click)="groupBy='month';    applyFilter()">
+          <span class="material-icons">calendar_month</span> Mois
+        </button>
+        <button [class.active]="groupBy === 'partner'"  (click)="groupBy='partner';  applyFilter()">
+          <span class="material-icons">person</span> Tiers
+        </button>
+      </div>
+      <div class="expand-btns">
+        <button class="btn-link" (click)="expandAll()">Tout développer</button>
+        <span class="sep">|</span>
+        <button class="btn-link" (click)="collapseAll()">Tout réduire</button>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement des mouvements...</div>
+  } @else if (errorMsg) {
+    <div class="alert-error">{{ errorMsg }}</div>
+  } @else if (summaryRows.length === 0) {
+    <div class="empty-card">Aucun mouvement trouvé pour cette période</div>
+  } @else {
+
+    <div class="report-card">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-group">
+              @if (groupBy === 'product')  { Article }
+              @if (groupBy === 'category') { Catégorie }
+              @if (groupBy === 'type')     { Type d'opération }
+              @if (groupBy === 'month')    { Mois }
+              @if (groupBy === 'partner')  { Tiers }
+            </th>
+            <th class="col-num col-green">Qté Entrées</th>
+            <th class="col-num col-green">Val. Entrées</th>
+            <th class="col-num col-red">Qté Sorties</th>
+            <th class="col-num col-red">Val. Sorties</th>
+            <th class="col-num col-blue no-print">Qté Transferts</th>
+            <th class="col-num col-blue no-print">Val. Transferts</th>
+            <th class="col-num no-print">Mvts</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of summaryRows; track row.key) {
+
+            <!-- Ligne de groupe -->
+            <tr class="group-header-row" (click)="toggleGroup(row.key)">
+              <td class="group-header-cell">
+                <span class="expand-icon material-icons no-print">
+                  {{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}
+                </span>
+                @if (groupBy === 'type') {
+                  <span class="type-badge {{ typeColor(row.key) }}">{{ row.label }}</span>
+                } @else {
+                  <span class="group-label">{{ row.label }}</span>
+                  @if (row.subLabel) { <span class="code-badge ml-4">{{ row.subLabel }}</span> }
+                }
+              </td>
+              <td class="col-num group-num col-green">{{ row.qtyEntrees > 0 ? fmt(row.qtyEntrees, 2) : '—' }}</td>
+              <td class="col-num group-num col-green">{{ row.valEntrees > 0 ? fmt(row.valEntrees) : '—' }}</td>
+              <td class="col-num group-num col-red">{{ row.qtySorties > 0 ? fmt(row.qtySorties, 2) : '—' }}</td>
+              <td class="col-num group-num col-red">{{ row.valSorties > 0 ? fmt(row.valSorties) : '—' }}</td>
+              <td class="col-num group-num col-blue no-print">{{ row.qtyTransferts > 0 ? fmt(row.qtyTransferts, 2) : '—' }}</td>
+              <td class="col-num group-num col-blue no-print">{{ row.valTransferts > 0 ? fmt(row.valTransferts) : '—' }}</td>
+              <td class="col-num group-num no-print">
+                <span class="badge">{{ row.rowCount }}</span>
+              </td>
+            </tr>
+
+            <!-- Détail des mouvements (expandés) -->
+            @if (isExpanded(row.key)) {
+              @for (m of getGroupMoves(row.key); track m.id) {
+                <tr class="detail-row">
+                  <td class="detail-label-cell">
+                    <span class="indent-icon material-icons">subdirectory_arrow_right</span>
+                    <span class="type-badge {{ typeColor(m.pickingTypeCode) }} small">{{ typeLabel(m.pickingTypeCode) }}</span>
+                    @if (groupBy !== 'product' && m.productCode) {
+                      <span class="code-badge">{{ m.productCode }}</span>
+                    }
+                    @if (groupBy !== 'product') { <span>{{ m.productName }}</span> }
+                    @if (groupBy !== 'partner' && m.partnerName) {
+                      <span class="text-muted"> — {{ m.partnerName }}</span>
+                    }
+                    @if (m.pickingRef) {
+                      <span class="picking-ref">{{ m.pickingRef }}</span>
+                    }
+                    <span class="text-muted small ml-4">{{ fmtDate(m.dateDone) }}</span>
+                  </td>
+                  <td class="col-num mono col-green">
+                    {{ m.pickingTypeCode === 'incoming' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                  </td>
+                  <td class="col-num mono col-green">
+                    {{ m.pickingTypeCode === 'incoming' ? fmt(m.subtotalValue || 0) : '' }}
+                  </td>
+                  <td class="col-num mono col-red">
+                    {{ m.pickingTypeCode === 'outgoing' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                  </td>
+                  <td class="col-num mono col-red">
+                    {{ m.pickingTypeCode === 'outgoing' ? fmt(m.subtotalValue || 0) : '' }}
+                  </td>
+                  <td class="col-num mono col-blue no-print">
+                    {{ m.pickingTypeCode === 'internal' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                  </td>
+                  <td class="col-num mono col-blue no-print">
+                    {{ m.pickingTypeCode === 'internal' ? fmt(m.subtotalValue || 0) : '' }}
+                  </td>
+                  <td class="no-print"></td>
+                </tr>
+              }
+            }
+
+          }
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td><strong>TOTAL</strong></td>
+            <td class="col-num mono fw-bold col-green">—</td>
+            <td class="col-num mono fw-bold col-green">{{ fmt(grandEntrees) }}</td>
+            <td class="col-num mono fw-bold col-red">—</td>
+            <td class="col-num mono fw-bold col-red">{{ fmt(grandSorties) }}</td>
+            <td class="col-num mono fw-bold col-blue no-print">—</td>
+            <td class="col-num mono fw-bold col-blue no-print">{{ fmt(grandTransferts) }}</td>
+            <td class="col-num no-print"><span class="badge">{{ totalMoves }}</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+  }
+</div>

@@ -20,8 +20,12 @@ export class LoginComponent {
 
   constructor(private authService: AuthService, private router: Router) {
     if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/welcome']);
+      this.redirectAfterLogin();
     }
+  }
+
+  private redirectAfterLogin(): void {
+    this.router.navigate([this.authService.isCentralized() ? '/group-home' : '/welcome']);
   }
 
   onSubmit(): void {
@@ -38,7 +42,7 @@ export class LoginComponent {
         if (session.mustChangePassword) {
           this.router.navigate(['/config/change-password']);
         } else {
-          this.router.navigate(['/welcome']);
+          this.redirectAfterLogin();
         }
       },
       error: (err) => {

@@ -26,7 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByGroup(CompanyGroup group);
     List<User> findByCompany(Company company);
 
-    @Query("SELECT u FROM User u JOIN FETCH u.role LEFT JOIN FETCH u.group LEFT JOIN FETCH u.company WHERE u.group.id = :groupId")
+    @Query("SELECT DISTINCT u FROM User u JOIN FETCH u.role LEFT JOIN FETCH u.group LEFT JOIN FETCH u.company c WHERE u.group.id = :groupId OR (c IS NOT NULL AND c.group.id = :groupId)")
     List<User> findAllByGroupId(@Param("groupId") Long groupId);
 
     @Query("SELECT u FROM User u JOIN FETCH u.role LEFT JOIN FETCH u.company WHERE u.company.id = :companyId")

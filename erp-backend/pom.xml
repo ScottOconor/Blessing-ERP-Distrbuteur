@@ -97,6 +97,13 @@
             <version>1.3.43</version>
         </dependency>
 
+        <!-- Apache PDFBox - PDF text extraction for eLeader import -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

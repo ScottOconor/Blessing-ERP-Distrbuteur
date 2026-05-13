@@ -1,6 +1,7 @@
 package com.erp.stock.controller;
 
 import com.erp.stock.dto.*;
+import com.erp.stock.repository.StockPickingTypeRepository;
 import com.erp.stock.service.BordereauExportService;
 import com.erp.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -18,6 +21,7 @@ public class StockController {
 
     private final StockService stockService;
     private final BordereauExportService bordereauExportService;
+    private final StockPickingTypeRepository pickingTypeRepo;
 
     // ---- Categories ----
     @GetMapping("/categories")
@@ -137,7 +141,14 @@ public class StockController {
     }
 
     @PostMapping("/pickings")
-    public ResponseEntity<StockPickingDTO> createPicking(@RequestBody StockPickingRequest req) {
+    public ResponseEntity<?> createPicking(@RequestBody StockPickingRequest req) {
+        if (req.getPickingTypeId() != null) {
+            pickingTypeRepo.findById(req.getPickingTypeId()).ifPresent(pt -> {
+                if ("incoming".equals(pt.getCode())) {
+                    throw new IllegalArgumentException("Les réceptions ne peuvent pas être créées manuellement. Elles sont générées automatiquement depuis les factures fournisseurs.");
+                }
+            });
+        }
         return ResponseEntity.ok(stockService.createPicking(req));
     }
 
@@ -242,6 +253,31 @@ public class StockController {
         return ResponseEntity.ok(stockService.createAdjustment(req));
     }
 
+    @PostMapping("/adjustments/bulk")
+    public ResponseEntity<List<StockAdjustmentDTO>> createAdjustmentsBulk(@RequestBody List<StockAdjustmentRequest> requests) {
+        return ResponseEntity.ok(stockService.createAdjustmentsBulk(requests));
+    }
+
+    /** Télécharger la feuille de comptage (inventaire vierge) en PDF */
+    @PostMapping("/adjustments/counting-sheet/pdf")
+    public ResponseEntity<byte[]> getCountingSheetPdf(@RequestBody InventorySheetDTO dto) {
+        byte[] pdf = bordereauExportService.generateCountingSheetPdf(dto);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"feuille_comptage.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    /** Télécharger la fiche d'inventaire (après application) en PDF */
+    @PostMapping("/adjustments/inventory-report/pdf")
+    public ResponseEntity<byte[]> getInventoryReportPdf(@RequestBody InventorySheetDTO dto) {
+        byte[] pdf = bordereauExportService.generateInventoryReportPdf(dto);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"fiche_inventaire.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
     // ---- Analyse ----
     @GetMapping("/report")
     public ResponseEntity<List<StockQuantDTO>> getStockReport(@RequestParam("companyId") Long companyId) {
@@ -252,8 +288,12 @@ public class StockController {
     public ResponseEntity<List<StockMoveDTO>> getMovements(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "productId", required = false) Long productId,
-            @RequestParam(name = "limit", defaultValue = "100") int limit) {
-        return ResponseEntity.ok(stockService.getMovements(companyId, productId, limit));
+            @RequestParam(name = "dateFrom", required = false) String dateFrom,
+            @RequestParam(name = "dateTo", required = false) String dateTo,
+            @RequestParam(name = "limit", defaultValue = "1000") int limit) {
+        LocalDateTime from = dateFrom != null ? LocalDate.parse(dateFrom).atStartOfDay() : null;
+        LocalDateTime to   = dateTo   != null ? LocalDate.parse(dateTo).atTime(23, 59, 59) : null;
+        return ResponseEntity.ok(stockService.getMovements(companyId, productId, from, to, limit));
     }
 
     @GetMapping("/valuation")

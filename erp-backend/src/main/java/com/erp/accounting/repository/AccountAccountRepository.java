@@ -28,6 +28,10 @@ public interface AccountAccountRepository extends JpaRepository<AccountAccount, 
 
     long countByCompanyId(Long companyId);
 
+    Optional<AccountAccount> findFirstByInternalTypeAndCompanyIdOrderByCode(String internalType, Long companyId);
+
+    List<AccountAccount> findByInternalTypeAndCompanyIdOrderByCode(String internalType, Long companyId);
+
     @Modifying
     @Query("DELETE FROM AccountAccount a WHERE a.company.id = :companyId")
     void deleteByCompanyId(@Param("companyId") Long companyId);

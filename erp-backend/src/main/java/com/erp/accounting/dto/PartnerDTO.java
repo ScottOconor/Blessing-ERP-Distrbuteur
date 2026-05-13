@@ -2,6 +2,8 @@ package com.erp.accounting.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,9 +19,9 @@ public class PartnerDTO {
     private Long companyId;
     private String companyName;
 
-    // Paramètres commerciaux
-    private java.math.BigDecimal tauxRistourne;
-    private java.math.BigDecimal tauxPrecompte;
-    private java.math.BigDecimal creditLimit;
+    private BigDecimal tauxRistourne;
+    private BigDecimal tauxPrecompte;
+    private BigDecimal creditLimit;
     private String receivableAccountCode;
+    private boolean exemptTaxeGuinness;
 }

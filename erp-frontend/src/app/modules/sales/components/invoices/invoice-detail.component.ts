@@ -7,11 +7,12 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AccountJournal } from '../../../../core/models/account.model';
 import { StockService, Warehouse } from '../../../stock/services/stock.service';
+import { PrintPreviewComponent, PrintDocType } from '../../../../shared/components/print-preview/print-preview.component';
 
 @Component({
   selector: 'app-invoice-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintPreviewComponent],
   templateUrl: './invoice-detail.component.html',
   styleUrl: './invoice-detail.component.scss'
 })
@@ -44,6 +45,9 @@ export class InvoiceDetailComponent implements OnInit {
   showCreditForm = false;
   creditAmount = 0;
   applyingCredit = false;
+
+  // Impression
+  showPrintModal = false;
 
   constructor(
     private salesService: SalesService,
@@ -284,6 +288,12 @@ export class InvoiceDetailComponent implements OnInit {
   get isInvoice(): boolean {
     return !this.invoice?.type || this.invoice.type === 'invoice';
   }
+
+  get printDocType(): PrintDocType { return this.isAvoir ? 'avoir' : 'invoice'; }
+  get printCompanyName(): string { return this.authService.getActiveCompany()?.name ?? ''; }
+
+  openPrint(): void { this.showPrintModal = true; }
+  closePrint(): void { this.showPrintModal = false; }
 
   get isAvoir(): boolean {
     return this.invoice?.type === 'credit_note';

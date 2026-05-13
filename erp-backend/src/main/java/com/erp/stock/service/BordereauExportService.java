@@ -1,5 +1,6 @@
 package com.erp.stock.service;
 
+import com.erp.stock.dto.InventorySheetDTO;
 import com.erp.stock.dto.ReceptionBordereauDTO;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
@@ -160,6 +161,224 @@ public class BordereauExportService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur génération PDF bordereau", e);
         }
+    }
+
+    // ======================== FEUILLE DE COMPTAGE ========================
+
+    public byte[] generateCountingSheetPdf(InventorySheetDTO dto) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Document doc = new Document(PageSize.A4, 30, 30, 40, 30);
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, PRIMARY);
+            Font subFont   = FontFactory.getFont(FontFactory.HELVETICA,      10, LABEL_FG);
+            Font hdrFont   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  Color.WHITE);
+            Font cellFont  = FontFactory.getFont(FontFactory.HELVETICA,      9,  CELL_FG);
+            Font totalFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  new Color(31, 31, 31));
+
+            Paragraph title = new Paragraph("FEUILLE DE COMPTAGE — INVENTAIRE PHYSIQUE", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(4);
+            doc.add(title);
+
+            String dateStr = dto.getDate() != null ? dto.getDate() : java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Paragraph dateLine = new Paragraph("Date : " + dateStr + (dto.getCompanyName() != null ? "     Société : " + dto.getCompanyName() : ""), subFont);
+            dateLine.setAlignment(Element.ALIGN_CENTER);
+            dateLine.setSpacingAfter(16);
+            doc.add(dateLine);
+
+            // Table: Emplacement | Code | Désignation | UdM | Qté système | Qté comptée (vide)
+            PdfPTable table = new PdfPTable(new float[]{3f, 2f, 5f, 1.5f, 2f, 2.5f});
+            table.setWidthPercentage(100);
+            for (String h : new String[]{"Emplacement", "Code", "Désignation", "UdM", "Qté système", "Qté comptée"}) {
+                PdfPCell hc = new PdfPCell(new Phrase(h, hdrFont));
+                hc.setBackgroundColor(PRIMARY);
+                hc.setPadding(6);
+                hc.setHorizontalAlignment(Element.ALIGN_CENTER);
+                hc.setBorderColor(Color.WHITE);
+                table.addCell(hc);
+            }
+
+            boolean alt = false;
+            int count = 0;
+            if (dto.getLines() != null) {
+                for (InventorySheetDTO.LineDTO l : dto.getLines()) {
+                    Color bg = alt ? ALT_BG : Color.WHITE;
+                    addTableCell(table, l.getLocationName() != null ? l.getLocationName() : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getProductCode()  != null ? l.getProductCode()  : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getProductName()  != null ? l.getProductName()  : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getUomName()      != null ? l.getUomName()      : "—", cellFont, bg, Element.ALIGN_CENTER);
+                    addTableCell(table, l.getSystemQty()    != null ? fmtQty(l.getSystemQty()) : "0",  cellFont, bg, Element.ALIGN_RIGHT);
+                    // Qté comptée : cellule vide pour saisie manuelle
+                    PdfPCell blank = new PdfPCell(new Phrase("", cellFont));
+                    blank.setBackgroundColor(new Color(255, 255, 220));
+                    blank.setPadding(5);
+                    blank.setMinimumHeight(18);
+                    table.addCell(blank);
+                    alt = !alt;
+                    count++;
+                }
+            }
+            if (count == 0) {
+                PdfPCell empty = new PdfPCell(new Phrase("Aucun article", cellFont));
+                empty.setColspan(6);
+                empty.setPadding(8);
+                empty.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(empty);
+            }
+
+            // Ligne total count
+            PdfPCell totalLbl = new PdfPCell(new Phrase("TOTAL ARTICLES : " + count, totalFont));
+            totalLbl.setColspan(6);
+            totalLbl.setBackgroundColor(TOTAL_BG);
+            totalLbl.setPadding(6);
+            totalLbl.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            table.addCell(totalLbl);
+
+            doc.add(table);
+
+            // Instructions
+            doc.add(new Paragraph(" "));
+            Paragraph instr = new Paragraph("Instructions : Comptez physiquement chaque article et renseignez la colonne « Qté comptée ». Signalez tout écart à votre responsable.", subFont);
+            instr.setSpacingBefore(8);
+            doc.add(instr);
+
+            // Signatures
+            doc.add(new Paragraph(" "));
+            PdfPTable sigTable = new PdfPTable(3);
+            sigTable.setWidthPercentage(100);
+            sigTable.setSpacingBefore(20);
+            for (String sig : new String[]{"Compteur", "Responsable stock", "Direction"}) {
+                PdfPCell sc = new PdfPCell();
+                sc.setPadding(8);
+                sc.setMinimumHeight(60);
+                sc.addElement(new Phrase(sig, FontFactory.getFont(FontFactory.HELVETICA, 8, LABEL_FG)));
+                sc.addElement(new Phrase("\n\nNom & Signature :", FontFactory.getFont(FontFactory.HELVETICA, 8, LABEL_FG)));
+                sigTable.addCell(sc);
+            }
+            doc.add(sigTable);
+
+            doc.close();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur génération feuille de comptage", e);
+        }
+    }
+
+    // ======================== FICHE D'INVENTAIRE ========================
+
+    public byte[] generateInventoryReportPdf(InventorySheetDTO dto) {
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Document doc = new Document(PageSize.A4, 30, 30, 40, 30);
+            PdfWriter.getInstance(doc, out);
+            doc.open();
+
+            Font titleFont  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, PRIMARY);
+            Font subFont    = FontFactory.getFont(FontFactory.HELVETICA,      10, LABEL_FG);
+            Font hdrFont    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  Color.WHITE);
+            Font cellFont   = FontFactory.getFont(FontFactory.HELVETICA,      9,  CELL_FG);
+            Font totalFont  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  new Color(31, 31, 31));
+            Font posFont    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  SUCCESS);
+            Font negFont    = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9,  AVARIE);
+
+            Paragraph title = new Paragraph("PROCÈS-VERBAL D'INVENTAIRE", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(4);
+            doc.add(title);
+
+            String dateStr = dto.getDate() != null ? dto.getDate() : java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            Paragraph dateLine = new Paragraph("Date : " + dateStr + (dto.getCompanyName() != null ? "     Société : " + dto.getCompanyName() : ""), subFont);
+            dateLine.setAlignment(Element.ALIGN_CENTER);
+            dateLine.setSpacingAfter(16);
+            doc.add(dateLine);
+
+            // Table: Emplacement | Code | Désignation | UdM | Qté avant | Qté comptée | Écart | Valeur écart
+            PdfPTable table = new PdfPTable(new float[]{2.5f, 1.8f, 4f, 1.2f, 2f, 2f, 1.8f, 2.5f});
+            table.setWidthPercentage(100);
+            for (String h : new String[]{"Emplacement", "Code", "Désignation", "UdM", "Qté avant", "Qté comptée", "Écart", "Valeur écart"}) {
+                PdfPCell hc = new PdfPCell(new Phrase(h, hdrFont));
+                hc.setBackgroundColor(PRIMARY);
+                hc.setPadding(6);
+                hc.setHorizontalAlignment(Element.ALIGN_CENTER);
+                hc.setBorderColor(Color.WHITE);
+                table.addCell(hc);
+            }
+
+            double totalValeur = 0;
+            int countPos = 0, countNeg = 0;
+            boolean alt = false;
+
+            if (dto.getLines() != null) {
+                for (InventorySheetDTO.LineDTO l : dto.getLines()) {
+                    Color bg   = alt ? ALT_BG : Color.WHITE;
+                    double diff = l.getDiff() != null ? l.getDiff() : 0;
+                    double val  = l.getValueDiff() != null ? l.getValueDiff() : 0;
+                    totalValeur += val;
+                    if (diff > 0) countPos++; else if (diff < 0) countNeg++;
+
+                    addTableCell(table, l.getLocationName() != null ? l.getLocationName() : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getProductCode()  != null ? l.getProductCode()  : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getProductName()  != null ? l.getProductName()  : "—", cellFont, bg, Element.ALIGN_LEFT);
+                    addTableCell(table, l.getUomName()      != null ? l.getUomName()      : "—", cellFont, bg, Element.ALIGN_CENTER);
+                    addTableCell(table, l.getSystemQty()    != null ? fmtQty(l.getSystemQty())  : "0", cellFont, bg, Element.ALIGN_RIGHT);
+                    addTableCell(table, l.getCountedQty()   != null ? fmtQty(l.getCountedQty()) : "0", cellFont, bg, Element.ALIGN_RIGHT);
+
+                    String diffStr = (diff > 0 ? "+" : "") + fmtQty(diff);
+                    Font diffFont = diff > 0 ? posFont : (diff < 0 ? negFont : cellFont);
+                    table.addCell(styledCell(diffStr, diffFont, bg, Element.ALIGN_RIGHT));
+
+                    String valStr = (val > 0 ? "+" : "") + fmtNum2(val) + " FCFA";
+                    Font valFont = val > 0 ? posFont : (val < 0 ? negFont : cellFont);
+                    table.addCell(styledCell(valStr, valFont, bg, Element.ALIGN_RIGHT));
+
+                    alt = !alt;
+                }
+            }
+
+            // Ligne totaux
+            String totalValStr = (totalValeur > 0 ? "+" : "") + fmtNum2(totalValeur) + " FCFA";
+            Font tvFont = totalValeur > 0 ? posFont : (totalValeur < 0 ? negFont : totalFont);
+            addTableCell(table, "TOTAUX", totalFont, TOTAL_BG, Element.ALIGN_LEFT);
+            addTableCell(table, "",       totalFont, TOTAL_BG, Element.ALIGN_LEFT);
+            addTableCell(table, "",       totalFont, TOTAL_BG, Element.ALIGN_LEFT);
+            addTableCell(table, "",       totalFont, TOTAL_BG, Element.ALIGN_LEFT);
+            addTableCell(table, "",       totalFont, TOTAL_BG, Element.ALIGN_RIGHT);
+            addTableCell(table, "",       totalFont, TOTAL_BG, Element.ALIGN_RIGHT);
+            table.addCell(styledCell(countPos + " ↑ / " + countNeg + " ↓", totalFont, TOTAL_BG, Element.ALIGN_CENTER));
+            table.addCell(styledCell(totalValStr, tvFont, TOTAL_BG, Element.ALIGN_RIGHT));
+
+            doc.add(table);
+
+            // Signatures
+            doc.add(new Paragraph(" "));
+            PdfPTable sigTable = new PdfPTable(3);
+            sigTable.setWidthPercentage(100);
+            sigTable.setSpacingBefore(20);
+            for (String sig : new String[]{"Responsable stock", "Comptable", "Direction"}) {
+                PdfPCell sc = new PdfPCell();
+                sc.setPadding(8);
+                sc.setMinimumHeight(60);
+                sc.addElement(new Phrase(sig, FontFactory.getFont(FontFactory.HELVETICA, 8, LABEL_FG)));
+                sc.addElement(new Phrase("\n\nNom & Signature :", FontFactory.getFont(FontFactory.HELVETICA, 8, LABEL_FG)));
+                sigTable.addCell(sc);
+            }
+            doc.add(sigTable);
+
+            doc.close();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur génération fiche d'inventaire", e);
+        }
+    }
+
+    private String fmtQty(double v) {
+        if (v == Math.floor(v)) return String.format("%.0f", v);
+        return String.format("%.3f", v).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    private String fmtNum2(double v) {
+        return String.format("%,.0f", v);
     }
 
     private void addInfoCell(PdfPTable t, String label, String value, Font lf, Font vf) {

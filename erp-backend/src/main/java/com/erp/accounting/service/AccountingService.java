@@ -8,13 +8,16 @@ import com.erp.common.repository.CompanyRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -142,6 +145,17 @@ public class AccountingService {
         }
 
         return toJournalDTO(journalRepo.save(journal));
+    }
+
+    public void deleteJournal(Long id) {
+        AccountJournal journal = journalRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Journal not found: " + id));
+        try {
+            journalRepo.delete(journal);
+            journalRepo.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalStateException("Ce journal contient des écritures comptables et ne peut pas être supprimé.");
+        }
     }
 
     // ===================== JOURNAL ENTRIES =====================
@@ -471,18 +485,28 @@ public class AccountingService {
     }
 
     /**
-     * Retourne le solde actuel du compte principal lié à un journal.
-     * Solde = total débit posté - total crédit posté sur ce compte.
+     * Retourne le solde du compte principal lié à un journal.
+     * Si excludeMoveId est fourni, les lignes de cette pièce sont exclues —
+     * ce qui donne le solde AVANT cette pièce (= solde initial correct sur le reçu).
      */
     @Transactional(readOnly = true)
-    public java.util.Map<String, Object> getJournalAccountBalance(Long journalId) {
+    public java.util.Map<String, Object> getJournalAccountBalance(Long journalId, Long excludeMoveId) {
         AccountJournal journal = journalRepo.findById(journalId)
                 .orElseThrow(() -> new EntityNotFoundException("Journal not found: " + journalId));
 
-        // Compte principal : débit en priorité, sinon crédit
-        AccountAccount account = journal.getDefaultDebitAccount() != null
-                ? journal.getDefaultDebitAccount()
-                : journal.getDefaultCreditAccount();
+        // Compte principal : priorité internalType='liquidity', sinon defaultDebitAccount
+        AccountAccount account = null;
+        if (journal.getDefaultDebitAccount() != null
+                && "liquidity".equals(journal.getDefaultDebitAccount().getInternalType())) {
+            account = journal.getDefaultDebitAccount();
+        } else if (journal.getDefaultCreditAccount() != null
+                && "liquidity".equals(journal.getDefaultCreditAccount().getInternalType())) {
+            account = journal.getDefaultCreditAccount();
+        } else {
+            account = journal.getDefaultDebitAccount() != null
+                    ? journal.getDefaultDebitAccount()
+                    : journal.getDefaultCreditAccount();
+        }
 
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("journalId", journalId);
@@ -496,8 +520,15 @@ public class AccountingService {
             return result;
         }
 
-        java.math.BigDecimal debit  = moveLineRepo.sumDebitByAccount(account.getId());
-        java.math.BigDecimal credit = moveLineRepo.sumCreditByAccount(account.getId());
+        java.math.BigDecimal debit;
+        java.math.BigDecimal credit;
+        if (excludeMoveId != null) {
+            debit  = moveLineRepo.sumDebitByAccountExcludingMove(account.getId(), excludeMoveId);
+            credit = moveLineRepo.sumCreditByAccountExcludingMove(account.getId(), excludeMoveId);
+        } else {
+            debit  = moveLineRepo.sumDebitByAccount(account.getId());
+            credit = moveLineRepo.sumCreditByAccount(account.getId());
+        }
         java.math.BigDecimal balance = debit.subtract(credit);
 
         result.put("accountId",   account.getId());
@@ -593,22 +624,26 @@ public class AccountingService {
 
     /**
      * Recalcule et sauvegarde le solde journalier d'un journal pour une date donnée.
-     * Le solde d'ouverture = solde de clôture du jour précédent.
-     * Le solde de clôture = ouverture + total_débit - total_crédit des écritures postées du jour.
+     *
+     * Pour un journal de caisse ou de banque, seules les mouvements sur le compte de trésorerie
+     * du journal (ex: 571, 521) sont pris en compte pour le solde.
+     * Si on sommait toutes les lignes, débit et crédit s'annuleraient toujours (écriture équilibrée).
      */
     public JournalDailyBalanceDTO updateDailyBalance(Long journalId, Long companyId, LocalDate date) {
-        // Solde d'ouverture = clôture du dernier jour enregistré avant cette date
-        List<JournalDailyBalance> previous = dailyBalanceRepo.findLatestBeforeDate(journalId, date);
-        BigDecimal openingBalance = previous.isEmpty()
-                ? BigDecimal.ZERO
-                : previous.get(0).getClosingBalance();
+        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
 
-        // Calculer les totaux débit/crédit des écritures postées du journal sur cette date
-        List<AccountMoveLine> dayLines = moveLineRepo.findPostedLinesByJournalAndDate(journalId, date);
-        BigDecimal totalDebit = dayLines.stream()
+        Long primaryAccountId = resolvePrimaryAccountId(journal);
+
+        List<AccountMoveLine> treasuryLines = primaryAccountId != null
+                ? moveLineRepo.findLinesByJournalAccountAndDate(journalId, primaryAccountId, date)
+                : moveLineRepo.findTreasuryLinesByJournalAndDate(journalId, date);
+
+        BigDecimal openingBalance = resolveOpeningBalance(journalId, primaryAccountId, date);
+
+        BigDecimal totalDebit = treasuryLines.stream()
                 .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalCredit = dayLines.stream()
+        BigDecimal totalCredit = treasuryLines.stream()
                 .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -628,16 +663,74 @@ public class AccountingService {
         balance.setTotalCredit(totalCredit);
         balance.setClosingBalance(closingBalance);
         JournalDailyBalance saved = dailyBalanceRepo.save(balance);
-
-        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
         return toBalanceDTO(saved, journal);
+    }
+
+    /** Retourne l'ID du compte principal d'un journal (defaultDebitAccount en priorité).
+     *  Retourne null si le journal n'a pas de compte configuré. */
+    private Long resolvePrimaryAccountId(AccountJournal journal) {
+        if (journal == null) return null;
+        if (journal.getDefaultDebitAccount() != null) return journal.getDefaultDebitAccount().getId();
+        if (journal.getDefaultCreditAccount() != null) return journal.getDefaultCreditAccount().getId();
+        return null;
+    }
+
+    /** Solde cumulatif de trésorerie du journal avant une date, en fusionnant
+     *  l'approche par ID de compte et l'approche par internalType='liquidity'. */
+    private BigDecimal resolveOpeningBalance(Long journalId, Long primaryAccountId, LocalDate date) {
+        if (primaryAccountId != null) {
+            BigDecimal byAccount = moveLineRepo.sumBalanceByJournalAndAccountBeforeDate(journalId, primaryAccountId, date);
+            if (byAccount != null && byAccount.compareTo(BigDecimal.ZERO) != 0) return byAccount;
+        }
+        BigDecimal byType = moveLineRepo.sumTreasuryBalanceBeforeDate(journalId, date);
+        return byType != null ? byType : BigDecimal.ZERO;
     }
 
     @Transactional(readOnly = true)
     public List<JournalDailyBalanceDTO> getDailyBalances(Long journalId) {
         AccountJournal journal = journalRepo.findById(journalId).orElse(null);
-        return dailyBalanceRepo.findByJournalIdOrderByDateDesc(journalId)
-                .stream().map(b -> toBalanceDTO(b, journal)).collect(Collectors.toList());
+
+        Long primaryAccountId = resolvePrimaryAccountId(journal);
+        List<AccountMoveLine> allLines = primaryAccountId != null
+                ? moveLineRepo.findAllLinesByJournalAndAccount(journalId, primaryAccountId)
+                : moveLineRepo.findAllTreasuryLinesByJournal(journalId);
+
+        // Grouper par date (TreeMap = ordre chronologique)
+        Map<LocalDate, List<AccountMoveLine>> byDate = new java.util.TreeMap<>();
+        for (AccountMoveLine l : allLines) {
+            byDate.computeIfAbsent(l.getDate(), d -> new ArrayList<>()).add(l);
+        }
+
+        BigDecimal running = BigDecimal.ZERO;
+        List<JournalDailyBalanceDTO> result = new ArrayList<>();
+
+        for (Map.Entry<LocalDate, List<AccountMoveLine>> entry : byDate.entrySet()) {
+            LocalDate date = entry.getKey();
+            BigDecimal opening = running;
+            BigDecimal dr = entry.getValue().stream()
+                    .map(l -> l.getDebit() != null ? l.getDebit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal cr = entry.getValue().stream()
+                    .map(l -> l.getCredit() != null ? l.getCredit() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal closing = opening.add(dr).subtract(cr);
+            running = closing;
+
+            result.add(JournalDailyBalanceDTO.builder()
+                    .journalId(journalId)
+                    .journalName(journal != null ? journal.getName() : null)
+                    .journalCode(journal != null ? journal.getCode() : null)
+                    .date(date)
+                    .openingBalance(opening)
+                    .totalDebit(dr)
+                    .totalCredit(cr)
+                    .closingBalance(closing)
+                    .build());
+        }
+
+        // Plus récent en premier (comme attendu par le frontend)
+        Collections.reverse(result);
+        return result;
     }
 
     @Transactional(readOnly = true)

@@ -5,7 +5,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "role_permissions",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "module", "action"}))
+       uniqueConstraints = @UniqueConstraint(
+           name = "uk_role_module_resource_action",
+           columnNames = {"role_id", "module", "resource", "action"}))
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class RolePermission {
 
@@ -20,6 +22,15 @@ public class RolePermission {
     /** VENTES | ACHATS | STOCK | COMPTABILITE | CONFIG */
     @Column(nullable = false)
     private String module;
+
+    /**
+     * Sous-ressource du module : BONS_COMMANDE, FACTURES, CLIENTS, AVOIRS, RISTOURNES,
+     * FOURNISSEURS, PRODUITS, MOUVEMENTS, INVENTAIRE, JOURNAUX, ECRITURES, RAPPORTS,
+     * GROUPES, ENTREPRISES, UTILISATEURS, ROLES.
+     * Nullable temporairement pour la migration Hibernate (update mode).
+     */
+    @Column(nullable = true)
+    private String resource;
 
     /** VIEW | CREATE | EDIT | DELETE | IMPORT | EXPORT */
     @Column(nullable = false)

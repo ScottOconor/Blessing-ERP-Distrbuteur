@@ -1,7 +1,10 @@
 <div class="page-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><span class="material-icons">move_to_inbox</span> Réceptions</h1>
+      <div>
+        <h1 class="page-title"><span class="material-icons">move_to_inbox</span> Réceptions</h1>
+        <p class="page-subtitle">Réceptions fournisseurs — manuelles ou depuis achat</p>
+      </div>
     </div>
     <button class="btn-primary" (click)="router.navigate(['/stock/receptions/new'])">
       <span class="material-icons">add</span> Nouvelle réception
@@ -21,6 +24,20 @@
       <span class="material-icons">history</span> Historique ({{ pickings.length }})
     </button>
   </div>
+
+  @if (activeTab === 'all') {
+    <div class="filter-bar">
+      <div class="filter-date-group">
+        <label>Du</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom" (ngModelChange)="applyFilter()">
+      </div>
+      <div class="filter-date-group">
+        <label>Au</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo" (ngModelChange)="applyFilter()">
+      </div>
+      <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
+    </div>
+  }
 
   <!-- Pending receptions (bordereau workflow) -->
   @if (activeTab === 'pending') {

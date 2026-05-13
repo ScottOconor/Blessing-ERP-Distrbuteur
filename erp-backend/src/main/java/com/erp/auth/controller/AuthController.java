@@ -8,6 +8,7 @@ import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.config.DataSeeder;
+import com.erp.config.repository.RolePermissionRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
     private final CompanyRepository companyRepository;
+    private final RolePermissionRepository rolePermissionRepository;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
@@ -47,7 +49,7 @@ public class AuthController {
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
 
         String roleCode = user.getRole().getCode();
-        boolean centralized = SYSTEM_ROLES.contains(roleCode);
+        boolean centralized = roleCode != null && SYSTEM_ROLES.contains(roleCode);
 
         // Claims embarqués dans le JWT
         Map<String, Object> claims = new HashMap<>();
@@ -83,6 +85,13 @@ public class AuthController {
         } else if (user.getCompany() != null) {
             resp.companyId(user.getCompany().getId())
                 .companyName(user.getCompany().getName());
+            // Permissions granulaires pour les rôles custom
+            List<AuthResponse.PermissionInfo> perms = rolePermissionRepository
+                    .findByRole(user.getRole()).stream()
+                    .map(p -> AuthResponse.PermissionInfo.builder()
+                            .module(p.getModule()).resource(p.getResource()).action(p.getAction()).build())
+                    .collect(Collectors.toList());
+            resp.permissions(perms);
         }
 
         log.info("Connexion réussie : {} [{}]", user.getUsername(), roleCode);

@@ -22,10 +22,17 @@
 
   <div class="filter-bar">
     @for (f of stateFilters; track f.value) {
-      <button class="filter-btn" [class.active]="stateFilter === f.value" (click)="setFilter(f.value)">
-        {{ f.label }}
-      </button>
+      <button class="filter-btn" [class.active]="stateFilter === f.value" (click)="setFilter(f.value)">{{ f.label }}</button>
     }
+    <div class="filter-date-group">
+      <label>Du</label>
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom" (ngModelChange)="applyFilter()">
+    </div>
+    <div class="filter-date-group">
+      <label>Au</label>
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo" (ngModelChange)="applyFilter()">
+    </div>
+    <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
   <div class="card">

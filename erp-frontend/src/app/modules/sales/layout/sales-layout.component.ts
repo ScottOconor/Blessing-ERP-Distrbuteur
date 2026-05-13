@@ -16,58 +16,78 @@ export class SalesLayoutComponent implements OnInit {
   companyName = 'Mon Entreprise';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  navItems: any[] = [];
 
   get isCentralized() { return this.authService.isCentralized(); }
   get companies() { return this.authService.getSession()?.companies ?? []; }
   get activeCompany() { return this.authService.getActiveCompany(); }
 
-  navItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/sales/dashboard' },
-    {
-      id: 'orders',
-      label: 'Bons de commande',
-      icon: 'receipt',
-      children: [
-        { label: 'Liste des bons', icon: 'list', route: '/sales/orders' },
-        { label: 'Nouveau bon', icon: 'add_circle', route: '/sales/orders/new' }
-      ]
-    },
-    {
-      id: 'invoices',
-      label: 'Factures & Avoirs',
-      icon: 'description',
-      children: [
-        { label: 'Factures', icon: 'receipt_long', route: '/sales/invoices' },
-        { label: 'Avoirs', icon: 'undo', route: '/sales/avoirs' }
-      ]
-    },
-    { id: 'clients', label: 'Clients', icon: 'people', route: '/sales/clients' },
-    {
-      id: 'commercial',
-      label: 'Commercial',
-      icon: 'local_offer',
-      children: [
-        { label: 'Ristournes', icon: 'redeem', route: '/sales/ristournes' },
-        { label: 'Précomptes & Enlèvements', icon: 'percent', route: '/sales/precomptes' }
-      ]
-    },
-    {
-      id: 'reports',
-      label: 'Rapports',
-      icon: 'assessment',
-      children: [
-        { label: 'Tableau de bord', icon: 'bar_chart', route: '/sales/reports' },
-        { label: 'État Commercial', icon: 'table_chart', route: '/sales/reports/etat-commercial' },
-        { label: 'Rapport Consolidé', icon: 'summarize', route: '/sales/reports/rapport-consolide' }
-      ]
-    }
-  ];
-
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, public router: Router) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
     this.userInitials = this.authService.getUserInitials();
+    this.navItems = this.buildNavItems();
+  }
+
+  private can(resource: string, action = 'VIEW'): boolean {
+    return this.authService.hasPermission('VENTES', resource, action);
+  }
+
+  private buildNavItems(): any[] {
+    const anyVentes = this.authService.hasAnyModulePermission('VENTES');
+    const items: any[] = [];
+
+    if (anyVentes) {
+      items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/sales/dashboard' });
+    }
+
+    const orderChildren: any[] = [];
+    if (this.can('BONS_COMMANDE', 'VIEW'))   orderChildren.push({ label: 'Liste des bons',  icon: 'list',       route: '/sales/orders' });
+    if (this.can('BONS_COMMANDE', 'CREATE')) orderChildren.push({ label: 'Nouveau bon',      icon: 'add_circle', route: '/sales/orders/new' });
+    if (orderChildren.length)
+      items.push({ id: 'orders', label: 'Bons de commande', icon: 'receipt', children: orderChildren });
+
+    const invoiceChildren: any[] = [];
+    if (this.can('FACTURES', 'VIEW')) invoiceChildren.push({ label: 'Factures', icon: 'receipt_long', route: '/sales/invoices' });
+    if (this.can('AVOIRS',   'VIEW')) invoiceChildren.push({ label: 'Avoirs',   icon: 'undo',         route: '/sales/avoirs' });
+    if (invoiceChildren.length)
+      items.push({ id: 'invoices', label: 'Factures & Avoirs', icon: 'description', children: invoiceChildren });
+
+    if (this.can('CLIENTS', 'VIEW'))
+      items.push({ id: 'clients', label: 'Clients', icon: 'people', route: '/sales/clients' });
+
+    const commChildren: any[] = [];
+    if (this.can('RISTOURNES', 'VIEW')) commChildren.push({ label: 'Ristournes', icon: 'redeem', route: '/sales/ristournes' });
+    if (this.can('RISTOURNES', 'VIEW')) commChildren.push({ label: 'Précomptes & Enlèvements', icon: 'percent', route: '/sales/precomptes' });
+    if (commChildren.length)
+      items.push({ id: 'commercial', label: 'Commercial', icon: 'local_offer', children: commChildren });
+
+    if (anyVentes) {
+      items.push({
+        id: 'eleader',
+        label: 'eLeader',
+        icon: 'upload_file',
+        children: [
+          { label: 'Import PDF',    icon: 'upload',   route: '/sales/eleader/import' },
+          { label: 'Journaux',      icon: 'history',  route: '/sales/eleader/journal' },
+          { label: 'Configuration', icon: 'settings', route: '/sales/eleader/config' }
+        ]
+      });
+    }
+
+    if (anyVentes) {
+      items.push({
+        id: 'reports', label: 'Rapports', icon: 'assessment',
+        children: [
+          { label: 'Tableau de bord',     icon: 'bar_chart',   route: '/sales/reports' },
+          { label: 'État Commercial',      icon: 'table_chart', route: '/sales/reports/etat-commercial' },
+          { label: 'Rapport Consolidé',   icon: 'summarize',   route: '/sales/reports/rapport-consolide' }
+        ]
+      });
+    }
+
+    return items;
   }
 
   toggleDropdown(id: string): void {
@@ -93,14 +113,8 @@ export class SalesLayoutComponent implements OnInit {
     this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
-  goHome(): void {
-    this.router.navigate(['/welcome']);
-  }
-
-  logout(): void {
-    this.authService.logout();
-    this.router.navigate(['/login']);
-  }
+  goHome(): void { this.router.navigate(['/welcome']); }
+  logout(): void { this.authService.logout(); this.router.navigate(['/login']); }
 
   isRouteActive(route: string): boolean {
     return this.router.url === route || this.router.url.startsWith(route + '/');

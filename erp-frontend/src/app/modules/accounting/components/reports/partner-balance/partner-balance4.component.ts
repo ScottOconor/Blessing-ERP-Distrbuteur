@@ -73,7 +73,7 @@ export class PartnerBalance4Component implements OnInit {
   print(): void { window.print(); }
 
   exportPdf(): void {
-    this.pdfExport.exportPartnerBalance4(this.lines, this.dateFrom, this.dateTo);
+    this.pdfExport.exportPartnerBalance4(this.lines, this.dateFrom, this.dateTo, this.authService.getActiveCompany()?.name);
   }
 
   exportExcel(): void {

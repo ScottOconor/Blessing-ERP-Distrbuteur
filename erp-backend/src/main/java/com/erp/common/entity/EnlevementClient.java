@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 /**
  * Tarif d'enlèvement spécifique pour un client sur une catégorie donnée.
- * Surcharge le montant global de l'Enlevement pour ce client.
+ * Ce montant REMPLACE le montant fixe global pour ce client (logique identique à Odoo).
  */
 @Entity
 @Table(name = "enlevement_clients",
@@ -27,7 +27,7 @@ public class EnlevementClient {
     @JoinColumn(name = "partner_id", nullable = false)
     private Partner partner;
 
-    /** Montant supplémentaire pour ce client (s'ajoute au montant fixe global) */
+    /** Tarif TTC par unité pour ce client — remplace montantFixe de l'Enlevement de base */
     @Column(name = "montant", precision = 20, scale = 2, nullable = false)
     private BigDecimal montant;
 

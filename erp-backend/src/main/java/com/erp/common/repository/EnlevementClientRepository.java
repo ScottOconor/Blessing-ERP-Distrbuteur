@@ -12,6 +12,10 @@ public interface EnlevementClientRepository extends JpaRepository<EnlevementClie
 
     Optional<EnlevementClient> findByEnlevementIdAndPartnerId(Long enlevementId, Long partnerId);
 
-    /** Trouve le tarif spécifique pour un client sur une catégorie donnée */
+    /** Trouve le tarif spécifique pour un client sur une catégorie donnée (filtre par société) */
+    Optional<EnlevementClient> findByEnlevement_CategoryIdAndEnlevement_CompanyIdAndPartnerId(
+            Long categoryId, Long companyId, Long partnerId);
+
+    /** Compatibilité — sans filtre société (multi-société non géré) */
     Optional<EnlevementClient> findByEnlevement_CategoryIdAndPartnerId(Long categoryId, Long partnerId);
 }

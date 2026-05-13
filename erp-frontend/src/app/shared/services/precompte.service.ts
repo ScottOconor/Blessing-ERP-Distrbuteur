@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
+
 export interface Precompte {
   id?: number;
   partnerId: number;
@@ -33,14 +35,26 @@ export interface Enlevement {
 
 @Injectable({ providedIn: 'root' })
 export class PrecompteService {
-  private basePrecompte = `http://${window.location.hostname}:8085/api/precomptes`;
-  private baseEnlevement = `http://${window.location.hostname}:8085/api/enlevements`;
+  private basePrecompte = `${environment.apiUrl}/api/precomptes`;
+  private baseEnlevement = `${environment.apiUrl}/api/enlevements`;
 
   constructor(private http: HttpClient) {}
 
   // ===== Précomptes =====
 
+  downloadPrecompteTemplate(): Observable<Blob> {
+    return this.http.get(`${this.basePrecompte}/template`, { responseType: 'blob' });
+  }
+
+  importPrecomptes(file: File, companyId: number): Observable<any> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('companyId', String(companyId));
+    return this.http.post(`${this.basePrecompte}/import`, fd);
+  }
+
   getAllPrecomptes(companyId: number): Observable<Precompte[]> {
+
     return this.http.get<Precompte[]>(this.basePrecompte, {
       params: new HttpParams().set('companyId', companyId)
     });

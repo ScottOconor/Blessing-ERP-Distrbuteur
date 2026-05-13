@@ -58,6 +58,8 @@ public class SalesInvoiceDTO {
     private BigDecimal totalLiquideNu;
     /** Net à payer = TTC - ristourne + enlèvement */
     private BigDecimal netAPayer;
+    /** Total taxe Guinness (300 par ligne catégorie Guinness) */
+    private BigDecimal totalGuinessTaxe;
 
     private List<LineDTO> lines;
     private List<RistourneDetailDTO> ristourneDetails;
@@ -96,5 +98,6 @@ public class SalesInvoiceDTO {
         private BigDecimal prixUnitaireTTC;
         private boolean consigne;
         private String categoryName;
+        private BigDecimal guinessTaxe;
     }
 }

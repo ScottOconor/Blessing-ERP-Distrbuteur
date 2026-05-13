@@ -6,11 +6,12 @@ import { PurchaseService, PurchaseOrder, PurchaseOrderLine } from '../../service
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { StockService, Product } from '../../../stock/services/stock.service';
+import { PrintPreviewComponent } from '../../../../shared/components/print-preview/print-preview.component';
 
 @Component({
   selector: 'app-purchase-order-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintPreviewComponent],
   templateUrl: './order-form.component.html',
   styleUrl: './order-form.component.scss'
 })
@@ -24,6 +25,7 @@ export class OrderFormComponent implements OnInit {
   confirming = false;
   errorMsg = '';
   successMsg = '';
+  showPrintModal = false;
   readonly TVA_DEFAULT = 19.25;
 
   // Autocomplete state per line
@@ -312,6 +314,10 @@ export class OrderFormComponent implements OnInit {
   }
 
   backToList(): void { this.router.navigate(['/purchases/orders']); }
+
+  get printCompanyName(): string { return this.authService.getActiveCompany()?.name ?? ''; }
+  openPrint(): void { this.showPrintModal = true; }
+  closePrint(): void { this.showPrintModal = false; }
 
   stateLabel(s?: string): string {
     const map: Record<string, string> = { draft: 'Brouillon', confirmed: 'Confirmée', received: 'Réceptionnée', cancelled: 'Annulée' };

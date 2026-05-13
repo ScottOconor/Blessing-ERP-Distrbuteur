@@ -24,6 +24,11 @@
       }
     </div>
     <div class="header-actions">
+      @if (invoice && invoice.state !== 'draft') {
+        <button class="btn-print" (click)="openPrint()">
+          <span class="material-icons">print</span> Imprimer
+        </button>
+      }
       @if (invoice?.state === 'draft') {
         <button class="btn-primary" (click)="postInvoice()" [disabled]="posting">
           <span class="material-icons">check_circle</span>
@@ -306,41 +311,6 @@
           }
         </div>
 
-        <!-- Formulaire de paiement inline -->
-        @if (showPaymentForm) {
-          <div class="payment-form card mt-12">
-            <div class="card-header">Nouveau paiement fournisseur</div>
-            <div class="payment-form-body">
-              <div class="form-group">
-                <label>Journal <span class="required">*</span></label>
-                <select [(ngModel)]="payment.journalId" class="form-control">
-                  @for (j of cashBankJournals; track j.id) {
-                    <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Date</label>
-                <input type="date" [(ngModel)]="payment.date" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label>Montant <span class="required">*</span></label>
-                <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" />
-              </div>
-              <div class="form-group">
-                <label>Mémo</label>
-                <input type="text" [(ngModel)]="payment.memo" class="form-control" placeholder="Référence chèque, virement..." />
-              </div>
-              <div class="payment-form-actions">
-                <button class="btn-secondary" (click)="closePaymentForm()">Annuler</button>
-                <button class="btn-primary" (click)="savePayment()" [disabled]="savingPayment">
-                  <span class="material-icons">save</span>
-                  {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Totaux -->
@@ -405,3 +375,74 @@
     </div>
   }
 </div>
+
+<!-- ══ Modal : Enregistrer un paiement fournisseur ══ -->
+@if (showPaymentForm && invoice) {
+  <div class="pay-overlay" (click).self="closePaymentForm()">
+    <div class="pay-modal">
+      <div class="pay-modal-hdr">
+        <div class="pay-modal-title">
+          <span class="material-icons">payments</span>
+          Nouveau paiement fournisseur
+        </div>
+        <button class="pay-modal-close" (click)="closePaymentForm()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="pay-summary">
+          <div class="pay-sum-row">
+            <span>Facture</span><strong>{{ invoice.name }}</strong>
+          </div>
+          <div class="pay-sum-row">
+            <span>Fournisseur</span><span>{{ invoice.partnerName }}</span>
+          </div>
+          <div class="pay-sum-row">
+            <span>Reste dû</span>
+            <strong class="pay-due">{{ (invoice.montantDu ?? invoice.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong>
+          </div>
+        </div>
+        <div class="pay-form-grid">
+          <div class="form-group">
+            <label>Journal <span class="required">*</span></label>
+            <select [(ngModel)]="payment.journalId" class="form-control">
+              @for (j of cashBankJournals; track j.id) {
+                <option [value]="j.id">{{ j.code }} – {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="payment.date" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Montant <span class="required">*</span></label>
+            <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Mémo / Référence</label>
+            <input type="text" [(ngModel)]="payment.memo" class="form-control" placeholder="N° chèque, virement..." />
+          </div>
+        </div>
+      </div>
+      <div class="pay-modal-ftr">
+        <button class="pay-btn-cancel" (click)="closePaymentForm()">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="pay-btn-save" (click)="savePayment()" [disabled]="savingPayment">
+          <span class="material-icons">{{ savingPayment ? 'hourglass_empty' : 'check_circle' }}</span>
+          {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showPrintModal && invoice) {
+  <app-print-preview
+    [purchaseInvoice]="invoice"
+    [docType]="printDocType"
+    [companyName]="printCompanyName"
+    (closed)="closePrint()">
+  </app-print-preview>
+}

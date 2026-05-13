@@ -2,9 +2,12 @@ package com.erp.accounting.service;
 
 import com.erp.accounting.dto.ImportResult;
 import com.erp.accounting.entity.*;
+import com.erp.accounting.init.OhadaDataInitializer;
 import com.erp.accounting.repository.*;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
+import com.erp.stock.entity.Warehouse;
+import com.erp.stock.repository.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +31,8 @@ public class ImportService {
     private final AnalyticAccountRepository analyticAccountRepo;
     private final PartnerRepository partnerRepo;
     private final CompanyRepository companyRepo;
+    private final OhadaDataInitializer ohadaInitializer;
+    private final WarehouseRepository warehouseRepo;
 
     // =====================================================
     // PLAN COMPTABLE (account.account)
@@ -36,21 +41,8 @@ public class ImportService {
     public ImportResult importAccounts(MultipartFile file, Long companyId, boolean replace) throws IOException {
         Company company = getCompany(companyId);
         ImportResult result = ImportResult.builder().build();
-
-        if (replace) {
-            // Détacher les journaux de leurs comptes par défaut avant suppression
-            List<AccountJournal> journals = journalRepo.findByCompanyId(companyId);
-            for (AccountJournal j : journals) {
-                j.setDefaultDebitAccount(null);
-                j.setDefaultCreditAccount(null);
-            }
-            journalRepo.saveAll(journals);
-
-            // Supprimer tous les comptes de la société
-            accountRepo.deleteByCompanyId(companyId);
-            accountRepo.flush();
-            log.info("Plan comptable remplacé : tous les comptes de la société {} supprimés", companyId);
-        }
+        // On ne supprime plus les comptes existants : des écritures peuvent les référencer.
+        // L'import fait toujours un upsert (mise à jour si le code existe, création sinon).
 
         Workbook wb = new XSSFWorkbook(file.getInputStream());
         try {
@@ -67,8 +59,9 @@ public class ImportService {
             Integer colName = findCol(headers,
                     "name", "Intitulé", "intitule", "Intitule",
                     "Libelle", "Libellé", "libellé", "libelle",
-                    "Nom", "nom", "Nom du compte", "Account Name",
-                    "account name", "Désignation", "designation");
+                    "Nom", "nom", "Nom du compte", "nom du compte",
+                    "Account Name", "account name",
+                    "Désignation", "designation");
 
             Integer colType = findCol(headers,
                     "account_type", "Type", "type",
@@ -77,16 +70,13 @@ public class ImportService {
                     "Internal Type", "internal type",
                     "Type (vue)", "Nature");
 
-            Integer colDeprecated = findCol(headers,
-                    "deprecated", "Deprecated",
-                    "Obsolète", "obsolete", "Obsolete",
-                    "Désactivé", "desactive");
-
             Integer colReconcile = findCol(headers,
                     "reconcile", "Reconcile",
                     "Réconciliation", "Reconciliation",
                     "Autoriser la réconciliation",
                     "autoriser la reconciliation",
+                    "Autoriser le lettrage",
+                    "autoriser le lettrage",
                     "Allow Reconciliation", "allow reconciliation",
                     "Réconciliation sur les pièces",
                     "Reconciliation sur les pieces");
@@ -127,7 +117,9 @@ public class ImportService {
                 String accountType = mapped[0];
                 String internalType = mapped[1];
 
-                boolean deprecated = (colDeprecated != null) && parseBoolean(getString(row, colDeprecated));
+                // On force deprecated=false : les comptes Odoo marqués obsolètes doivent
+                // rester visibles dans l'ERP (ils seraient filtrés sinon).
+                boolean deprecated = false;
                 boolean reconcile  = (colReconcile != null)  && parseBoolean(getString(row, colReconcile));
 
                 Optional<AccountAccount> existing = accountRepo.findFirstByCodeAndCompanyId(code, companyId);
@@ -153,6 +145,8 @@ public class ImportService {
         } finally {
             wb.close();
         }
+
+        ohadaInitializer.reseedMissingGroupAccounts(company);
 
         result.setMessage(String.format("Import terminé : %d créés, %d mis à jour, %d ignorés, %d erreur(s)",
                 result.getCreated(), result.getUpdated(), result.getSkipped(), result.getErrors().size()));
@@ -403,6 +397,69 @@ public class ImportService {
     }
 
     // =====================================================
+    // ENTREPÔTS (stock.warehouse)
+    // =====================================================
+
+    public ImportResult importWarehouses(MultipartFile file, Long companyId) throws IOException {
+        ImportResult result = ImportResult.builder().build();
+
+        Workbook wb = new XSSFWorkbook(file.getInputStream());
+        try {
+            Sheet sheet = wb.getSheetAt(0);
+            Map<String, Integer> headers = readHeaders(sheet);
+
+            Integer colName   = findCol(headers, "name", "Nom", "Nom de l'entrepôt", "Warehouse Name");
+            Integer colCode   = findCol(headers, "code", "Code", "Code abrégé", "Short Name");
+            Integer colActive = findCol(headers, "active", "Actif", "Active");
+
+            if (colName == null || colCode == null) {
+                result.addError("Colonnes obligatoires manquantes : 'name' et 'code'. Colonnes détectées : " + headers.keySet());
+                return result;
+            }
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String name = getString(row, colName).trim();
+                String code = getString(row, colCode).trim().toUpperCase();
+
+                if (name.isEmpty() || name.equalsIgnoreCase("false")) continue;
+                if (code.isEmpty() || code.equalsIgnoreCase("false")) continue;
+                if (code.length() > 10) code = code.substring(0, 10);
+
+                String activeRaw = colActive != null ? getString(row, colActive) : "true";
+                boolean active = activeRaw.isEmpty() || "true".equalsIgnoreCase(activeRaw) || "1".equals(activeRaw);
+
+                Optional<Warehouse> existing = warehouseRepo.findFirstByCodeAndCompanyId(code, companyId);
+                if (existing.isPresent()) {
+                    Warehouse w = existing.get();
+                    w.setName(name);
+                    w.setActive(active);
+                    warehouseRepo.save(w);
+                    result.setUpdated(result.getUpdated() + 1);
+                } else {
+                    Warehouse w = Warehouse.builder()
+                            .name(name)
+                            .code(code)
+                            .active(active)
+                            .companyId(companyId)
+                            .build();
+                    warehouseRepo.save(w);
+                    result.setCreated(result.getCreated() + 1);
+                }
+            }
+        } finally {
+            wb.close();
+        }
+
+        result.setMessage(String.format("Import terminé : %d créés, %d mis à jour, %d ignorés, %d erreur(s)",
+                result.getCreated(), result.getUpdated(), result.getSkipped(), result.getErrors().size()));
+        log.info(result.getMessage());
+        return result;
+    }
+
+    // =====================================================
     // HELPERS
     // =====================================================
 
@@ -474,10 +531,17 @@ public class ImportService {
      */
     private String extractCode(String raw) {
         if (raw == null || raw.isEmpty()) return "";
-        // ID externe Odoo (ex: module.ref) → ignorer
-        if (raw.contains(".") && !raw.contains(" ")) return "";
+        // ID externe Odoo : "account.account_5711" ou "l10n_cm.account_5711" → extraire la partie après "_"
+        if (raw.contains(".") && !raw.contains(" ")) {
+            int underscore = raw.lastIndexOf('_');
+            if (underscore >= 0) {
+                String afterUnderscore = raw.substring(underscore + 1);
+                if (!afterUnderscore.isEmpty()) return afterUnderscore;
+            }
+            return "";
+        }
         String[] parts = raw.split("\\s+", 2);
-        if (parts[0].matches("\\d+")) return parts[0];
+        if (parts[0].matches("[0-9]+[A-Za-z0-9]*")) return parts[0];
         return raw.trim();
     }
 
@@ -488,34 +552,47 @@ public class ImportService {
         if (raw == null) raw = "";
         String v = raw.trim().toLowerCase();
 
-        if ("asset_receivable".equals(v) || "receivable".equals(v) || "créances clients".equals(v))
+        if ("asset_receivable".equals(v) || "receivable".equals(v) || "recevable".equals(v)
+                || "créances clients".equals(v))
             return new String[]{"asset", "receivable"};
-        if ("asset_cash".equals(v) || "bank and cash".equals(v) || "liquidités".equals(v))
+        if ("asset_cash".equals(v) || "bank and cash".equals(v)
+                || "liquidités".equals(v) || "banque et liquidités".equals(v)
+                || "banque et liquidites".equals(v) || "trésorerie".equals(v))
             return new String[]{"asset", "liquidity"};
         if ("asset_current".equals(v) || "asset_prepayments".equals(v)
                 || "asset_non_current".equals(v) || "asset_fixed".equals(v)
                 || "current assets".equals(v) || "non-current assets".equals(v)
                 || "fixed assets".equals(v) || "prepayments".equals(v)
-                || "actif courant".equals(v) || "actif non courant".equals(v)
-                || "immobilisations".equals(v) || "acomptes".equals(v))
+                || "actif courant".equals(v) || "actif circulant".equals(v)
+                || "actif non courant".equals(v) || "actif immobilise".equals(v)
+                || "actif immobilisé".equals(v) || "immobilisations".equals(v)
+                || "acomptes".equals(v))
             return new String[]{"asset", "other"};
         if ("liability_payable".equals(v) || "payable".equals(v) || "dettes fournisseurs".equals(v))
             return new String[]{"liability", "payable"};
         if ("liability_credit_card".equals(v) || "liability_current".equals(v)
                 || "liability_non_current".equals(v) || "current liabilities".equals(v)
                 || "non-current liabilities".equals(v) || "passif courant".equals(v)
-                || "passif non courant".equals(v) || "carte de crédit".equals(v))
+                || "passif circulant".equals(v) || "passif non courant".equals(v)
+                || "carte de crédit".equals(v))
             return new String[]{"liability", "other"};
         if ("equity".equals(v) || "equity_unaffected".equals(v)
-                || "capitaux propres".equals(v) || "résultats non affectés".equals(v))
+                || "capitaux propres".equals(v) || "résultats non affectés".equals(v)
+                || "benefices de l'annee en cours".equals(v)
+                || "bénéfices de l'année en cours".equals(v))
             return new String[]{"equity", "other"};
         if ("income".equals(v) || "income_other".equals(v) || "other income".equals(v)
-                || "produits".equals(v) || "autres produits".equals(v))
+                || "produits".equals(v) || "revenus".equals(v) || "autres produits".equals(v))
             return new String[]{"income", "other"};
         if ("expense".equals(v) || "expense_depreciation".equals(v) || "expense_direct_cost".equals(v)
                 || "expenses".equals(v) || "depreciation".equals(v) || "cost of revenue".equals(v)
-                || "charges".equals(v) || "amortissements".equals(v) || "coût des ventes".equals(v))
+                || "charges".equals(v) || "notes de frais".equals(v)
+                || "amortissements".equals(v) || "coût des ventes".equals(v))
             return new String[]{"expense", "other"};
+        // Comptes spéciaux / hors bilan → on les traite comme des comptes autres
+        if ("comptes speciaux".equals(v) || "comptes spéciaux".equals(v)
+                || "hors bilan".equals(v) || "off balance sheet".equals(v))
+            return new String[]{"off_balance", "other"};
 
         return new String[]{"other", "other"};
     }

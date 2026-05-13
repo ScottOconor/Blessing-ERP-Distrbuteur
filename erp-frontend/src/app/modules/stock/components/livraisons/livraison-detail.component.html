@@ -13,6 +13,11 @@
       </div>
     </div>
     <div class="header-actions">
+      @if (!isNew && picking) {
+        <button class="btn-secondary" (click)="openPrint()">
+          <span class="material-icons">print</span> Imprimer
+        </button>
+      }
       @if (!isDone && !isCancelled) {
         <button class="btn-secondary" (click)="save()" [disabled]="saving">
           <span class="material-icons">save</span> {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
@@ -167,3 +172,12 @@
     </div>
   }
 </div>
+
+@if (showPrintModal && picking) {
+  <app-print-preview
+    [picking]="picking"
+    docType="bon"
+    [companyName]="printCompanyName"
+    (closed)="closePrint()">
+  </app-print-preview>
+}

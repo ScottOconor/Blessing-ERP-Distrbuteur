@@ -1,5 +1,8 @@
 <div class="import-page">
 
+  <!-- Input file caché -->
+  <input #fileInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onFileChange($event)" [disabled]="importing" />
+
   <!-- Header -->
   <div class="page-header">
     <h1><span class="material-icons">upload_file</span> Import de données</h1>
@@ -10,16 +13,13 @@
   <div class="import-order-card">
     <h3><span class="material-icons">info</span> Ordre d'import recommandé</h3>
     <div class="order-steps">
-      <div
-        *ngFor="let step of importOrder"
-        class="order-step"
-        [class.active]="activeTab === step.tabId"
-        (click)="setTab(step.tabId)"
-      >
-        <span class="step-number">{{ step.step }}</span>
-        <span class="material-icons step-icon">{{ step.icon }}</span>
-        <span class="step-label">{{ step.label }}</span>
-      </div>
+      @for (step of importOrder; track step.tabId) {
+        <div class="order-step" [class.active]="activeTab === step.tabId" (click)="setTab(step.tabId)">
+          <span class="step-number">{{ step.step }}</span>
+          <span class="material-icons step-icon">{{ step.icon }}</span>
+          <span class="step-label">{{ step.label }}</span>
+        </div>
+      }
     </div>
   </div>
 
@@ -27,27 +27,26 @@
   <div class="journal-types-card">
     <h3><span class="material-icons">book</span> Types de journaux supportés</h3>
     <div class="journal-types-list">
-      <div *ngFor="let jt of journalTypes" class="journal-type-badge" [style.border-color]="jt.color">
-        <span class="material-icons" [style.color]="jt.color">{{ jt.icon }}</span>
-        <div>
-          <strong>{{ jt.label }}</strong>
-          <code>{{ jt.value }}</code>
+      @for (jt of journalTypes; track jt.value) {
+        <div class="journal-type-badge" [style.border-color]="jt.color">
+          <span class="material-icons" [style.color]="jt.color">{{ jt.icon }}</span>
+          <div>
+            <strong>{{ jt.label }}</strong>
+            <code>{{ jt.value }}</code>
+          </div>
         </div>
-      </div>
+      }
     </div>
   </div>
 
   <!-- Tabs -->
   <div class="tabs">
-    <button
-      *ngFor="let tab of tabs"
-      class="tab-btn"
-      [class.active]="activeTab === tab.id"
-      (click)="setTab(tab.id)"
-    >
-      <span class="material-icons">{{ tab.icon }}</span>
-      {{ tab.label }}
-    </button>
+    @for (tab of tabs; track tab.id) {
+      <button class="tab-btn" [class.active]="activeTab === tab.id" (click)="setTab(tab.id)">
+        <span class="material-icons">{{ tab.icon }}</span>
+        {{ tab.label }}
+      </button>
+    }
   </div>
 
   <!-- Import Panel -->
@@ -55,92 +54,170 @@
     <div class="panel-header">
       <span class="material-icons">{{ activeTabDef.icon }}</span>
       <h2>{{ activeTabDef.label }}</h2>
+      @if (activeTabDef.templateAction) {
+        <button class="btn-template" (click)="downloadTemplate()" title="Télécharger le modèle Excel">
+          <span class="material-icons">download</span> Modèle
+        </button>
+      }
     </div>
 
     <p class="panel-desc">{{ activeTabDef.description }}</p>
 
-    <div *ngIf="activeTabDef.warning" class="warning-banner">
-      <span class="material-icons">warning</span>
-      {{ activeTabDef.warning }}
+    @if (activeTabDef.warning) {
+      <div class="warning-banner">
+        <span class="material-icons">warning</span>
+        {{ activeTabDef.warning }}
+      </div>
+    }
+
+    <!-- Zone de sélection -->
+    <div class="upload-form">
+      @if (importing) {
+        <div class="file-drop-zone loading">
+          <span class="material-icons drop-icon spinning">sync</span>
+          <span class="drop-text">Import en cours…</span>
+        </div>
+      } @else if (previewLoading) {
+        <div class="file-drop-zone loading">
+          <span class="material-icons drop-icon spinning">sync</span>
+          <span class="drop-text">Lecture du fichier…</span>
+        </div>
+      } @else {
+        <div class="file-drop-zone" (click)="triggerFileInput()" style="cursor:pointer">
+          <span class="material-icons drop-icon">cloud_upload</span>
+          <span class="drop-text">Cliquez pour sélectionner un fichier <b>.xlsx</b></span>
+          <span class="drop-hint">Un aperçu s'affichera avant l'import définitif</span>
+        </div>
+      }
     </div>
 
-    <form (submit)="onImport($event)" class="upload-form">
-      <label class="file-drop-zone">
-        <span class="material-icons drop-icon">cloud_upload</span>
-        <span class="drop-text">
-          {{ selectedFileName || 'Cliquez ou glissez un fichier .xlsx ici' }}
-        </span>
-        <input
-          type="file"
-          accept=".xlsx,.xls"
-          (change)="onFileSelected($event)"
-          style="display:none"
-        />
-      </label>
+    <!-- Erreur -->
+    @if (errorMsg) {
+      <div class="alert alert-error">
+        <span class="material-icons">error</span> {{ errorMsg }}
+      </div>
+    }
 
-      <label *ngIf="activeTabDef.supportsReplace" class="replace-toggle" [class.active]="replaceAccounts">
-        <input
-          type="checkbox"
-          [checked]="replaceAccounts"
-          (change)="replaceAccounts = $any($event.target).checked"
-        />
-        <span class="material-icons">{{ replaceAccounts ? 'warning' : 'merge' }}</span>
-        <span>
-          <ng-container *ngIf="replaceAccounts">
-            <strong>Remplacement complet</strong> — les comptes existants seront supprimés avant l'import
-          </ng-container>
-          <ng-container *ngIf="!replaceAccounts">
-            Mise à jour uniquement (ajoute / modifie, ne supprime pas)
-          </ng-container>
-        </span>
-      </label>
-
-      <button type="submit" class="btn-import" [disabled]="importing || !selectedFileName">
-        <span *ngIf="!importing" class="material-icons">upload</span>
-        <span *ngIf="importing" class="material-icons spinning">sync</span>
-        {{ importing ? 'Import en cours...' : 'Lancer l\'import' }}
-      </button>
-    </form>
-
-    <!-- Error -->
-    <div *ngIf="errorMsg" class="alert alert-error">
-      <span class="material-icons">error</span> {{ errorMsg }}
-    </div>
-
-    <!-- Result -->
-    <div *ngIf="result" class="import-result">
-      <div class="result-summary">
-        <div class="stat created">
-          <span class="material-icons">add_circle</span>
-          <strong>{{ result.created }}</strong>
-          <span>Créés</span>
+    <!-- Résultat -->
+    @if (result) {
+      <div class="import-result">
+        <div class="result-summary">
+          <div class="stat created">
+            <span class="material-icons">add_circle</span>
+            <strong>{{ result.created }}</strong>
+            <span>Créés</span>
+          </div>
+          <div class="stat updated">
+            <span class="material-icons">update</span>
+            <strong>{{ result.updated }}</strong>
+            <span>Mis à jour</span>
+          </div>
+          <div class="stat skipped">
+            <span class="material-icons">skip_next</span>
+            <strong>{{ result.skipped }}</strong>
+            <span>Ignorés</span>
+          </div>
+          <div class="stat errors" [class.has-errors]="result.errors.length > 0">
+            <span class="material-icons">warning</span>
+            <strong>{{ result.errors.length }}</strong>
+            <span>Erreurs</span>
+          </div>
         </div>
-        <div class="stat updated">
-          <span class="material-icons">update</span>
-          <strong>{{ result.updated }}</strong>
-          <span>Mis à jour</span>
-        </div>
-        <div class="stat skipped">
-          <span class="material-icons">skip_next</span>
-          <strong>{{ result.skipped }}</strong>
-          <span>Ignorés</span>
-        </div>
-        <div class="stat errors" [class.has-errors]="result.errors.length > 0">
-          <span class="material-icons">warning</span>
-          <strong>{{ result.errors.length }}</strong>
-          <span>Erreurs</span>
+
+        <p class="result-message">{{ result.message }}</p>
+
+        @if (result.errors.length > 0) {
+          <div class="error-list">
+            <h4>Détails des erreurs :</h4>
+            <ul>
+              @for (err of result.errors; track $index) {
+                <li>{{ err }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div style="margin-top:16px">
+          <button class="btn-secondary" (click)="triggerFileInput()">
+            <span class="material-icons">upload_file</span> Importer un autre fichier
+          </button>
         </div>
       </div>
+    }
+  </div>
+</div>
 
-      <p class="result-message">{{ result.message }}</p>
+<!-- ═══════════════════════════════════════════════════════════════
+     MODALE DE PRÉVISUALISATION
+════════════════════════════════════════════════════════════════ -->
+@if (showPreview) {
+  <div class="modal-overlay" (click)="closePreview()">
+    <div class="modal-preview" (click)="$event.stopPropagation()">
 
-      <div *ngIf="result.errors.length > 0" class="error-list">
-        <h4>Détails des erreurs :</h4>
-        <ul>
-          <li *ngFor="let err of result.errors">{{ err }}</li>
-        </ul>
+      <!-- En-tête -->
+      <div class="modal-preview-header">
+        <span class="material-icons">{{ activeTabDef.icon }}</span>
+        <div>
+          <h2>Aperçu — {{ activeTabDef.label }}</h2>
+          <p class="preview-meta">
+            {{ previewRows.length }} ligne(s) affichée(s)
+            @if (previewRows.length === PREVIEW_MAX) { <span class="badge-warning">limité à {{ PREVIEW_MAX }}</span> }
+            &nbsp;·&nbsp; Fichier : <b>{{ selectedFileName }}</b>
+          </p>
+        </div>
+        <button class="btn-close-modal" (click)="closePreview()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Colonnes détectées dans le fichier -->
+      <div class="preview-detected-cols">
+        <span class="label-cols">Colonnes détectées :</span>
+        @for (h of previewHeaders; track h) {
+          <span class="col-chip" [class.col-chip-active]="isActiveCol(h)">{{ h }}</span>
+        }
+      </div>
+
+      <!-- Tableau d'aperçu -->
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              @for (col of previewCols; track col.key) {
+                <th>{{ col.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of previewRows; track $index; let i = $index) {
+              <tr>
+                <td class="col-num text-muted">{{ i + 1 }}</td>
+                @for (col of previewCols; track col.key) {
+                  <td [class.cell-empty]="!getCellValue(row, col)">
+                    {{ getCellValue(row, col) || '—' }}
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (activeTabDef.warning) {
+        <div class="preview-warning">
+          <span class="material-icons">warning</span> {{ activeTabDef.warning }}
+        </div>
+      }
+
+      <!-- Pied de modale -->
+      <div class="modal-preview-footer">
+        <button class="btn-cancel" (click)="closePreview()">Annuler</button>
+        <button class="btn-confirm" (click)="confirmImport()">
+          <span class="material-icons">check_circle</span>
+          Confirmer l'import ({{ previewRows.length }} ligne{{ previewRows.length > 1 ? 's' : '' }})
+        </button>
       </div>
     </div>
   </div>
-
-</div>
+}

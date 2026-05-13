@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/*.js", "/*.css", "/*.ico", "/*.png", "/*.svg").permitAll()
-                .requestMatchers("/", "/index.html", "/{path:[^\\.]*}", "/{path:[^\\.]*}/**").permitAll()
+                .requestMatchers("/", "/index.html").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )

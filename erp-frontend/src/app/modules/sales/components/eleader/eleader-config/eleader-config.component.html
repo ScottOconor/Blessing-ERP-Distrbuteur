@@ -1,0 +1,193 @@
+<div class="config-page">
+  <div class="page-header">
+    <h2>Configuration eLeader</h2>
+    <p class="subtitle">Paramètres d'import des factures eLeader (Brasseries / Guinness)</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <span class="material-icons spin">refresh</span> Chargement…
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div *ngIf="successMsg" class="alert alert-success">
+      <span class="material-icons">check_circle</span> {{ successMsg }}
+    </div>
+    <div *ngIf="errorMsg" class="alert alert-error">
+      <span class="material-icons">error</span> {{ errorMsg }}
+    </div>
+
+    <!-- Section Journal -->
+    <div class="card">
+      <div class="card-header">
+        <span class="material-icons">book</span>
+        <h3>Journal comptable</h3>
+        <span class="required-badge">Obligatoire</span>
+      </div>
+      <div class="card-body">
+        <div class="field-group">
+          <label class="field-label">Journal des ventes eLeader *</label>
+          <select [(ngModel)]="config.journalId" class="field-select"
+                  [class.error]="!config.journalId">
+            <option [ngValue]="undefined">— Sélectionner un journal —</option>
+            <option *ngFor="let j of journals" [value]="j.id">
+              {{ j.name }} ({{ j.code }})
+            </option>
+          </select>
+          <p class="field-hint">Ce journal sera utilisé pour toutes les factures générées depuis les imports eLeader.</p>
+        </div>
+        <div class="field-row">
+          <div class="field-group half">
+            <label class="field-label">Code produit PSA (précompte)</label>
+            <input [(ngModel)]="config.psaProductCode" class="field-input" placeholder="PRC01" />
+          </div>
+          <div class="field-group half">
+            <label class="field-label">Code produit frais d'enlèvement</label>
+            <input [(ngModel)]="config.fraisEnlevementCode" class="field-input" placeholder="ELV01" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="toggle-label">
+            <input type="checkbox" [(ngModel)]="config.autoConfirm" class="toggle-input" />
+            <span class="toggle-track"></span>
+            <span class="toggle-text">Confirmer automatiquement les bons de commande après import</span>
+          </label>
+          <p class="field-hint">Si activé, le bon de commande sera directement confirmé et la facture créée sans étape manuelle.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Codes d'emballage -->
+    <div class="card mt-16">
+      <div class="card-header">
+        <span class="material-icons">inventory_2</span>
+        <h3>Codes d'emballage eLeader</h3>
+        <div class="header-actions">
+          <button class="btn-defaults" (click)="showLoadDefaultsConfirm = true" title="Pré-remplir avec les codes eLeader standards">
+            <span class="material-icons">auto_fix_high</span> Charger les valeurs par défaut
+          </button>
+          <button class="btn-add" (click)="openAddMapping()">
+            <span class="material-icons">add</span> Ajouter
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="section-desc">
+          Définissez la correspondance entre les codes eLeader du PDF (ex&nbsp;: VCBB65, VRACC12, 354111)
+          et les codes produits ERP (ex&nbsp;: CB12, CB24, CBG12).
+        </p>
+
+        <!-- Tableau des mappings -->
+        <div class="mapping-table" *ngIf="config.emballageMappings.length > 0; else noMappings">
+          <table>
+            <thead>
+              <tr>
+                <th>Code eLeader (PDF)</th>
+                <th>Code ERP</th>
+                <th>Modèle</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of config.emballageMappings; trackBy: trackByIndex; let i = index">
+                <td>
+                  <input [(ngModel)]="m.eleaderCode" class="inline-input" placeholder="ex: VCBB65" />
+                </td>
+                <td>
+                  <input [(ngModel)]="m.erpProductCode" class="inline-input" placeholder="ex: CB12, EMB1…" />
+                </td>
+                <td>
+                  <select [(ngModel)]="m.invoiceModel" class="inline-select">
+                    <option *ngFor="let mod of MODELS" [value]="mod">{{ mod }}</option>
+                  </select>
+                </td>
+                <td>
+                  <button class="btn-icon danger" (click)="removeMapping(i)" title="Supprimer">
+                    <span class="material-icons">delete_outline</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #noMappings>
+          <div class="empty-state">
+            <span class="material-icons">inventory_2</span>
+            <p>Aucun mapping configuré.</p>
+            <small>Cliquez sur <strong>Charger les valeurs par défaut</strong> pour pré-remplir les codes courants, ou ajoutez les vôtres.</small>
+          </div>
+        </ng-template>
+
+        <!-- Modale confirmation chargement des défauts -->
+        <div class="modal-overlay" *ngIf="showLoadDefaultsConfirm" (click)="showLoadDefaultsConfirm = false">
+          <div class="modal-box" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h4>Charger les valeurs par défaut</h4>
+              <button class="btn-icon" (click)="showLoadDefaultsConfirm = false">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Les codes eLeader standards (VCBB65, VRACC12, 354111, etc.) vont être ajoutés dans le tableau.</p>
+              <p>Vous pourrez les modifier — changer les codes ERP, en supprimer, en ajouter — avant d'enregistrer.</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" (click)="showLoadDefaultsConfirm = false">Annuler</button>
+              <button class="btn-primary" (click)="loadDefaults()">
+                <span class="material-icons">auto_fix_high</span> Charger
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modale ajout mapping -->
+        <div class="modal-overlay" *ngIf="showAddMapping" (click)="showAddMapping = false">
+          <div class="modal-box" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h4>Nouveau code d'emballage</h4>
+              <button class="btn-icon" (click)="showAddMapping = false">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="field-group">
+                <label class="field-label">Code eLeader (tel qu'il apparaît dans le PDF) *</label>
+                <input [(ngModel)]="newMapping.eleaderCode" class="field-input"
+                       placeholder="ex: VCBB65, VRACC12, 354111…" />
+                <p class="field-hint">Recopiez exactement le code tel qu'il figure dans la section emballages du PDF eLeader.</p>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Code produit ERP *</label>
+                <input [(ngModel)]="newMapping.erpProductCode" class="field-input"
+                       placeholder="ex: CB12, CB24, EMB1, EMB2, CBG12…" />
+                <p class="field-hint">Entrez le code exact du produit tel qu'il existe dans votre ERP.</p>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Modèle de facture</label>
+                <select [(ngModel)]="newMapping.invoiceModel" class="field-select">
+                  <option *ngFor="let mod of MODELS" [value]="mod">{{ mod }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" (click)="showAddMapping = false">Annuler</button>
+              <button class="btn-primary" (click)="addMapping()"
+                      [disabled]="!newMapping.eleaderCode || !newMapping.erpProductCode">
+                Ajouter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton Enregistrer -->
+    <div class="actions-bar">
+      <button class="btn-primary large" (click)="save()" [disabled]="saving">
+        <span class="material-icons" *ngIf="!saving">save</span>
+        <span class="material-icons spin" *ngIf="saving">refresh</span>
+        {{ saving ? 'Enregistrement…' : 'Enregistrer la configuration' }}
+      </button>
+    </div>
+  </ng-container>
+</div>

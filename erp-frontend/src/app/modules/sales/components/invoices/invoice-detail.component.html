@@ -24,6 +24,11 @@
       }
     </div>
     <div class="header-actions">
+      @if (invoice && invoice.state !== 'draft') {
+        <button class="btn-print" (click)="openPrint()">
+          <span class="material-icons">print</span> Imprimer
+        </button>
+      }
       @if (invoice?.state === 'draft') {
         <button class="btn-primary" (click)="postInvoice()" [disabled]="posting">
           <span class="material-icons">check_circle</span>
@@ -184,7 +189,7 @@
             <th class="text-right">Qté</th>
             <th class="text-right">Prix U. HT</th>
             <th class="text-right">Prix U. TTC</th>
-            <th class="text-right">TVA %</th>
+            <th class="text-right">Taxe(s)</th>
             <th class="text-right">Total HT</th>
             <th class="text-right">Total TTC</th>
             <th class="text-right col-enl">Frais Enlèv.</th>
@@ -198,7 +203,14 @@
               <td class="text-right">{{ line.quantity | number:'1.0-2' }}</td>
               <td class="text-right">{{ line.prixUnitaire | number:'1.0-0' }}</td>
               <td class="text-right">{{ (line.prixUnitaireTTC ?? 0) | number:'1.0-0' }}</td>
-              <td class="text-right">{{ line.tauxTVA || 0 }}%</td>
+              <td class="text-right">
+                @if ((line.guinessTaxe ?? 0) > 0) {
+                  <span class="taxe-tag taxe-tva">TVA {{ line.tauxTVA || 0 }}%</span>
+                  <span class="taxe-tag taxe-guiness">Taxe Guiness</span>
+                } @else {
+                  <span class="taxe-tag taxe-tva">TVA {{ line.tauxTVA || 0 }}%</span>
+                }
+              </td>
               <td class="text-right">{{ line.montantHT | number:'1.0-0' }}</td>
               <td class="text-right font-bold">{{ line.montantTTC | number:'1.0-0' }}</td>
               <td class="text-right col-enl">{{ (line.fraisEnlevement ?? 0) | number:'1.0-0' }}</td>
@@ -354,69 +366,6 @@
           }
         </div>
 
-        <!-- Formulaire paiement cash/banque -->
-        @if (showPaymentForm) {
-          <div class="payment-form card mt-12">
-            <div class="card-header">Nouveau paiement</div>
-            <div class="payment-form-body">
-              <div class="form-group">
-                <label>Journal <span class="required">*</span></label>
-                <select [(ngModel)]="payment.journalId" class="form-control">
-                  @for (j of cashBankJournals; track j.id) {
-                    <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Date</label>
-                <input type="date" [(ngModel)]="payment.date" class="form-control" />
-              </div>
-              <div class="form-group">
-                <label>Montant <span class="required">*</span></label>
-                <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" />
-              </div>
-              <div class="form-group">
-                <label>Mémo</label>
-                <input type="text" [(ngModel)]="payment.memo" class="form-control" placeholder="Référence..." />
-              </div>
-              <div class="payment-form-actions">
-                <button class="btn-secondary" (click)="closePaymentForm()">Annuler</button>
-                <button class="btn-primary" (click)="savePayment()" [disabled]="savingPayment">
-                  <span class="material-icons">save</span>
-                  {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Formulaire compensation crédit -->
-        @if (showCreditForm) {
-          <div class="payment-form card mt-12" style="border-left:3px solid #017E84">
-            <div class="card-header" style="color:#017E84">
-              <span class="material-icons" style="font-size:16px">redeem</span>
-              Appliquer crédit disponible
-            </div>
-            <div class="payment-form-body">
-              <div style="margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:13px">
-                <div>Crédit disponible : <strong>{{ invoice.partnerCreditDisponible | number:'1.0-2' }} FCFA</strong></div>
-                <div>Reste dû sur cette facture : <strong>{{ invoice.montantDu | number:'1.0-2' }} FCFA</strong></div>
-              </div>
-              <div class="form-group">
-                <label>Montant à compenser <span class="required">*</span></label>
-                <input type="number" [(ngModel)]="creditAmount" class="form-control" min="0"
-                  [max]="Math.min(invoice.montantDu || 0, invoice.partnerCreditDisponible || 0)" step="1" />
-              </div>
-              <div class="payment-form-actions">
-                <button class="btn-secondary" (click)="showCreditForm = false">Annuler</button>
-                <button class="btn-primary" style="background:#017E84" (click)="applyCredit()" [disabled]="applyingCredit || creditAmount <= 0">
-                  <span class="material-icons">check_circle</span>
-                  {{ applyingCredit ? 'Application...' : 'Appliquer' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Totaux -->
@@ -487,3 +436,117 @@
     </div>
   }
 </div>
+
+<!-- ══ Modal : Enregistrer un paiement ══ -->
+@if (showPaymentForm && invoice) {
+  <div class="pay-overlay" (click).self="closePaymentForm()">
+    <div class="pay-modal">
+      <div class="pay-modal-hdr">
+        <div class="pay-modal-title">
+          <span class="material-icons">payments</span>
+          Enregistrer un paiement
+        </div>
+        <button class="pay-modal-close" (click)="closePaymentForm()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="pay-summary">
+          <div class="pay-sum-row">
+            <span>Facture</span><strong>{{ invoice.name }}</strong>
+          </div>
+          <div class="pay-sum-row">
+            <span>Client</span><span>{{ invoice.partnerName }}</span>
+          </div>
+          <div class="pay-sum-row">
+            <span>Reste dû</span>
+            <strong class="pay-due">{{ (invoice.montantDu ?? invoice.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong>
+          </div>
+        </div>
+        <div class="pay-form-grid">
+          <div class="form-group">
+            <label>Journal <span class="required">*</span></label>
+            <select [(ngModel)]="payment.journalId" class="form-control">
+              @for (j of cashBankJournals; track j.id) {
+                <option [value]="j.id">{{ j.code }} – {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" [(ngModel)]="payment.date" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Montant <span class="required">*</span></label>
+            <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Mémo / Référence</label>
+            <input type="text" [(ngModel)]="payment.memo" class="form-control" placeholder="N° chèque, virement..." />
+          </div>
+        </div>
+      </div>
+      <div class="pay-modal-ftr">
+        <button class="pay-btn-cancel" (click)="closePaymentForm()">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="pay-btn-save" (click)="savePayment()" [disabled]="savingPayment">
+          <span class="material-icons">{{ savingPayment ? 'hourglass_empty' : 'check_circle' }}</span>
+          {{ savingPayment ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══ Modal : Appliquer un crédit ══ -->
+@if (showCreditForm && invoice) {
+  <div class="pay-overlay" (click).self="showCreditForm = false">
+    <div class="pay-modal">
+      <div class="pay-modal-hdr credit-hdr">
+        <div class="pay-modal-title">
+          <span class="material-icons">redeem</span>
+          Appliquer un crédit
+        </div>
+        <button class="pay-modal-close" (click)="showCreditForm = false">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="credit-info-box">
+          <div class="credit-info-row">
+            <span>Crédit disponible</span>
+            <strong class="credit-avail">{{ (invoice.partnerCreditDisponible || 0) | number:'1.0-0' }} FCFA</strong>
+          </div>
+          <div class="credit-info-row">
+            <span>Reste dû sur cette facture</span>
+            <strong class="pay-due">{{ (invoice.montantDu || 0) | number:'1.0-0' }} FCFA</strong>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label>Montant à compenser <span class="required">*</span></label>
+          <input type="number" [(ngModel)]="creditAmount" class="form-control" min="0"
+            [max]="Math.min(invoice.montantDu || 0, invoice.partnerCreditDisponible || 0)" step="1" />
+        </div>
+      </div>
+      <div class="pay-modal-ftr">
+        <button class="pay-btn-cancel" (click)="showCreditForm = false">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="pay-btn-save credit-save" (click)="applyCredit()" [disabled]="applyingCredit || creditAmount <= 0">
+          <span class="material-icons">{{ applyingCredit ? 'hourglass_empty' : 'check_circle' }}</span>
+          {{ applyingCredit ? 'Application...' : 'Appliquer le crédit' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showPrintModal && invoice) {
+  <app-print-preview
+    [invoice]="invoice"
+    [docType]="printDocType"
+    [companyName]="printCompanyName"
+    (closed)="closePrint()">
+  </app-print-preview>
+}

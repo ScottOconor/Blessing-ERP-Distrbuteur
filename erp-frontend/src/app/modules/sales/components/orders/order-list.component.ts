@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SalesService, SalesOrder } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -7,7 +8,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 @Component({
   selector: 'app-order-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './order-list.component.html',
   styleUrl: './order-list.component.scss'
 })
@@ -15,7 +16,11 @@ export class OrderListComponent implements OnInit {
   orders: SalesOrder[] = [];
   filteredOrders: SalesOrder[] = [];
   loading = false;
+  canCreate = false;
+  canEdit   = false;
   stateFilter = 'all';
+  dateFrom = '';
+  dateTo = '';
   successMsg = '';
   errorMsg = '';
   confirming: number | null = null;
@@ -36,6 +41,8 @@ export class OrderListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.canCreate = this.authService.hasPermission('VENTES', 'BONS_COMMANDE', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('VENTES', 'BONS_COMMANDE', 'EDIT');
     this.loadOrders();
   }
 
@@ -53,13 +60,22 @@ export class OrderListComponent implements OnInit {
   }
 
   applyFilter(): void {
-    this.filteredOrders = this.stateFilter === 'all'
-      ? this.orders
-      : this.orders.filter(o => o.state === this.stateFilter);
+    this.filteredOrders = this.orders.filter(o => {
+      if (this.stateFilter !== 'all' && o.state !== this.stateFilter) return false;
+      if (this.dateFrom && o.date < this.dateFrom) return false;
+      if (this.dateTo && o.date > this.dateTo) return false;
+      return true;
+    });
   }
 
   setFilter(state: string): void {
     this.stateFilter = state;
+    this.applyFilter();
+  }
+
+  clearDateFilter(): void {
+    this.dateFrom = '';
+    this.dateTo = '';
     this.applyFilter();
   }
 

@@ -84,6 +84,15 @@ $accent: #00A09D;
   }
 }
 
+.btn-group-home {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.1); color: #fff; border: none;
+  border-radius: 8px; padding: 6px 12px; font-size: 13px;
+  font-weight: 500; cursor: pointer;
+  .material-icons { font-size: 18px; }
+  &:hover { background: rgba(255,255,255,.2); }
+}
+
 .nav-right {
   display: flex; align-items: center; gap: 8px;
   padding: 0 12px; border-left: 1px solid rgba(255,255,255,0.1);

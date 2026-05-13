@@ -2,15 +2,16 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable, { RowInput, Styles, UserOptions } from 'jspdf-autotable';
 
-// ─── Palette ─────────────────────────────────────────────────────────────────
-const PURPLE  : [number,number,number] = [113, 75, 103];
+// ─── Palette professionnelle (style Odoo / Blessing Reports) ─────────────────
+const HDR_BG  : [number,number,number] = [242, 242, 242];  // #f2f2f2 — en-tête colonnes
+const TOT_BG  : [number,number,number] = [233, 236, 239];  // #e9ecef — total général
+const SUB_BG  : [number,number,number] = [248, 249, 250];  // #f8f9fa — sous-total
+const SEC_BG  : [number,number,number] = [226, 232, 240];  // section
+const ALT_BG  : [number,number,number] = [249, 249, 249];  // #f9f9f9 — alternance
 const WHITE   : [number,number,number] = [255, 255, 255];
-const GREY    : [number,number,number] = [233, 236, 239];
-const LIGHT_P : [number,number,number] = [240, 239, 244];
-const GREEN   : [number,number,number] = [232, 245, 232];
-const FAFAFA  : [number,number,number] = [250, 250, 250];
-const DARK    : [number,number,number] = [ 51,  51,  51];
 const BLACK   : [number,number,number] = [  0,   0,   0];
+const DARK    : [number,number,number] = [ 33,  37,  41];  // #212529
+const MUTED   : [number,number,number] = [108, 117, 125];  // #6c757d
 
 // ─── Formatage ───────────────────────────────────────────────────────────────
 function dateStr(d: string | Date): string {
@@ -20,43 +21,64 @@ function dateStr(d: string | Date): string {
 }
 function fmt2(v: any): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .format(v != null ? Number(v) : 0);
+    .format(v != null ? Number(v) : 0)
+    .replace(/ | /g, ' ');
 }
 function fmt0(v: any): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-    .format(v != null ? Number(v) : 0);
+    .format(v != null ? Number(v) : 0)
+    .replace(/ | /g, ' ');
 }
 function n(v: any): number { return v != null ? Number(v) : 0; }
 
-// ─── Cellule numérique ───────────────────────────────────────────────────────
+// ─── Cellules numériques ──────────────────────────────────────────────────────
 function nc2(v: any): { content: string; styles: Partial<Styles> } {
-  return { content: fmt2(v), styles: { halign: 'right', font: 'courier' } };
+  return { content: fmt2(v), styles: { halign: 'right' } };
 }
 function nc0(v: any): { content: string; styles: Partial<Styles> } {
-  return { content: n(v) !== 0 ? fmt0(v) : '', styles: { halign: 'right', font: 'courier' } };
+  return { content: n(v) !== 0 ? fmt0(v) : '', styles: { halign: 'right' } };
+}
+function ncDash(v: any): { content: string; styles: Partial<Styles> } {
+  return n(v) !== 0
+    ? { content: fmt2(v), styles: { halign: 'right', textColor: DARK } }
+    : { content: '—', styles: { halign: 'right', textColor: MUTED } };
 }
 
-// ─── En-tête de page (bandeau violet + sous-titre) ───────────────────────────
-function drawPageHeader(doc: jsPDF, title: string, subtitle: string): void {
+// ─── En-tête de document ──────────────────────────────────────────────────────
+// Retourne la coordonnée Y de départ pour le tableau
+function drawPageHeader(doc: jsPDF, title: string, subtitle: string, companyName?: string): number {
   const W = doc.internal.pageSize.width;
-  // Bandeau violet
-  doc.setFillColor(...PURPLE);
-  doc.rect(0, 0, W, 16, 'F');
-  // Titre blanc centré
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...WHITE);
-  doc.text(title.toUpperCase(), W / 2, 10.5, { align: 'center' });
-  // Sous-titre + date
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text(subtitle, W / 2, 21, { align: 'center' });
-  doc.text(`Imprimé le ${new Date().toLocaleString('fr-FR')}`, W / 2, 26, { align: 'center' });
-  // Ligne séparatrice violette
-  doc.setDrawColor(...PURPLE);
+  let y = 10;
+
+  if (companyName) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text(companyName.toUpperCase(), W - 10, y, { align: 'right' });
+    y += 6;
+  }
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...DARK);
+  doc.text(title.toUpperCase(), W / 2, y, { align: 'center' });
+  y += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...MUTED);
+  doc.text(subtitle, W / 2, y, { align: 'center' });
+  y += 5;
+
+  doc.setFontSize(7.5);
+  doc.text(`Imprimé le : ${new Date().toLocaleString('fr-FR')}`, W / 2, y, { align: 'center' });
+  y += 4;
+
+  doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.4);
-  doc.line(10, 29, W - 10, 29);
+  doc.line(10, y, W - 10, y);
+
+  return y + 3;
 }
 
 // ─── Pied de page ─────────────────────────────────────────────────────────────
@@ -66,58 +88,61 @@ function addFooter(doc: jsPDF, reportName: string): void {
   const H = doc.internal.pageSize.height;
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
-    doc.setDrawColor(180, 180, 180);
+    doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
     doc.line(10, H - 8, W - 10, H - 8);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.setTextColor(130, 130, 130);
+    doc.setTextColor(...MUTED);
     doc.text(reportName, 10, H - 4);
     doc.text(`Page ${p} / ${pages}`, W - 10, H - 4, { align: 'right' });
   }
 }
 
-// ─── Options autoTable de base ────────────────────────────────────────────────
+// ─── Styles de base ───────────────────────────────────────────────────────────
 const HEAD: Partial<Styles> = {
-  fillColor: PURPLE, textColor: WHITE, fontStyle: 'bold',
-  halign: 'center', fontSize: 8, valign: 'middle', cellPadding: 2.5
+  fillColor: HDR_BG, textColor: DARK, fontStyle: 'bold',
+  halign: 'center', fontSize: 8.5, valign: 'middle', cellPadding: 3,
+  lineColor: BLACK, lineWidth: 0.3
 };
-const BASE: Partial<Styles> = { fontSize: 8, cellPadding: 2, textColor: DARK };
-const ALT : Partial<Styles> = { fillColor: FAFAFA };
+const BASE: Partial<Styles> = {
+  fontSize: 8.5, cellPadding: 2.5, textColor: DARK,
+  lineColor: [180, 180, 180], lineWidth: 0.15
+};
+const ALT: Partial<Styles> = { fillColor: ALT_BG };
 
 function baseOpts(startY: number, extraOpts: Partial<UserOptions> = {}): UserOptions {
   return {
     startY,
     headStyles: HEAD,
-    styles: { ...BASE, lineWidth: 0.15, lineColor: [210, 210, 210] },
+    styles: BASE,
     alternateRowStyles: ALT,
     margin: { left: 10, right: 10, bottom: 14 },
     tableLineWidth: 0.3,
-    tableLineColor: PURPLE,
+    tableLineColor: BLACK,
     ...extraOpts
   };
 }
 
-// ─── Ligne sous-total ─────────────────────────────────────────────────────────
+// ─── Lignes spéciales ─────────────────────────────────────────────────────────
 type Cell = string | { content: string; styles: Partial<Styles> };
+
 function subRow(cells: Cell[]): RowInput {
   return cells.map(c => typeof c === 'string'
-    ? { content: c, styles: { fillColor: LIGHT_P, fontStyle: 'bold' as const, textColor: DARK } }
-    : { ...c, styles: { fillColor: LIGHT_P, fontStyle: 'bold' as const, halign: 'right' as const, font: 'courier', textColor: DARK } }
+    ? { content: c, styles: { fillColor: SUB_BG, fontStyle: 'bold' as const, textColor: DARK } }
+    : { ...c, styles: { fillColor: SUB_BG, fontStyle: 'bold' as const, halign: 'right' as const, textColor: DARK } }
   ) as RowInput;
 }
 
-// ─── Ligne grand total ────────────────────────────────────────────────────────
 function gtRow(cells: Cell[]): RowInput {
   return cells.map(c => typeof c === 'string'
-    ? { content: c, styles: { fillColor: GREEN, fontStyle: 'bold' as const, textColor: BLACK } }
-    : { ...c, styles: { fillColor: GREEN, fontStyle: 'bold' as const, halign: 'right' as const, font: 'courier', textColor: BLACK } }
+    ? { content: c, styles: { fillColor: TOT_BG, fontStyle: 'bold' as const, textColor: BLACK } }
+    : { ...c, styles: { fillColor: TOT_BG, fontStyle: 'bold' as const, halign: 'right' as const, textColor: BLACK } }
   ) as RowInput;
 }
 
-// ─── Ligne en-tête de section ─────────────────────────────────────────────────
 function secRow(label: string, colSpan: number): RowInput {
-  return [{ content: label, colSpan, styles: { fillColor: GREY, textColor: PURPLE, fontStyle: 'bold' as const, fontSize: 8.5 } }];
+  return [{ content: label, colSpan, styles: { fillColor: SEC_BG, textColor: DARK, fontStyle: 'bold' as const, fontSize: 8.5 } }];
 }
 
 function lastY(doc: jsPDF): number {
@@ -134,22 +159,36 @@ export class PdfExportService {
     lines: any[], apiTotals: any,
     totalDebit: number, totalCredit: number,
     totalFinalDebit: number, totalFinalCredit: number,
-    dateFrom: string, dateTo: string
+    dateFrom: string, dateTo: string,
+    companyName?: string
   ): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Balance Générale à 4 Colonnes',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
+    const startY = drawPageHeader(doc, 'Balance Générale à 4 Colonnes',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
 
-    const body: RowInput[] = lines.map(l => [
-      { content: l.accountCode, styles: { halign: 'center' as const, font: 'courier', fontStyle: 'bold' as const } },
-      l.accountName,
-      nc2(l.debit), nc2(l.credit), nc2(l.finalDebit), nc2(l.finalCredit)
-    ]);
-    body.push(subRow(['Totaux comptes de bilan', '', nc2(apiTotals?.bilanDebit), nc2(apiTotals?.bilanCredit), nc2(apiTotals?.bilanFinalDebit), nc2(apiTotals?.bilanFinalCredit)]));
-    body.push(subRow(['Totaux comptes de gestion', '', nc2(apiTotals?.gestionDebit), nc2(apiTotals?.gestionCredit), nc2(apiTotals?.gestionFinalDebit), nc2(apiTotals?.gestionFinalCredit)]));
+    const bilanLines   = lines.filter((l: any) => l.accountCode?.[0] >= '1' && l.accountCode?.[0] <= '5');
+    const gestionLines = lines.filter((l: any) => l.accountCode?.[0] >= '6' && l.accountCode?.[0] <= '8');
+
+    const toRow = (l: any): RowInput => [
+      { content: l.accountCode || '', styles: { halign: 'center' as const, font: 'courier', fontStyle: 'bold' as const } },
+      l.accountName || '',
+      ncDash(l.debit), ncDash(l.credit), ncDash(l.finalDebit), ncDash(l.finalCredit)
+    ];
+
+    const body: RowInput[] = [];
+    if (bilanLines.length > 0) {
+      body.push(secRow('COMPTES DE BILAN  —  Classes 1 à 5', 6));
+      bilanLines.forEach((l: any) => body.push(toRow(l)));
+      body.push(subRow(['Sous-totaux Bilan', '', nc2(apiTotals?.bilanDebit), nc2(apiTotals?.bilanCredit), nc2(apiTotals?.bilanFinalDebit), nc2(apiTotals?.bilanFinalCredit)]));
+    }
+    if (gestionLines.length > 0) {
+      body.push(secRow('COMPTES DE GESTION  —  Classes 6 à 8', 6));
+      gestionLines.forEach((l: any) => body.push(toRow(l)));
+      body.push(subRow(['Sous-totaux Gestion', '', nc2(apiTotals?.gestionDebit), nc2(apiTotals?.gestionCredit), nc2(apiTotals?.gestionFinalDebit), nc2(apiTotals?.gestionFinalCredit)]));
+    }
     body.push(gtRow(['TOTAUX DE LA BALANCE', '', nc2(totalDebit), nc2(totalCredit), nc2(totalFinalDebit), nc2(totalFinalCredit)]));
 
-    autoTable(doc, baseOpts(33, {
+    autoTable(doc, baseOpts(startY, {
       head: [['N°Compte', 'Libellé du Compte', 'Débit Mvt', 'Crédit Mvt', 'Solde Débiteur', 'Solde Créditeur']],
       body,
       columnStyles: {
@@ -172,31 +211,66 @@ export class PdfExportService {
   exportBalance6(
     lines: any[],
     bilanTotals: any, gestionTotals: any, grandTotals: any,
-    dateFrom: string, dateTo: string
+    dateFrom: string, dateTo: string,
+    companyName?: string
   ): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Balance Générale à 6 Colonnes',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
+    const startY = drawPageHeader(doc, 'Balance Générale à 6 Colonnes',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
 
-    const body: RowInput[] = lines.map(l => [
-      { content: l.accountCode, styles: { halign: 'center' as const, font: 'courier', fontStyle: 'bold' as const } },
-      l.accountName,
-      nc2(l.initialDebit), nc2(l.initialCredit),
-      nc2(l.debit), nc2(l.credit),
-      nc2(l.finalDebit), nc2(l.finalCredit)
-    ]);
-    const totRow = (label: string, t: any, fn: (c: Cell[]) => RowInput) =>
-      fn([label, '', nc2(t.initD), nc2(t.initC), nc2(t.mvtD), nc2(t.mvtC), nc2(t.finD), nc2(t.finC)]);
-    body.push(totRow('Totaux bilan', bilanTotals, subRow));
-    body.push(totRow('Totaux gestion', gestionTotals, subRow));
-    body.push(totRow('TOTAUX DE LA BALANCE', grandTotals, gtRow));
+    const bilanLines   = lines.filter((l: any) => l.accountCode?.[0] >= '1' && l.accountCode?.[0] <= '5');
+    const gestionLines = lines.filter((l: any) => l.accountCode?.[0] >= '6' && l.accountCode?.[0] <= '8');
 
-    autoTable(doc, baseOpts(33, {
-      head: [['N°Compte', 'Libellé', 'Init. Débit', 'Init. Crédit', 'Mvt. Débit', 'Mvt. Crédit', 'Solde Déb.', 'Solde Cré.']],
+    const toRow = (l: any): RowInput => [
+      { content: l.accountCode || '', styles: { halign: 'center' as const, font: 'courier', fontStyle: 'bold' as const } },
+      l.accountName || '',
+      ncDash(l.initialDebit), ncDash(l.initialCredit),
+      ncDash(l.debit), ncDash(l.credit),
+      ncDash(l.finalDebit), ncDash(l.finalCredit)
+    ];
+
+    const subTotRow = (label: string, t: any): RowInput =>
+      subRow([label, '', nc2(t?.initD), nc2(t?.initC), nc2(t?.mvtD), nc2(t?.mvtC), nc2(t?.finD), nc2(t?.finC)]);
+
+    const body: RowInput[] = [];
+    if (bilanLines.length > 0) {
+      body.push(secRow('COMPTES DE BILAN  —  Classes 1 à 5', 8));
+      bilanLines.forEach((l: any) => body.push(toRow(l)));
+      body.push(subTotRow('Sous-totaux Bilan', bilanTotals));
+    }
+    if (gestionLines.length > 0) {
+      body.push(secRow('COMPTES DE GESTION  —  Classes 6 à 8', 8));
+      gestionLines.forEach((l: any) => body.push(toRow(l)));
+      body.push(subTotRow('Sous-totaux Gestion', gestionTotals));
+    }
+    body.push(gtRow(['TOTAUX DE LA BALANCE', '',
+      nc2(grandTotals?.initD), nc2(grandTotals?.initC),
+      nc2(grandTotals?.mvtD),  nc2(grandTotals?.mvtC),
+      nc2(grandTotals?.finD),  nc2(grandTotals?.finC)
+    ]));
+
+    autoTable(doc, baseOpts(startY, {
+      head: [
+        [
+          { content: 'N°Compte',          rowSpan: 2, styles: { ...HEAD, valign: 'middle' as const } },
+          { content: 'Libellé du Compte', rowSpan: 2, styles: { ...HEAD, halign: 'left'   as const, valign: 'middle' as const } },
+          { content: 'Soldes Initiaux',       colSpan: 2, styles: { ...HEAD, halign: 'center' as const } },
+          { content: 'Mouvements de Période', colSpan: 2, styles: { ...HEAD, halign: 'center' as const } },
+          { content: 'Soldes Finaux',         colSpan: 2, styles: { ...HEAD, halign: 'center' as const } },
+        ],
+        [
+          { content: 'Débit',     styles: { ...HEAD } },
+          { content: 'Crédit',    styles: { ...HEAD } },
+          { content: 'Débit',     styles: { ...HEAD } },
+          { content: 'Crédit',    styles: { ...HEAD } },
+          { content: 'Débiteur',  styles: { ...HEAD } },
+          { content: 'Créditeur', styles: { ...HEAD } },
+        ]
+      ],
       body,
       columnStyles: {
         0: { cellWidth: 22, halign: 'center' as const },
-        1: { cellWidth: 64 },
+        1: { cellWidth: 66 },
         2: { cellWidth: 27, halign: 'right' as const }, 3: { cellWidth: 27, halign: 'right' as const },
         4: { cellWidth: 27, halign: 'right' as const }, 5: { cellWidth: 27, halign: 'right' as const },
         6: { cellWidth: 27, halign: 'right' as const }, 7: { cellWidth: 27, halign: 'right' as const },
@@ -210,15 +284,12 @@ export class PdfExportService {
   // ─────────────────────────────────────────────────────────
   // GRAND LIVRE
   // ─────────────────────────────────────────────────────────
-  exportGrandLivre(data: any[], dateFrom: string, dateTo: string): void {
+  exportGrandLivre(data: any[], dateFrom: string, dateTo: string, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Grand Livre',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
-
-    let startY = 33;
+    let startY = drawPageHeader(doc, 'Grand Livre',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
 
     for (const account of data) {
-      // En-tête de compte
       autoTable(doc, {
         startY,
         body: [secRow(`${account.accountCode}  —  ${account.accountName}`, 7)],
@@ -234,7 +305,7 @@ export class PdfExportService {
         line.moveRef || '',
         { content: line.journalCode || '', styles: { halign: 'center' as const } },
         line.label || '',
-        nc2(line.debit), nc2(line.credit), nc2(line.balance)
+        ncDash(line.debit), ncDash(line.credit), ncDash(line.balance)
       ]);
       body.push(subRow([
         `Total ${account.accountCode}`, '', '', '',
@@ -264,108 +335,171 @@ export class PdfExportService {
   }
 
   // ─────────────────────────────────────────────────────────
-  // BILAN OHADA  — nombres entiers (sans décimales)
+  // BILAN OHADA
   // ─────────────────────────────────────────────────────────
   exportBilan(
     actifRows: any[], passifRows: any[],
-    totalActif: number, totalPassif: number, dateTo: string
+    totalActif: number, totalPassif: number,
+    dateTo: string, companyName?: string
   ): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, `Bilan au ${dateStr(dateTo)} — SYSCOHADA Révisé`, 'ACTIF  /  PASSIF');
+    const startY = drawPageHeader(
+      doc, `BILAN — Exercice clos le ${dateStr(dateTo)}`,
+      'SYSCOHADA Révisé  |  Durée (en mois) : 12', companyName);
 
-    const empty = { ref: '', label: '', brut: 0, amort: 0, net: 0, isHeader: false, isEmpty: true, isTotal: false };
+    const empty = { ref: '', label: '', brut: 0, amort: 0, net: 0, netPrev: 0, isHeader: false, isEmpty: true, isTotal: false };
     const maxLen = Math.max(actifRows.length, passifRows.length);
     const body: RowInput[] = [];
 
+    const CS: Partial<Styles> = { fontSize: 7.5, cellPadding: 1.5 };
+
     for (let i = 0; i < maxLen; i++) {
-      const a = actifRows[i] || empty;
+      const a = actifRows[i]  || empty;
       const p = passifRows[i] || empty;
       const isHdr = a.isHeader || p.isHeader;
       const isTot = a.isTotal  || p.isTotal;
-      const fill  = isHdr ? GREY : isTot ? LIGHT_P : (i % 2 === 0 ? WHITE : FAFAFA);
+      const fill  = isHdr ? SEC_BG : isTot ? TOT_BG : (i % 2 === 0 ? WHITE : ALT_BG);
       const fs    = (isHdr || isTot) ? 'bold' as const : 'normal' as const;
 
-      const cell  = (v: any): { content: string; styles: Partial<Styles> } =>
-        ({ content: String(v ?? ''), styles: { fillColor: fill, fontStyle: fs, textColor: DARK } });
-      const numBilan = (v: any) =>
-        ({ content: n(v) !== 0 ? fmt0(n(v)) : '', styles: { fillColor: fill, fontStyle: fs, halign: 'right' as const, font: 'courier', textColor: DARK } });
-      const labelCell = (v: any, isH: boolean) =>
-        ({ content: String(v ?? ''), styles: { fillColor: fill, fontStyle: fs, textColor: isH ? PURPLE : DARK } });
+      const cell = (v: any) =>
+        ({ content: String(v ?? ''), styles: { ...CS, fillColor: fill, fontStyle: fs, textColor: DARK } });
+      const numCell = (v: any) =>
+        n(v) !== 0
+          ? { content: fmt0(n(v)), styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'right' as const, textColor: DARK } }
+          : { content: '—',       styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'right' as const, textColor: MUTED } };
 
       body.push([
         cell(a.isHeader || a.isEmpty ? '' : a.ref),
-        labelCell(a.label, a.isHeader),
-        numBilan(a.isHeader || a.isEmpty ? 0 : a.brut),
-        numBilan(a.isHeader || a.isEmpty ? 0 : a.amort),
-        numBilan(a.isHeader || a.isEmpty ? 0 : a.net),
+        cell(a.label),
+        numCell(a.isHeader || a.isEmpty ? 0 : a.brut),
+        numCell(a.isHeader || a.isEmpty ? 0 : a.amort),
+        numCell(a.isHeader || a.isEmpty ? 0 : a.net),
+        numCell(a.isHeader || a.isEmpty ? 0 : a.netPrev),
         cell(p.isHeader || p.isEmpty ? '' : p.ref),
-        labelCell(p.label, p.isHeader),
-        numBilan(p.isHeader || p.isEmpty ? 0 : p.net),
+        cell(p.label),
+        numCell(p.isHeader || p.isEmpty ? 0 : p.net),
+        numCell(p.isHeader || p.isEmpty ? 0 : p.netPrev),
       ]);
     }
 
     body.push(gtRow([
-      'BZ — TOTAL ACTIF', '', '', '',
-      { content: fmt0(totalActif), styles: { halign: 'right', font: 'courier' } },
-      'BZ — TOTAL PASSIF', '',
-      { content: fmt0(totalPassif), styles: { halign: 'right', font: 'courier' } }
+      'BZ', 'TOTAL GÉNÉRAL ACTIF', '', '',
+      { content: fmt0(totalActif), styles: { halign: 'right' } },
+      '',
+      'BZ', 'TOTAL GÉNÉRAL PASSIF',
+      { content: fmt0(totalPassif), styles: { halign: 'right' } },
+      '',
     ]));
 
-    autoTable(doc, baseOpts(33, {
-      head: [['REF', 'ACTIF', 'BRUT', 'AMORT.', 'NET N', 'REF', 'PASSIF', 'NET N']],
+    const H: Partial<Styles> = { ...HEAD, fontSize: 7.5, cellPadding: 2 };
+
+    autoTable(doc, {
+      startY,
+      head: [
+        [
+          { content: 'A C T I F', colSpan: 6, styles: { ...H, halign: 'center' as const, fillColor: [226, 232, 240] as [number,number,number] } },
+          { content: 'P A S S I F', colSpan: 4, styles: { ...H, halign: 'center' as const, fillColor: [226, 232, 240] as [number,number,number] } },
+        ],
+        [
+          { content: 'REF',          styles: { ...H } },
+          { content: 'Désignation',  styles: { ...H, halign: 'left' as const } },
+          { content: 'Brut N',       styles: { ...H, halign: 'right' as const } },
+          { content: 'Amort/Prov',   styles: { ...H, halign: 'right' as const } },
+          { content: 'Net N',        styles: { ...H, halign: 'right' as const } },
+          { content: 'Net N-1',      styles: { ...H, halign: 'right' as const } },
+          { content: 'REF',          styles: { ...H } },
+          { content: 'Désignation',  styles: { ...H, halign: 'left' as const } },
+          { content: 'Net N',        styles: { ...H, halign: 'right' as const } },
+          { content: 'Net N-1',      styles: { ...H, halign: 'right' as const } },
+        ]
+      ],
       body,
+      styles: { fontSize: 7.5, cellPadding: 1.5, textColor: DARK, lineColor: [180, 180, 180], lineWidth: 0.1 },
+      headStyles: { ...HEAD, fontSize: 7.5, cellPadding: 2 },
+      margin: { left: 10, right: 10, bottom: 14 },
+      tableLineWidth: 0.3,
+      tableLineColor: BLACK,
       columnStyles: {
-        0: { cellWidth: 13, halign: 'center' as const },
-        1: { cellWidth: 58 },
-        2: { cellWidth: 26, halign: 'right' as const },
-        3: { cellWidth: 24, halign: 'right' as const },
-        4: { cellWidth: 24, halign: 'right' as const },
-        5: { cellWidth: 13, halign: 'center' as const },
-        6: { cellWidth: 58 },
-        7: { cellWidth: 26, halign: 'right' as const },
+        0: { cellWidth: 10, halign: 'center' as const },
+        1: { cellWidth: 62 },
+        2: { cellWidth: 20, halign: 'right' as const },
+        3: { cellWidth: 19, halign: 'right' as const },
+        4: { cellWidth: 19, halign: 'right' as const },
+        5: { cellWidth: 19, halign: 'right' as const },
+        6: { cellWidth: 10, halign: 'center' as const },
+        7: { cellWidth: 62 },
+        8: { cellWidth: 19, halign: 'right' as const },
+        9: { cellWidth: 19, halign: 'right' as const },
       }
-    }));
+    });
 
     addFooter(doc, 'Bilan OHADA — SYSCOHADA Révisé');
     doc.save(`Bilan_OHADA_${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   // ─────────────────────────────────────────────────────────
-  // COMPTE DE RÉSULTAT — nombres entiers
+  // COMPTE DE RÉSULTAT
   // ─────────────────────────────────────────────────────────
-  exportCompteResultat(lines: any[], dateFrom: string, dateTo: string): void {
+  exportCompteResultat(lines: any[], dateFrom: string, dateTo: string, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Compte de Résultat — SYSCOHADA Révisé',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
+    const startY = drawPageHeader(doc, 'COMPTE DE RÉSULTAT',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
+
+    // Numéros de comptes SYSCOHADA par code rubrique
+    const COMPTES: Record<string, string> = {
+      'TA': '701',           'RA': '601',          'RB': '6031',         'XA': '',
+      'TB': '702, 705-708',  'TC': '73',            'TD': '72',            'XB': '',
+      'TE': '602, 6032-33',  'TF': '605',           'TG': '61',
+      'TH': '62, 63',        'TI': '64',            'TJ': '65',            'TK': '66',
+      'XC': '',              'XD': '',
+      'TL': '781',           'TM': '791',           'TN': '681',           'TO': '691',  'XI': '',
+      'TP': '77, 786, 796',  'TQ': '671-673',       'XJ': '',              'XK': '',
+      'TR': '82, 84-88',     'TS': '81, 83-87',     'XL': '',
+      'TT': '87',            'TU': '891',            'XM': '',
+    };
+
+    const CS: Partial<Styles> = { fontSize: 7.5, cellPadding: 1.5 };
+    const H: Partial<Styles> = { ...HEAD, fontSize: 7.5, cellPadding: 2 };
 
     const body: RowInput[] = lines.map((l, i) => {
-      const isHdr = !!l.isSectionHeader;
       const isTot = !!l.isTotal;
-      const fill  = isHdr ? GREY : isTot ? LIGHT_P : (i % 2 === 0 ? WHITE : FAFAFA);
-      const fs    = (isHdr || isTot) ? 'bold' as const : 'normal' as const;
+      const fill  = isTot ? TOT_BG : (i % 2 === 0 ? WHITE : ALT_BG);
+      const fs    = isTot ? 'bold' as const : 'normal' as const;
+      const compte = COMPTES[l.code] ?? '';
       return [
-        { content: l.code || '', styles: { fillColor: fill, fontStyle: fs, halign: 'center' as const, textColor: isHdr ? PURPLE : DARK } },
-        { content: l.label || '', styles: { fillColor: fill, fontStyle: fs, textColor: isHdr ? PURPLE : DARK } },
-        { content: (n(l.current) !== 0 || isTot) ? fmt0(l.current) : '',
-          styles: { fillColor: fill, fontStyle: fs, halign: 'right' as const, font: 'courier', textColor: DARK } }
+        { content: l.code || '', styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'center' as const, textColor: DARK } },
+        { content: l.label || '', styles: { ...CS, fillColor: fill, fontStyle: fs, textColor: DARK } },
+        { content: compte, styles: { ...CS, fillColor: fill, fontStyle: 'normal' as const, halign: 'center' as const, textColor: MUTED } },
+        n(l.current) !== 0 || isTot
+          ? { content: fmt0(l.current), styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'right' as const, textColor: DARK } }
+          : { content: '—',            styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'right' as const, textColor: MUTED } },
+        { content: n(l.prev) !== 0 ? fmt0(l.prev) : '', styles: { ...CS, fillColor: fill, fontStyle: fs, halign: 'right' as const, textColor: MUTED } },
       ];
     });
 
-    const lastTotal = [...lines].reverse().find(l => l.isTotal);
-    if (lastTotal) {
-      body.push(gtRow(['', 'RÉSULTAT NET DE L\'EXERCICE',
-        { content: fmt0(lastTotal.current), styles: { halign: 'right', font: 'courier' } }]));
-    }
-
-    autoTable(doc, baseOpts(33, {
-      head: [['REF', 'LIBELLÉ', 'NET N']],
+    autoTable(doc, {
+      startY,
+      head: [[
+        { content: 'REF',     styles: { ...H } },
+        { content: 'LIBELLÉ', styles: { ...H, halign: 'left' as const } },
+        { content: 'COMPTE',  styles: { ...H } },
+        { content: 'NET N',   styles: { ...H, halign: 'right' as const } },
+        { content: 'NET N-1', styles: { ...H, halign: 'right' as const } },
+      ]],
       body,
+      styles: { fontSize: 7.5, cellPadding: 1.5, textColor: DARK, lineColor: [180, 180, 180], lineWidth: 0.1 },
+      headStyles: { ...HEAD, fontSize: 7.5, cellPadding: 2 },
+      margin: { left: 10, right: 10, bottom: 14 },
+      tableLineWidth: 0.3,
+      tableLineColor: BLACK,
       columnStyles: {
-        0: { cellWidth: 18, halign: 'center' as const },
-        1: { cellWidth: 133 },
-        2: { cellWidth: 38, halign: 'right' as const },
+        0: { cellWidth: 12,  halign: 'center' as const },
+        1: { cellWidth: 97 },
+        2: { cellWidth: 28,  halign: 'center' as const },
+        3: { cellWidth: 27,  halign: 'right' as const },
+        4: { cellWidth: 26,  halign: 'right' as const },
       }
-    }));
+    });
 
     addFooter(doc, 'Compte de Résultat SYSCOHADA');
     doc.save(`Compte_de_Resultat_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -374,18 +508,18 @@ export class PdfExportService {
   // ─────────────────────────────────────────────────────────
   // BALANCE DES TIERS 4 COLONNES
   // ─────────────────────────────────────────────────────────
-  exportPartnerBalance4(lines: any[], dateFrom: string, dateTo: string): void {
+  exportPartnerBalance4(lines: any[], dateFrom: string, dateTo: string, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Balance des Tiers à 4 Colonnes',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
+    const startY = drawPageHeader(doc, 'Balance des Tiers à 4 Colonnes',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
 
     const body: RowInput[] = lines.map(l => [
       l.partnerRef || '',
       l.partnerName,
       { content: l.accountNumber || '', styles: { halign: 'center' as const, font: 'courier' } },
-      nc2(l.debit), nc2(l.credit), nc2(l.finalDebit), nc2(l.finalCredit),
+      ncDash(l.debit), ncDash(l.credit), ncDash(l.finalDebit), ncDash(l.finalCredit),
       { content: l.type === 'customer' ? 'Client' : 'Fournisseur',
-        styles: { halign: 'center' as const, textColor: l.type === 'customer' ? [0, 100, 0] : [140, 60, 0] } }
+        styles: { halign: 'center' as const } }
     ]);
 
     const totD  = lines.reduce((s: number, l: any) => s + n(l.debit), 0);
@@ -394,7 +528,7 @@ export class PdfExportService {
     const totFC = lines.reduce((s: number, l: any) => s + n(l.finalCredit), 0);
     body.push(gtRow(['TOTAL', '', '', nc2(totD), nc2(totC), nc2(totFD), nc2(totFC), '']));
 
-    autoTable(doc, baseOpts(33, {
+    autoTable(doc, baseOpts(startY, {
       head: [['Réf.', 'Tiers', 'N° Compte', 'Débit', 'Crédit', 'Solde Débiteur', 'Solde Créditeur', 'Type']],
       body,
       columnStyles: {
@@ -413,17 +547,17 @@ export class PdfExportService {
   // ─────────────────────────────────────────────────────────
   // BALANCE DES TIERS 6 COLONNES
   // ─────────────────────────────────────────────────────────
-  exportPartnerBalance6(lines: any[], dateFrom: string, dateTo: string): void {
+  exportPartnerBalance6(lines: any[], dateFrom: string, dateTo: string, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Balance des Tiers à 6 Colonnes',
-      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`);
+    const startY = drawPageHeader(doc, 'Balance des Tiers à 6 Colonnes',
+      `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)}`, companyName);
 
     const body: RowInput[] = lines.map(l => [
       l.partnerRef || '', l.partnerName,
       { content: l.accountNumber || '', styles: { halign: 'center' as const, font: 'courier' } },
-      nc2(l.initialDebit), nc2(l.initialCredit),
-      nc2(l.debit), nc2(l.credit),
-      nc2(l.finalDebit), nc2(l.finalCredit),
+      ncDash(l.initialDebit), ncDash(l.initialCredit),
+      ncDash(l.debit), ncDash(l.credit),
+      ncDash(l.finalDebit), ncDash(l.finalCredit),
       { content: l.type === 'customer' ? 'Client' : 'Fournisseur',
         styles: { halign: 'center' as const } }
     ]);
@@ -434,7 +568,7 @@ export class PdfExportService {
       nc2(sum('debit')),        nc2(sum('credit')),
       nc2(sum('finalDebit')),   nc2(sum('finalCredit')), '']));
 
-    autoTable(doc, baseOpts(33, {
+    autoTable(doc, baseOpts(startY, {
       head: [['Réf.', 'Tiers', 'N° Cpt', 'Init. D.', 'Init. C.', 'Mvt. D.', 'Mvt. C.', 'Sol. D.', 'Sol. C.', 'Type']],
       body,
       columnStyles: {
@@ -454,10 +588,11 @@ export class PdfExportService {
   // ─────────────────────────────────────────────────────────
   // ÉTAT COMMERCIAL
   // ─────────────────────────────────────────────────────────
-  exportEtatCommercial(data: any): void {
+  exportEtatCommercial(data: any, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'État Commercial — Statistiques de Ventes',
-      `Période du ${dateStr(data.dateFrom)} au ${dateStr(data.dateTo)} — ${data.totalInvoices} facture(s)`);
+    const startY = drawPageHeader(doc, 'État Commercial — Statistiques de Ventes',
+      `Période du ${dateStr(data.dateFrom)} au ${dateStr(data.dateTo)} — ${data.totalInvoices} facture(s)`,
+      companyName);
 
     const body: RowInput[] = [];
     for (const client of data.clients) {
@@ -474,7 +609,7 @@ export class PdfExportService {
     }
     body.push(gtRow(['TOTAL GÉNÉRAL', '', nc2(data.grandTotalQty), nc2(data.grandTotalHT), nc2(data.grandTotalTTC)]));
 
-    autoTable(doc, baseOpts(33, {
+    autoTable(doc, baseOpts(startY, {
       head: [['Code', 'Désignation', 'Quantité', 'CA HT', 'CA TTC']],
       body,
       columnStyles: {
@@ -493,10 +628,11 @@ export class PdfExportService {
   // ─────────────────────────────────────────────────────────
   // RAPPORT COMMERCIAL CONSOLIDÉ
   // ─────────────────────────────────────────────────────────
-  exportRapportConsolide(data: any): void {
+  exportRapportConsolide(data: any, companyName?: string): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    drawPageHeader(doc, 'Rapport Commercial Consolidé',
-      `Période du ${dateStr(data.dateFrom)} au ${dateStr(data.dateTo)} — ${data.totalInvoices} facture(s)`);
+    const startY = drawPageHeader(doc, 'Rapport Commercial Consolidé',
+      `Période du ${dateStr(data.dateFrom)} au ${dateStr(data.dateTo)} — ${data.totalInvoices} facture(s)`,
+      companyName);
 
     const body: RowInput[] = [];
     for (const client of data.clients) {
@@ -526,7 +662,7 @@ export class PdfExportService {
       nc2(data.grandTotalRemise), ''
     ]));
 
-    autoTable(doc, baseOpts(33, {
+    autoTable(doc, baseOpts(startY, {
       head: [['Code', 'Désignation', 'Qté', 'Prix Moy.', 'CA HT', 'CA TTC', 'Remise', '% Rem.']],
       body,
       columnStyles: {
@@ -539,5 +675,72 @@ export class PdfExportService {
 
     addFooter(doc, 'Rapport Commercial Consolidé');
     doc.save(`Rapport_Consolide_${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // RAPPORT DE STOCK VALORISÉ
+  // ─────────────────────────────────────────────────────────
+  exportStockReport(
+    groups: {
+      warehouseName: string;
+      rows: { code: string; name: string; uom: string; price: number; qty: number; value: number }[];
+      subtotalQty: number;
+      subtotalValue: number;
+    }[],
+    companyName?: string
+  ): void {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const startY = drawPageHeader(
+      doc, 'Rapport de Stock Valorisé',
+      `État au ${new Date().toLocaleDateString('fr-FR')}`,
+      companyName
+    );
+
+    const body: RowInput[] = [];
+    let grandQty = 0;
+    let grandVal = 0;
+
+    for (const grp of groups) {
+      body.push(secRow(`ENTREPÔT : ${grp.warehouseName.toUpperCase()}`, 6));
+      for (const r of grp.rows) {
+        body.push([
+          { content: r.code, styles: { halign: 'center' as const, font: 'courier' } },
+          r.name,
+          { content: r.uom, styles: { halign: 'center' as const } },
+          { content: r.price > 0 ? fmt0(r.price) : '', styles: { halign: 'right' as const } },
+          { content: r.qty > 0 ? fmt2(r.qty) : '0,00', styles: { halign: 'right' as const } },
+          { content: fmt0(r.value), styles: { halign: 'right' as const } },
+        ]);
+      }
+      body.push(subRow([
+        '', `Sous-total ${grp.warehouseName}`, '', '',
+        { content: fmt2(grp.subtotalQty), styles: { halign: 'right' } },
+        { content: fmt0(grp.subtotalValue), styles: { halign: 'right' } },
+      ]));
+      grandQty += grp.subtotalQty;
+      grandVal += grp.subtotalValue;
+    }
+
+    body.push(gtRow([
+      '', 'TOTAL GÉNÉRAL DU STOCK', '', '',
+      { content: fmt2(grandQty), styles: { halign: 'right' } },
+      { content: fmt0(grandVal), styles: { halign: 'right' } },
+    ]));
+
+    autoTable(doc, baseOpts(startY, {
+      head: [['Référence', 'Désignation', 'UDM', 'P.U. (CMUP)', 'Quantité', 'Valeur (FCFA)']],
+      body,
+      columnStyles: {
+        0: { cellWidth: 28, halign: 'center' as const },
+        1: { cellWidth: 110 },
+        2: { cellWidth: 18, halign: 'center' as const },
+        3: { cellWidth: 32, halign: 'right' as const },
+        4: { cellWidth: 32, halign: 'right' as const },
+        5: { cellWidth: 40, halign: 'right' as const },
+      }
+    }));
+
+    addFooter(doc, 'Rapport de Stock Valorisé');
+    doc.save(`Rapport_Stock_${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 }

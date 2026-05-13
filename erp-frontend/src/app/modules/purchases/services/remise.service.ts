@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface Remise {
   id?: number;
@@ -52,7 +53,7 @@ export interface PartnerGroup {
 @Injectable({ providedIn: 'root' })
 export class RemiseService {
 
-  private base = `http://${window.location.hostname}:8085/api/remises`;
+  private base = `${environment.apiUrl}/api/remises`;
 
   constructor(private http: HttpClient) {}
 

@@ -2,6 +2,7 @@ package com.erp.purchases.service;
 
 import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
+import com.erp.accounting.service.AccountingService;
 import com.erp.common.ConsigneCodes;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
@@ -63,6 +64,7 @@ public class PurchaseService {
     private final com.erp.purchases.repository.RemiseRepository remiseRepo;
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
+    private final AccountingService accountingService;
 
     // ===================== COMMANDES D'ACHAT =====================
 
@@ -761,16 +763,29 @@ public class PurchaseService {
         AccountJournal journal = journalRepo.findById(req.getJournalId())
                 .orElseThrow(() -> new EntityNotFoundException("Journal introuvable"));
 
+        if (!"cash".equals(journal.getType()) && !"bank".equals(journal.getType())) {
+            throw new IllegalArgumentException(
+                "Le journal \"" + journal.getName() + "\" n'est pas un journal de caisse ou de banque. " +
+                "Veuillez sélectionner le journal Caisse (CAI) ou Banque (BNQ).");
+        }
+
         Company company = invoice.getCompany();
         LocalDate date = req.getDate() != null ? req.getDate() : LocalDate.now();
         BigDecimal amount = req.getAmount();
 
-        // Compte trésorerie (crédit) = compte par défaut du journal
+        // Compte trésorerie (crédit) : utiliser le compte défini sur le journal, c'est lui qui fait foi.
+        // Fallback uniquement si le journal n'a pas de compte configuré.
         AccountAccount treasuryAccount = journal.getDefaultCreditAccount();
         if (treasuryAccount == null) {
-            treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
-                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("571", company.getId()))
-                    .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable (521/571)"));
+            if ("cash".equals(journal.getType())) {
+                treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("571", company.getId())
+                        .or(() -> accountRepo.findFirstByCodeAndCompanyId("572", company.getId()))
+                        .orElseThrow(() -> new EntityNotFoundException("Compte de caisse introuvable (571) — configurez le compte sur le journal"));
+            } else {
+                treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
+                        .or(() -> accountRepo.findFirstByCodeAndCompanyId("522", company.getId()))
+                        .orElseThrow(() -> new EntityNotFoundException("Compte bancaire introuvable (521) — configurez le compte sur le journal"));
+            }
         }
 
         // Compte fournisseur (débit)
@@ -821,6 +836,7 @@ public class PurchaseService {
                 .build();
 
         paymentRepo.save(payment);
+        accountingService.updateDailyBalance(journal.getId(), company.getId(), date);
 
         // Mise à jour des totaux de la facture
         BigDecimal totalPaye = paymentRepo.sumPostedPaymentsByInvoice(invoice.getId());

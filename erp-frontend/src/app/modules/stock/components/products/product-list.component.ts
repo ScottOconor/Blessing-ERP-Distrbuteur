@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StockService, Product, ProductCategory } from '../../services/stock.service';
+import { StockService, Product, ProductCategory, Warehouse, StockAdjustmentRequest } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
@@ -38,13 +38,22 @@ export class ProductListComponent implements OnInit {
   showImportModal = false;
   importRows: Record<string, any>[] = [];
   importLoading = false;
+  private mainLocationId: number | null = null;
 
   private companyId!: number;
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
+  canImport = false;
 
   constructor(private stockService: StockService, private authService: AuthService) {}
 
   ngOnInit(): void {
     this.companyId = this.authService.getCompanyId();
+    this.canCreate = this.authService.hasPermission('STOCK', 'PRODUITS', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('STOCK', 'PRODUITS', 'EDIT');
+    this.canDelete = this.authService.hasPermission('STOCK', 'PRODUITS', 'DELETE');
+    this.canImport = this.authService.hasPermission('STOCK', 'PRODUITS', 'IMPORT');
     this.load();
   }
 
@@ -52,11 +61,14 @@ export class ProductListComponent implements OnInit {
     this.loading = true;
     forkJoin({
       products: this.stockService.getProducts(this.companyId),
-      categories: this.stockService.getCategories(this.companyId)
+      categories: this.stockService.getCategories(this.companyId),
+      warehouses: this.stockService.getWarehouses(this.companyId)
     }).subscribe({
-      next: ({ products, categories }) => {
+      next: ({ products, categories, warehouses }) => {
         this.products = products;
         this.categories = categories;
+        const mainWh = warehouses[0];
+        if (mainWh?.stockLocationId) this.mainLocationId = mainWh.stockLocationId;
         this.applyFilter();
         this.loading = false;
       },
@@ -156,10 +168,14 @@ export class ProductListComponent implements OnInit {
   }
 
   async confirmImport(): Promise<void> {
+    this.importLoading = true;
     let done = 0, errors = 0;
+    const stockAdjustments: StockAdjustmentRequest[] = [];
+
     for (const row of this.importRows) {
       const name = String(row['Nom'] || row['Nom*'] || '').trim();
       if (!name) continue;
+      const qty = parseFloat(row['Quantité en stock'] || '0') || 0;
       const dto: Product = {
         name,
         defaultCode: String(row['Référence interne'] || row['Code (Référence)'] || '').trim() || undefined,
@@ -172,13 +188,30 @@ export class ProductListComponent implements OnInit {
         companyId: this.companyId
       };
       try {
-        await this.stockService.createProduct(dto).toPromise();
+        const created = await this.stockService.createProduct(dto).toPromise();
         done++;
+        if (qty > 0 && created?.id && this.mainLocationId) {
+          stockAdjustments.push({
+            productId: created.id,
+            locationId: this.mainLocationId,
+            newQty: qty,
+            notes: 'Stock initial — import',
+            companyId: this.companyId
+          });
+        }
       } catch { errors++; }
     }
+
+    if (stockAdjustments.length > 0) {
+      try {
+        await this.stockService.createAdjustmentsBulk(stockAdjustments).toPromise();
+      } catch { /* les produits sont créés, l'ajustement est non bloquant */ }
+    }
+
+    this.importLoading = false;
     this.closeImportModal();
     this.load();
-    this.showSuccessMsg(`Import terminé : ${done} créé(s), ${errors} erreur(s)`);
+    this.showSuccessMsg(`Import terminé : ${done} créé(s)${stockAdjustments.length > 0 ? ', ' + stockAdjustments.length + ' stock(s) initialisé(s)' : ''}, ${errors} erreur(s)`);
   }
 
   showSuccessMsg(msg: string): void {

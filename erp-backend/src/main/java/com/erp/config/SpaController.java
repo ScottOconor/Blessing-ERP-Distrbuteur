@@ -12,8 +12,8 @@ public class SpaController {
 
     @GetMapping(value = {
         "/",
-        "/{path:[^\\.]*}",
-        "/{path:[^\\.]*}/**"
+        "/{path:^(?!api|actuator)[^\\.]*$}",
+        "/{path:^(?!api|actuator)[^\\.]*$}/**"
     })
     public String forward() {
         return "forward:/index.html";

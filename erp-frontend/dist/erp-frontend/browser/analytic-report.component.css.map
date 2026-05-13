@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/modules/accounting/components/analytic/analytic-report.component.scss"],
-  "sourcesContent": [".row-child {\n  background: #fafafa;\n}\n\n.totals-row td {\n  background: #f0f0f0;\n  border-top: 2px solid #714B67;\n}\n\n@media print {\n  .no-print { display: none !important; }\n}\n"],
-  "mappings": ";AAAA,CAAA;AACE,cAAA;;AAGF,CAAA,WAAA;AACE,cAAA;AACA,cAAA,IAAA,MAAA;;AAGF,OAAA;AACE,GAAA;AAAY,aAAA;;;",
-  "names": []
-}

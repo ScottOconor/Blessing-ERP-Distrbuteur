@@ -93,7 +93,8 @@ export class GeneralBalance6Component implements OnInit {
   exportPdf(): void {
     this.pdfExport.exportBalance6(
       this.lines, this.bilanTotals, this.gestionTotals, this.totals,
-      this.dateFrom, this.dateTo
+      this.dateFrom, this.dateTo,
+      this.authService.getActiveCompany()?.name
     );
   }
 

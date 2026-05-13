@@ -7,11 +7,12 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { StockService, Product, Warehouse } from '../../../stock/services/stock.service';
 import { AccountJournal } from '../../../../core/models/account.model';
+import { PrintPreviewComponent } from '../../../../shared/components/print-preview/print-preview.component';
 
 @Component({
   selector: 'app-order-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintPreviewComponent],
   templateUrl: './order-form.component.html',
   styleUrl: './order-form.component.scss'
 })
@@ -27,6 +28,7 @@ export class OrderFormComponent implements OnInit {
   confirming = false;
   errorMsg = '';
   successMsg = '';
+  showPrintModal = false;
   readonly TVA_DEFAULT = 19.25;
 
   partnerBalance: number | null = null;
@@ -417,6 +419,10 @@ export class OrderFormComponent implements OnInit {
       error: (err) => { this.errorMsg = err.error?.message || 'Erreur lors de l\'annulation'; }
     });
   }
+
+  get printCompanyName(): string { return this.authService.getActiveCompany()?.name ?? ''; }
+  openPrint(): void { this.showPrintModal = true; }
+  closePrint(): void { this.showPrintModal = false; }
 
   back(): void {
     this.router.navigate(['/sales/orders']);

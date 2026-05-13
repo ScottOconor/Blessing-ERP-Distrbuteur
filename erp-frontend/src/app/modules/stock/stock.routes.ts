@@ -9,7 +9,6 @@ export const stockRoutes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', loadComponent: () => import('./components/dashboard/stock-dashboard.component').then(m => m.StockDashboardComponent) },
       { path: 'receptions', loadComponent: () => import('./components/receptions/reception-list.component').then(m => m.ReceptionListComponent) },
-      { path: 'receptions/new', loadComponent: () => import('./components/receptions/reception-detail.component').then(m => m.ReceptionDetailComponent) },
       { path: 'receptions/bordereau/:id', loadComponent: () => import('./components/receptions/bordereau.component').then(m => m.BordereauComponent) },
       { path: 'receptions/:id', loadComponent: () => import('./components/receptions/reception-detail.component').then(m => m.ReceptionDetailComponent) },
       { path: 'products', loadComponent: () => import('./components/products/product-list.component').then(m => m.ProductListComponent) },
@@ -26,6 +25,7 @@ export const stockRoutes: Routes = [
       { path: 'locations', loadComponent: () => import('./components/locations/location-list.component').then(m => m.LocationListComponent) },
       { path: 'picking-types', loadComponent: () => import('./components/picking-types/picking-type-list.component').then(m => m.PickingTypeListComponent) },
       { path: 'analyse/rapport', loadComponent: () => import('./components/analyse/stock-report.component').then(m => m.StockReportComponent) },
+      { path: 'analyse/mouvements-analyse', loadComponent: () => import('./components/analyse/movement-analysis.component').then(m => m.MovementAnalysisComponent) },
       { path: 'analyse/mouvements', loadComponent: () => import('./components/analyse/stock-movements.component').then(m => m.StockMovementsComponent) },
       { path: 'analyse/valorisation', loadComponent: () => import('./components/analyse/stock-valuation.component').then(m => m.StockValuationComponent) },
     ]

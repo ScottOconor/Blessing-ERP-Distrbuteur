@@ -86,33 +86,46 @@ public class RistourneService {
     }
 
     /**
-     * Import bulk de ristournes depuis Excel.
-     * Colonnes attendues : Client, Catégorie d'article, Type de ristourne, Montant de la ristourne, Actif
+     * Import bulk de ristournes depuis Excel — version optimisée batch.
+     * Précharge partenaires, catégories et ristournes existantes en 3 requêtes,
+     * puis effectue un seul saveAll au lieu d'une requête par ligne.
      */
     public List<RistourneDTO> importRistournes(List<RistourneImportRow> rows, Long companyId) {
-        List<RistourneDTO> result = new java.util.ArrayList<>();
+        // 3 requêtes au total pour tout précharger
+        Map<String, Partner> partnersByName = partnerRepo.findByCompanyId(companyId)
+                .stream().collect(Collectors.toMap(
+                        p -> p.getName().toLowerCase().trim(), p -> p, (a, b) -> a));
+
+        Map<String, ProductCategory> categoriesByName = categoryRepo.findByCompanyIdOrderByNameAsc(companyId)
+                .stream().collect(Collectors.toMap(
+                        c -> c.getName().toLowerCase().trim(), c -> c, (a, b) -> a));
+
+        Map<String, Ristourne> existingMap = ristourneRepo.findByCompanyIdAndActiveTrue(companyId)
+                .stream().collect(Collectors.toMap(
+                        r -> r.getPartner().getId() + "_" + r.getCategory().getId(),
+                        r -> r, (a, b) -> a));
+
+        List<Ristourne> toSave = new ArrayList<>();
         for (RistourneImportRow row : rows) {
-            try {
-                Partner partner = partnerRepo.findByNameIgnoreCaseAndCompanyId(row.getClientName(), companyId)
-                        .orElse(null);
-                if (partner == null) continue;
+            if (row.getClientName() == null || row.getCategoryName() == null) continue;
+            Partner partner = partnersByName.get(row.getClientName().toLowerCase().trim());
+            if (partner == null) continue;
+            ProductCategory cat = categoriesByName.get(row.getCategoryName().toLowerCase().trim());
+            if (cat == null) continue;
 
-                java.util.Optional<ProductCategory> catOpt = categoryRepo.findByNameIgnoreCaseAndCompanyId(
-                        row.getCategoryName(), companyId);
-                if (catOpt.isEmpty()) continue;
-
-                Long categoryId = catOpt.get().getId();
-                RistourneDTO dto = RistourneDTO.builder()
-                        .partnerId(partner.getId())
-                        .categoryId(categoryId)
-                        .montantFixe(row.getMontantFixe() != null ? row.getMontantFixe() : BigDecimal.ZERO)
-                        .typeRistourne(row.getTypeRistourne())
-                        .companyId(companyId)
-                        .build();
-                result.add(save(dto));
-            } catch (Exception ignored) {}
+            String key = partner.getId() + "_" + cat.getId();
+            Ristourne entity = existingMap.getOrDefault(key, Ristourne.builder().build());
+            entity.setPartner(partner);
+            entity.setCategory(cat);
+            entity.setMontantFixe(row.getMontantFixe() != null ? row.getMontantFixe() : BigDecimal.ZERO);
+            entity.setTypeRistourne(row.getTypeRistourne());
+            entity.setCompanyId(companyId);
+            entity.setActive(true);
+            toSave.add(entity);
         }
-        return result;
+
+        // 1 seul batch write
+        return ristourneRepo.saveAll(toSave).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     @lombok.Data

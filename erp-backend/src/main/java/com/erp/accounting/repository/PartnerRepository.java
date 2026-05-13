@@ -20,4 +20,6 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     java.util.Optional<Partner> findFirstByNameAndCompanyId(String name, Long companyId);
     /** @deprecated */ @Deprecated java.util.Optional<Partner> findByRefAndCompanyId(String ref, Long companyId);
     /** @deprecated */ @Deprecated java.util.Optional<Partner> findByNameAndCompanyId(String name, Long companyId);
+
+    List<Partner> findByNameContainingIgnoreCaseAndCompanyId(String name, Long companyId);
 }

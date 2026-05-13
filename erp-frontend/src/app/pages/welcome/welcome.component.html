@@ -10,6 +10,12 @@
     </div>
 
     <div class="header-right">
+      @if (authService.isCentralized()) {
+        <button class="btn-group-home" (click)="goToGroupHome()" title="Retour à l'espace groupe">
+          <span class="material-icons">corporate_fare</span>
+          Espace groupe
+        </button>
+      }
       <div class="user-info">
         <div class="user-avatar">{{ userInitials }}</div>
         <div class="user-details">

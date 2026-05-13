@@ -1,0 +1,166 @@
+<div class="import-page">
+  <div class="page-header">
+    <div>
+      <h2>Import eLeader</h2>
+      <p class="subtitle">Importer une facture PDF eLeader et créer un bon de commande</p>
+    </div>
+    <button class="btn-logs" (click)="toggleLogs()">
+      <span class="material-icons">history</span>
+      Historique des imports
+    </button>
+  </div>
+
+  <!-- Bandeau journal -->
+  <div class="journal-banner" *ngIf="journalName">
+    <span class="material-icons">book</span>
+    Journal utilisé : <strong>{{ journalName }}</strong>
+    <a class="link-config" routerLink="/sales/eleader/config">Modifier</a>
+  </div>
+
+  <!-- Warning pas de journal -->
+  <div class="alert alert-warning" *ngIf="configWarning">
+    <span class="material-icons">warning</span>
+    {{ configWarning }}
+    <a class="link-config" routerLink="/sales/eleader/config">Configurer maintenant</a>
+  </div>
+
+  <!-- Zone de dépôt -->
+  <div class="drop-zone"
+       [class.drag-over]="isDragOver"
+       [class.has-file]="!!selectedFile"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave()"
+       (drop)="onDrop($event)"
+       (click)="!selectedFile && fileInput.click()">
+    <input #fileInput type="file" accept=".pdf" (change)="onFileSelected($event)" hidden />
+
+    <ng-container *ngIf="!selectedFile">
+      <span class="material-icons drop-icon">picture_as_pdf</span>
+      <p class="drop-title">Glissez-déposez votre PDF eLeader ici</p>
+      <p class="drop-sub">ou cliquez pour sélectionner un fichier</p>
+      <p class="drop-hint">Formats acceptés : PDF — Factures Brasseries ou Guinness</p>
+    </ng-container>
+
+    <ng-container *ngIf="selectedFile">
+      <span class="material-icons drop-icon ready">picture_as_pdf</span>
+      <p class="drop-title file-name">{{ selectedFile.name }}</p>
+      <p class="drop-sub">{{ (selectedFile.size / 1024).toFixed(1) }} Ko</p>
+      <button class="btn-clear" (click)="$event.stopPropagation(); clearFile()">
+        <span class="material-icons">close</span> Changer de fichier
+      </button>
+    </ng-container>
+  </div>
+
+  <!-- Options d'import -->
+  <div class="options-card" *ngIf="selectedFile">
+    <div class="option-group">
+      <label class="option-label">Modèle de facture</label>
+      <div class="radio-group">
+        <label class="radio-option" [class.selected]="invoiceModel === 'AUTO'">
+          <input type="radio" [(ngModel)]="invoiceModel" value="AUTO" />
+          <span class="material-icons">auto_awesome</span>
+          <span>Détection automatique</span>
+        </label>
+        <label class="radio-option" [class.selected]="invoiceModel === 'BRASSERIES'">
+          <input type="radio" [(ngModel)]="invoiceModel" value="BRASSERIES" />
+          <span class="material-icons">sports_bar</span>
+          <span>Brasseries</span>
+        </label>
+        <label class="radio-option" [class.selected]="invoiceModel === 'GUINNESS'">
+          <input type="radio" [(ngModel)]="invoiceModel" value="GUINNESS" />
+          <span class="material-icons">local_bar</span>
+          <span>Guinness</span>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn-import" (click)="import()" [disabled]="importing">
+      <span class="material-icons" *ngIf="!importing">upload</span>
+      <span class="material-icons spin" *ngIf="importing">refresh</span>
+      {{ importing ? 'Import en cours…' : 'Importer la facture' }}
+    </button>
+  </div>
+
+  <!-- Résultat -->
+  <ng-container *ngIf="result">
+    <div class="result-card" [class.success]="result.success" [class.error]="!result.success">
+      <div class="result-icon">
+        <span class="material-icons">{{ result.success ? 'check_circle' : 'error' }}</span>
+      </div>
+      <div class="result-body">
+        <p class="result-title">{{ result.success ? 'Import réussi !' : 'Import échoué' }}</p>
+        <p class="result-msg">{{ result.message }}</p>
+        <div class="result-details" *ngIf="result.success">
+          <span class="detail-chip">
+            <span class="material-icons">receipt</span>
+            Facture eLeader : {{ result.eleaderReference }}
+          </span>
+          <span class="detail-chip">
+            <span class="material-icons">person</span>
+            Client : {{ result.clientName }}
+          </span>
+          <span class="detail-chip">
+            <span class="material-icons">assignment</span>
+            BC : {{ result.salesOrderName }}
+          </span>
+        </div>
+        <div class="result-warning" *ngIf="result.warning">
+          <span class="material-icons">warning</span>
+          {{ result.warning }}
+        </div>
+        <div class="result-actions" *ngIf="result.success">
+          <button class="btn-secondary" (click)="goToOrder()">
+            <span class="material-icons">open_in_new</span>
+            Voir les bons de commande
+          </button>
+          <button class="btn-primary small" (click)="clearFile()">
+            <span class="material-icons">add</span>
+            Nouvel import
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Historique -->
+  <div class="logs-section" *ngIf="showLogs">
+    <h3>Historique des imports eLeader</h3>
+    <div *ngIf="loadingLogs" class="loading-state">
+      <span class="material-icons spin">refresh</span> Chargement…
+    </div>
+    <div class="logs-table" *ngIf="!loadingLogs">
+      <table *ngIf="logs.length > 0; else noLogs">
+        <thead>
+          <tr>
+            <th>Référence</th>
+            <th>Fichier</th>
+            <th>Modèle</th>
+            <th>Facture eLeader</th>
+            <th>Client</th>
+            <th>BC créé</th>
+            <th>Statut</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs">
+            <td class="mono">{{ log.reference }}</td>
+            <td class="filename">{{ log.filename }}</td>
+            <td><span class="model-badge">{{ log.invoiceModel }}</span></td>
+            <td class="mono">{{ log.eleaderReference || '—' }}</td>
+            <td>{{ log.clientName || '—' }}</td>
+            <td class="mono">{{ log.salesOrderName || '—' }}</td>
+            <td><span class="badge" [ngClass]="statusClass(log.status)">{{ statusLabel(log.status) }}</span></td>
+            <td>{{ log.importDate | date:'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #noLogs>
+        <div class="empty-state">
+          <span class="material-icons">history</span>
+          <p>Aucun import enregistré.</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

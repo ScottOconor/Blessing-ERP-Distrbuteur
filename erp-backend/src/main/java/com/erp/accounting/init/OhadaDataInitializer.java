@@ -9,12 +9,15 @@ import com.erp.common.repository.CompanyRepository;
 import com.erp.stock.entity.StockLocation;
 import com.erp.stock.entity.StockPickingType;
 import com.erp.stock.entity.Warehouse;
+import com.erp.config.entity.CompanyGroup;
+import com.erp.config.repository.CompanyGroupRepository;
 import com.erp.stock.repository.StockLocationRepository;
 import com.erp.stock.repository.StockPickingTypeRepository;
 import com.erp.stock.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +26,13 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@Order(2)
 @RequiredArgsConstructor
 @Slf4j
 public class OhadaDataInitializer implements CommandLineRunner {
 
     private final CompanyRepository companyRepository;
+    private final CompanyGroupRepository groupRepository;
     private final AccountAccountRepository accountRepository;
     private final AccountJournalRepository journalRepository;
     private final WarehouseRepository warehouseRepository;
@@ -37,36 +42,51 @@ public class OhadaDataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        initDefaultCompany();
-        initChartOfAccounts();
-        ensureEssentialAccounts();
-        initDefaultJournals();
-        initDefaultWarehouses();
+        Company company = initDefaultCompany();
+        initializeCompany(company);
     }
 
-    private void initDefaultCompany() {
-        if (companyRepository.count() == 0) {
-            Company company = Company.builder()
-                    .name("Ma Société")
-                    .sigle("MS")
-                    .adresse("Yaoundé, Cameroun")
-                    .telephone("+237 000 000 000")
-                    .email("contact@masociete.cm")
-                    .build();
-            companyRepository.save(company);
-            log.info("Default company created: {}", company.getName());
-        }
+    /** Initialise le plan comptable, les journaux et les entrepôts pour une entreprise. */
+    @Transactional
+    public void initializeCompany(Company company) {
+        initChartOfAccounts(company);
+        ensureEssentialAccounts(company);
+        initDefaultJournals(company);
+        initDefaultWarehouses(company);
     }
 
-    private void initChartOfAccounts() {
-        Company company = companyRepository.findAll().get(0);
-
-        if (accountRepository.countByCompanyId(company.getId()) > 0) {
-            log.info("Chart of accounts already initialized, skipping.");
-            return;
+    private Company initDefaultCompany() {
+        if (companyRepository.count() > 0) {
+            Company c = companyRepository.findAll().get(0);
+            if (c.getGroup() == null) {
+                groupRepository.findByCode("DEV_GROUP").ifPresent(g -> {
+                    c.setGroup(g);
+                    companyRepository.save(c);
+                    log.info("Default company linked to DEV_GROUP");
+                });
+            }
+            return companyRepository.findAll().get(0);
         }
+        CompanyGroup devGroup = groupRepository.findByCode("DEV_GROUP").orElse(null);
+        Company c = companyRepository.save(Company.builder()
+                .name("Ma Société").sigle("MS")
+                .adresse("Yaoundé, Cameroun").telephone("+237 000 000 000")
+                .email("contact@masociete.cm")
+                .group(devGroup).build());
+        log.info("Default company created: {}", c.getName());
+        return c;
+    }
 
-        log.info("Initializing OHADA SYSCOHADA Revised chart of accounts...");
+    /** Public entry-point called after a plan comptable replace-import to restore missing group accounts. */
+    @Transactional
+    public void reseedMissingGroupAccounts(Company company) {
+        initChartOfAccounts(company);
+        ensureEssentialAccounts(company);
+        initDefaultJournals(company);
+    }
+
+    private void initChartOfAccounts(Company company) {
+        log.info("Checking OHADA group accounts for company {}…", company.getId());
 
         Set<String> reconcileAccounts = Set.of(
             "401", "4011", "4012", "404", "408", "409",
@@ -331,8 +351,16 @@ public class OhadaDataInitializer implements CommandLineRunner {
             }
         }
 
-        accountRepository.saveAll(accounts);
-        log.info("OHADA chart of accounts initialized: {} accounts created", accounts.size());
+        long cid = company.getId();
+        List<AccountAccount> toCreate = accounts.stream()
+                .filter(a -> accountRepository.findFirstByCodeAndCompanyId(a.getCode(), cid).isEmpty())
+                .collect(java.util.stream.Collectors.toList());
+        if (!toCreate.isEmpty()) {
+            accountRepository.saveAll(toCreate);
+            log.info("OHADA chart of accounts: {}/{} accounts created/restored", toCreate.size(), accounts.size());
+        } else {
+            log.info("OHADA chart of accounts: all group accounts already present ({})", accounts.size());
+        }
     }
 
     /**
@@ -340,11 +368,17 @@ public class OhadaDataInitializer implements CommandLineRunner {
      * Runs as an upsert on every startup — safe even if accounts are already present.
      * The user can override names/types via the plan comptable Excel import.
      */
-    private void ensureEssentialAccounts() {
-        Company company = companyRepository.findAll().get(0);
+    private void ensureEssentialAccounts(Company company) {
         Long cid = company.getId();
 
-        // Uniquement les comptes métier spécifiques non couverts par le plan comptable importé
+        // Comptes de trésorerie — internalType='liquidity' est critique pour le calcul des soldes journaliers.
+        // Ces upserts corrigent les anciens enregistrements qui n'avaient pas ce champ renseigné.
+        upsertAccount(cid, "571",   "Caisse siège social",      "asset",     "liquidity", false, company);
+        upsertAccount(cid, "572",   "Caisse succursale",         "asset",     "liquidity", false, company);
+        upsertAccount(cid, "521",   "Banques locales",           "asset",     "liquidity", false, company);
+        upsertAccount(cid, "522",   "Banques à l'étranger",      "asset",     "liquidity", false, company);
+
+        // Comptes métier spécifiques
         upsertAccount(cid, "419800", "Ristournes à accorder - brasserie", "liability", "other", false, company);
         upsertAccount(cid, "419801", "Ristournes à accorder - guinness",  "liability", "other", false, company);
 
@@ -356,10 +390,11 @@ public class OhadaDataInitializer implements CommandLineRunner {
                                boolean reconcile, Company company) {
         accountRepository.findFirstByCodeAndCompanyId(code, companyId).ifPresentOrElse(
             acc -> {
-                if (!name.equals(acc.getName())) {
-                    acc.setName(name);
-                    accountRepository.save(acc);
-                }
+                boolean changed = false;
+                if (!name.equals(acc.getName()))                              { acc.setName(name);                    changed = true; }
+                if (accountType  != null && !accountType.equals(acc.getAccountType()))   { acc.setAccountType(accountType);     changed = true; }
+                if (internalType != null && !internalType.equals(acc.getInternalType())) { acc.setInternalType(internalType);   changed = true; }
+                if (changed) accountRepository.save(acc);
             },
             () -> accountRepository.save(AccountAccount.builder()
                     .code(code).name(name)
@@ -369,30 +404,74 @@ public class OhadaDataInitializer implements CommandLineRunner {
         );
     }
 
-    private void initDefaultJournals() {
-        Company company = companyRepository.findAll().get(0);
+    private void initDefaultJournals(Company company) {
+        AccountAccount sales701  = accountRepository.findFirstByCodeAndCompanyId("701", company.getId()).orElse(null);
+        AccountAccount client411 = accountRepository.findFirstByCodeAndCompanyId("411", company.getId()).orElse(null);
+        AccountAccount fourn401  = accountRepository.findFirstByCodeAndCompanyId("401", company.getId()).orElse(null);
+        // Pour la caisse/banque : chercher n'importe quel compte de liquidité (57x / 52x)
+        AccountAccount caisse571 = accountRepository.findFirstByCodeAndCompanyId("571", company.getId())
+                .or(() -> accountRepository.findFirstByInternalTypeAndCompanyIdOrderByCode("liquidity", company.getId()))
+                .orElse(null);
+        AccountAccount banque521 = accountRepository.findFirstByCodeAndCompanyId("521", company.getId())
+                .or(() -> accountRepository.findFirstByCodeAndCompanyId("522", company.getId()))
+                .orElse(null);
 
-        if (!journalRepository.findByCompanyIdAndActiveTrue(company.getId()).isEmpty()) {
-            log.info("Default journals already exist, skipping.");
+        List<AccountJournal> existing = journalRepository.findByCompanyIdAndActiveTrue(company.getId());
+        if (!existing.isEmpty()) {
+            // Repair: mettre à jour les comptes par défaut null sur les journaux cash/bank
+            // créés avant l'import du plan comptable (ou dont le compte était introuvable à l'import).
+            boolean repaired = false;
+            // Pour la réparation automatique : seulement si UN SEUL compte de liquidité existe.
+            // Si plusieurs (5711, 5712...), on ne peut pas deviner lequel appartient à quel journal
+            // → l'utilisateur doit réimporter les journaux après les comptes.
+            List<AccountAccount> allLiquid = accountRepository.findByInternalTypeAndCompanyIdOrderByCode("liquidity", company.getId());
+            AccountAccount singleCashAcct = (allLiquid.size() == 1) ? allLiquid.get(0)
+                    : accountRepository.findFirstByCodeAndCompanyId("571", company.getId()).orElse(null);
+
+            List<AccountAccount> bankCodes = accountRepository.findByCodeStartingWithAndCompanyId("52", company.getId());
+            AccountAccount singleBankAcct = (bankCodes.size() == 1) ? bankCodes.get(0)
+                    : accountRepository.findFirstByCodeAndCompanyId("521", company.getId())
+                        .or(() -> accountRepository.findFirstByCodeAndCompanyId("522", company.getId()))
+                        .orElse(null);
+
+            for (AccountJournal j : existing) {
+                if ("cash".equals(j.getType())
+                        && (j.getDefaultDebitAccount() == null || j.getDefaultCreditAccount() == null)) {
+                    if (singleCashAcct != null) {
+                        j.setDefaultDebitAccount(singleCashAcct);
+                        j.setDefaultCreditAccount(singleCashAcct);
+                        journalRepository.save(j);
+                        repaired = true;
+                        log.info("Repaired cash journal [{}] → {} for company {}",
+                                j.getCode(), singleCashAcct.getCode(), company.getId());
+                    } else {
+                        log.warn("Cash journal [{}] has no default account and multiple liquidity accounts exist — reimport journals after accounts.", j.getCode());
+                    }
+                } else if ("bank".equals(j.getType())
+                        && (j.getDefaultDebitAccount() == null || j.getDefaultCreditAccount() == null)) {
+                    if (singleBankAcct != null) {
+                        j.setDefaultDebitAccount(singleBankAcct);
+                        j.setDefaultCreditAccount(singleBankAcct);
+                        journalRepository.save(j);
+                        repaired = true;
+                        log.info("Repaired bank journal [{}] → {} for company {}",
+                                j.getCode(), singleBankAcct.getCode(), company.getId());
+                    } else {
+                        log.warn("Bank journal [{}] has no default account and multiple bank accounts exist — reimport journals after accounts.", j.getCode());
+                    }
+                }
+            }
+            if (!repaired) {
+                log.info("Default journals already exist and are healthy, skipping.");
+            }
             return;
         }
-
-        AccountAccount sales401 = accountRepository
-                .findFirstByCodeAndCompanyId("701", company.getId()).orElse(null);
-        AccountAccount client411 = accountRepository
-                .findFirstByCodeAndCompanyId("411", company.getId()).orElse(null);
-        AccountAccount fourn401 = accountRepository
-                .findFirstByCodeAndCompanyId("401", company.getId()).orElse(null);
-        AccountAccount caisse571 = accountRepository
-                .findFirstByCodeAndCompanyId("571", company.getId()).orElse(null);
-        AccountAccount banque521 = accountRepository
-                .findFirstByCodeAndCompanyId("521", company.getId()).orElse(null);
 
         List<AccountJournal> journals = new ArrayList<>();
 
         journals.add(AccountJournal.builder()
                 .code("VNT").name("Journal des Ventes").type("sale")
-                .defaultDebitAccount(client411).defaultCreditAccount(sales401)
+                .defaultDebitAccount(client411).defaultCreditAccount(sales701)
                 .company(company).active(true).build());
 
         journals.add(AccountJournal.builder()
@@ -419,9 +498,7 @@ public class OhadaDataInitializer implements CommandLineRunner {
         log.info("Default journals initialized: {} journals created", journals.size());
     }
 
-    private void initDefaultWarehouses() {
-        Company company = companyRepository.findAll().get(0);
-
+    private void initDefaultWarehouses(Company company) {
         if (!warehouseRepository.findByCompanyIdAndActiveTrue(company.getId()).isEmpty()) {
             log.info("Warehouses already initialized, skipping.");
             return;

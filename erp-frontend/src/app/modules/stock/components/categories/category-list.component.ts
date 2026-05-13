@@ -33,9 +33,21 @@ export class CategoryListComponent implements OnInit {
   importRows: Record<string, any>[] = [];
   importLoading = false;
 
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
+  canImport = false;
+
+
   constructor(private stockService: StockService, private authService: AuthService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.canCreate = this.authService.hasPermission('STOCK', 'PRODUITS', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('STOCK', 'PRODUITS', 'EDIT');
+    this.canDelete = this.authService.hasPermission('STOCK', 'PRODUITS', 'DELETE');
+    this.canImport = this.authService.hasPermission('STOCK', 'PRODUITS', 'IMPORT');
+    this.load();
+  }
 
   load(): void {
     this.loading = true;
@@ -118,6 +130,7 @@ export class CategoryListComponent implements OnInit {
   closeImportModal(): void { this.showImportModal = false; this.importRows = []; }
 
   async confirmImport(): Promise<void> {
+    this.importLoading = true;
     const cid = this.authService.getCompanyId();
     let done = 0, errors = 0;
     for (const row of this.importRows) {
@@ -134,6 +147,7 @@ export class CategoryListComponent implements OnInit {
         done++;
       } catch { errors++; }
     }
+    this.importLoading = false;
     this.closeImportModal();
     this.load();
     this.showSuccess(`Import terminé : ${done} créé(e)(s), ${errors} erreur(s)`);

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface PurchaseOrderLine {
   id?: number;
@@ -120,7 +121,7 @@ export interface PurchaseInvoice {
 
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
-  private base = `http://${window.location.hostname}:8085/api/purchases`;
+  private base = `${environment.apiUrl}/api/purchases`;
 
   constructor(private http: HttpClient) {}
 

@@ -937,7 +937,7 @@ public class StockService {
         } else if (productId != null) {
             quants = quantRepo.findByProductIdAndCompanyId(productId, companyId);
         } else {
-            quants = quantRepo.findAllWithStock(companyId);
+            quants = quantRepo.findAllByCompanyId(companyId);
         }
         return quants.stream().map(this::toQuantDTO).collect(Collectors.toList());
     }
@@ -947,6 +947,12 @@ public class StockService {
         StockLocation loc = locationRepo.findById(q.getLocationId()).orElse(null);
         BigDecimal price = product != null && product.getStandardPrice() != null ? product.getStandardPrice() : ZERO;
         BigDecimal available = q.getQuantity().subtract(q.getReservedQuantity()).max(ZERO);
+
+        Long categoryId = product != null ? product.getCategoryId() : null;
+        String categoryName = categoryId != null
+                ? categoryRepo.findById(categoryId).map(c -> c.getName()).orElse(null)
+                : null;
+
         return StockQuantDTO.builder()
                 .id(q.getId())
                 .productId(q.getProductId())
@@ -962,6 +968,8 @@ public class StockService {
                 .standardPrice(price)
                 .totalValue(q.getQuantity().multiply(price).setScale(2, RoundingMode.HALF_UP))
                 .companyId(q.getCompanyId())
+                .categoryId(categoryId)
+                .categoryName(categoryName)
                 .build();
     }
 
@@ -993,6 +1001,13 @@ public class StockService {
     // ============================================================
     // AJUSTEMENTS DE STOCK
     // ============================================================
+
+    public List<StockAdjustmentDTO> createAdjustmentsBulk(List<StockAdjustmentRequest> requests) {
+        return requests.stream()
+                .map(this::createAdjustment)
+                .filter(a -> a.getQtyDiff() != null && a.getQtyDiff().compareTo(ZERO) != 0)
+                .collect(Collectors.toList());
+    }
 
     @Transactional(readOnly = true)
     public List<StockAdjustmentDTO> getAdjustments(Long companyId) {
@@ -1160,17 +1175,21 @@ public class StockService {
     }
 
     @Transactional(readOnly = true)
-    public List<StockMoveDTO> getMovements(Long companyId, Long productId, int limit) {
+    public List<StockMoveDTO> getMovements(Long companyId, Long productId,
+                                           LocalDateTime dateFrom, LocalDateTime dateTo, int limit) {
         List<StockMove> moves;
         if (productId != null) {
             moves = moveRepo.findDoneByProduct(productId, companyId);
+        } else if (dateFrom != null && dateTo != null) {
+            moves = moveRepo.findDoneByCompanyBetween(companyId, dateFrom, dateTo, PageRequest.of(0, limit));
+        } else if (dateFrom != null) {
+            moves = moveRepo.findDoneByCompanyFrom(companyId, dateFrom, PageRequest.of(0, limit));
+        } else if (dateTo != null) {
+            moves = moveRepo.findDoneByCompanyTo(companyId, dateTo, PageRequest.of(0, limit));
         } else {
             moves = moveRepo.findAllDoneByCompany(companyId, PageRequest.of(0, limit));
         }
-        return moves.stream().map(m -> {
-            StockPicking picking = m.getPicking();
-            return toMoveDTO(m, picking);
-        }).collect(Collectors.toList());
+        return moves.stream().map(m -> toMoveDTO(m, m.getPicking())).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -1434,15 +1453,28 @@ public class StockService {
                 .map(q -> q.getQuantity().subtract(q.getReservedQuantity()).max(ZERO))
                 .orElse(ZERO);
 
+        // Catégorie du produit
+        Product product = productRepo.findById(m.getProductId()).orElse(null);
+        Long categoryId = product != null ? product.getCategoryId() : null;
+        String categoryName = categoryId != null
+                ? categoryRepo.findById(categoryId).map(c -> c.getName()).orElse(null)
+                : null;
+
         return StockMoveDTO.builder()
-                .id(m.getId()).pickingId(picking != null ? picking.getId() : null)
+                .id(m.getId())
+                .pickingId(picking != null ? picking.getId() : null)
+                .pickingRef(picking != null ? picking.getName() : null)
                 .productId(m.getProductId()).productCode(m.getProductCode())
                 .productName(m.getProductName()).uomName(m.getUomName())
+                .categoryId(categoryId).categoryName(categoryName)
                 .qtyDemanded(m.getQtyDemanded()).qtyDone(m.getQtyDone())
                 .priceUnit(m.getPriceUnit()).subtotalValue(subtotal)
                 .locationId(m.getLocationId()).locationName(srcName)
                 .locationDestId(m.getLocationDestId()).locationDestName(destName)
                 .state(m.getState()).companyId(m.getCompanyId())
+                .pickingTypeCode(picking != null ? picking.getPickingTypeCode() : null)
+                .dateDone(picking != null ? picking.getDateDone() : null)
+                .partnerName(picking != null ? picking.getPartnerName() : null)
                 .availableQty(available)
                 .build();
     }

@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class PrecompteService {
 
+    public static final String[] TAUX_ALLOWED = {"1", "2", "2.5", "5", "10"};
+
     private final PrecompteRepository precompteRepo;
     private final PartnerRepository partnerRepo;
 

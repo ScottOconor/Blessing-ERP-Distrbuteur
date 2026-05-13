@@ -59,6 +59,16 @@ public class ConfigController {
         return ResponseEntity.ok(configService.updateCompany(id, dto));
     }
 
+    @GetMapping("/groups/{groupId}/dashboard")
+    public ResponseEntity<GroupDashboardDTO> getGroupDashboard(@PathVariable Long groupId) {
+        return ResponseEntity.ok(configService.getGroupDashboard(groupId));
+    }
+
+    @GetMapping("/companies/{companyId}/dashboard")
+    public ResponseEntity<GroupDashboardDTO> getCompanyDashboard(@PathVariable Long companyId) {
+        return ResponseEntity.ok(configService.getCompanyDashboard(companyId));
+    }
+
     // ======= ROLES =======
 
     @GetMapping("/roles/system")

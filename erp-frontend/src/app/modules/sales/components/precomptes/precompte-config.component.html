@@ -1,6 +1,8 @@
 <div class="page-container">
-  <!-- Input file caché pour import -->
+<!-- Input file caché pour import -->
   <input #importEnlInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportEnlFileChange($event)" />
+  <input #importPcInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportPcFileChange($event)" />
+
 
   <div class="page-header">
     <div class="header-left">
@@ -12,11 +14,18 @@
     </div>
     <div class="header-right" style="display:flex;gap:8px;align-items:center">
       @if (activeTab === 'precomptes') {
+        <button class="btn-outline" (click)="downloadPcTemplate()">
+          <span class="material-icons">download</span> Modèle Excel
+        </button>
+        <button class="btn-import" (click)="triggerPcImport()" [disabled]="importPcLoading">
+          <span class="material-icons">upload_file</span> {{ importPcLoading ? 'Lecture...' : 'Importer Excel' }}
+        </button>
         <button class="btn-new" (click)="openNewPc()"><span class="material-icons">add</span> Nouveau précompte</button>
       } @else {
         <button class="btn-outline" (click)="downloadEnlTemplate()">
           <span class="material-icons">download</span> Modèle Excel
         </button>
+
         <button class="btn-import" (click)="triggerEnlImport()" [disabled]="importEnlLoading">
           <span class="material-icons">upload_file</span> {{ importEnlLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
@@ -122,13 +131,78 @@
 
 </div>
 
-<!-- ===== PRÉCOMPTE MODAL ===== -->
-@if (showPcModal) {
-  <div class="modal-overlay" (click.self)="showPcModal = false">
-    <div class="modal-box">
+<!-- ===== PRÉCOMPTES MODAL IMPORT EXCEL ===== -->
+@if (showImportPcModal) {
+  <div class="modal-overlay" (click)="closeImportPcModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:720px;position:relative">
+
+      @if (importPcLoading) {
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
+          <div class="spinner"></div>
+          <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
+          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importPcRows.length }} ligne(s) en cours de traitement</p>
+        </div>
+      }
+
       <div class="modal-header">
         <span class="material-icons">percent</span>
-        <h2>{{ editingPc ? 'Modifier précompte' : 'Nouveau précompte' }}</h2>
+        <h2>Aperçu import précomptes — {{ importPcRows.length }} ligne(s)</h2>
+        <button class="btn-close-modal" (click)="closeImportPcModal()"><span class="material-icons">close</span></button>
+      </div>
+
+      <div style="padding:0 16px 10px 16px">
+        <div style="font-size:12px;color:#6c757d;line-height:1.6">
+          Colonnes acceptées : <b>partner_id</b> (nom ou ID), <b>type_precompte</b> (sale / purchase / vente / achat), <b>taux_precompte</b>.
+          Le partenaire est résolu par <b>nom exact</b> dans la base de données.
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;max-height:50vh;padding:0 16px 16px 16px">
+        <table class="cfg-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Partenaire</th>
+              <th>Type</th>
+              <th class="text-right">Taux (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of importPcRows; track $index; let i=$index) {
+              <tr>
+                <td class="text-muted">{{ i+1 }}</td>
+                <td class="font-bold">{{ getPartnerFromRow(row) }}</td>
+                <td>
+                  <span class="badge"
+                    [class.badge-sale]="['sale','vente','ventes'].includes(getTypeFromRow(row).toLowerCase())"
+                    [class.badge-purchase]="['purchase','achat','achats'].includes(getTypeFromRow(row).toLowerCase())">
+                    {{ getTypeFromRow(row) }}
+                  </span>
+                </td>
+                <td class="text-right font-mono">{{ getTauxFromRow(row) }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeImportPcModal()">Annuler</button>
+        <button class="btn-save" (click)="confirmImportPc()" [disabled]="importPcLoading">
+          <span class="material-icons">check_circle</span> Confirmer l'import ({{ importPcRows.length }} lignes)
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===== PRÉCOMPTE MODAL CRÉATION / ÉDITION ===== -->
+@if (showPcModal) {
+  <div class="modal-overlay" (click)="showPcModal = false">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:480px">
+      <div class="modal-header">
+        <span class="material-icons">percent</span>
+        <h2>{{ editingPc ? 'Modifier le précompte' : 'Nouveau précompte' }}</h2>
         <button class="btn-close-modal" (click)="showPcModal = false"><span class="material-icons">close</span></button>
       </div>
       @if (pcError) { <div class="modal-error"><span class="material-icons">error</span>{{ pcError }}</div> }
@@ -158,7 +232,7 @@
       <div class="modal-footer">
         <button class="btn-cancel" (click)="showPcModal = false">Annuler</button>
         <button class="btn-save" (click)="savePc()" [disabled]="savingPc">
-          <span class="material-icons">save</span> Enregistrer
+          <span class="material-icons">save</span> {{ savingPc ? 'Enregistrement...' : 'Enregistrer' }}
         </button>
       </div>
     </div>
@@ -203,7 +277,7 @@
           Il est comptabilisé dans un compte distinct (ex. surcharge logistique).
         </p>
         <div class="lines-header">
-          <span class="lines-title">Suppléments par client</span>
+          <span class="lines-title">Tarifs clients spécifiques</span>
           <button class="btn-add-line" (click)="addEnlClient()"><span class="material-icons">add</span> Ajouter client</button>
         </div>
         @if (enlForm.clients && enlForm.clients.length > 0) {
@@ -211,9 +285,7 @@
             <thead>
               <tr>
                 <th>Client</th>
-                <th class="ar">Supplément (FCFA)</th>
-                <th class="ar">Total facturé</th>
-                <th>Compte supplément</th>
+                <th class="ar">Tarif client (FCFA/unité)</th>
                 <th></th>
               </tr>
             </thead>
@@ -227,18 +299,13 @@
                     </select>
                   </td>
                   <td class="ar"><input type="number" class="inp ar" [(ngModel)]="ec.montant" min="0" /></td>
-                  <td class="ar amt">{{ (enlForm.montantFixe || 0) + (ec.montant || 0) | number:'1.0-0' }}</td>
-                  <td>
-                    <input type="text" class="inp" [(ngModel)]="ec.supplementAccountCode"
-                      placeholder="ex: 6134" style="width:90px" />
-                  </td>
                   <td><button class="btn-del" (click)="removeEnlClient(i)"><span class="material-icons">delete</span></button></td>
                 </tr>
               }
             </tbody>
           </table>
         } @else {
-          <p class="text-muted" style="font-size:13px; padding: 8px 0;">Aucun supplément — le montant fixe s'applique uniformément.</p>
+          <p class="text-muted" style="font-size:13px; padding: 8px 0;">Aucun tarif spécifique — le tarif de base s'applique uniformément.</p>
         }
       </div>
       <div class="modal-footer">
@@ -254,7 +321,14 @@
 <!-- Modal Import Enlèvements Excel -->
 @if (showImportEnlModal) {
   <div class="modal-overlay" (click)="closeImportEnlModal()">
-    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:650px">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:650px;position:relative">
+      @if (importEnlLoading) {
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
+          <div class="spinner"></div>
+          <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
+          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importEnlRows.length }} ligne(s) en cours de traitement</p>
+        </div>
+      }
       <div class="modal-header">
         <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span>
           Aperçu import enlèvements ({{ importEnlRows.length }} ligne(s))

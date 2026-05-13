@@ -9,10 +9,10 @@
         <span class="material-icons">download</span>
         {{ downloadingTemplate ? 'Téléchargement...' : 'Modèle Excel' }}
       </button>
-      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel">
+      <label class="btn btn-outline" [class.loading]="importing || previewLoading" title="Importer depuis Excel">
         <span class="material-icons">upload_file</span>
-        {{ importing ? 'Import...' : 'Importer' }}
-        <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing">
+        {{ importing ? 'Import...' : previewLoading ? 'Lecture...' : 'Importer' }}
+        <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing || previewLoading">
       </label>
       <button class="btn btn-primary" (click)="openCreate()">
         <span class="material-icons">add</span>
@@ -128,6 +128,72 @@
     }
   </div>
 </div>
+
+<!-- MODALE PRÉVISUALISATION IMPORT -->
+@if (showPreview) {
+  <div class="modal-overlay" (click)="closePreview()">
+    <div class="modal" style="max-width:900px;width:95%" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span class="material-icons">account_tree</span>
+        <div>
+          <h3>Aperçu — Plan Comptable</h3>
+          <p style="margin:0;font-size:13px;color:#6c757d">
+            {{ previewRows.length }} ligne(s)
+            @if (previewRows.length === PREVIEW_MAX) { <span style="color:#ff9800">(limité à {{ PREVIEW_MAX }})</span> }
+          </p>
+        </div>
+        <button class="modal-close" (click)="closePreview()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding:0 16px 8px">
+        <!-- Colonnes détectées -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">
+          <span style="font-size:12px;color:#6c757d;font-weight:600">Colonnes détectées :</span>
+          @for (h of previewHeaders; track h) {
+            <span style="padding:2px 8px;border-radius:12px;font-size:11px;"
+                  [style.background]="isActiveCol(h) ? '#d4edda' : '#f1f3f5'"
+                  [style.color]="isActiveCol(h) ? '#155724' : '#6c757d'">{{ h }}</span>
+          }
+        </div>
+
+        <!-- Tableau -->
+        <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+          <table class="table-erp" style="font-size:13px">
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                @for (col of previewCols; track col.key) {
+                  <th>{{ col.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of previewRows; track $index; let i = $index) {
+                <tr>
+                  <td style="color:#6c757d">{{ i + 1 }}</td>
+                  @for (col of previewCols; track col.key) {
+                    <td>{{ getCellValue(row, col) || '—' }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="closePreview()">Annuler</button>
+        <button class="btn btn-primary" (click)="confirmImport()">
+          <span class="material-icons">check_circle</span>
+          Confirmer l'import ({{ previewRows.length }} ligne{{ previewRows.length > 1 ? 's' : '' }})
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- MODAL -->
 @if (showModal) {

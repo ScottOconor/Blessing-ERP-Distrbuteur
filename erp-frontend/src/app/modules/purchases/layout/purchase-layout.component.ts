@@ -15,47 +15,55 @@ export class PurchaseLayoutComponent implements OnInit {
   userInitials = '';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  navItems: any[] = [];
 
   get isCentralized() { return this.authService.isCentralized(); }
   get companies() { return this.authService.getSession()?.companies ?? []; }
   get activeCompany() { return this.authService.getActiveCompany(); }
-
-  navItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/purchases/dashboard' },
-    {
-      id: 'orders',
-      label: 'Commandes',
-      icon: 'shopping_cart',
-      children: [
-        { label: 'Toutes les commandes', icon: 'list', route: '/purchases/orders' },
-        { label: 'Nouvelle commande', icon: 'add_circle', route: '/purchases/orders/new' }
-      ]
-    },
-    {
-      id: 'invoices',
-      label: 'Facturation',
-      icon: 'receipt_long',
-      children: [
-        { label: 'Factures fournisseurs', icon: 'receipt_long', route: '/purchases/invoices' },
-        { label: 'Avoirs fournisseurs', icon: 'undo', route: '/purchases/avoirs' }
-      ]
-    },
-    { id: 'suppliers', label: 'Fournisseurs', icon: 'store', route: '/purchases/suppliers' },
-    {
-      id: 'commercial',
-      label: 'Commercial',
-      icon: 'local_offer',
-      children: [
-        { label: 'Remises fournisseurs', icon: 'discount', route: '/purchases/remises' }
-      ]
-    }
-  ];
 
   constructor(private authService: AuthService, public router: Router) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
     this.userInitials = this.authService.getUserInitials();
+    this.navItems = this.buildNavItems();
+  }
+
+  private can(resource: string, action = 'VIEW'): boolean {
+    return this.authService.hasPermission('ACHATS', resource, action);
+  }
+
+  private buildNavItems(): any[] {
+    const anyAchats = this.authService.hasAnyModulePermission('ACHATS');
+    const items: any[] = [];
+
+    if (anyAchats) {
+      items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/purchases/dashboard' });
+    }
+
+    const orderChildren: any[] = [];
+    if (this.can('BONS_COMMANDE', 'VIEW'))   orderChildren.push({ label: 'Toutes les commandes', icon: 'list',       route: '/purchases/orders' });
+    if (this.can('BONS_COMMANDE', 'CREATE')) orderChildren.push({ label: 'Nouvelle commande',    icon: 'add_circle', route: '/purchases/orders/new' });
+    if (orderChildren.length)
+      items.push({ id: 'orders', label: 'Commandes', icon: 'shopping_cart', children: orderChildren });
+
+    const invoiceChildren: any[] = [];
+    if (this.can('FACTURES', 'VIEW')) invoiceChildren.push({ label: 'Factures fournisseurs', icon: 'receipt_long', route: '/purchases/invoices' });
+    if (this.can('FACTURES', 'VIEW')) invoiceChildren.push({ label: 'Avoirs fournisseurs',   icon: 'undo',         route: '/purchases/avoirs' });
+    if (invoiceChildren.length)
+      items.push({ id: 'invoices', label: 'Facturation', icon: 'receipt_long', children: invoiceChildren });
+
+    if (this.can('FOURNISSEURS', 'VIEW'))
+      items.push({ id: 'suppliers', label: 'Fournisseurs', icon: 'store', route: '/purchases/suppliers' });
+
+    if (anyAchats) {
+      items.push({
+        id: 'commercial', label: 'Commercial', icon: 'local_offer',
+        children: [{ label: 'Remises fournisseurs', icon: 'discount', route: '/purchases/remises' }]
+      });
+    }
+
+    return items;
   }
 
   toggleDropdown(id: string): void {

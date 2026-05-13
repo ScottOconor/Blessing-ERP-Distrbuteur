@@ -110,29 +110,31 @@
     @if (loadingBrasseries) {
       <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
     } @else {
-      @for (qDef of QUARTERS; track qDef.q) {
-        @let qKey = 'Q' + qDef.q + '-' + currentYear;
-        @let qGroup = brasseriesByQuarter.find(g => g.quarter === qDef.q && g.year === currentYear);
+      @for (qg of brasseriesByQuarter; track $index) {
+        @let qKey = 'Q' + qg.quarter + '-' + qg.year;
+        @let qLabel = QUARTERS.find(q => q.q === qg.quarter)?.label ?? '';
         <div class="quarter-card">
           <div class="quarter-header" (click)="toggleQuarter(qKey)">
             <div class="quarter-title">
               <span class="material-icons quarter-icon">calendar_today</span>
-              <strong>Trimestre {{ qDef.q }} {{ currentYear }}</strong>
-              <span class="quarter-sub">{{ qDef.label }}</span>
-              @if (qGroup) {
-                <span class="badge-count">{{ qGroup.partners.length }} client(s)</span>
-                <span class="quarter-total">{{ qGroup.totalAmount | number:'1.0-2' }} FCFA</span>
+              <strong>Trimestre {{ qg.quarter }} {{ qg.year }}</strong>
+              <span class="quarter-sub">{{ qLabel }}</span>
+              @if (qg.partners.length > 0) {
+                <span class="badge-count">{{ qg.partners.length }} client(s)</span>
+                <span class="quarter-total">{{ qg.totalAmount | number:'1.0-2' }} FCFA</span>
               }
             </div>
             <div class="quarter-actions" (click)="$event.stopPropagation()">
-              <button class="btn-generate"
-                [disabled]="generatingQuarter === qKey"
-                (click)="generateQuarter(qDef.q)">
-                <span class="material-icons" style="font-size:16px">
-                  {{ generatingQuarter === qKey ? 'hourglass_empty' : 'autorenew' }}
-                </span>
-                {{ generatingQuarter === qKey ? 'Génération…' : 'Générer ristournes' }}
-              </button>
+              @if (qg.year === currentYear) {
+                <button class="btn-generate"
+                  [disabled]="generatingQuarter === qKey"
+                  (click)="generateQuarter(qg.quarter)">
+                  <span class="material-icons" style="font-size:16px">
+                    {{ generatingQuarter === qKey ? 'hourglass_empty' : 'autorenew' }}
+                  </span>
+                  {{ generatingQuarter === qKey ? 'Génération…' : 'Générer ristournes' }}
+                </button>
+              }
               <span class="material-icons expand-icon">
                 {{ expandedQuarters.has(qKey) ? 'expand_less' : 'expand_more' }}
               </span>
@@ -141,10 +143,10 @@
 
           @if (expandedQuarters.has(qKey)) {
             <div class="quarter-body">
-              @if (!qGroup || qGroup.partners.length === 0) {
+              @if (qg.partners.length === 0) {
                 <div class="empty-quarter">Aucun règlement pour ce trimestre.</div>
               } @else {
-                @for (pg of qGroup.partners; track pg.partnerId) {
+                @for (pg of qg.partners; track pg.partnerId) {
                   @let partnerKey = qKey + '-' + pg.partnerId;
                   <div class="partner-row" (click)="toggleBrasseriePartner(partnerKey)">
                     <span class="material-icons" style="font-size:16px;color:#666">
@@ -603,7 +605,14 @@
 <!-- Modal Import Ristournes Excel -->
 @if (showImportModal) {
   <div class="modal-overlay" (click)="closeImportModal()">
-    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:750px">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:750px;position:relative">
+      @if (importLoading) {
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
+          <div class="spinner"></div>
+          <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
+          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importRows.length }} ligne(s) en cours de traitement</p>
+        </div>
+      }
       <div class="modal-header">
         <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span>
           Aperçu import ristournes ({{ importRows.length }} ligne(s))

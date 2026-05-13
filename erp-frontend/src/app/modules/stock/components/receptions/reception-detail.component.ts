@@ -67,14 +67,13 @@ export class ReceptionDetailComponent implements OnInit {
       this.products = products.filter(p => p.type === 'product' || p.type === 'consu');
 
       if (this.isNew) {
+        this.scheduledDate = new Date().toISOString().split('T')[0];
         const defaultType = this.pickingTypes[0];
-        if (defaultType) {
-          this.selectedTypeId = defaultType.id!;
-          this.selectedSrcId = defaultType.defaultLocationSrcId!;
-          this.selectedDestId = defaultType.defaultLocationDestId!;
-        }
-        this.scheduledDate = new Date().toISOString().slice(0, 10);
-        this.addLine();
+        if (defaultType) this.selectedTypeId = defaultType.id!;
+        const supplier = locations.find(l => l.usage === 'supplier');
+        const stock = locations.find(l => l.usage === 'internal');
+        if (supplier) this.selectedSrcId = supplier.id!;
+        if (stock) this.selectedDestId = stock.id!;
       } else {
         this.loadPicking(Number(id));
       }

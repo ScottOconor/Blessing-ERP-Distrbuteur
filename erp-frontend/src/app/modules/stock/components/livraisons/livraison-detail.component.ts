@@ -5,11 +5,12 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { StockService, StockPicking, StockPickingType, StockLocation, Product } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PrintPreviewComponent } from '../../../../shared/components/print-preview/print-preview.component';
 
 @Component({
   selector: 'app-livraison-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PrintPreviewComponent],
   templateUrl: './livraison-detail.component.html',
   styleUrl: './livraison-detail.component.scss'
 })
@@ -35,6 +36,7 @@ export class LivraisonDetailComponent implements OnInit {
   scheduledDate = '';
 
   lines: Array<{ productId: number | null; qtyDemanded: number; qtyDone: number; priceUnit: number; uomName: string; availableQty: number }> = [];
+  showPrintModal = false;
   private companyId!: number;
 
   constructor(
@@ -108,6 +110,10 @@ export class LivraisonDetailComponent implements OnInit {
       });
     }
   }
+
+  get printCompanyName(): string { return this.authService.getActiveCompany()?.name ?? ''; }
+  openPrint(): void  { this.showPrintModal = true; }
+  closePrint(): void { this.showPrintModal = false; }
 
   get isDraft(): boolean { return !this.picking || this.picking.state === 'draft'; }
   get isDone(): boolean { return this.picking?.state === 'done'; }

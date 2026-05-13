@@ -39,6 +39,9 @@ export class WarehouseListComponent implements OnInit {
   importLoading = false;
 
   private companyId!: number;
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
 
   constructor(
     private stockService: StockService,
@@ -48,6 +51,9 @@ export class WarehouseListComponent implements OnInit {
 
   ngOnInit(): void {
     this.companyId = this.authService.getCompanyId();
+    this.canCreate = this.authService.hasPermission('STOCK', 'INVENTAIRE', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('STOCK', 'INVENTAIRE', 'EDIT');
+    this.canDelete = this.authService.hasPermission('STOCK', 'INVENTAIRE', 'DELETE');
     this.load();
     this.accountingService.getJournals(this.companyId).subscribe(j => {
       this.journals = j.filter(jj => jj.type === 'general' || (jj.code || '').toUpperCase() === 'STK');
@@ -152,6 +158,7 @@ export class WarehouseListComponent implements OnInit {
   closeImportModal(): void { this.showImportModal = false; this.importRows = []; }
 
   async confirmImport(): Promise<void> {
+    this.importLoading = true;
     let done = 0, errors = 0;
     for (const row of this.importRows) {
       const dto = {
@@ -165,6 +172,7 @@ export class WarehouseListComponent implements OnInit {
         done++;
       } catch { errors++; }
     }
+    this.importLoading = false;
     this.closeImportModal();
     this.load();
     this.showSuccessMsg(`Import terminé : ${done} créé(s), ${errors} erreur(s)`);

@@ -22,6 +22,11 @@
       <span class="material-icons">check_circle</span>{{ successMsg }}
     </div>
   }
+  @if (errorMsg) {
+    <div class="alert-error mb-3">
+      <span class="material-icons">error_outline</span>{{ errorMsg }}
+    </div>
+  }
 
   <div class="table-container">
     @if (loading) {
@@ -69,6 +74,11 @@
                 <button class="btn btn-ghost btn-sm" (click)="$event.stopPropagation(); openEdit(journal)" title="Modifier">
                   <span class="material-icons">edit</span>
                 </button>
+                @if (isSuperAdmin()) {
+                  <button class="btn btn-ghost btn-sm btn-danger-ghost" (click)="$event.stopPropagation(); deleteJournal(journal)" title="Supprimer">
+                    <span class="material-icons">delete</span>
+                  </button>
+                }
               </td>
             </tr>
           }

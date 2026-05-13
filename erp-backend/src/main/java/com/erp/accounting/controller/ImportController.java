@@ -104,14 +104,13 @@ public class ImportController {
     @PostMapping("/accounts")
     public ResponseEntity<ImportResult> importAccounts(
             @RequestParam MultipartFile file,
-            @RequestParam Long companyId,
-            @RequestParam(defaultValue = "false") boolean replace) {
+            @RequestParam Long companyId) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(
                     ImportResult.builder().message("Fichier vide").build());
         }
         try {
-            ImportResult result = importService.importAccounts(file, companyId, replace);
+            ImportResult result = importService.importAccounts(file, companyId, false);
             return ResponseEntity.ok(result);
         } catch (IOException e) {
             log.error("Erreur import plan comptable", e);
@@ -162,6 +161,55 @@ public class ImportController {
         }
     }
 
+    @GetMapping("/journals/template")
+    public ResponseEntity<byte[]> downloadJournalsTemplate() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = wb.createSheet("Journaux");
+
+            CellStyle headerStyle = wb.createCellStyle();
+            Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            Row header = sheet.createRow(0);
+            String[] cols = {"code", "name", "type", "default_account_id"};
+            for (int i = 0; i < cols.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(cols[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 7000);
+            }
+
+            Object[][] examples = {
+                {"VTE",  "Journal de Vente",           "sale",     "701100"},
+                {"ACH",  "Journal d'Achats",            "purchase", "601100"},
+                {"CAI",  "Caisse",                      "cash",     "571000"},
+                {"BQ",   "Banque",                      "bank",     "512000"},
+                {"OD",   "Opérations Diverses",         "general",  ""},
+            };
+            int rowIdx = 1;
+            for (Object[] ex : examples) {
+                Row row = sheet.createRow(rowIdx++);
+                for (int c = 0; c < ex.length; c++) {
+                    row.createCell(c).setCellValue(ex[c].toString());
+                }
+            }
+
+            wb.write(out);
+            byte[] bytes = out.toByteArray();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_journaux.xlsx\"")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentLength(bytes.length)
+                    .body(bytes);
+        }
+    }
+
     /**
      * Import journals from Odoo account.journal Excel export.
      * REQUIRES plan comptable to be imported first.
@@ -179,6 +227,77 @@ public class ImportController {
             return ResponseEntity.ok(result);
         } catch (IOException e) {
             log.error("Erreur import journaux", e);
+            return ResponseEntity.internalServerError().body(
+                    ImportResult.builder().message("Erreur lecture fichier: " + e.getMessage()).build());
+        }
+    }
+
+    /**
+     * Download an Excel template for warehouse import (stock.warehouse).
+     */
+    @GetMapping("/warehouses/template")
+    public ResponseEntity<byte[]> downloadWarehousesTemplate() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = wb.createSheet("Entrepôts");
+
+            CellStyle headerStyle = wb.createCellStyle();
+            Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            Row header = sheet.createRow(0);
+            String[] cols = {"name", "code", "active"};
+            for (int i = 0; i < cols.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(cols[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 7000);
+            }
+
+            Object[][] examples = {
+                {"Entrepôt Principal", "WH",  "true"},
+                {"Entrepôt Secondaire", "WH2", "true"},
+                {"Dépôt Achat",        "DAC", "true"},
+            };
+            int rowIdx = 1;
+            for (Object[] ex : examples) {
+                Row row = sheet.createRow(rowIdx++);
+                for (int c = 0; c < ex.length; c++) {
+                    row.createCell(c).setCellValue(ex[c].toString());
+                }
+            }
+
+            wb.write(out);
+            byte[] bytes = out.toByteArray();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_entrepots.xlsx\"")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentLength(bytes.length)
+                    .body(bytes);
+        }
+    }
+
+    /**
+     * Import warehouses from Odoo stock.warehouse Excel export.
+     */
+    @PostMapping("/warehouses")
+    public ResponseEntity<ImportResult> importWarehouses(
+            @RequestParam MultipartFile file,
+            @RequestParam Long companyId) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ImportResult.builder().message("Fichier vide").build());
+        }
+        try {
+            ImportResult result = importService.importWarehouses(file, companyId);
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            log.error("Erreur import entrepôts", e);
             return ResponseEntity.internalServerError().body(
                     ImportResult.builder().message("Erreur lecture fichier: " + e.getMessage()).build());
         }

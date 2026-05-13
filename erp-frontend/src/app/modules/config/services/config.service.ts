@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from '../../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -38,6 +39,7 @@ export interface RoleInfo {
 
 export interface Permission {
   module: string;
+  resource: string;
   action: string;
 }
 
@@ -67,13 +69,55 @@ export interface CreateUserRequest {
   companyId?: number;
 }
 
+export interface GroupDashboardCompany {
+  companyId: number;
+  companyName: string;
+  sigle?: string;
+  caToday: number;
+  invoicesToday: number;
+  dueAmount: number;
+  caMonth: number;
+  invoicesMonth: number;
+}
+
+export interface GroupDashboard {
+  groupId: number;
+  groupName: string;
+  companies: GroupDashboardCompany[];
+  totalCAToday: number;
+  totalInvoicesToday: number;
+  totalDue: number;
+  totalCAMonth: number;
+}
+
 export const MODULES = ['VENTES', 'ACHATS', 'STOCK', 'COMPTABILITE', 'CONFIG'];
 export const ACTIONS = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'IMPORT', 'EXPORT'];
 export const SYSTEM_ROLE_CODES = ['SUPER_ADMIN', 'ADMIN', 'SUPER_AUDITEUR', 'AUDITEUR', 'CONTROLEUR'];
 
+export const RESOURCES: Record<string, string[]> = {
+  VENTES:       ['BONS_COMMANDE', 'FACTURES', 'CLIENTS', 'AVOIRS', 'RISTOURNES'],
+  ACHATS:       ['BONS_COMMANDE', 'FACTURES', 'FOURNISSEURS'],
+  STOCK:        ['PRODUITS', 'MOUVEMENTS', 'INVENTAIRE'],
+  COMPTABILITE: ['JOURNAUX', 'ECRITURES', 'RAPPORTS'],
+  CONFIG:       ['GROUPES', 'ENTREPRISES', 'UTILISATEURS', 'ROLES']
+};
+
+export const MODULE_LABELS: Record<string, string> = {
+  VENTES: 'Ventes', ACHATS: 'Achats', STOCK: 'Stock',
+  COMPTABILITE: 'Comptabilité', CONFIG: 'Configuration'
+};
+
+export const RESOURCE_LABELS: Record<string, string> = {
+  BONS_COMMANDE: 'Bons de commande', FACTURES: 'Factures', CLIENTS: 'Clients',
+  AVOIRS: 'Avoirs', RISTOURNES: 'Ristournes', FOURNISSEURS: 'Fournisseurs',
+  PRODUITS: 'Produits', MOUVEMENTS: 'Mouvements de stock', INVENTAIRE: 'Inventaire',
+  JOURNAUX: 'Journaux', ECRITURES: 'Ecritures comptables', RAPPORTS: 'Rapports',
+  GROUPES: 'Groupes', ENTREPRISES: 'Entreprises', UTILISATEURS: 'Utilisateurs', ROLES: 'Rôles'
+};
+
 @Injectable({ providedIn: 'root' })
 export class ConfigService {
-  private api = `http://${window.location.hostname}:8085/api/config`;
+  private api = `${environment.apiUrl}/api/config`;
 
   constructor(private http: HttpClient) {}
 
@@ -131,5 +175,13 @@ export class ConfigService {
   }
   toggleUserActive(id: number): Observable<void> {
     return this.http.post<void>(`${this.api}/users/${id}/toggle-active`, {});
+  }
+
+  getGroupDashboard(groupId: number): Observable<GroupDashboard> {
+    return this.http.get<GroupDashboard>(`${this.api}/groups/${groupId}/dashboard`);
+  }
+
+  getCompanyDashboard(companyId: number): Observable<GroupDashboard> {
+    return this.http.get<GroupDashboard>(`${this.api}/companies/${companyId}/dashboard`);
   }
 }

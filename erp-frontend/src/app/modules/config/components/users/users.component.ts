@@ -79,20 +79,22 @@ export class UsersComponent implements OnInit {
   }
 
   onGroupChange(): void {
-    if (this.filterGroupId) {
+    const gid = Number(this.filterGroupId);
+    if (gid) {
+      this.filterGroupId = gid;
       this.loadUsers();
-      this.loadCompanies(this.filterGroupId);
-      this.loadRoles(this.filterGroupId);
+      this.loadCompanies(gid);
+      this.loadRoles(gid);
     }
   }
 
   onRoleChange(): void {
-    const role = this.roles.find(r => r.id === this.form.roleId);
+    const role = this.roles.find(r => r.id === Number(this.form.roleId));
     this.selectedRole = role ?? null;
     this.isSystemRole = role ? SYSTEM_ROLE_CODES.includes(role.code ?? '') : false;
     if (this.isSystemRole) {
       this.form.companyId = undefined;
-      this.form.groupId = this.filterGroupId ?? undefined;
+      this.form.groupId = this.filterGroupId ? Number(this.filterGroupId) : undefined;
     } else {
       this.form.groupId = undefined;
     }
@@ -125,6 +127,8 @@ export class UsersComponent implements OnInit {
     if (!this.form.roleId) { this.errorMsg = 'Sélectionnez un rôle'; return; }
     if (!this.editingUser && !this.form.password) { this.errorMsg = 'Le mot de passe est requis'; return; }
     if (!this.editingUser && !this.form.username) { this.errorMsg = 'Le nom d\'utilisateur est requis'; return; }
+    if (this.isSystemRole && !this.form.groupId) { this.errorMsg = 'Le groupe est requis pour ce rôle'; return; }
+    if (!this.isSystemRole && !this.editingUser && !this.form.companyId) { this.errorMsg = 'Sélectionnez une entreprise'; return; }
 
     const obs = this.editingUser?.id
       ? this.configService.updateUser(this.editingUser.id, this.form)

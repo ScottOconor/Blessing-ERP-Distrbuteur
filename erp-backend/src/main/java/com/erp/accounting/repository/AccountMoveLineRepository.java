@@ -89,6 +89,15 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
            "WHERE l.account.id = :accountId AND l.move.state = 'posted'")
     BigDecimal sumCreditByAccount(@Param("accountId") Long accountId);
 
+    /** Même chose mais en excluant un move précis — utilisé pour calculer le solde AVANT une pièce existante */
+    @Query("SELECT COALESCE(SUM(l.debit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.id = :accountId AND l.move.state = 'posted' AND l.move.id <> :excludeMoveId")
+    BigDecimal sumDebitByAccountExcludingMove(@Param("accountId") Long accountId, @Param("excludeMoveId") Long excludeMoveId);
+
+    @Query("SELECT COALESCE(SUM(l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.id = :accountId AND l.move.state = 'posted' AND l.move.id <> :excludeMoveId")
+    BigDecimal sumCreditByAccountExcludingMove(@Param("accountId") Long accountId, @Param("excludeMoveId") Long excludeMoveId);
+
     @Query("SELECT l FROM AccountMoveLine l " +
            "WHERE l.company.id = :companyId " +
            "AND l.date BETWEEN :from AND :to " +
@@ -126,6 +135,51 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.date = :date AND l.move.state = 'posted'")
     List<AccountMoveLine> findPostedLinesByJournalAndDate(
             @Param("journalId") Long journalId,
+            @Param("date") LocalDate date);
+
+    /**
+     * Lignes de trésorerie d'un journal pour une date : uniquement les comptes
+     * dont internalType = 'liquidity' (571, 521...). Utilisé pour le solde journalier.
+     */
+    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.date = :date AND l.move.state = 'posted' AND l.account.internalType = 'liquidity'")
+    List<AccountMoveLine> findTreasuryLinesByJournalAndDate(
+            @Param("journalId") Long journalId,
+            @Param("date") LocalDate date);
+
+    /** Toutes les lignes de trésorerie (internalType='liquidity') d'un journal, triées par date ASC */
+    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.move.state = 'posted' AND l.account.internalType = 'liquidity' ORDER BY l.date ASC")
+    List<AccountMoveLine> findAllTreasuryLinesByJournal(@Param("journalId") Long journalId);
+
+    /**
+     * Solde cumulatif de trésorerie d'un journal AVANT une date donnée.
+     * SUM(débit - crédit) sur les comptes liquidity — sert d'openingBalance fiable,
+     * indépendant des enregistrements JournalDailyBalance potentiellement corrompus.
+     */
+    @Query("SELECT COALESCE(SUM(l.debit - l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.journal.id = :journalId AND l.date < :date " +
+           "AND l.move.state = 'posted' AND l.account.internalType = 'liquidity'")
+    BigDecimal sumTreasuryBalanceBeforeDate(
+            @Param("journalId") Long journalId,
+            @Param("date") LocalDate date);
+
+    // ── Variantes par ID de compte (robustes si internalType mal configuré) ──
+
+    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.account.id = :accountId AND l.date = :date AND l.move.state = 'posted'")
+    List<AccountMoveLine> findLinesByJournalAccountAndDate(
+            @Param("journalId") Long journalId,
+            @Param("accountId") Long accountId,
+            @Param("date") LocalDate date);
+
+    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.account.id = :accountId AND l.move.state = 'posted' ORDER BY l.date ASC")
+    List<AccountMoveLine> findAllLinesByJournalAndAccount(
+            @Param("journalId") Long journalId,
+            @Param("accountId") Long accountId);
+
+    @Query("SELECT COALESCE(SUM(l.debit - l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.journal.id = :journalId AND l.account.id = :accountId AND l.date < :date AND l.move.state = 'posted'")
+    BigDecimal sumBalanceByJournalAndAccountBeforeDate(
+            @Param("journalId") Long journalId,
+            @Param("accountId") Long accountId,
             @Param("date") LocalDate date);
 
     /**

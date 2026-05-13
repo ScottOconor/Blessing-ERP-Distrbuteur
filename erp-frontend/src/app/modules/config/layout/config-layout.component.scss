@@ -72,6 +72,15 @@
   }
 }
 
+.btn-group-home {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.1); color: #fff; border: none;
+  border-radius: 8px; padding: 6px 12px; font-size: 13px;
+  font-weight: 500; cursor: pointer;
+  .material-icons { font-size: 18px; }
+  &:hover { background: rgba(255,255,255,.2); }
+}
+
 .btn-logout {
   background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer;
   padding: 4px; border-radius: 4px; display: flex; align-items: center;

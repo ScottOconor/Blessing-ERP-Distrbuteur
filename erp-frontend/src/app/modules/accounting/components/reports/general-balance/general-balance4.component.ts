@@ -95,7 +95,8 @@ export class GeneralBalance4Component implements OnInit {
       this.lines, this.totals,
       this.totalDebit, this.totalCredit,
       this.totalFinalDebit, this.totalFinalCredit,
-      this.dateFrom, this.dateTo
+      this.dateFrom, this.dateTo,
+      this.authService.getActiveCompany()?.name
     );
   }
 

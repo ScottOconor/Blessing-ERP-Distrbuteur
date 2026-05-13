@@ -17,6 +17,7 @@ public class RoleDTO {
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class PermissionDTO {
         private String module;
+        private String resource;
         private String action;
     }
 }

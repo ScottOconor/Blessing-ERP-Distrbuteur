@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/modules/accounting/components/analytic/analytic-accounts.component.scss"],
-  "sourcesContent": [".empty-state {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  padding: 60px 20px;\n  color: #aaa;\n\n  .material-icons {\n    font-size: 48px;\n    margin-bottom: 12px;\n    color: #ddd;\n  }\n}\n"],
-  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,kBAAA;AACA,eAAA;AACA,WAAA,KAAA;AACA,SAAA;;AAEA,CAPF,YAOE,CAAA;AACE,aAAA;AACA,iBAAA;AACA,SAAA;;",
-  "names": []
-}

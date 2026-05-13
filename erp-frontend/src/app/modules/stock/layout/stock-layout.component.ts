@@ -15,61 +15,76 @@ export class StockLayoutComponent implements OnInit {
   userInitials = '';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  navItems: any[] = [];
 
   get isCentralized() { return this.authService.isCentralized(); }
   get companies() { return this.authService.getSession()?.companies ?? []; }
   get activeCompany() { return this.authService.getActiveCompany(); }
-
-  navItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/stock/dashboard' },
-    {
-      id: 'operations',
-      label: 'Opérations',
-      icon: 'swap_horiz',
-      children: [
-        { label: 'Réceptions fournisseurs', icon: 'move_to_inbox', route: '/stock/receptions' },
-        { label: 'Ajustements de stock', icon: 'tune', route: '/stock/adjustments' },
-        { label: 'Transferts inter-dépôts', icon: 'compare_arrows', route: '/stock/transferts' },
-      ]
-    },
-    {
-      id: 'expeditions',
-      label: 'Expéditions',
-      icon: 'local_shipping',
-      children: [
-        { label: 'Expéditions inter-agences', icon: 'send', route: '/stock/expeditions' },
-        { label: 'Agences distantes', icon: 'business', route: '/stock/agences' },
-      ]
-    },
-    {
-      id: 'analyse',
-      label: 'Analyse',
-      icon: 'analytics',
-      children: [
-        { label: 'Rapport de stock', icon: 'inventory', route: '/stock/analyse/rapport' },
-        { label: 'Mouvements de produits', icon: 'sync_alt', route: '/stock/analyse/mouvements' },
-        { label: 'Valorisation de stock', icon: 'price_check', route: '/stock/analyse/valorisation' },
-      ]
-    },
-    {
-      id: 'config',
-      label: 'Configuration',
-      icon: 'settings',
-      children: [
-        { label: 'Articles', icon: 'category', route: '/stock/products' },
-        { label: 'Catégories d\'articles', icon: 'folder', route: '/stock/categories' },
-        { label: 'Entrepôts', icon: 'warehouse', route: '/stock/warehouses' },
-        { label: 'Emplacements', icon: 'place', route: '/stock/locations' },
-        { label: 'Types d\'opérations', icon: 'swap_horiz', route: '/stock/picking-types' },
-      ]
-    },
-  ];
 
   constructor(private authService: AuthService, public router: Router) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
     this.userInitials = this.authService.getUserInitials();
+    this.navItems = this.buildNavItems();
+  }
+
+  private can(resource: string, action = 'VIEW'): boolean {
+    return this.authService.hasPermission('STOCK', resource, action);
+  }
+
+  private buildNavItems(): any[] {
+    const anyStock = this.authService.hasAnyModulePermission('STOCK');
+    const items: any[] = [];
+
+    if (anyStock) {
+      items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/stock/dashboard' });
+    }
+
+    if (this.can('MOUVEMENTS')) {
+      items.push({
+        id: 'operations', label: 'Opérations', icon: 'swap_horiz',
+        children: [
+          { label: 'Réceptions fournisseurs', icon: 'move_to_inbox', route: '/stock/receptions' },
+          { label: 'Ajustements de stock',    icon: 'tune',          route: '/stock/adjustments' },
+          { label: 'Transferts inter-dépôts', icon: 'compare_arrows',route: '/stock/transferts' }
+        ]
+      });
+      items.push({
+        id: 'expeditions', label: 'Expéditions', icon: 'local_shipping',
+        children: [
+          { label: 'Expéditions inter-agences', icon: 'send',     route: '/stock/expeditions' },
+          { label: 'Agences distantes',          icon: 'business', route: '/stock/agences' }
+        ]
+      });
+    }
+
+    if (this.can('MOUVEMENTS') || this.can('INVENTAIRE')) {
+      items.push({
+        id: 'analyse', label: 'Analyse', icon: 'analytics',
+        children: [
+          { label: 'Rapport de stock',       icon: 'inventory',  route: '/stock/analyse/rapport' },
+          { label: 'Analyse des mouvements', icon: 'bar_chart',  route: '/stock/analyse/mouvements-analyse' },
+          { label: 'Mouvements de produits', icon: 'sync_alt',   route: '/stock/analyse/mouvements' },
+          { label: 'Valorisation de stock',  icon: 'price_check',route: '/stock/analyse/valorisation' }
+        ]
+      });
+    }
+
+    const configChildren: any[] = [];
+    if (this.can('PRODUITS')) {
+      configChildren.push({ label: 'Articles',           icon: 'category',   route: '/stock/products' });
+      configChildren.push({ label: "Catégories d'articles", icon: 'folder', route: '/stock/categories' });
+    }
+    if (this.can('INVENTAIRE')) {
+      configChildren.push({ label: 'Entrepôts',          icon: 'warehouse',  route: '/stock/warehouses' });
+      configChildren.push({ label: 'Emplacements',       icon: 'place',      route: '/stock/locations' });
+      configChildren.push({ label: "Types d'opérations", icon: 'swap_horiz', route: '/stock/picking-types' });
+    }
+    if (configChildren.length)
+      items.push({ id: 'config', label: 'Configuration', icon: 'settings', children: configChildren });
+
+    return items;
   }
 
   toggleDropdown(id: string): void {

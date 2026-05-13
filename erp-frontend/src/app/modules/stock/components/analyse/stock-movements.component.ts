@@ -31,7 +31,7 @@ export class StockMovementsComponent implements OnInit {
   load(): void {
     this.loading = true;
     const cid = this.authService.getCompanyId();
-    this.stockService.getMovements(cid, this.filterProductId ?? undefined, this.limit).subscribe({
+    this.stockService.getMovements(cid, { productId: this.filterProductId ?? undefined, limit: this.limit }).subscribe({
       next: (data) => {
         this.movements = data;
         this.applyFilter();

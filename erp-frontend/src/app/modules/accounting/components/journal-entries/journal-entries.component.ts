@@ -20,10 +20,12 @@ export class JournalEntriesComponent implements OnInit {
   loading = false;
   confirmCancelId: number | null = null;
 
+  private static today(): string { return new Date().toISOString().split('T')[0]; }
+
   filters = {
     journalId: '',
-    dateFrom: '',
-    dateTo: '',
+    dateFrom: JournalEntriesComponent.today(),
+    dateTo: JournalEntriesComponent.today(),
     state: ''
   };
 
@@ -66,7 +68,8 @@ export class JournalEntriesComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.filters = { journalId: '', dateFrom: '', dateTo: '', state: '' };
+    const today = JournalEntriesComponent.today();
+    this.filters = { journalId: '', dateFrom: today, dateTo: today, state: '' };
     this.loadMoves();
   }
 

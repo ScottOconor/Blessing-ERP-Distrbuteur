@@ -53,4 +53,28 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
            "AND i.type = 'credit_note' AND i.state = 'posted' AND i.montantDu > 0")
     java.math.BigDecimal sumAvailableCredits(@Param("partnerId") Long partnerId,
                                              @Param("companyId") Long companyId);
+
+    // ======= GROUP DASHBOARD STATS =======
+
+    @Query("SELECT i.company.id, COUNT(i), COALESCE(SUM(i.totalTTC), 0) " +
+           "FROM SalesInvoice i WHERE i.company.id IN :companyIds " +
+           "AND i.state IN ('posted','paid') AND i.type = 'invoice' AND i.date = :today " +
+           "GROUP BY i.company.id")
+    List<Object[]> todayStatsByCompanies(@Param("companyIds") List<Long> companyIds,
+                                         @Param("today") LocalDate today);
+
+    @Query("SELECT i.company.id, COALESCE(SUM(i.montantDu), 0) " +
+           "FROM SalesInvoice i WHERE i.company.id IN :companyIds " +
+           "AND i.state = 'posted' AND i.type = 'invoice' " +
+           "GROUP BY i.company.id")
+    List<Object[]> totalDueByCompanies(@Param("companyIds") List<Long> companyIds);
+
+    @Query("SELECT i.company.id, COALESCE(SUM(i.totalTTC), 0), COUNT(i) " +
+           "FROM SalesInvoice i WHERE i.company.id IN :companyIds " +
+           "AND i.state IN ('posted','paid') AND i.type = 'invoice' " +
+           "AND YEAR(i.date) = :year AND MONTH(i.date) = :month " +
+           "GROUP BY i.company.id")
+    List<Object[]> monthStatsByCompanies(@Param("companyIds") List<Long> companyIds,
+                                          @Param("year") int year,
+                                          @Param("month") int month);
 }

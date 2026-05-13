@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { Permission } from '../../modules/config/services/config.service';
 
 export interface AuthSession {
   token: string;
@@ -16,12 +18,13 @@ export interface AuthSession {
   groupName?: string;
   companies?: { id: number; name: string; sigle: string }[];
   mustChangePassword: boolean;
+  /** Permissions granulaires pour les rôles custom */
+  permissions?: Permission[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = `http://${window.location.hostname}:8085/api/auth`;
-  // private apiUrl = `https://api.kairosiinovationtechnologies.online/api/auth`;
+  private apiUrl = `${environment.apiUrl}/api/auth`;
   private SESSION_KEY = 'erp_session';
   private ACTIVE_COMPANY_KEY = 'erp_active_company';
 
@@ -99,6 +102,27 @@ export class AuthService {
   canImport(): boolean { return ['SUPER_ADMIN','ADMIN','SUPER_AUDITEUR','AUDITEUR'].includes(this.getRoleCode()); }
   canManageConfig(): boolean { return ['SUPER_ADMIN','ADMIN','SUPER_AUDITEUR'].includes(this.getRoleCode()); }
   canManageUsers(): boolean { return ['SUPER_ADMIN','ADMIN'].includes(this.getRoleCode()); }
+
+  /**
+   * Vérifie si l'utilisateur a accès à une ressource précise d'un module.
+   * Les rôles système centralisés ont toujours accès.
+   */
+  hasPermission(module: string, resource: string, action: string): boolean {
+    const session = this.getSession();
+    if (!session) return false;
+    if (session.centralized) return true;
+    return (session.permissions ?? []).some(
+      p => p.module === module && p.resource === resource && p.action === action
+    );
+  }
+
+  /** Vérifie si l'utilisateur a au moins une permission dans un module donné. */
+  hasAnyModulePermission(module: string): boolean {
+    const session = this.getSession();
+    if (!session) return false;
+    if (session.centralized) return true;
+    return (session.permissions ?? []).some(p => p.module === module);
+  }
 
   getUserDisplayName(): string {
     const s = this.getSession();

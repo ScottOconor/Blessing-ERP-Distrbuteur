@@ -7,6 +7,7 @@ import { StockService, ProductCategory } from '../../../stock/services/stock.ser
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { environment } from '../../../../../environments/environment';
 
 const RMS_HEADERS = ['Fournisseur', "Catégorie d'article", 'Type (brasserie/guinness)', 'Montant de la remise', 'Actif'];
 const RMS_SAMPLE  = ['Brasseries du Cameroun', 'Bières', 'brasserie', '500', 'Oui'];
@@ -53,7 +54,7 @@ export class RemiseListComponent implements OnInit {
   importLoading = false;
   @ViewChild('importInput') importInput!: ElementRef<HTMLInputElement>;
 
-  private apiBase = `http://${window.location.hostname}:8085/api`;
+  private apiBase = `${environment.apiUrl}/api`;
 
   constructor(
     private svc: RemiseService,
@@ -274,16 +275,18 @@ export class RemiseListComponent implements OnInit {
 
     if (rows.length === 0) { alert('Aucune ligne valide à importer.'); return; }
 
+    this.importLoading = true;
     this.http.post<{ imported: number }>(
       `${this.apiBase}/remises/import?companyId=${this.companyId}`,
       rows
     ).subscribe({
       next: (res) => {
+        this.importLoading = false;
         this.closeImportModal();
         this.loadRemises();
         alert(`${res.imported} remise(s) importée(s) avec succès.`);
       },
-      error: () => alert('Erreur lors de l\'import.')
+      error: () => { this.importLoading = false; alert('Erreur lors de l\'import.'); }
     });
   }
 

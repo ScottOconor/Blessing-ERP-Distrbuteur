@@ -160,7 +160,50 @@
   th { background: #f8f9fa; font-weight: 600; font-size: 12px; }
   .mod-cell { font-weight: 600; font-size: 13px; color: #2c3e50; }
   .text-center { text-align: center; }
+
+  // Colonnes de la nouvelle table 3-niveaux
+  .col-resource { min-width: 180px; text-align: left; }
+  .col-action   { min-width: 72px; text-align: center; }
+  .col-all      { min-width: 56px; text-align: center; }
+
+  // Ligne module (en-tête de groupe)
+  .module-header-row {
+    background: #f0f2f5;
+    td { border-top: 2px solid #dee2e6; }
+  }
+  .module-header-cell {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: #2c3e50; padding: 10px 14px;
+  }
+  .module-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #2c3e50; flex-shrink: 0;
+  }
+  .module-action-cell { background: #f0f2f5; }
+  .partial-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    background: #fff3cd; color: #856404; font-size: 10px; font-weight: 600;
+  }
+
+  // Ligne ressource
+  .resource-row {
+    background: white;
+    &:hover { background: #fafbfc; }
+  }
+  .res-cell {
+    padding-left: 24px; font-size: 13px; color: #495057;
+  }
+  .res-indent { color: #adb5bd; margin-right: 4px; font-size: 12px; }
 }
+
+// Section titre dans la modale
+.perm-section-title {
+  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+  color: #495057; margin-bottom: 12px;
+  .material-icons { font-size: 16px; color: #6c757d; }
+}
+
+// Modale large pour les permissions
+.modal-perm { width: 860px; }
 
 // Info banner
 .info-banner { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #cfe2ff; color: #084298; border-radius: 6px; font-size: 13px; .material-icons { font-size: 16px; } }

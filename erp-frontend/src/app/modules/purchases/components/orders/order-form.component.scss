@@ -19,6 +19,14 @@ $accent: #00A09D;
 }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
+.btn-print {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+  background: white; color: #495057; border: 1px solid #dee2e6; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif; transition: all 0.15s;
+  .material-icons { font-size: 16px; }
+  &:hover { background: #f8f9fa; border-color: #adb5bd; }
+}
+
 .btn-save, .btn-confirm, .btn-cancel-order {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s;

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface Ristourne {
   id?: number;
@@ -62,7 +63,7 @@ export interface QuarterGroup {
 @Injectable({ providedIn: 'root' })
 export class RistourneService {
 
-  private base = `http://${window.location.hostname}:8085/api/ristournes`;
+  private base = `${environment.apiUrl}/api/ristournes`;
 
   constructor(private http: HttpClient) {}
 
@@ -136,6 +137,17 @@ export class RistourneService {
     return this.http.post<{ generated: number; skipped: number; total: number }>(
       `${this.base}/paiements/generate-by-period`,
       { dateStart, dateEnd, companyId }
+    );
+  }
+
+  importBatch(
+    rows: Array<{ clientName: string; categoryName: string; typeRistourne: string; montantFixe: number }>,
+    companyId: number
+  ): Observable<Ristourne[]> {
+    return this.http.post<Ristourne[]>(
+      `${this.base}/import`,
+      rows,
+      { params: new HttpParams().set('companyId', companyId) }
     );
   }
 }

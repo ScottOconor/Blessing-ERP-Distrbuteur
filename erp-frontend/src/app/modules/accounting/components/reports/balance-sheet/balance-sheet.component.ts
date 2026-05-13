@@ -172,7 +172,8 @@ export class BalanceSheetComponent implements OnInit {
   exportPdf(): void {
     this.pdfExport.exportBilan(
       this.actifRows, this.passifRows,
-      this.totalActif, this.totalPassif, this.dateTo
+      this.totalActif, this.totalPassif, this.dateTo,
+      this.authService.getActiveCompany()?.name
     );
   }
 

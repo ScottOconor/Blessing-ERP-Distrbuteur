@@ -1,0 +1,559 @@
+<div class="pp-overlay" (click).self="close()">
+  <div class="pp-modal">
+
+    <!-- ── Header ── -->
+    <div class="pp-header">
+      <div class="pp-header-left">
+        <span class="material-icons">print</span>
+        <span>Aperçu avant impression — <strong>{{ docTitle }} {{ docRef }}</strong></span>
+      </div>
+      <button class="pp-close" (click)="close()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <!-- ── Format selector ── -->
+    @if (docType !== 'bon' && docType !== 'purchase_order' && docType !== 'sales_order') {
+      <div class="pp-formats">
+        @for (f of FORMATS; track f.value) {
+          <button class="fmt-btn" [class.active]="format === f.value" (click)="setFormat(f.value)">
+            <span class="material-icons">{{ f.icon }}</span>
+            {{ f.label }}
+          </button>
+        }
+      </div>
+    }
+    @if (docType === 'purchase_order' || docType === 'sales_order') {
+      <div class="pp-formats">
+        @for (f of FORMATS; track f.value) {
+          @if (f.value !== 'ticket') {
+            <button class="fmt-btn" [class.active]="format === f.value" (click)="setFormat(f.value)">
+              <span class="material-icons">{{ f.icon }}</span>
+              {{ f.label }}
+            </button>
+          }
+        }
+      </div>
+    }
+
+    <!-- ── Preview area ── -->
+    <div class="pp-body" [class.ticket-mode]="format === 'ticket'">
+      <div class="preview-page" [class.page-a4]="format==='a4'" [class.page-a5]="format==='a5'" [class.page-ticket]="format==='ticket' || docType==='bon' && format==='a4'">
+
+        <!-- ═══════════════ INVOICE A4 / A5 ═══════════════ -->
+        @if ((docType === 'invoice' || docType === 'avoir') && format !== 'ticket') {
+          <div class="inv-doc">
+            <div class="inv-header">
+              <div class="inv-company">
+                <div class="inv-co-name">{{ companyName }}</div>
+                @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
+              </div>
+              <div class="inv-title-block">
+                <div class="inv-doctype">{{ docTitle }}</div>
+                <div class="inv-ref">{{ invoice?.name }}</div>
+              </div>
+            </div>
+
+            <div class="inv-meta">
+              <div class="inv-meta-client">
+                <div class="inv-meta-lbl">CLIENT</div>
+                <div class="inv-meta-val">{{ invoice?.partnerName }}</div>
+                @if (invoice?.warehouseName) { <div class="inv-meta-sub">{{ invoice?.warehouseName }}</div> }
+              </div>
+              <div class="inv-meta-dates">
+                <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
+                @if (invoice?.dateEcheance) {
+                  <div class="inv-mrow"><span>Échéance</span><span>{{ fmtDate(invoice?.dateEcheance) }}</span></div>
+                }
+                @if (invoice?.salesOrderName) {
+                  <div class="inv-mrow"><span>Commande</span><span>{{ invoice?.salesOrderName }}</span></div>
+                }
+              </div>
+            </div>
+
+            <table class="inv-lines">
+              <thead>
+                <tr>
+                  <th>Code</th><th class="tdesc">Désignation</th>
+                  <th class="tr">Qté</th><th class="tr">P.U.HT</th>
+                  <th class="tr">Remise</th><th class="tr">Mnt HT</th>
+                  <th class="tr">TVA</th><th class="tr">Mnt TTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of salesLines; track $index) {
+                  <tr>
+                    <td>{{ l.productCode }}</td>
+                    <td class="tdesc">{{ l.description }}</td>
+                    <td class="tr">{{ fmt(l.quantity) }}</td>
+                    <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
+                    <td class="tr">{{ l.tauxRemise ? (l.tauxRemise + '%') : '—' }}</td>
+                    <td class="tr">{{ fmt(l.montantHT) }}</td>
+                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
+                    <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
+                  </tr>
+                }
+                @if (consigneLines.length) {
+                  <tr class="inv-section-hdr"><td colspan="8">CONSIGNES</td></tr>
+                  @for (l of consigneLines; track $index) {
+                    <tr class="inv-consigne">
+                      <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
+                      <td class="tr">{{ fmt(l.quantity) }}</td>
+                      <td colspan="3"></td><td></td>
+                      <td class="tr">{{ fmt(l.montantTTC) }}</td>
+                    </tr>
+                  }
+                }
+                @if (invoice?.ristourneDetails?.length) {
+                  <tr class="inv-section-hdr"><td colspan="8">RISTOURNES</td></tr>
+                  @for (r of invoice?.ristourneDetails; track $index) {
+                    <tr class="inv-rst">
+                      <td colspan="2">{{ r.categoryName }}</td>
+                      <td class="tr">{{ fmt(r.quantite) }}</td>
+                      <td class="tr">{{ fmt(r.montantUnitaire) }}</td>
+                      <td></td>
+                      <td class="tr">{{ fmt(r.montantTotal) }}</td>
+                      <td></td>
+                      <td class="tr inv-red">– {{ fmt(r.montantTotal) }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+
+            <div class="inv-totals-wrap">
+              <div class="inv-totals">
+                <div class="inv-trow"><span>Total HT</span><span>{{ fmt(invoice?.totalHT) }} F</span></div>
+                <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(invoice?.totalTVA) }} F</span></div>
+                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(invoice?.totalTTC) }} F</span></div>
+                @if (invoice?.totalPrecompte) {
+                  <div class="inv-trow inv-deduct"><span>Précompte (−)</span><span>{{ fmt(invoice?.totalPrecompte) }} F</span></div>
+                }
+                @if (invoice?.totalRistourne) {
+                  <div class="inv-trow inv-deduct"><span>Ristournes (−)</span><span>{{ fmt(invoice?.totalRistourne) }} F</span></div>
+                }
+                @if (invoice?.fraisEnlevementTTC) {
+                  <div class="inv-trow"><span>Frais d'enlèvement</span><span>{{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
+                }
+                <div class="inv-trow inv-net"><span>NET À PAYER</span><span>{{ fmt(invoice?.netAPayer ?? invoice?.totalTTC) }} F</span></div>
+                @if (invoice?.montantPaye) {
+                  <div class="inv-trow inv-paid"><span>Déjà payé</span><span>{{ fmt(invoice?.montantPaye) }} F</span></div>
+                }
+                @if (invoice?.montantDu) {
+                  <div class="inv-trow inv-due"><span>Reste dû</span><span>{{ fmt(invoice?.montantDu) }} F</span></div>
+                }
+              </div>
+            </div>
+
+            <div class="inv-lettres">
+              Arrêté à la somme de : <strong>{{ montantEnLettres(invoice?.netAPayer ?? invoice?.totalTTC) }}</strong>
+            </div>
+            <div class="inv-sigs">
+              <div class="inv-sig"><div class="inv-sig-lbl">Signature du livreur</div><div class="inv-sig-area"></div></div>
+              <div class="inv-sig"><div class="inv-sig-lbl">Cachet et signature du client</div><div class="inv-sig-area"></div></div>
+            </div>
+          </div>
+        }
+
+        <!-- ═══════════════ TICKET ═══════════════ -->
+        @if ((docType === 'invoice' || docType === 'avoir') && format === 'ticket') {
+          <div class="tkt">
+            <div class="tkt-co">{{ companyName }}</div>
+            @if (companyPhone) { <div class="tkt-phone">{{ companyPhone }}</div> }
+            <div class="tkt-sep"></div>
+            <div class="tkt-type">{{ docTitle }}</div>
+            <div class="tkt-ref">{{ invoice?.name }}</div>
+            <div class="tkt-sep"></div>
+            <div class="tkt-row"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
+            <div class="tkt-row"><span>Client</span><span>{{ invoice?.partnerName }}</span></div>
+            <div class="tkt-sep"></div>
+            @for (l of salesLines; track $index) {
+              <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+              <div class="tkt-prod-row">
+                <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaire) }}</span>
+                <span class="tbold">{{ fmt(l.montantTTC) }} F</span>
+              </div>
+            }
+            @if (consigneLines.length) {
+              <div class="tkt-sep-label">— Consignes —</div>
+              @for (l of consigneLines; track $index) {
+                <div class="tkt-prod-name">{{ l.description }}</div>
+                <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>{{ fmt(l.montantTTC) }} F</span></div>
+              }
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-row sm"><span>Total HT</span><span>{{ fmt(invoice?.totalHT) }} F</span></div>
+            <div class="tkt-row sm"><span>TVA 19,25%</span><span>{{ fmt(invoice?.totalTVA) }} F</span></div>
+            @if (invoice?.totalPrecompte) {
+              <div class="tkt-row sm"><span>Précompte</span><span>– {{ fmt(invoice?.totalPrecompte) }} F</span></div>
+            }
+            @if (invoice?.fraisEnlevementTTC) {
+              <div class="tkt-row sm"><span>Frais enlèv.</span><span>{{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-total"><span>NET À PAYER</span><span>{{ fmt(invoice?.netAPayer ?? invoice?.totalTTC) }} F</span></div>
+            @if (invoice?.montantDu) {
+              <div class="tkt-row sm"><span>Reste dû</span><span>{{ fmt(invoice?.montantDu) }} F</span></div>
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-lettres">{{ montantEnLettres(invoice?.netAPayer ?? invoice?.totalTTC) }}</div>
+            <div class="tkt-thanks">Merci de votre confiance !</div>
+            <div class="tkt-sig">Signature : ____________________</div>
+          </div>
+        }
+
+        <!-- ═══════════════ BON DE LIVRAISON ═══════════════ -->
+        @if (docType === 'bon') {
+          <div class="inv-doc">
+            <div class="inv-header">
+              <div class="inv-company">
+                <div class="inv-co-name">{{ companyName }}</div>
+                @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
+              </div>
+              <div class="inv-title-block">
+                <div class="inv-doctype">BON DE LIVRAISON</div>
+                <div class="inv-ref">{{ picking?.name }}</div>
+              </div>
+            </div>
+
+            <div class="inv-meta">
+              <div class="inv-meta-client">
+                <div class="inv-meta-lbl">CLIENT / DESTINATAIRE</div>
+                <div class="inv-meta-val">{{ picking?.partnerName || '—' }}</div>
+              </div>
+              <div class="inv-meta-dates">
+                <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(picking?.scheduledDate) }}</span></div>
+                @if (picking?.origin) { <div class="inv-mrow"><span>Origine</span><span>{{ picking?.origin }}</span></div> }
+                @if (picking?.notes)  { <div class="inv-mrow"><span>Notes</span><span>{{ picking?.notes }}</span></div>  }
+              </div>
+            </div>
+
+            <table class="inv-lines">
+              <thead>
+                <tr>
+                  <th class="tr">#</th><th>Code</th><th class="tdesc">Désignation</th>
+                  <th class="tr">Qté dem.</th><th class="tr">Qté livrée</th><th>U.M.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of pickingMoves; track $index) {
+                  <tr>
+                    <td class="tr tgray">{{ $index + 1 }}</td>
+                    <td>{{ m.productCode }}</td>
+                    <td class="tdesc">{{ m.productName }}</td>
+                    <td class="tr">{{ fmt(m.qtyDemanded) }}</td>
+                    <td class="tr tbold">{{ fmt(m.qtyDone ?? m.qtyDemanded) }}</td>
+                    <td>{{ m.uomName }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" class="tr inv-total-lbl">TOTAL COLIS LIVRÉS</td>
+                  <td class="tr inv-total-val">{{ fmt(totalPickingQty) }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="inv-sigs">
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Signature du livreur</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Cachet et signature du client</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+            </div>
+            <div class="inv-footer-note">Document non contractuel · {{ companyName }}</div>
+          </div>
+        }
+
+        <!-- ═══════════════ FACTURE FOURNISSEUR A4 / A5 ═══════════════ -->
+        @if (docType === 'purchase_invoice' && format !== 'ticket') {
+          <div class="inv-doc">
+            <div class="inv-header">
+              <div class="inv-company">
+                <div class="inv-co-name">{{ companyName }}</div>
+                @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
+              </div>
+              <div class="inv-title-block">
+                <div class="inv-doctype">{{ docTitle }}</div>
+                <div class="inv-ref">{{ purchaseInvoice?.name }}</div>
+              </div>
+            </div>
+            <div class="inv-meta">
+              <div class="inv-meta-client">
+                <div class="inv-meta-lbl">FOURNISSEUR</div>
+                <div class="inv-meta-val">{{ purchaseInvoice?.partnerName }}</div>
+              </div>
+              <div class="inv-meta-dates">
+                <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(purchaseInvoice?.date) }}</span></div>
+                @if (purchaseInvoice?.dateEcheance) {
+                  <div class="inv-mrow"><span>Échéance</span><span>{{ fmtDate(purchaseInvoice?.dateEcheance) }}</span></div>
+                }
+                @if (purchaseInvoice?.purchaseOrderName) {
+                  <div class="inv-mrow"><span>Commande</span><span>{{ purchaseInvoice?.purchaseOrderName }}</span></div>
+                }
+              </div>
+            </div>
+            <table class="inv-lines">
+              <thead>
+                <tr>
+                  <th>Code</th><th class="tdesc">Désignation</th>
+                  <th class="tr">Qté</th><th class="tr">P.U.HT</th>
+                  <th class="tr">TVA</th><th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of purchaseInvoiceLines; track $index) {
+                  <tr>
+                    <td>{{ l.productCode }}</td>
+                    <td class="tdesc">{{ l.description }}</td>
+                    <td class="tr">{{ fmt(l.quantity) }}</td>
+                    <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
+                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
+                    <td class="tr">{{ fmt(l.montantHT) }}</td>
+                    <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <div class="inv-totals-wrap">
+              <div class="inv-totals">
+                <div class="inv-trow"><span>Total HT</span><span>{{ fmt(purchaseInvoice?.totalHT) }} F</span></div>
+                <div class="inv-trow"><span>TVA</span><span>{{ fmt(purchaseInvoice?.totalTVA) }} F</span></div>
+                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(purchaseInvoice?.totalTTC) }} F</span></div>
+                @if (purchaseInvoice?.totalPrecompte) {
+                  <div class="inv-trow"><span>PSA</span><span>{{ fmt(purchaseInvoice?.totalPrecompte) }} F</span></div>
+                }
+                <div class="inv-trow inv-net"><span>NET À PAYER</span><span>{{ fmt(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }} F</span></div>
+                @if (purchaseInvoice?.montantPaye) {
+                  <div class="inv-trow inv-paid"><span>Déjà payé</span><span>{{ fmt(purchaseInvoice?.montantPaye) }} F</span></div>
+                }
+                @if (purchaseInvoice?.montantDu) {
+                  <div class="inv-trow inv-due"><span>Reste dû</span><span>{{ fmt(purchaseInvoice?.montantDu) }} F</span></div>
+                }
+              </div>
+            </div>
+            <div class="inv-lettres">
+              Arrêté à la somme de : <strong>{{ montantEnLettres(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }}</strong>
+            </div>
+            <div class="inv-sigs">
+              <div class="inv-sig"><div class="inv-sig-lbl">Signature du fournisseur</div><div class="inv-sig-area"></div></div>
+              <div class="inv-sig"><div class="inv-sig-lbl">Cachet et signature</div><div class="inv-sig-area"></div></div>
+            </div>
+          </div>
+        }
+
+        <!-- ═══════════════ FACTURE FOURNISSEUR TICKET ═══════════════ -->
+        @if (docType === 'purchase_invoice' && format === 'ticket') {
+          <div class="tkt">
+            <div class="tkt-co">{{ companyName }}</div>
+            @if (companyPhone) { <div class="tkt-phone">{{ companyPhone }}</div> }
+            <div class="tkt-sep"></div>
+            <div class="tkt-type">{{ docTitle }}</div>
+            <div class="tkt-ref">{{ purchaseInvoice?.name }}</div>
+            <div class="tkt-sep"></div>
+            <div class="tkt-row"><span>Date</span><span>{{ fmtDate(purchaseInvoice?.date) }}</span></div>
+            <div class="tkt-row"><span>Fournisseur</span><span>{{ purchaseInvoice?.partnerName }}</span></div>
+            <div class="tkt-sep"></div>
+            @for (l of purchaseInvoiceLines; track $index) {
+              <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+              <div class="tkt-prod-row">
+                <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaire) }}</span>
+                <span class="tbold">{{ fmt(l.montantTTC) }} F</span>
+              </div>
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-row sm"><span>Total HT</span><span>{{ fmt(purchaseInvoice?.totalHT) }} F</span></div>
+            <div class="tkt-row sm"><span>TVA</span><span>{{ fmt(purchaseInvoice?.totalTVA) }} F</span></div>
+            <div class="tkt-sep"></div>
+            <div class="tkt-total"><span>NET À PAYER</span><span>{{ fmt(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }} F</span></div>
+            <div class="tkt-sep"></div>
+            <div class="tkt-lettres">{{ montantEnLettres(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }}</div>
+          </div>
+        }
+
+        <!-- ═══════════════ BON DE COMMANDE FOURNISSEUR ═══════════════ -->
+        @if (docType === 'purchase_order') {
+          <div class="inv-doc">
+            <div class="inv-header">
+              <div class="inv-company">
+                <div class="inv-co-name">{{ companyName }}</div>
+                @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
+              </div>
+              <div class="inv-title-block">
+                <div class="inv-doctype">BON DE COMMANDE</div>
+                <div class="inv-ref">{{ purchaseOrder?.name }}</div>
+              </div>
+            </div>
+            <div class="inv-meta">
+              <div class="inv-meta-client">
+                <div class="inv-meta-lbl">FOURNISSEUR</div>
+                <div class="inv-meta-val">{{ purchaseOrder?.partnerName || '—' }}</div>
+              </div>
+              <div class="inv-meta-dates">
+                <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(purchaseOrder?.date) }}</span></div>
+                @if (purchaseOrder?.dateExpected) {
+                  <div class="inv-mrow"><span>Livraison prévue</span><span>{{ fmtDate(purchaseOrder?.dateExpected) }}</span></div>
+                }
+                @if (purchaseOrder?.notes) {
+                  <div class="inv-mrow"><span>Notes</span><span>{{ purchaseOrder?.notes }}</span></div>
+                }
+              </div>
+            </div>
+            <table class="inv-lines">
+              <thead>
+                <tr>
+                  <th class="tr">#</th><th>Code</th><th class="tdesc">Désignation</th>
+                  <th class="tr">Qté</th><th class="tr">P.U. HT</th>
+                  <th class="tr">TVA</th><th class="tr">Total HT</th><th class="tr">Total TTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of (purchaseOrder?.lines ?? []); track $index) {
+                  <tr>
+                    <td class="tr tgray">{{ $index + 1 }}</td>
+                    <td>{{ l.productCode }}</td>
+                    <td class="tdesc">{{ l.description }}</td>
+                    <td class="tr">{{ fmt(l.quantity) }}</td>
+                    <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
+                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
+                    <td class="tr">{{ fmt(l.montantHT) }}</td>
+                    <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <div class="inv-totals-wrap">
+              <div class="inv-totals">
+                <div class="inv-trow"><span>Total HT</span><span>{{ fmt(purchaseOrder?.totalHT) }} F</span></div>
+                <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(purchaseOrder?.totalTVA) }} F</span></div>
+                <div class="inv-trow inv-net"><span>TOTAL TTC</span><span>{{ fmt(purchaseOrder?.totalTTC) }} F</span></div>
+              </div>
+            </div>
+            <div class="inv-lettres">
+              Arrêté à la somme de : <strong>{{ montantEnLettres(purchaseOrder?.totalTTC) }}</strong>
+            </div>
+            <div class="inv-sigs">
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Le fournisseur</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Pour la société</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+            </div>
+            <div class="inv-footer-note">Bon de commande soumis à acceptation · {{ companyName }}</div>
+          </div>
+        }
+
+        <!-- ═══════════════ BON DE COMMANDE CLIENT ═══════════════ -->
+        @if (docType === 'sales_order') {
+          <div class="inv-doc">
+            <div class="inv-header">
+              <div class="inv-company">
+                <div class="inv-co-name">{{ companyName }}</div>
+                @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
+              </div>
+              <div class="inv-title-block">
+                <div class="inv-doctype">BON DE COMMANDE</div>
+                <div class="inv-ref">{{ salesOrder?.name }}</div>
+              </div>
+            </div>
+            <div class="inv-meta">
+              <div class="inv-meta-client">
+                <div class="inv-meta-lbl">CLIENT</div>
+                <div class="inv-meta-val">{{ salesOrder?.partnerName || '—' }}</div>
+                @if (salesOrder?.warehouseName) { <div class="inv-meta-sub">{{ salesOrder?.warehouseName }}</div> }
+              </div>
+              <div class="inv-meta-dates">
+                <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(salesOrder?.date) }}</span></div>
+                @if (salesOrder?.dateEcheance) {
+                  <div class="inv-mrow"><span>Échéance</span><span>{{ fmtDate(salesOrder?.dateEcheance) }}</span></div>
+                }
+                @if (salesOrder?.invoiceName) {
+                  <div class="inv-mrow"><span>Facture</span><span>{{ salesOrder?.invoiceName }}</span></div>
+                }
+                @if (salesOrder?.notes) {
+                  <div class="inv-mrow"><span>Notes</span><span>{{ salesOrder?.notes }}</span></div>
+                }
+              </div>
+            </div>
+            <table class="inv-lines">
+              <thead>
+                <tr>
+                  <th class="tr">#</th><th>Code</th><th class="tdesc">Désignation</th>
+                  <th class="tr">Qté</th><th class="tr">P.U. HT</th>
+                  <th class="tr">Remise</th><th class="tr">TVA</th>
+                  <th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of (salesOrder?.lines ?? []); track $index) {
+                  <tr>
+                    <td class="tr tgray">{{ $index + 1 }}</td>
+                    <td>{{ l.productCode }}</td>
+                    <td class="tdesc">{{ l.description }}</td>
+                    <td class="tr">{{ fmt(l.quantity) }}</td>
+                    <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
+                    <td class="tr">{{ l.tauxRemise ? (l.tauxRemise + '%') : '—' }}</td>
+                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
+                    <td class="tr">{{ fmt(l.montantHT) }}</td>
+                    <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <div class="inv-totals-wrap">
+              <div class="inv-totals">
+                @if (salesOrder?.totalRemise) {
+                  <div class="inv-trow inv-deduct"><span>Remise totale</span><span>– {{ fmt(salesOrder?.totalRemise) }} F</span></div>
+                }
+                <div class="inv-trow"><span>Total HT</span><span>{{ fmt(salesOrder?.totalHT) }} F</span></div>
+                <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(salesOrder?.totalTVA) }} F</span></div>
+                <div class="inv-trow inv-net"><span>TOTAL TTC</span><span>{{ fmt(salesOrder?.totalTTC) }} F</span></div>
+              </div>
+            </div>
+            <div class="inv-lettres">
+              Arrêté à la somme de : <strong>{{ montantEnLettres(salesOrder?.totalTTC) }}</strong>
+            </div>
+            <div class="inv-sigs">
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Le client</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+              <div class="inv-sig">
+                <div class="inv-sig-lbl">Pour la société</div>
+                <div class="inv-sig-name">Nom : ________________________</div>
+                <div class="inv-sig-area"></div>
+              </div>
+            </div>
+            <div class="inv-footer-note">Bon de commande · {{ companyName }}</div>
+          </div>
+        }
+
+      </div><!-- /preview-page -->
+    </div><!-- /pp-body -->
+
+    <!-- ── Footer ── -->
+    <div class="pp-footer">
+      <button class="pp-btn-cancel" (click)="close()">
+        <span class="material-icons">close</span> Fermer
+      </button>
+      <button class="pp-btn-print" (click)="print()" [disabled]="printing">
+        <span class="material-icons">{{ printing ? 'hourglass_empty' : 'print' }}</span>
+        {{ printing ? 'Génération...' : 'Imprimer' }}
+      </button>
+    </div>
+
+  </div>
+</div>

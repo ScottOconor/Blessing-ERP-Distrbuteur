@@ -58,6 +58,27 @@ export const salesRoutes: Routes = [
       {
         path: 'precomptes',
         loadComponent: () => import('./components/precomptes/precompte-config.component').then(m => m.PrecompteConfigComponent)
+      },
+      {
+        path: 'eleader/import',
+        loadComponent: () => import('./components/eleader/eleader-import/eleader-import.component').then(m => m.EleaderImportComponent)
+      },
+      {
+        path: 'eleader/orders',
+        loadComponent: () => import('./components/eleader/eleader-orders/eleader-orders.component').then(m => m.EleaderOrdersComponent)
+      },
+      {
+        path: 'eleader/config',
+        loadComponent: () => import('./components/eleader/eleader-config/eleader-config.component').then(m => m.EleaderConfigComponent)
+      },
+      {
+        path: 'eleader/journal',
+        loadComponent: () => import('./components/eleader/eleader-journal/eleader-journal.component').then(m => m.EleaderJournalComponent)
+      },
+      {
+        path: 'eleader',
+        redirectTo: 'eleader/import',
+        pathMatch: 'full'
       }
     ]
   }

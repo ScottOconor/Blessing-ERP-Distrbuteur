@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface AnalyticAccount {
   id?: number;
@@ -42,7 +43,7 @@ export interface AnalyticBalanceLine {
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticService {
-  private apiUrl = `http://${window.location.hostname}:8085/api/analytic`;
+  private apiUrl = `${environment.apiUrl}/api/analytic`;
 
   constructor(private http: HttpClient) {}
 

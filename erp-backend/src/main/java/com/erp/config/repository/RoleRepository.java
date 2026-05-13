@@ -12,4 +12,5 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     boolean existsByCode(String code);
     List<Role> findByGroupOrIsSystemTrue(CompanyGroup group);
     List<Role> findByIsSystemTrue();
+    boolean existsByGroupAndIsSystemFalse(CompanyGroup group);
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 // Interfaces
 export interface SalesOrderLine {
@@ -42,6 +43,7 @@ export interface SalesOrder {
   createdAt?: string;
   invoiceId?: number;
   invoiceName?: string;
+  eleaderReference?: string;
 }
 
 export interface SalesInvoiceLine {
@@ -63,6 +65,7 @@ export interface SalesInvoiceLine {
   fraisEnlevement?: number;
   prixUnitaireTTC?: number;
   consigne?: boolean;
+  guinessTaxe?: number;
 }
 
 export interface RistourneDetail {
@@ -105,6 +108,7 @@ export interface SalesInvoice {
   fraisEnlevementTTC?: number;
   totalPrecompte?: number;
   totalLiquideNu?: number;
+  totalGuinessTaxe?: number;
   netAPayer?: number;
   lines: SalesInvoiceLine[];
   ristourneDetails?: RistourneDetail[];
@@ -143,6 +147,7 @@ export interface SalesClient {
   tauxPrecompte?: number;
   creditLimit?: number;
   receivableAccountCode?: string;
+  exemptTaxeGuinness?: boolean;
 }
 
 // ===== Sales Stats =====
@@ -179,7 +184,7 @@ export interface SalesStatsResponse {
 
 @Injectable({ providedIn: 'root' })
 export class SalesService {
-  private apiUrl = `http://${window.location.hostname}:8085/api/sales`;
+  private apiUrl = `${environment.apiUrl}/api/sales`;
 
   constructor(private http: HttpClient) {}
 

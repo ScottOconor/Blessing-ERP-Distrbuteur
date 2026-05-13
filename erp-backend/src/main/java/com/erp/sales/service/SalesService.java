@@ -3,6 +3,7 @@ package com.erp.sales.service;
 import com.erp.accounting.dto.PartnerDTO;
 import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
+import com.erp.accounting.service.AccountingService;
 import com.erp.common.ConsigneCodes;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
@@ -70,6 +71,7 @@ public class SalesService {
     private final RistourneRepository ristourneRepo;
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
+    private final AccountingService accountingService;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String DEFAULT_REVENUE_ACCOUNT    = "7011";
@@ -79,7 +81,9 @@ public class SalesService {
     private static final String PSA_ACCOUNT                = "4412";
     private static final String CONSIGNE_ACCOUNT           = "4194";
     private static final String RISTOURNE_CREDIT_ACCOUNT   = "419800";
+    private static final String RISTOURNE_CREDIT_GUINNESS  = "419801";
     private static final BigDecimal RISTOURNE_7019_FIXE    = new BigDecimal("201.00");
+    private static final BigDecimal GUINNESS_TAXE_LIGNE    = new BigDecimal("300.00");
     private static final BigDecimal TVA_RATE               = new BigDecimal("0.1925");
 
     private static final java.util.Set<String> CATEGORIES_RISTOURNE_BRASSERIE = java.util.Set.of(
@@ -91,6 +95,12 @@ public class SalesService {
         "famille guinness bouteille de 15",
         "famille guinness bouteille de 24"
     );
+
+    private boolean isCategorieGuinness(String name) {
+        if (name == null) return false;
+        String norm = normalizeCategorie(name);
+        return norm.contains("guinness") || CATEGORIES_RISTOURNE_GUINNESS.contains(norm);
+    }
 
     // ===================== BONS DE COMMANDE =====================
 
@@ -510,7 +520,26 @@ public class SalesService {
                     .build());
         }
 
-        // Ligne frais d'enlèvement 701500 (total = base + surplus client)
+        // Taxe Guinness 419801 : crédit pour facture, débit pour avoir
+        BigDecimal totalGuinessTaxe = invoice.getTotalGuinessTaxe() != null ? invoice.getTotalGuinessTaxe() : ZERO;
+        if (totalGuinessTaxe.compareTo(ZERO) > 0) {
+            AccountAccount acct419801 = accountRepo.findFirstByCodeAndCompanyId(RISTOURNE_CREDIT_GUINNESS, companyId)
+                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("419801", companyId))
+                    .orElse(null);
+            if (acct419801 != null) {
+                moveLines.add(AccountMoveLine.builder()
+                        .move(move).account(acct419801).partner(invoice.getPartner())
+                        .name("Taxe Guinness - " + invoice.getName()).date(date)
+                        .debit(isAvoir ? totalGuinessTaxe : ZERO)
+                        .credit(isAvoir ? ZERO : totalGuinessTaxe)
+                        .journal(invoice.getJournal()).company(invoice.getCompany())
+                        .build());
+            } else {
+                log.warn("[GUINNESS TAXE] Compte 419801 introuvable pour société {} — ligne non générée", companyId);
+            }
+        }
+
+        // Ligne frais d'enlèvement 701500 (montant HT)
         BigDecimal totalEnlevement = invoice.getFraisEnlevementTTC() != null ? invoice.getFraisEnlevementTTC() : ZERO;
         if (totalEnlevement.compareTo(ZERO) != 0) {
             AccountAccount enlAccount = accountRepo.findFirstByCodeAndCompanyId(ENLEVEMENT_ACCOUNT, companyId)
@@ -663,17 +692,29 @@ public class SalesService {
         AccountJournal journal = journalRepo.findById(req.getJournalId())
                 .orElseThrow(() -> new EntityNotFoundException("Journal introuvable"));
 
+        if (!"cash".equals(journal.getType()) && !"bank".equals(journal.getType())) {
+            throw new IllegalArgumentException(
+                "Le journal \"" + journal.getName() + "\" n'est pas un journal de caisse ou de banque. " +
+                "Veuillez sélectionner le journal Caisse (CAI) ou Banque (BNQ).");
+        }
+
         Company company = invoice.getCompany();
         LocalDate date = req.getDate() != null ? req.getDate() : LocalDate.now();
         BigDecimal amount = req.getAmount();
 
-        // Compte trésorerie (débit) = compte par défaut du journal
+        // Compte trésorerie (débit) : utiliser le compte défini sur le journal, c'est lui qui fait foi.
+        // Fallback uniquement si le journal n'a pas de compte configuré.
         AccountAccount treasuryAccount = journal.getDefaultDebitAccount();
         if (treasuryAccount == null) {
-            // Fallback: chercher un compte 521 ou 571
-            treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
-                    .or(() -> accountRepo.findFirstByCodeAndCompanyId("571", company.getId()))
-                    .orElseThrow(() -> new EntityNotFoundException("Compte de trésorerie introuvable (521/571)"));
+            if ("cash".equals(journal.getType())) {
+                treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("571", company.getId())
+                        .or(() -> accountRepo.findFirstByCodeAndCompanyId("572", company.getId()))
+                        .orElseThrow(() -> new EntityNotFoundException("Compte de caisse introuvable (571) — configurez le compte sur le journal"));
+            } else {
+                treasuryAccount = accountRepo.findFirstByCodeAndCompanyId("521", company.getId())
+                        .or(() -> accountRepo.findFirstByCodeAndCompanyId("522", company.getId()))
+                        .orElseThrow(() -> new EntityNotFoundException("Compte bancaire introuvable (521) — configurez le compte sur le journal"));
+            }
         }
 
         // Compte client (crédit)
@@ -741,6 +782,7 @@ public class SalesService {
                 .build();
 
         paymentRepo.save(payment);
+        accountingService.updateDailyBalance(journal.getId(), company.getId(), date);
 
         // ---- Mettre à jour les totaux de la facture ----
         BigDecimal totalPaye = paymentRepo.sumPostedPaymentsByInvoice(invoice.getId());
@@ -870,6 +912,7 @@ public class SalesService {
                 .tauxPrecompte(dto.getTauxPrecompte())
                 .creditLimit(dto.getCreditLimit())
                 .receivableAccountCode(dto.getReceivableAccountCode())
+                .exemptTaxeGuinness(dto.isExemptTaxeGuinness())
                 .company(company)
                 .build();
 
@@ -890,6 +933,7 @@ public class SalesService {
         partner.setTauxPrecompte(dto.getTauxPrecompte());
         partner.setCreditLimit(dto.getCreditLimit());
         partner.setReceivableAccountCode(dto.getReceivableAccountCode());
+        partner.setExemptTaxeGuinness(dto.isExemptTaxeGuinness());
 
         return toPartnerDTO(partnerRepo.save(partner));
     }
@@ -951,6 +995,23 @@ public class SalesService {
                     .multiply(BigDecimal.ONE.add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
                     .setScale(4, RoundingMode.HALF_UP);
 
+            // Taxe Guinness : +300 par unité sur le prixUnitaireTTC
+            BigDecimal guinessTaxe = ZERO;
+            BigDecimal montantTTC = ol.getMontantTTC() != null ? ol.getMontantTTC() : ZERO;
+            Long catId = resolveCategoryId(ol.getCategoryId(), ol.getProductCode(), companyId);
+            if (!isConsigne && catId != null) {
+                boolean estGuinness = categoryRepo.findById(catId)
+                        .map(c -> isCategorieGuinness(c.getName()))
+                        .orElse(false);
+                boolean exempt = order.getPartner() != null && order.getPartner().isExemptTaxeGuinness();
+                if (estGuinness && !exempt) {
+                    puttc = puttc.add(GUINNESS_TAXE_LIGNE);  // +300 sur le prix unitaire TTC
+                    BigDecimal qty = ol.getQuantity() != null ? ol.getQuantity() : BigDecimal.ONE;
+                    guinessTaxe = GUINNESS_TAXE_LIGNE.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                    montantTTC  = montantTTC.add(guinessTaxe);  // +qté×300 sur le total ligne
+                }
+            }
+
             invoiceLines.add(SalesInvoiceLine.builder()
                     .invoice(invoice)
                     .productId(ol.getProductId())
@@ -961,14 +1022,15 @@ public class SalesService {
                     .tauxRemise(ol.getTauxRemise())
                     .tauxTVA(tva)
                     .accountCode(ol.getAccountCode())
-                    .categoryId(ol.getCategoryId())
+                    .categoryId(catId)
                     .consigne(isConsigne)
                     .montantHT(ht)
                     .montantTVA(ol.getMontantTVA() != null ? ol.getMontantTVA() : ZERO)
-                    .montantTTC(ol.getMontantTTC() != null ? ol.getMontantTTC() : ZERO)
+                    .montantTTC(montantTTC)
                     .precompte(pc)
                     .fraisEnlevement(enl)
                     .prixUnitaireTTC(puttc)
+                    .guinessTaxe(guinessTaxe)
                     .build());
         }
 
@@ -1068,12 +1130,13 @@ public class SalesService {
         // Séparer en groupes par catégorie
         List<Ristourne> brasserie = new ArrayList<>();
         List<Ristourne> autres    = new ArrayList<>();
+        List<Ristourne> guinness  = new ArrayList<>();
         for (Ristourne r : toutesRistournes) {
             if (r.getCategory().getName() == null) continue;
             String norm = normalizeCategorie(r.getCategory().getName());
-            if (CATEGORIES_RISTOURNE_BRASSERIE.contains(norm))  brasserie.add(r);
-            else if (!CATEGORIES_RISTOURNE_GUINNESS.contains(norm)) autres.add(r);
-            // Guinness → ignoré pour l'instant
+            if (CATEGORIES_RISTOURNE_BRASSERIE.contains(norm))       brasserie.add(r);
+            else if (isCategorieGuinness(r.getCategory().getName()))  guinness.add(r);
+            else                                                       autres.add(r);
         }
 
         Partner partner = invoice.getPartner();
@@ -1107,9 +1170,21 @@ public class SalesService {
             }
         }
 
-        log.info("[RISTOURNE] HT brasserie={} (7019={}) HT autres={}", totalHtBrasserie, total7019Brasserie, totalHtAutres);
+        // ── Groupe GUINNESS : HT complet → 7019 (Cr 419801) ──
+        BigDecimal totalHtGuinness = ZERO;
+        for (Ristourne r : guinness) {
+            BigDecimal qty = getQtyFromInvoice(r.getCategory().getId(), invoice, companyId);
+            log.info("[RISTOURNE] Guinness '{}' qty={} montantFixe={}", r.getCategory().getName(), qty, r.getMontantFixe());
+            if (qty.compareTo(ZERO) > 0) {
+                totalHtGuinness = totalHtGuinness.add(qty.multiply(r.getMontantFixe()));
+            }
+        }
 
-        if (totalHtBrasserie.compareTo(ZERO) <= 0 && totalHtAutres.compareTo(ZERO) <= 0) {
+        log.info("[RISTOURNE] HT brasserie={} (7019={}) HT autres={} HT guinness={}",
+                totalHtBrasserie, total7019Brasserie, totalHtAutres, totalHtGuinness);
+
+        if (totalHtBrasserie.compareTo(ZERO) <= 0 && totalHtAutres.compareTo(ZERO) <= 0
+                && totalHtGuinness.compareTo(ZERO) <= 0) {
             log.info("[RISTOURNE] Aucune quantité trouvée sur la facture pour les catégories éligibles");
             return;
         }
@@ -1125,9 +1200,21 @@ public class SalesService {
                 .or(() -> accountRepo.findFirstByCodeAndCompanyId(TVA_ACCOUNT, companyId)).orElse(null);
         AccountAccount acct4198 = accountRepo.findFirstByCodeAndCompanyId(RISTOURNE_CREDIT_ACCOUNT, companyId)
                 .orElse(null);
+        AccountAccount acct419801 = accountRepo.findFirstByCodeAndCompanyId(RISTOURNE_CREDIT_GUINNESS, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("419801", companyId))
+                .orElse(null);
 
-        if (acct7019 == null || acct4431 == null || acct4198 == null) {
-            log.warn("[RISTOURNE] Écriture non générée pour {} : comptes manquants (701900/443100/419800)", invoice.getName());
+        boolean needBrasserieAutres = totalHtBrasserie.compareTo(ZERO) > 0 || totalHtAutres.compareTo(ZERO) > 0;
+        boolean needGuinness        = totalHtGuinness.compareTo(ZERO) > 0;
+
+        if (needBrasserieAutres && (acct7019 == null || acct4431 == null || acct4198 == null)) {
+            log.warn("[RISTOURNE] Écriture brasserie/autres non générée pour {} : comptes manquants (701900/443100/419800)", invoice.getName());
+        }
+        if (needGuinness && (acct7019 == null || acct4431 == null || acct419801 == null)) {
+            log.warn("[RISTOURNE] Écriture Guinness non générée pour {} : comptes manquants (701900/443100/419801)", invoice.getName());
+        }
+        if ((!needBrasserieAutres || acct7019 == null || acct4431 == null || acct4198 == null)
+                && (!needGuinness || acct7019 == null || acct4431 == null || acct419801 == null)) {
             return;
         }
 
@@ -1149,47 +1236,82 @@ public class SalesService {
                 .build();
 
         List<AccountMoveLine> lines = new ArrayList<>();
-        BigDecimal totalDebits = ZERO;
+        BigDecimal totalDebitsBrassAutres = ZERO;
+        BigDecimal totalDebitsGuinness    = ZERO;
 
         // ── Brasserie : 7019 (qty×201) + 7015 (reste HT) ──
-        if (totalHtBrasserie.compareTo(ZERO) > 0) {
+        if (needBrasserieAutres && acct7019 != null && acct4431 != null && acct4198 != null
+                && totalHtBrasserie.compareTo(ZERO) > 0) {
             BigDecimal d7019br = total7019Brasserie.setScale(2, RoundingMode.HALF_UP);
             BigDecimal d7015br = totalHtBrasserie.subtract(total7019Brasserie).setScale(2, RoundingMode.HALF_UP);
             lines.add(ristourneLine(move, acct7019, partner, labelBr, date, d7019br, ZERO, journal, invoice.getCompany()));
-            totalDebits = totalDebits.add(d7019br);
+            totalDebitsBrassAutres = totalDebitsBrassAutres.add(d7019br);
             if (d7015br.compareTo(ZERO) > 0 && acct7015 != null) {
                 lines.add(ristourneLine(move, acct7015, partner, labelBr, date, d7015br, ZERO, journal, invoice.getCompany()));
-                totalDebits = totalDebits.add(d7015br);
+                totalDebitsBrassAutres = totalDebitsBrassAutres.add(d7015br);
             }
         }
 
         // ── Autres : HT complet dans 7019 ──
-        if (totalHtAutres.compareTo(ZERO) > 0) {
+        if (needBrasserieAutres && acct7019 != null && acct4431 != null && acct4198 != null
+                && totalHtAutres.compareTo(ZERO) > 0) {
             BigDecimal d7019aut = totalHtAutres.setScale(2, RoundingMode.HALF_UP);
             lines.add(ristourneLine(move, acct7019, partner, labelAut, date, d7019aut, ZERO, journal, invoice.getCompany()));
-            totalDebits = totalDebits.add(d7019aut);
+            totalDebitsBrassAutres = totalDebitsBrassAutres.add(d7019aut);
         }
 
-        // ── Précompte sur HT total ──
-        BigDecimal totalHT = totalHtBrasserie.add(totalHtAutres);
-        BigDecimal debitPrecompte = totalHT.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
-        if (acct4412 != null && debitPrecompte.compareTo(ZERO) > 0) {
-            lines.add(ristourneLine(move, acct4412, partner, labelAut, date, debitPrecompte, ZERO, journal, invoice.getCompany()));
-            totalDebits = totalDebits.add(debitPrecompte);
+        // ── Précompte + TVA sur HT brasserie/autres ──
+        if (needBrasserieAutres && acct7019 != null && acct4431 != null && acct4198 != null) {
+            BigDecimal htBrAut = totalHtBrasserie.add(totalHtAutres);
+            BigDecimal debitPcBrAut = htBrAut.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
+            if (acct4412 != null && debitPcBrAut.compareTo(ZERO) > 0) {
+                lines.add(ristourneLine(move, acct4412, partner, labelAut, date, debitPcBrAut, ZERO, journal, invoice.getCompany()));
+                totalDebitsBrassAutres = totalDebitsBrassAutres.add(debitPcBrAut);
+            }
+            BigDecimal debitTVABrAut = htBrAut.multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
+            if (debitTVABrAut.compareTo(ZERO) > 0) {
+                lines.add(ristourneLine(move, acct4431, partner, labelAut, date, debitTVABrAut, ZERO, journal, invoice.getCompany()));
+                totalDebitsBrassAutres = totalDebitsBrassAutres.add(debitTVABrAut);
+            }
         }
 
-        // ── TVA sur HT total ──
-        BigDecimal debitTVA = totalHT.multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
-        lines.add(ristourneLine(move, acct4431, partner, labelAut, date, debitTVA, ZERO, journal, invoice.getCompany()));
-        totalDebits = totalDebits.add(debitTVA);
+        // ── Guinness : HT complet → 7019, précompte → 4412, TVA → 4431, Cr → 419801 ──
+        if (needGuinness && acct7019 != null && acct4431 != null && acct419801 != null) {
+            String labelGu = "Ristourne Guinness " + invoice.getName();
+            BigDecimal d7019gu = totalHtGuinness.setScale(2, RoundingMode.HALF_UP);
+            lines.add(ristourneLine(move, acct7019, partner, labelGu, date, d7019gu, ZERO, journal, invoice.getCompany()));
+            totalDebitsGuinness = totalDebitsGuinness.add(d7019gu);
 
-        // ── Crédit 419800 = somme de tous les débits ──
-        lines.add(ristourneLine(move, acct4198, partner, labelAut, date, ZERO,
-                totalDebits.setScale(2, RoundingMode.HALF_UP), journal, invoice.getCompany()));
+            BigDecimal debitPcGu = totalHtGuinness.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
+            if (acct4412 != null && debitPcGu.compareTo(ZERO) > 0) {
+                lines.add(ristourneLine(move, acct4412, partner, labelGu, date, debitPcGu, ZERO, journal, invoice.getCompany()));
+                totalDebitsGuinness = totalDebitsGuinness.add(debitPcGu);
+            }
+            BigDecimal debitTVAGu = totalHtGuinness.multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
+            lines.add(ristourneLine(move, acct4431, partner, labelGu, date, debitTVAGu, ZERO, journal, invoice.getCompany()));
+            totalDebitsGuinness = totalDebitsGuinness.add(debitTVAGu);
+        }
+
+        // ── Crédits : 419800 pour brasserie/autres, 419801 pour Guinness ──
+        if (totalDebitsBrassAutres.compareTo(ZERO) > 0 && acct4198 != null) {
+            lines.add(ristourneLine(move, acct4198, partner, labelAut, date, ZERO,
+                    totalDebitsBrassAutres.setScale(2, RoundingMode.HALF_UP), journal, invoice.getCompany()));
+        }
+        if (totalDebitsGuinness.compareTo(ZERO) > 0 && acct419801 != null) {
+            lines.add(ristourneLine(move, acct419801, partner, "Ristourne Guinness " + invoice.getName(), date, ZERO,
+                    totalDebitsGuinness.setScale(2, RoundingMode.HALF_UP), journal, invoice.getCompany()));
+        }
+
+        BigDecimal totalDebits = totalDebitsBrassAutres.add(totalDebitsGuinness);
+        if (lines.isEmpty() || totalDebits.compareTo(ZERO) == 0) {
+            log.info("[RISTOURNE] Aucune ligne générée pour {}", invoice.getName());
+            return;
+        }
 
         move.setLines(lines);
         moveRepo.save(move);
-        log.info("[RISTOURNE] Écriture {} générée — HT total={} | crédit={}", moveName, totalHT, totalDebits);
+        log.info("[RISTOURNE] Écriture {} générée — HT brasserie/autres={} HT guinness={} | total débits={}",
+                moveName, totalHtBrasserie.add(totalHtAutres), totalHtGuinness, totalDebits);
     }
 
     private BigDecimal getQtyFromInvoice(Long catId, SalesInvoice invoice, Long companyId) {
@@ -1517,12 +1639,29 @@ public class SalesService {
             // Frais d'enlèvement (only on non-consigne lines with a category)
             line.setFraisEnlevement(computeFraisEnlevement(req, line, partnerId, companyId));
 
-            // Prix unitaire TTC
+            // Prix unitaire TTC (base sans taxe Guinness)
             BigDecimal tva = line.getTauxTVA() != null ? line.getTauxTVA() : ZERO;
             BigDecimal puttc = line.getPrixUnitaire()
                     .multiply(BigDecimal.ONE.add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
                     .setScale(4, RoundingMode.HALF_UP);
+
+            // Taxe Guinness : +300 par unité sur le prixUnitaireTTC (sauf client exempté)
+            BigDecimal guinessTaxeLigne = ZERO;
+            if (!line.isConsigne() && line.getCategoryId() != null) {
+                boolean estGuinness = categoryRepo.findById(line.getCategoryId())
+                        .map(c -> isCategorieGuinness(c.getName()))
+                        .orElse(false);
+                boolean exempt = invoice.getPartner() != null && invoice.getPartner().isExemptTaxeGuinness();
+                if (estGuinness && !exempt) {
+                    puttc = puttc.add(GUINNESS_TAXE_LIGNE);  // +300 sur le prix unitaire TTC
+                    BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
+                    guinessTaxeLigne = GUINNESS_TAXE_LIGNE.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                    // montantTTC = montantHT + montantTVA + qté×300
+                    line.setMontantTTC(line.getMontantTTC().add(guinessTaxeLigne));
+                }
+            }
             line.setPrixUnitaireTTC(puttc);
+            line.setGuinessTaxe(guinessTaxeLigne);
 
             invoice.getLines().add(line);
         }
@@ -1538,18 +1677,21 @@ public class SalesService {
         return null;
     }
 
+    /**
+     * Calcule les frais d'enlèvement TTC d'une ligne selon la logique Odoo :
+     * - Si un tarif client spécifique existe → il REMPLACE le tarif de base (pas d'addition)
+     * - Sinon → tarif de base (montantFixe) pour la catégorie
+     * - montantFixe est TTC par unité (même convention qu'Odoo montant_fixe)
+     */
     private BigDecimal computeFraisEnlevement(SalesInvoiceRequest.LineRequest req,
                                                SalesInvoiceLine line,
                                                Long partnerId, Long companyId) {
         if (ConsigneCodes.isConsigne(line.getProductCode()) || companyId == null) return ZERO;
 
-        // Priorité 1 : categoryId déjà résolu sur la ligne
         Long catId = line.getCategoryId();
-        // Priorité 2 : categoryId du request
         if (catId == null && req != null) {
             catId = resolveCategoryId(req.getCategoryId(), req.getProductCode(), companyId);
         }
-        // Priorité 3 : fallback par productCode de la ligne
         if (catId == null && line.getProductCode() != null && !line.getProductCode().isBlank()) {
             catId = resolveCategoryId(null, line.getProductCode(), companyId);
         }
@@ -1557,48 +1699,20 @@ public class SalesService {
 
         BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
 
-        // Montant de base pour cette catégorie (uniquement enlevements actifs)
-        BigDecimal base = enlevementRepo.findByCategoryIdAndCompanyIdAndActiveTrue(catId, companyId)
-                .map(e -> {
-                    BigDecimal montant = e.getMontantFixe() != null ? e.getMontantFixe() : ZERO;
-                    return montant.multiply(qty).setScale(2, RoundingMode.HALF_UP);
-                })
-                .orElse(ZERO);
-
-        // Surplus client : s'ajoute au montant fixe de base
+        // Tarif client spécifique : remplace le tarif de base (logique Odoo get_montant_enlevement)
         if (partnerId != null) {
             var clientRate = enlevementClientRepo
-                    .findByEnlevement_CategoryIdAndPartnerId(catId, partnerId);
+                    .findByEnlevement_CategoryIdAndEnlevement_CompanyIdAndPartnerId(catId, companyId, partnerId);
             if (clientRate.isPresent() && clientRate.get().getMontant() != null) {
-                BigDecimal surplus = clientRate.get().getMontant()
-                        .multiply(qty).setScale(2, RoundingMode.HALF_UP);
-                return base.add(surplus);
+                return clientRate.get().getMontant().multiply(qty).setScale(2, RoundingMode.HALF_UP);
             }
         }
-        return base;
-    }
 
-    /**
-     * Calcule uniquement la part supplément client des frais d'enlèvement d'une ligne.
-     * Retourne zéro si pas de supplément pour ce client/catégorie.
-     */
-    private BigDecimal computeEnlevementSupplement(Long categoryId, Long partnerId, BigDecimal qty) {
-        if (categoryId == null || partnerId == null) return ZERO;
-        return enlevementClientRepo
-                .findByEnlevement_CategoryIdAndPartnerId(categoryId, partnerId)
-                .map(ec -> ec.getMontant().multiply(qty).setScale(2, RoundingMode.HALF_UP))
+        // Tarif de base pour la catégorie
+        return enlevementRepo.findByCategoryIdAndCompanyIdAndActiveTrue(catId, companyId)
+                .map(e -> (e.getMontantFixe() != null ? e.getMontantFixe() : ZERO)
+                        .multiply(qty).setScale(2, RoundingMode.HALF_UP))
                 .orElse(ZERO);
-    }
-
-    /**
-     * Retourne le compte comptable du supplément pour ce client/catégorie (ou null si pas de supplément).
-     */
-    private String getEnlevementSupplementAccount(Long categoryId, Long partnerId) {
-        if (categoryId == null || partnerId == null) return null;
-        return enlevementClientRepo
-                .findByEnlevement_CategoryIdAndPartnerId(categoryId, partnerId)
-                .map(ec -> ec.getSupplementAccountCode())
-                .orElse(null);
     }
 
     private void computeLineTotals(SalesOrderLine line) {
@@ -1655,16 +1769,19 @@ public class SalesService {
     private void computeInvoiceTotals(SalesInvoice invoice) {
         // Accumulation sur lignes NON-consigne uniquement pour HT/TVA/PSA/enlèvement
         BigDecimal totalHT = ZERO, totalTVA = ZERO, totalPrecompte = ZERO, totalEnlevement = ZERO;
+        BigDecimal totalGuinessTaxe = ZERO;
         // Consignes : montant TTC des lignes consigne positives et négatives
         BigDecimal consigneMontant = ZERO, deconsigneMontant = ZERO;
 
         for (SalesInvoiceLine line : invoice.getLines()) {
-            BigDecimal ht  = line.getMontantHT()  != null ? line.getMontantHT()  : ZERO;
-            BigDecimal tva = line.getMontantTVA() != null ? line.getMontantTVA() : ZERO;
-            BigDecimal ttc = line.getMontantTTC() != null ? line.getMontantTTC() : ZERO;
-            BigDecimal pc  = line.getPrecompte()  != null ? line.getPrecompte()  : ZERO;
-            BigDecimal enl = line.getFraisEnlevement() != null ? line.getFraisEnlevement() : ZERO;
-            BigDecimal qty = line.getQuantity()   != null ? line.getQuantity()   : ZERO;
+            BigDecimal ht   = line.getMontantHT()  != null ? line.getMontantHT()  : ZERO;
+            BigDecimal tva  = line.getMontantTVA() != null ? line.getMontantTVA() : ZERO;
+            BigDecimal ttc  = line.getMontantTTC() != null ? line.getMontantTTC() : ZERO;
+            BigDecimal pc   = line.getPrecompte()  != null ? line.getPrecompte()  : ZERO;
+            BigDecimal enlHT = line.getFraisEnlevement() != null ? line.getFraisEnlevement() : ZERO;
+            BigDecimal gTx  = line.getGuinessTaxe() != null ? line.getGuinessTaxe() : ZERO;
+            BigDecimal qty  = line.getQuantity()   != null ? line.getQuantity()   : ZERO;
+            BigDecimal tauxTVA = line.getTauxTVA() != null ? line.getTauxTVA()    : ZERO;
 
             if (ConsigneCodes.isConsigne(line.getProductCode())) {
                 if (qty.compareTo(ZERO) >= 0) {
@@ -1673,17 +1790,18 @@ public class SalesService {
                     deconsigneMontant = deconsigneMontant.add(ttc.abs());
                 }
             } else {
-                totalHT         = totalHT.add(ht);
-                totalTVA        = totalTVA.add(tva);
-                totalPrecompte  = totalPrecompte.add(pc);
-                totalEnlevement = totalEnlevement.add(enl);
+                totalHT           = totalHT.add(ht);
+                totalTVA          = totalTVA.add(tva);
+                totalPrecompte    = totalPrecompte.add(pc);
+                totalEnlevement   = totalEnlevement.add(enlHT);
+                totalGuinessTaxe  = totalGuinessTaxe.add(gTx);
             }
         }
 
         // Liquide Nu = HT + TVA + PSA  (base de calcul ristourne)
         BigDecimal totalLiquideNu = totalHT.add(totalTVA).add(totalPrecompte).setScale(2, RoundingMode.HALF_UP);
-        // Total TTC = Liquide Nu + Frais enlèvement  (sans consigne)
-        BigDecimal totalTTC = totalLiquideNu.add(totalEnlevement).setScale(0, RoundingMode.HALF_UP);
+        // Total TTC = Liquide Nu + Frais enlèvement + Taxe Guinness
+        BigDecimal totalTTC = totalLiquideNu.add(totalEnlevement).add(totalGuinessTaxe).setScale(0, RoundingMode.HALF_UP);
         // Net à payer = Total TTC + Consigne − Déconsigne
         BigDecimal netAPayer = totalTTC.add(consigneMontant).subtract(deconsigneMontant).setScale(0, RoundingMode.HALF_UP);
 
@@ -1697,6 +1815,7 @@ public class SalesService {
         invoice.setTotalTVA(totalTVA);
         invoice.setTotalPrecompte(totalPrecompte);
         invoice.setFraisEnlevementTTC(totalEnlevement);
+        invoice.setTotalGuinessTaxe(totalGuinessTaxe);
         invoice.setTotalLiquideNu(totalLiquideNu);
         invoice.setTotalTTC(totalTTC);
         invoice.setTotalRistourne(totalRistourne);
@@ -1839,6 +1958,7 @@ public class SalesService {
                 .lines(lines).createdAt(order.getCreatedAt())
                 .invoiceId(invoice != null ? invoice.getId() : null)
                 .invoiceName(invoice != null ? invoice.getName() : null)
+                .eleaderReference(order.getEleaderReference())
                 .build();
     }
 
@@ -1885,6 +2005,7 @@ public class SalesService {
                         .precompte(l.getPrecompte()).fraisEnlevement(l.getFraisEnlevement())
                         .prixUnitaireTTC(l.getPrixUnitaireTTC()).consigne(ConsigneCodes.isConsigne(l.getProductCode()))
                         .categoryName(l.getCategoryId() != null ? catNames.get(l.getCategoryId()) : null)
+                        .guinessTaxe(l.getGuinessTaxe())
                         .build())
                 .collect(Collectors.toList());
 
@@ -1916,6 +2037,7 @@ public class SalesService {
                 .totalPrecompte(invoice.getTotalPrecompte())
                 .totalLiquideNu(invoice.getTotalLiquideNu())
                 .netAPayer(invoice.getNetAPayer())
+                .totalGuinessTaxe(invoice.getTotalGuinessTaxe())
                 .lines(lines)
                 .ristourneDetails(buildRistourneDetails(invoice))
                 .payments(payments).createdAt(invoice.getCreatedAt())
@@ -1951,6 +2073,7 @@ public class SalesService {
                 .companyId(p.getCompany() != null ? p.getCompany().getId() : null)
                 .tauxRistourne(p.getTauxRistourne()).tauxPrecompte(p.getTauxPrecompte())
                 .creditLimit(p.getCreditLimit()).receivableAccountCode(p.getReceivableAccountCode())
+                .exemptTaxeGuinness(p.isExemptTaxeGuinness())
                 .build();
     }
 }

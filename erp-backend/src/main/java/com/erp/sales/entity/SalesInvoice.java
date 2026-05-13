@@ -115,6 +115,10 @@ public class SalesInvoice {
     @Column(name = "net_a_payer", precision = 20, scale = 2)
     private BigDecimal netAPayer;
 
+    /** Total taxe Guinness (300 fixe par ligne de catégorie Guinness, hors exempté) */
+    @Column(name = "total_guinness_taxe", precision = 20, scale = 2)
+    private BigDecimal totalGuinessTaxe;
+
     /** Entrepôt de départ pour les mouvements de stock (obligatoire sur les factures) */
     @Column(name = "warehouse_id")
     private Long warehouseId;

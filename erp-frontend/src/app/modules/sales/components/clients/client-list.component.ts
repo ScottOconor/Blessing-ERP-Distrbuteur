@@ -45,6 +45,11 @@ export class ClientListComponent implements OnInit {
   ristournes: RistourneForm[] = [];
   loadingRst = false;
 
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
+  canImport = false;
+
   readonly TAUX_OPTS = [1, 2, 2.5, 5, 10];
   readonly TYPE_OPTS = [
     { value: 'brasserie', label: 'Brasseries' },
@@ -65,6 +70,10 @@ export class ClientListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.canCreate = this.authService.hasPermission('VENTES', 'CLIENTS', 'CREATE');
+    this.canEdit   = this.authService.hasPermission('VENTES', 'CLIENTS', 'EDIT');
+    this.canDelete = this.authService.hasPermission('VENTES', 'CLIENTS', 'DELETE');
+    this.canImport = this.authService.hasPermission('VENTES', 'CLIENTS', 'IMPORT');
     this.loadClients();
     this.stockSvc.getCategories(this.authService.getCompanyId()).subscribe(c => this.categories = c);
   }
@@ -254,6 +263,7 @@ export class ClientListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     const companyId = this.authService.getCompanyId();
+    this.importLoading = true;
     this.importProgress = { done: 0, total: this.importRows.length, errors: 0, messages: [] };
 
     for (const row of this.importRows) {
@@ -278,6 +288,7 @@ export class ClientListComponent implements OnInit {
       }
     }
 
+    this.importLoading = false;
     this.showImportModal = false;
     this.loadClients();
     const p = this.importProgress;

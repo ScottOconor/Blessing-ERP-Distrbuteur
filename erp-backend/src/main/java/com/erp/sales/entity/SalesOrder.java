@@ -67,6 +67,10 @@ public class SalesOrder {
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
+    /** Référence de la facture eLeader d'origine (si importé via le module eLeader) */
+    @Column(name = "eleader_reference")
+    private String eleaderReference;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

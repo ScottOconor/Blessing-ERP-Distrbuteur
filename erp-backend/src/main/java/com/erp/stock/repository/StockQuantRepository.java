@@ -19,6 +19,9 @@ public interface StockQuantRepository extends JpaRepository<StockQuant, Long> {
     @Query("SELECT q FROM StockQuant q WHERE q.companyId = :cid AND q.quantity > 0")
     List<StockQuant> findAllWithStock(@Param("cid") Long companyId);
 
+    @Query("SELECT q FROM StockQuant q WHERE q.companyId = :cid")
+    List<StockQuant> findAllByCompanyId(@Param("cid") Long companyId);
+
     @Query(value = "SELECT COALESCE(SUM(q.quantity * p.standard_price), 0) FROM stock_quants q JOIN products p ON p.id = q.product_id WHERE q.company_id = :cid AND q.quantity > 0", nativeQuery = true)
     java.math.BigDecimal computeTotalStockValue(@Param("cid") Long companyId);
 }

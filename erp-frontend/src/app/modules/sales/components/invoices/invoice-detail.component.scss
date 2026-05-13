@@ -18,6 +18,14 @@
   transition: all 0.15s; &:hover { background: #f0f0f0; } .material-icons { font-size: 20px; }
 }
 
+.btn-print {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+  background: white; color: #495057; border: 1px solid #dee2e6; border-radius: 6px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Roboto', sans-serif; transition: all 0.15s;
+  .material-icons { font-size: 16px; }
+  &:hover { background: #f8f9fa; border-color: #adb5bd; }
+}
+
 .btn-primary, .btn-secondary, .btn-danger, .btn-payment, .btn-avoir, .btn-warning, .btn-ristourne {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
   border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;
@@ -250,4 +258,86 @@
   &:focus { outline: none; border-color: #017E84; }
 }
 
+// ─── Payment modal ────────────────────────────────────────────────────────────
+$pay-accent: #017E84;
+
+.pay-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9000; padding: 20px;
+}
+.pay-modal {
+  background: white; border-radius: 12px; width: 100%; max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+}
+.pay-modal-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #e9ecef; background: #f8f9fa;
+  &.credit-hdr .pay-modal-title .material-icons { color: $pay-accent; }
+}
+.pay-modal-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; color: #212529;
+  .material-icons { color: $pay-accent; font-size: 20px; }
+}
+.pay-modal-close {
+  background: none; border: none; cursor: pointer; color: #6c757d;
+  border-radius: 50%; padding: 4px; display: flex; align-items: center; transition: all 0.15s;
+  &:hover { background: #e9ecef; color: #212529; }
+  .material-icons { font-size: 20px; }
+}
+.pay-modal-body { padding: 20px; }
+.pay-summary {
+  background: #f8f9fa; border-radius: 8px; padding: 12px 16px;
+  margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px;
+}
+.pay-sum-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: #495057;
+}
+.pay-due { color: #dc3545; font-size: 14px; }
+.pay-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.credit-info-box {
+  background: #f0fdf4; border: 1px solid #a3e0c9; border-radius: 8px;
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.credit-info-row {
+  display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+}
+.credit-avail { color: #0a5c45; font-size: 14px; }
+.pay-modal-ftr {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid #e9ecef; background: #f8f9fa;
+}
+.pay-btn-cancel {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: 1px solid #dee2e6; border-radius: 6px; background: white;
+  color: #495057; font-size: 13px; font-weight: 500; cursor: pointer;
+  font-family: 'Roboto', sans-serif; transition: all 0.15s;
+  .material-icons { font-size: 16px; }
+  &:hover { background: #f0f0f0; }
+}
+.pay-btn-save {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px;
+  background: $pay-accent; color: white; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: 'Roboto', sans-serif; transition: all 0.15s;
+  .material-icons { font-size: 16px; }
+  &:hover:not(:disabled) { background: #015f64; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &.credit-save { background: $pay-accent; &:hover:not(:disabled) { background: #015f64; } }
+}
+
 .required-star { color: #dc3545; margin-left: 2px; }
+
+.taxe-tag {
+  display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 6px;
+  border-radius: 4px; white-space: nowrap;
+  &.taxe-tva {
+    background: #e8f4fd; color: #0066cc; border: 1px solid #b3d9f5;
+  }
+  &.taxe-guiness {
+    background: #fff3cd; color: #856404; border: 1px solid #ffc107;
+    margin-left: 3px;
+  }
+}

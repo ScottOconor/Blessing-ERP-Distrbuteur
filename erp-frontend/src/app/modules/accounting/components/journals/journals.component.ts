@@ -142,6 +142,22 @@ export class JournalsComponent implements OnInit {
     this.router.navigate(['/accounting/journals', journal.id]);
   }
 
+  isSuperAdmin(): boolean { return this.authService.isSuperAdmin(); }
+
+  deleteJournal(journal: AccountJournal): void {
+    if (!confirm(`Supprimer le journal « ${journal.name} » (${journal.code}) ? Cette action est irréversible.`)) return;
+    this.accountingService.deleteJournal(journal.id!).subscribe({
+      next: () => { this.loadData(); this.showSuccess(`Journal « ${journal.name} » supprimé.`); },
+      error: (err) => {
+        const msg = err.status === 409
+          ? 'Ce journal contient des écritures et ne peut pas être supprimé.'
+          : (err.error?.message || 'Erreur lors de la suppression.');
+        this.errorMsg = msg;
+        setTimeout(() => this.errorMsg = '', 5000);
+      }
+    });
+  }
+
   getAccountName(id?: number): string {
     if (!id) return '-';
     const acc = this.accounts.find(a => a.id === id);

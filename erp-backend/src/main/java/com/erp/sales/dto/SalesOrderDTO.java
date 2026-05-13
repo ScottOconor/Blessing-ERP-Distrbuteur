@@ -40,6 +40,9 @@ public class SalesOrderDTO {
     private Long invoiceId;
     private String invoiceName;
 
+    /** Référence eLeader si ce bon a été importé via le module eLeader */
+    private String eleaderReference;
+
     @Data
     @Builder
     @NoArgsConstructor

@@ -21,6 +21,8 @@ export class PurchaseAvoirListComponent implements OnInit {
   filteredAvoirs: PurchaseInvoice[] = [];
   loading = false;
   stateFilter = 'all';
+  dateFrom = '';
+  dateTo = '';
 
   stateFilters = [
     { value: 'all',       label: 'Tous' },
@@ -76,15 +78,20 @@ export class PurchaseAvoirListComponent implements OnInit {
   }
 
   applyFilter(): void {
-    this.filteredAvoirs = this.stateFilter === 'all'
-      ? this.avoirs
-      : this.avoirs.filter(a => a.state === this.stateFilter);
+    this.filteredAvoirs = this.avoirs.filter(a => {
+      if (this.stateFilter !== 'all' && a.state !== this.stateFilter) return false;
+      if (this.dateFrom && a.date < this.dateFrom) return false;
+      if (this.dateTo && a.date > this.dateTo) return false;
+      return true;
+    });
   }
 
   setFilter(state: string): void {
     this.stateFilter = state;
     this.applyFilter();
   }
+
+  clearDateFilter(): void { this.dateFrom = ''; this.dateTo = ''; this.applyFilter(); }
 
   openAvoir(avoir: PurchaseInvoice): void {
     this.router.navigate(['/purchases/invoices', avoir.id]);

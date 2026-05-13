@@ -27,10 +27,20 @@ public class AuthResponse {
 
     private boolean mustChangePassword;
 
+    /** Permissions effectives pour les rôles custom (non centralisés) */
+    private List<PermissionInfo> permissions;
+
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class CompanyInfo {
         private Long id;
         private String name;
         private String sigle;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class PermissionInfo {
+        private String module;
+        private String resource;
+        private String action;
     }
 }

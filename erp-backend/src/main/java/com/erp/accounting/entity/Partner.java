@@ -44,4 +44,9 @@ public class Partner {
     @Builder.Default
     @ColumnDefault("true")
     private boolean active = true;
+
+    @Builder.Default
+    @ColumnDefault("false")
+    @Column(name = "exempt_taxe_guinness")
+    private boolean exemptTaxeGuinness = false;
 }

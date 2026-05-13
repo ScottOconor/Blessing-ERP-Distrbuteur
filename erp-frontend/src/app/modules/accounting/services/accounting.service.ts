@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { AccountAccount, AccountJournal, Partner } from '../../../core/models/account.model';
 import { ImportResult } from '../../../core/models/import-result.model';
 import { AccountMove } from '../../../core/models/move.model';
+import { environment } from '../../../../environments/environment';
 
 export interface JournalDailyBalanceDTO {
   id?: number;
@@ -21,7 +22,7 @@ export interface JournalDailyBalanceDTO {
 
 @Injectable({ providedIn: 'root' })
 export class AccountingService {
-  private apiUrl = `http://${window.location.hostname}:8085/api/accounting`;
+  private apiUrl = `${environment.apiUrl}/api/accounting`;
 
   constructor(private http: HttpClient) {}
 
@@ -61,6 +62,10 @@ export class AccountingService {
 
   updateJournal(id: number, journal: AccountJournal): Observable<AccountJournal> {
     return this.http.put<AccountJournal>(`${this.apiUrl}/journals/${id}`, journal);
+  }
+
+  deleteJournal(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/journals/${id}`);
   }
 
   // ===== ECRITURES =====
@@ -116,8 +121,9 @@ export class AccountingService {
   }
 
   // ===== JOURNAL DETAIL =====
-  getJournalAccountBalance(journalId: number): Observable<{ journalId: number; journalCode: string; accountId: number | null; accountCode: string | null; accountName: string | null; balance: number }> {
-    return this.http.get<any>(`${this.apiUrl}/journals/${journalId}/account-balance`);
+  getJournalAccountBalance(journalId: number, excludeMoveId?: number): Observable<{ journalId: number; journalCode: string; accountId: number | null; accountCode: string | null; accountName: string | null; balance: number }> {
+    const params = excludeMoveId != null ? new HttpParams().set('excludeMoveId', excludeMoveId) : new HttpParams();
+    return this.http.get<any>(`${this.apiUrl}/journals/${journalId}/account-balance`, { params });
   }
 
   getJournalMoves(journalId: number, companyId: number): Observable<AccountMove[]> {
@@ -145,10 +151,18 @@ export class AccountingService {
   }
 
   // ===== IMPORT EXCEL =====
-  private importUrl = `http://${window.location.hostname}:8085/api/import`;
+  private importUrl = `${environment.apiUrl}/api/import`;
 
   downloadAccountsTemplate(): Observable<Blob> {
     return this.http.get(`${this.importUrl}/accounts/template`, { responseType: 'blob' });
+  }
+
+  downloadJournalsTemplate(): Observable<Blob> {
+    return this.http.get(`${this.importUrl}/journals/template`, { responseType: 'blob' });
+  }
+
+  downloadWarehousesTemplate(): Observable<Blob> {
+    return this.http.get(`${this.importUrl}/warehouses/template`, { responseType: 'blob' });
   }
 
   importAccounts(file: File, companyId: number, replace = false): Observable<ImportResult> {
@@ -178,6 +192,20 @@ export class AccountingService {
     fd.append('file', file);
     fd.append('companyId', String(companyId));
     return this.http.post<ImportResult>(`${this.importUrl}/journals`, fd);
+  }
+
+  importPrecomptes(file: File, companyId: number): Observable<ImportResult> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('companyId', String(companyId));
+    return this.http.post<ImportResult>(`${environment.apiUrl}/api/precomptes/import`, fd);
+  }
+
+  importWarehouses(file: File, companyId: number): Observable<ImportResult> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('companyId', String(companyId));
+    return this.http.post<ImportResult>(`${this.importUrl}/warehouses`, fd);
   }
 
   getJournalTypes(): Observable<{ value: string; label: string; icon: string }[]> {
