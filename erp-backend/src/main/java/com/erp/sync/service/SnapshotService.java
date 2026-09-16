@@ -530,11 +530,15 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
-        // ── Bons de commande (tout sauf brouillon) — pas de fenêtre de date : seul filet de
-        // sécurité existant pour SALE_ORDER_CONFIRMED / PURCHASE_ORDER_RECEIVED, un volume
-        // nettement plus faible que les factures donc pas besoin de le limiter. ────────────────
+        // ── Bons de commande (tout sauf brouillon), fenêtrés à 2 ans comme les factures ────────
+        // Ancien commentaire : "volume nettement plus faible que les factures donc pas besoin de
+        // le limiter" — c'était le même raisonnement qui avait laissé ristournePaiements/
+        // remisePaiements sans borne jusqu'à ce qu'elles finissent par dépasser la limite de
+        // taille du broker (cf. correctif ci-dessus). Même classe de bug, même correctif par
+        // précaution avant qu'un client à gros volume de commandes ne la reproduise.
         List<SpokeSnapshotPayload.SaleOrderItem> salesOrders =
                 salesOrderRepo.findByCompanyIdAndStateNotOrderByDateDescNameDesc(cid, "draft").stream()
+                .filter(o -> full || o.getDate() == null || !o.getDate().isBefore(twoYearsAgo))
                 .map(o -> SpokeSnapshotPayload.SaleOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())
@@ -547,6 +551,7 @@ public class SnapshotService {
 
         List<SpokeSnapshotPayload.PurchaseOrderItem> purchaseOrders =
                 purchaseOrderRepo.findByCompanyIdAndStateNotOrderByCreatedAtDesc(cid, "draft").stream()
+                .filter(o -> full || o.getDate() == null || !o.getDate().isBefore(twoYearsAgo))
                 .map(o -> SpokeSnapshotPayload.PurchaseOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())
