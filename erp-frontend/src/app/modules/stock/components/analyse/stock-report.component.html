@@ -10,11 +10,11 @@
       <button class="btn-secondary" (click)="load()">
         <span class="material-icons">refresh</span>
       </button>
-      <button class="btn-secondary" (click)="exportPdf()">
+      <button class="btn-secondary btn-pdf" (click)="exportPdf()">
         <span class="material-icons">picture_as_pdf</span> PDF
       </button>
-      <button class="btn-secondary" (click)="printReport()">
-        <span class="material-icons">print</span> Imprimer
+      <button class="btn-secondary btn-excel" (click)="exportExcel()">
+        <span class="material-icons">table_view</span> Excel
       </button>
     </div>
   </div>
@@ -25,7 +25,7 @@
       <span class="kpi-icon material-icons">category</span>
       <div>
         <div class="kpi-value">{{ groups.length }}</div>
-        <div class="kpi-label">{{ groupBy === 'product' ? 'Articles' : groupBy === 'category' ? 'Catégories' : groupBy === 'warehouse' ? 'Entrepôts' : 'Emplacements' }}</div>
+        <div class="kpi-label">{{ groupBy === 'product' ? 'Articles' : groupBy === 'category' ? 'Catégories' : 'Entrepôts' }}</div>
       </div>
     </div>
     <div class="kpi-card">
@@ -68,9 +68,6 @@
         <button [class.active]="groupBy === 'warehouse'" (click)="groupBy = 'warehouse'; applyFilter()">
           <span class="material-icons">warehouse</span> Entrepôt
         </button>
-        <button [class.active]="groupBy === 'location'"  (click)="groupBy = 'location';  applyFilter()">
-          <span class="material-icons">place</span> Emplacement
-        </button>
       </div>
       <div class="expand-btns">
         <button class="btn-link" (click)="expandAll()">Tout développer</button>
@@ -94,7 +91,6 @@
               @if (groupBy === 'product')   { Article / Emplacement }
               @if (groupBy === 'category')  { Catégorie / Article }
               @if (groupBy === 'warehouse') { Entrepôt / Article }
-              @if (groupBy === 'location')  { Emplacement / Article }
             </th>
             <th class="col-center no-print">UDM</th>
             <th class="col-num">P.U. (CMUP)</th>
@@ -115,7 +111,6 @@
                   @if (groupBy === 'product')   { inventory_2 }
                   @if (groupBy === 'category')  { label }
                   @if (groupBy === 'warehouse') { warehouse }
-                  @if (groupBy === 'location')  { place }
                 </span>
                 <span class="group-label">{{ grp.label }}</span>
                 <span class="group-count no-print">{{ grp.rows.length }} article(s)</span>

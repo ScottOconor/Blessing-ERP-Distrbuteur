@@ -25,6 +25,15 @@ export interface RemisePaiementLine {
   montantTotal?: number;
 }
 
+export interface RemiseArticleLine {
+  productCode?: string;
+  productName?: string;
+  categoryName?: string;
+  quantite: number;
+  montantUnitaire: number;
+  montantTotal: number;
+}
+
 export interface RemisePaiement {
   id?: number;
   name?: string;
@@ -37,10 +46,12 @@ export interface RemisePaiement {
   invoiceName?: string;
   generatedInvoiceId?: number;
   generatedInvoiceName?: string;
+  typeRemise?: string;
   companyId: number;
   notes?: string;
   createdAt?: string;
   lines: RemisePaiementLine[];
+  articleLines?: RemiseArticleLine[];
 }
 
 export interface PartnerGroup {
@@ -48,6 +59,14 @@ export interface PartnerGroup {
   partnerName: string;
   totalAmount: number;
   paiements: RemisePaiement[];
+}
+
+export interface QuarterGroup {
+  quarter: number;
+  year: number;
+  label: string;
+  totalAmount: number;
+  partners: PartnerGroup[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -77,18 +96,14 @@ export class RemiseService {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
 
-  getAllPaiements(companyId: number): Observable<RemisePaiement[]> {
-    return this.http.get<RemisePaiement[]>(`${this.base}/paiements`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
+  getAllPaiements(companyId: number, type?: string): Observable<RemisePaiement[]> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (type) params = params.set('type', type);
+    return this.http.get<RemisePaiement[]>(`${this.base}/paiements`, { params });
   }
 
   getPaiement(id: number): Observable<RemisePaiement> {
     return this.http.get<RemisePaiement>(`${this.base}/paiements/${id}`);
-  }
-
-  savePaiement(dto: RemisePaiement): Observable<RemisePaiement> {
-    return this.http.post<RemisePaiement>(`${this.base}/paiements`, dto);
   }
 
   confirmPaiement(id: number): Observable<RemisePaiement> {
@@ -99,10 +114,10 @@ export class RemiseService {
     return this.http.post<RemisePaiement>(`${this.base}/paiements/${id}/cancel`, {});
   }
 
-  getGroupedPaiements(companyId: number): Observable<PartnerGroup[]> {
-    return this.http.get<PartnerGroup[]>(`${this.base}/paiements/grouped`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
+  getGroupedPaiements(companyId: number, type?: string): Observable<PartnerGroup[]> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (type) params = params.set('type', type);
+    return this.http.get<PartnerGroup[]>(`${this.base}/paiements/grouped`, { params });
   }
 
   generateFacture(paiementIds: number[], companyId: number): Observable<{ invoiceId: number; invoiceName: string }> {
@@ -110,5 +125,25 @@ export class RemiseService {
       `${this.base}/paiements/generate-facture`,
       { paiementIds, companyId }
     );
+  }
+
+  generateByQuarter(quarter: number, year: number, companyId: number): Observable<{ generated: number; skipped: number; total: number }> {
+    return this.http.post<{ generated: number; skipped: number; total: number }>(
+      `${this.base}/paiements/generate-by-quarter`,
+      { quarter, year, companyId }
+    );
+  }
+
+  generateByPeriod(dateStart: string, dateEnd: string, companyId: number): Observable<{ generated: number; skipped: number; total: number }> {
+    return this.http.post<{ generated: number; skipped: number; total: number }>(
+      `${this.base}/paiements/generate-by-period`,
+      { dateStart, dateEnd, companyId }
+    );
+  }
+
+  getRapport(companyId: number, dateFrom: string, dateTo: string): Observable<RemisePaiement[]> {
+    return this.http.get<RemisePaiement[]>(`${this.base}/rapport`, {
+      params: new HttpParams().set('companyId', companyId).set('dateFrom', dateFrom).set('dateTo', dateTo)
+    });
   }
 }

@@ -2,9 +2,9 @@
 
 // Extra column for consolidé
 .remise-col {
-  color: #e65100;
+  color: var(--warning);
 }
 
 .consolide-table tbody .srpt-line td.remise-col {
-  color: #e65100;
+  color: var(--warning);
 }

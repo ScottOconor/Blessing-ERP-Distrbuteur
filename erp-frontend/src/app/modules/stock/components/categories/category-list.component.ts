@@ -5,8 +5,8 @@ import { StockService, ProductCategory } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
 
-const CAT_HEADERS = ['Nom*', 'Code', 'Compte Stock (311xxx)', 'Compte Entrée Stock (603x)', 'Compte CMV (605xx)'];
-const CAT_SAMPLE  = ['Matériaux de construction', 'MAT', '311100', '6031', '60500'];
+const CAT_HEADERS = ['Nom*', 'Code'];
+const CAT_SAMPLE  = ['Matériaux de construction', 'MAT'];
 
 @Component({
   selector: 'app-category-list',
@@ -94,7 +94,7 @@ export class CategoryListComponent implements OnInit {
   }
 
   private empty(): ProductCategory {
-    return { name: '', code: '', stockAccountCode: '311000', stockInAccountCode: '6031', cogsAccountCode: '60500', companyId: 0 };
+    return { name: '', code: '', companyId: 0 };
   }
 
   showSuccess(msg: string): void { this.successMsg = msg; setTimeout(() => this.successMsg = '', 3000); }
@@ -137,9 +137,6 @@ export class CategoryListComponent implements OnInit {
       const dto: ProductCategory = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
         code: String(row['Code'] || '').trim() || undefined,
-        stockAccountCode: String(row['Compte Stock (311xxx)'] || '311000').trim(),
-        stockInAccountCode: String(row['Compte Entrée Stock (603x)'] || '6031').trim(),
-        cogsAccountCode: String(row['Compte CMV (605xx)'] || '60500').trim(),
         companyId: cid
       };
       try {

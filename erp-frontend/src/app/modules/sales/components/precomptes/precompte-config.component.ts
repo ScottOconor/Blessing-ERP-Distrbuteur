@@ -7,6 +7,7 @@ import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { NotificationService } from '../../../../core/services/notification.service';
 
 
 
@@ -74,7 +75,8 @@ export class PrecompteConfigComponent implements OnInit {
     private svc: PrecompteService,
     private salesSvc: SalesService,
     private stockSvc: StockService,
-    private auth: AuthService
+    private auth: AuthService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -131,7 +133,10 @@ export class PrecompteConfigComponent implements OnInit {
 
   deletePc(id: number): void {
     if (!confirm('Supprimer ce précompte ?')) return;
-    this.svc.deletePrecompte(id).subscribe(() => this.loadPrecomptes());
+    this.svc.deletePrecompte(id).subscribe({
+      next: () => this.loadPrecomptes(),
+      error: err => this.notificationService.notify(err?.error?.message ?? 'Erreur lors de la suppression.', 'error')
+    });
   }
 
   // ===== Enlèvements =====
@@ -142,6 +147,11 @@ export class PrecompteConfigComponent implements OnInit {
       next: e => { this.enlevements = e; this.loadingEnl = false; },
       error: () => this.loadingEnl = false
     });
+  }
+
+  /** TTC = HT × (1 + 19,25%), pour vérifier le calcul appliqué en facturation */
+  ttc(montantHT: number | null | undefined): number {
+    return (montantHT ?? 0) * 1.1925;
   }
 
   openNewEnl(): void {
@@ -182,7 +192,10 @@ export class PrecompteConfigComponent implements OnInit {
 
   deleteEnl(id: number): void {
     if (!confirm('Supprimer ce frais d\'enlèvement ?')) return;
-    this.svc.deleteEnlevement(id).subscribe(() => this.loadEnlevements());
+    this.svc.deleteEnlevement(id).subscribe({
+      next: () => this.loadEnlevements(),
+      error: err => this.notificationService.notify(err?.error?.message ?? 'Erreur lors de la suppression.', 'error')
+    });
   }
 
   typeLabel(t: string): string {
@@ -250,12 +263,14 @@ export class PrecompteConfigComponent implements OnInit {
     this.importPcLoading = true;
     this.svc.importPrecomptes(this.pcFile, this.companyId).subscribe({
 
-      next: (res: any) => {
+      next: (res) => {
         this.importPcLoading = false;
         this.closeImportPcModal();
         this.loadPrecomptes();
         const msg = res?.message || 'Import terminé';
-        alert(msg + (res?.errors?.length ? (`\n\n${res.errors.join('\n')}`) : ''));
+        const errors = res?.errors?.length ? `\n\n${res.errors.join('\n')}` : '';
+        const warnings = res?.warnings?.length ? `\n\nAvertissements :\n${res.warnings.join('\n')}` : '';
+        alert(msg + errors + warnings);
       },
       error: () => {
         this.importPcLoading = false;

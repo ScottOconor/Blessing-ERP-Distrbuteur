@@ -1,0 +1,123 @@
+<div class="list-page">
+  <div class="page-header">
+    <div class="page-title">
+      <span class="material-icons">point_of_sale</span>
+      <div>
+        <h1>Gestion des caisses</h1>
+        <p>Configurez vos caisses et journaux de caisse</p>
+      </div>
+    </div>
+    <button class="btn-primary" (click)="openCreate()">
+      <span class="material-icons">add</span>
+      Nouvelle caisse
+    </button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-row"><span class="material-icons spin">sync</span> Chargement…</div>
+  }
+
+  @if (!loading && caisses.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">point_of_sale</span>
+      <p>Aucune caisse configurée. Créez-en une pour commencer.</p>
+    </div>
+  }
+
+  @if (!loading && caisses.length > 0) {
+    <div class="table-wrap">
+      <table class="cai-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Nom</th>
+            <th>Journal</th>
+            <th>Responsable</th>
+            <th>Statut</th>
+            <th>Solde actuel</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of caisses; track c.id) {
+            <tr>
+              <td class="mono">{{ c.code || '—' }}</td>
+              <td class="fw-bold">{{ c.name }}</td>
+              <td>{{ c.journalName || getJournalName(c.journalId) }}</td>
+              <td>{{ c.responsableName || '—' }}</td>
+              <td>
+                <span class="badge" [class.ouverte]="c.status === 'OUVERTE'" [class.cloturee]="c.status === 'CLOTUREE'">
+                  <span class="material-icons">{{ c.status === 'OUVERTE' ? 'lock_open' : 'lock' }}</span>
+                  {{ c.status }}
+                </span>
+              </td>
+              <td class="amount">{{ formatAmount(c.soldeActuel) }}</td>
+              <td>
+                <div class="action-btns">
+                  <button class="btn-icon" title="Modifier" (click)="openEdit(c)">
+                    <span class="material-icons">edit</span>
+                  </button>
+                  <button class="btn-icon" title="Brouillard" (click)="viewSessions(c)">
+                    <span class="material-icons">receipt_long</span>
+                  </button>
+                  @if (c.status === 'CLOTUREE') {
+                    <button class="btn-icon green" title="Rouvrir" (click)="rouvrirCaisse(c)">
+                      <span class="material-icons">lock_open</span>
+                    </button>
+                  }
+                  <button class="btn-icon red" title="Désactiver" (click)="deleteCaisse(c)">
+                    <span class="material-icons">delete_outline</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Modal formulaire -->
+  @if (showForm) {
+    <div class="modal-overlay" (click)="closeForm()">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <span class="material-icons">point_of_sale</span>
+          <h2>{{ editMode ? 'Modifier la caisse' : 'Nouvelle caisse' }}</h2>
+          <button class="btn-close" (click)="closeForm()"><span class="material-icons">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>Nom de la caisse *</label>
+            <input type="text" [(ngModel)]="form.name" placeholder="Ex: Caisse principale" />
+          </div>
+          <div class="form-row">
+            <label>Code</label>
+            <input type="text" [(ngModel)]="form.code" placeholder="Ex: CAISSE-01" />
+          </div>
+          <div class="form-row">
+            <label>Journal de caisse *</label>
+            <select [(ngModel)]="form.journalId">
+              <option [value]="0">— Sélectionner un journal —</option>
+              @for (j of journals; track j.id) {
+                <option [value]="j.id">{{ j.name }} ({{ j.code }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Responsable</label>
+            <input type="text" [(ngModel)]="form.responsableName" placeholder="Nom du responsable" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" (click)="closeForm()">Annuler</button>
+          <button class="btn-save" (click)="save()" [disabled]="saving || !form.name || !form.journalId">
+            @if (saving) { <span class="material-icons spin">sync</span> }
+            @else { <span class="material-icons">save</span> }
+            {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

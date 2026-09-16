@@ -1,138 +1,269 @@
-<div class="page-container">
-  <div class="page-header">
-    <h1 class="page-title">
-      <span class="material-icons">dashboard</span>
-      Tableau de bord — Ventes
-    </h1>
-    <button class="btn-refresh" (click)="loadDashboard()" title="Actualiser">
-      <span class="material-icons" [class.spin]="loading">refresh</span>
+<div class="dash">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="dash-header">
+    <div>
+      <h1 class="dash-title">Tableau de bord</h1>
+      <p class="dash-sub">Vue d'ensemble des ventes en temps réel</p>
+    </div>
+    <button class="btn-refresh" (click)="loadDashboard()" [class.spinning]="loading">
+      <span class="material-icons">refresh</span>
     </button>
   </div>
 
   @if (loading) {
-    <div class="loading-overlay">
-      <span class="material-icons spin">refresh</span> Chargement...
+    <div class="skeleton-row">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="skeleton-card"></div>
+      }
     </div>
-  }
+  } @else {
 
-  <!-- KPI Cards -->
-  <div class="kpi-grid">
-    @for (kpi of kpis; track kpi.label) {
-      <div class="kpi-card" [class.clickable]="!!kpi.route" (click)="navigateTo(kpi.route)">
-        <div class="kpi-icon" [style.background]="kpi.color + '18'" [style.color]="kpi.color">
-          <span class="material-icons">{{ kpi.icon }}</span>
-        </div>
-        <div class="kpi-body">
-          <div class="kpi-value" [style.color]="kpi.color">{{ kpi.value }}</div>
-          <div class="kpi-label">{{ kpi.label }}</div>
-          @if (kpi.sub) { <div class="kpi-sub">{{ kpi.sub }}</div> }
-        </div>
-        @if (kpi.route) {
-          <span class="material-icons kpi-arrow">chevron_right</span>
-        }
+  <!-- ══ KPI HERO (5 cartes top) ══════════════════════════════════════════ -->
+  <div class="kpi-row">
+
+    <!-- CA TTC -->
+    <div class="kpi hero-card hero-teal">
+      <div class="kpi-icon-wrap"><span class="material-icons">trending_up</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ fmtM(caTTC) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Chiffre d'affaires TTC</span>
+        <span class="kpi-hint">{{ fmtM(caHT) }} FCFA HT</span>
       </div>
-    }
+    </div>
+
+    <!-- Encaissé -->
+    <div class="kpi hero-card hero-green">
+      <div class="kpi-icon-wrap"><span class="material-icons">payments</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ fmtM(encaisse) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Encaissé</span>
+        <span class="kpi-hint">{{ tauxEncaissement }} % du CA</span>
+      </div>
+    </div>
+
+    <!-- Reste dû -->
+    <div class="kpi hero-card" [class.hero-orange]="resteAEncaisser > 0" [class.hero-gray]="resteAEncaisser === 0">
+      <div class="kpi-icon-wrap"><span class="material-icons">schedule</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ fmtM(resteAEncaisser) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Reste à encaisser</span>
+        <span class="kpi-hint">{{ nbFacturesPosted }} facture(s) non soldée(s)</span>
+      </div>
+    </div>
+
+    <!-- Factures -->
+    <div class="kpi hero-card hero-purple clickable" (click)="go('/sales/invoices')">
+      <div class="kpi-icon-wrap"><span class="material-icons">description</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ nbFactures }}</span>
+        <span class="kpi-lbl">Factures</span>
+        <span class="kpi-hint">{{ nbFacturesPaid }} payées · {{ nbFacturesPosted }} validées</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <!-- Taux d'encaissement -->
+    <div class="kpi hero-card hero-blue">
+      <div class="kpi-icon-wrap"><span class="material-icons">donut_large</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ tauxEncaissement }}<span class="kpi-pct">%</span></span>
+        <span class="kpi-lbl">Taux d'encaissement</span>
+        <div class="mini-progress">
+          <div class="mini-bar" [style.width.%]="tauxEncaissement"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Stats bons & factures -->
-  <div class="stats-row">
-    <!-- Bons de commande par statut -->
-    <div class="card stats-card">
-      <div class="card-header">
-        <span class="material-icons">receipt</span>
-        Bons de commande par statut
+  <!-- ══ LIGNE SECONDAIRE (3 compteurs) ═══════════════════════════════════ -->
+  <div class="secondary-row">
+    <div class="sec-card clickable" (click)="go('/sales/orders')">
+      <span class="material-icons sec-icon">receipt_long</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ nbBCs }}</span>
+        <span class="sec-lbl">Bons de commande</span>
+        <span class="sec-hint">{{ nbBCsConfirmed }} confirmés</span>
       </div>
-      <div class="stats-list">
-        @for (s of orderStats; track s.label) {
-          <div class="stat-item">
-            <div class="stat-dot" [style.background]="s.color"></div>
-            <span class="stat-label">{{ s.label }}</span>
-            <span class="stat-count" [style.color]="s.color">{{ s.count }}</span>
+    </div>
+    <div class="sec-card clickable" (click)="go('/sales/avoirs')">
+      <span class="material-icons sec-icon">undo</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ nbAvoirs }}</span>
+        <span class="sec-lbl">Avoirs</span>
+        <span class="sec-hint">{{ fmtM(totalAvoirs) }} FCFA émis</span>
+      </div>
+    </div>
+    <div class="sec-card">
+      <span class="material-icons sec-icon">people</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ nbClients }}</span>
+        <span class="sec-lbl">Clients actifs</span>
+        <span class="sec-hint">avec facturation</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LIGNE MILIEU : évolution + répartition ════════════════════════════ -->
+  <div class="mid-row">
+
+    <!-- Créances clients -->
+    <div class="card creances-card">
+      <div class="card-hd">
+        <span class="card-title">
+          <span class="material-icons">account_balance_wallet</span>
+          Créances clients
+        </span>
+        @if (nbClientsDebiteurs > 0) {
+          <span class="creances-total-badge">{{ fmtFull(totalCreances) }}</span>
+        }
+      </div>
+
+      @if (creances.length === 0) {
+        <div class="creances-empty">
+          <span class="material-icons">check_circle</span>
+          <span>Aucune créance en cours</span>
+        </div>
+      } @else {
+        <div class="creances-list">
+          @for (c of creances; track c.name) {
+            <div class="creance-item" [class.critical]="c.aging === 'critical'" [class.late]="c.aging === 'late'">
+              <div class="creance-left">
+                <div class="creance-avatar">{{ c.name.charAt(0).toUpperCase() }}</div>
+                <div class="creance-info">
+                  <span class="creance-name">{{ c.name }}</span>
+                  <span class="creance-meta">{{ c.nbFactures }} facture{{ c.nbFactures > 1 ? 's' : '' }}</span>
+                </div>
+              </div>
+              <div class="creance-right">
+                <span class="creance-amount">{{ fmtM(c.totalDu) }} FCFA</span>
+                <span class="aging-badge aging-{{ c.aging }}">
+                  @if (c.aging === 'current') { ≤ 30 j }
+                  @else if (c.aging === 'late') { {{ c.oldestDays }} j }
+                  @else { {{ c.oldestDays }} j ⚠ }
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Répartition factures -->
+    <div class="card break-card">
+      <div class="card-hd">
+        <span class="card-title"><span class="material-icons">pie_chart</span> Répartition factures</span>
+      </div>
+      <div class="breakdown-list">
+        @for (b of invoiceBreakdown; track b.label) {
+          <div class="break-item">
+            <div class="break-top">
+              <span class="break-dot" [style.background]="b.color"></span>
+              <span class="break-lbl">{{ b.label }}</span>
+              <span class="break-count" [style.color]="b.color">{{ b.count }}</span>
+              <span class="break-pct">{{ b.pct }} %</span>
+            </div>
+            <div class="break-track">
+              <div class="break-bar" [style.width.%]="b.pct" [style.background]="b.color"></div>
+            </div>
+            @if (b.amount > 0) {
+              <span class="break-amount">{{ fmtM(b.amount) }} FCFA</span>
+            }
           </div>
         }
       </div>
     </div>
 
-    <!-- Factures par statut -->
-    <div class="card stats-card">
-      <div class="card-header">
-        <span class="material-icons">description</span>
-        Factures par statut
+  </div>
+
+  <!-- ══ TOP CLIENTS ══════════════════════════════════════════════════════ -->
+  @if (topClients.length > 0) {
+    <div class="card top-clients-card">
+      <div class="card-hd">
+        <span class="card-title"><span class="material-icons">workspace_premium</span> Top 5 clients</span>
       </div>
-      <div class="stats-list">
-        @for (s of invoiceStats; track s.label) {
-          <div class="stat-item">
-            <div class="stat-dot" [style.background]="s.color"></div>
-            <span class="stat-label">{{ s.label }}</span>
-            <div class="stat-right">
-              <span class="stat-count" [style.color]="s.color">{{ s.count }}</span>
-              @if (s.amount > 0) {
-                <span class="stat-amount">{{ s.amount | number:'1.0-0' }} F</span>
+      <div class="top-list">
+        @for (c of topClients; track c.name; let idx = $index) {
+          <div class="top-item">
+            <span class="top-rank">{{ idx + 1 }}</span>
+            <div class="top-info">
+              <div class="top-name">{{ c.name }}</div>
+              <div class="top-bar-track">
+                <div class="top-bar-fill" [style.width.%]="c.pct"></div>
+              </div>
+            </div>
+            <div class="top-nums">
+              <span class="top-ca">{{ fmtM(c.caTTC) }} FCFA</span>
+              @if (c.du > 0) {
+                <span class="top-du">{{ fmtM(c.du) }} dû</span>
               }
             </div>
           </div>
         }
       </div>
     </div>
-  </div>
+  }
 
-  <!-- Dernières activités -->
+  <!-- ══ DERNIÈRES ACTIVITÉS ════════════════════════════════════════════════ -->
   <div class="activity-row">
-    <!-- Derniers bons -->
-    <div class="card activity-card">
-      <div class="card-header">
-        <span>Derniers bons de commande</span>
-        <button class="btn-link" (click)="navigateTo('/sales/orders')">Voir tout</button>
-      </div>
-      @if (recentOrders.length === 0) {
-        <div class="empty-activity">Aucun bon de commande</div>
-      } @else {
-        <table class="mini-table">
-          <thead>
-            <tr><th>Numéro</th><th>Client</th><th class="text-right">TTC</th><th>Statut</th></tr>
-          </thead>
-          <tbody>
-            @for (o of recentOrders; track o.id) {
-              <tr class="clickable-row" (click)="goToOrder(o.id)">
-                <td class="font-mono">{{ o.name }}</td>
-                <td>{{ o.partnerName }}</td>
-                <td class="text-right font-bold">{{ o.totalTTC | number:'1.0-0' }}</td>
-                <td><span [class]="getStateBadge(o.state || '')">{{ getStateLabel(o.state || '') }}</span></td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
 
     <!-- Dernières factures -->
     <div class="card activity-card">
-      <div class="card-header">
-        <span>Dernières factures</span>
-        <button class="btn-link" (click)="navigateTo('/sales/invoices')">Voir tout</button>
+      <div class="card-hd">
+        <span class="card-title"><span class="material-icons">description</span> Dernières factures</span>
+        <button class="btn-link" (click)="go('/sales/invoices')">Voir tout <span class="material-icons">arrow_forward</span></button>
       </div>
       @if (recentInvoices.length === 0) {
-        <div class="empty-activity">Aucune facture</div>
+        <div class="empty-act">Aucune facture</div>
       } @else {
-        <table class="mini-table">
-          <thead>
-            <tr><th>Numéro</th><th>Client</th><th class="text-right">TTC</th><th class="text-right">Reste</th><th>Statut</th></tr>
-          </thead>
+        <table class="act-table">
+          <thead><tr><th>N°</th><th>Client</th><th class="r">TTC</th><th class="r">Reste</th><th>Statut</th></tr></thead>
           <tbody>
-            @for (inv of recentInvoices; track inv.id) {
-              <tr class="clickable-row" (click)="goToInvoice(inv.id)">
-                <td class="font-mono">{{ inv.name }}</td>
-                <td>{{ inv.partnerName }}</td>
-                <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
-                <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
-                  {{ inv.montantDu | number:'1.0-0' }}
-                </td>
-                <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
+            @for (i of recentInvoices; track i.id) {
+              <tr (click)="goInvoice(i.id)">
+                <td class="mono">{{ i.name }}</td>
+                <td class="client-cell">{{ i.partnerName }}</td>
+                <td class="r mono bold">{{ i.totalTTC | number:'1.0-0' }}</td>
+                <td class="r mono" [class.du-pos]="(i.montantDu || 0) > 0">{{ (i.montantDu || 0) | number:'1.0-0' }}</td>
+                <td><span [class]="'badge badge-' + i.state">{{ stateLabel(i.state || '') }}</span></td>
               </tr>
             }
           </tbody>
         </table>
       }
     </div>
+
+    <!-- Derniers bons de commande -->
+    <div class="card activity-card">
+      <div class="card-hd">
+        <span class="card-title"><span class="material-icons">receipt_long</span> Derniers bons de commande</span>
+        <button class="btn-link" (click)="go('/sales/orders')">Voir tout <span class="material-icons">arrow_forward</span></button>
+      </div>
+      @if (recentOrders.length === 0) {
+        <div class="empty-act">Aucun bon de commande</div>
+      } @else {
+        <table class="act-table">
+          <thead><tr><th>N°</th><th>Client</th><th>Date</th><th class="r">TTC</th><th>Statut</th></tr></thead>
+          <tbody>
+            @for (o of recentOrders; track o.id) {
+              <tr (click)="goOrder(o.id)">
+                <td class="mono">{{ o.name }}</td>
+                <td class="client-cell">{{ o.partnerName }}</td>
+                <td class="muted">{{ o.date | date:'dd/MM/yy' }}</td>
+                <td class="r mono bold">{{ o.totalTTC | number:'1.0-0' }}</td>
+                <td><span [class]="'badge badge-' + o.state">{{ stateLabel(o.state || '') }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
   </div>
+
+  } <!-- end !loading -->
 </div>

@@ -9,8 +9,6 @@ import com.erp.common.repository.CompanyRepository;
 import com.erp.stock.entity.StockLocation;
 import com.erp.stock.entity.StockPickingType;
 import com.erp.stock.entity.Warehouse;
-import com.erp.config.entity.CompanyGroup;
-import com.erp.config.repository.CompanyGroupRepository;
 import com.erp.stock.repository.StockLocationRepository;
 import com.erp.stock.repository.StockPickingTypeRepository;
 import com.erp.stock.repository.WarehouseRepository;
@@ -32,7 +30,6 @@ import java.util.Set;
 public class OhadaDataInitializer implements CommandLineRunner {
 
     private final CompanyRepository companyRepository;
-    private final CompanyGroupRepository groupRepository;
     private final AccountAccountRepository accountRepository;
     private final AccountJournalRepository journalRepository;
     private final WarehouseRepository warehouseRepository;
@@ -46,33 +43,22 @@ public class OhadaDataInitializer implements CommandLineRunner {
         initializeCompany(company);
     }
 
-    /** Initialise le plan comptable, les journaux et les entrepôts pour une entreprise. */
+    /** Initialise les journaux et les entrepôts pour une entreprise.
+     *  Le plan comptable n'est PAS auto-créé : l'utilisateur importe son propre plan. */
     @Transactional
     public void initializeCompany(Company company) {
-        initChartOfAccounts(company);
-        ensureEssentialAccounts(company);
         initDefaultJournals(company);
         initDefaultWarehouses(company);
     }
 
     private Company initDefaultCompany() {
         if (companyRepository.count() > 0) {
-            Company c = companyRepository.findAll().get(0);
-            if (c.getGroup() == null) {
-                groupRepository.findByCode("DEV_GROUP").ifPresent(g -> {
-                    c.setGroup(g);
-                    companyRepository.save(c);
-                    log.info("Default company linked to DEV_GROUP");
-                });
-            }
             return companyRepository.findAll().get(0);
         }
-        CompanyGroup devGroup = groupRepository.findByCode("DEV_GROUP").orElse(null);
         Company c = companyRepository.save(Company.builder()
                 .name("Ma Société").sigle("MS")
                 .adresse("Yaoundé, Cameroun").telephone("+237 000 000 000")
-                .email("contact@masociete.cm")
-                .group(devGroup).build());
+                .email("contact@masociete.cm").build());
         log.info("Default company created: {}", c.getName());
         return c;
     }
@@ -249,6 +235,7 @@ public class OhadaDataInitializer implements CommandLineRunner {
         // ===== CLASSE 6 - COMPTES DE CHARGES =====
         accounts.add(build("60",    "Achats et variations de stocks",             "expense",   "other",    false, company));
         accounts.add(build("601",   "Achats de marchandises",                     "expense",   "other",    false, company));
+        accounts.add(build("601901","Rabais, Remises et Ristournes obtenus des fournisseurs","expense","other",false, company));
         accounts.add(build("602",   "Achats de matières premières et fournitures liées","expense","other", false, company));
         accounts.add(build("603",   "Variations de stocks de biens achetés",      "expense",   "other",    false, company));
         accounts.add(build("6031",  "Variation de stocks de marchandises",        "expense",   "other",    false, company));
@@ -310,6 +297,7 @@ public class OhadaDataInitializer implements CommandLineRunner {
         // ===== CLASSE 7 - COMPTES DE PRODUITS =====
         accounts.add(build("70",    "Ventes",                                     "income",    "other",    false, company));
         accounts.add(build("701",   "Ventes de marchandises",                     "income",    "other",    false, company));
+        accounts.add(build("701901","Rabais, remises, ristournes accordées sur articles", "expense", "other", false, company));
         accounts.add(build("702",   "Ventes de produits fabriqués",               "income",    "other",    false, company));
         accounts.add(build("703",   "Ventes de produits résiduels",               "income",    "other",    false, company));
         accounts.add(build("705",   "Travaux facturés",                           "income",    "other",    false, company));
@@ -535,7 +523,7 @@ public class OhadaDataInitializer implements CommandLineRunner {
         // --- Magasin Principal ---
         StockLocation mainStock = stockLocationRepository.save(StockLocation.builder()
                 .name("MP/Stock").usage("internal").companyId(company.getId()).active(true)
-                .accountCode("311000").build());
+                .build());
         Warehouse magasin = warehouseRepository.save(Warehouse.builder()
                 .name("Magasin Principal").code("MP")
                 .stockLocationId(mainStock.getId())

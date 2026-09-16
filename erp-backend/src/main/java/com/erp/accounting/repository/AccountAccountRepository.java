@@ -15,6 +15,8 @@ public interface AccountAccountRepository extends JpaRepository<AccountAccount, 
 
     List<AccountAccount> findByCompanyIdAndDeprecatedFalseOrderByCode(Long companyId);
 
+    List<AccountAccount> findByCompanyIdOrderByCode(Long companyId);
+
     List<AccountAccount> findByCodeStartingWithAndCompanyId(String prefix, Long companyId);
 
     List<AccountAccount> findByCompanyId(Long companyId);

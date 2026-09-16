@@ -1,0 +1,235 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Trous &amp; Casses</h1>
+      <p class="page-subtitle">Sortie de stock pour marchandises avariées/cassées</p>
+    </div>
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div>
+  }
+
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'new'" (click)="activeTab = 'new'">
+      <span class="material-icons">add_circle_outline</span> Nouvelle sortie
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">
+      <span class="material-icons">history</span> Historique &amp; rapport
+    </button>
+  </div>
+
+  @if (activeTab === 'new') {
+    <div class="card">
+      <div class="card-body">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Entrepôt <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="form.warehouseId" (ngModelChange)="onWarehouseChange()">
+              <option [ngValue]="0" disabled>-- Sélectionner --</option>
+              @for (w of warehouses; track w.id) { <option [ngValue]="w.id">{{ w.name }}</option> }
+            </select>
+            @if (form.warehouseId && allProducts.length === 0) {
+              <span class="field-hint field-hint-danger">Aucun article en stock dans cet entrepôt.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label>Date <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="form.date">
+          </div>
+          <div class="form-group">
+            <label>Client (destination)</label>
+            <select class="form-control" [(ngModel)]="form.partnerId">
+              <option [ngValue]="null">-- Aucun --</option>
+              @for (c of clients; track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+            </select>
+          </div>
+          <div class="form-group form-full">
+            <label>Notes</label>
+            <input type="text" class="form-control" [(ngModel)]="form.notes" placeholder="Motif de la casse/avarie...">
+          </div>
+        </div>
+
+        <div class="section-title">
+          <span class="material-icons">inventory_2</span> Articles à sortir
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th class="text-right">Quantité</th>
+              <th class="text-right">CMUP</th>
+              <th class="text-right">Valeur estimée</th>
+              <th style="width:44px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of lines; track $index; let i = $index) {
+              <tr>
+                <td class="search-cell">
+                  <input type="text" class="form-control" [(ngModel)]="line.search"
+                         [disabled]="!form.warehouseId"
+                         placeholder="{{ form.warehouseId ? 'Rechercher un article en stock...' : 'Sélectionnez d\'abord un entrepôt' }}"
+                         (input)="onSearchInput(i)" (focus)="onSearchInput(i)" autocomplete="off">
+                  @if (activeSuggestionIdx === i && getSuggestions(i).length > 0) {
+                    <div class="suggestions">
+                      @for (p of getSuggestions(i); track p.id) {
+                        <div class="suggestion-item" (click)="selectProduct(i, p)">
+                          <span class="code-badge">{{ p.defaultCode }}</span> {{ p.name }}
+                          <span class="qty-badge">{{ p.qtyOnHand }} dispo</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                  @if (line.productId) {
+                    <span class="field-hint" [class.field-hint-danger]="lineExceedsStock(line)">
+                      Disponible : {{ line.available }}
+                    </span>
+                  }
+                </td>
+                <td class="text-right">
+                  <input type="number" class="form-control w-qty" min="0" [(ngModel)]="line.quantity"
+                         [class.input-error]="lineExceedsStock(line)">
+                </td>
+                <td class="text-right mono">{{ fmt(line.unitCost) }}</td>
+                <td class="text-right mono">{{ fmt((line.quantity ?? 0) * line.unitCost) }}</td>
+                <td>
+                  <button class="btn-icon" (click)="removeLine(i)" title="Supprimer">
+                    <span class="material-icons">delete_outline</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-right" style="font-weight:600">Total estimé</td>
+              <td class="text-right mono" style="font-weight:600">{{ fmt(totalEstimate) }} FCFA</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <button class="btn-add-line" (click)="addLine()">
+          <span class="material-icons">add</span> Ajouter un article
+        </button>
+
+        <div class="form-actions">
+          <button class="btn-primary" (click)="save()" [disabled]="saving">
+            <span class="material-icons" [class.spin]="saving">{{ saving ? 'hourglass_empty' : 'save' }}</span>
+            {{ saving ? 'Enregistrement…' : 'Enregistrer la sortie' }}
+          </button>
+        </div>
+        <p class="section-hint">Génère une écriture unique : Débit 659300 (charge) / Crédit 6031 (variation de stocks).</p>
+      </div>
+    </div>
+  }
+
+  @if (activeTab === 'history') {
+    <div class="card">
+      <div class="card-body">
+        <div class="filter-bar">
+          <div class="filter-date-group">
+            <label>Du</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom">
+          </div>
+          <div class="filter-date-group">
+            <label>Au</label>
+            <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo">
+          </div>
+          <button class="btn-secondary" (click)="loadHistory()">
+            <span class="material-icons">refresh</span> Actualiser
+          </button>
+          <button class="btn-secondary" (click)="exportExcel()" [disabled]="losses.length === 0">
+            <span class="material-icons">grid_on</span> Excel
+          </button>
+          <button class="btn-secondary" (click)="exportPdf()" [disabled]="losses.length === 0">
+            <span class="material-icons">picture_as_pdf</span> PDF
+          </button>
+        </div>
+
+        @if (historyError) {
+          <div class="alert alert-danger"><span class="material-icons">error</span> {{ historyError }}</div>
+        }
+
+        @if (loadingHistory) {
+          <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement…</div>
+        } @else if (losses.length === 0) {
+          <div class="empty-state">Aucune casse enregistrée sur la période.</div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Réf.</th>
+                <th>Date</th>
+                <th>Entrepôt</th>
+                <th>Client</th>
+                <th class="text-right">Valeur</th>
+                <th style="width:80px"></th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of losses; track l.id) {
+                <tr>
+                  <td class="mono">{{ l.name }}</td>
+                  <td>{{ l.date }}</td>
+                  <td>{{ l.warehouseName }}</td>
+                  <td>{{ l.partnerName || '—' }}</td>
+                  <td class="text-right mono">{{ fmt(l.totalValue ?? 0) }} FCFA</td>
+                  <td>
+                    <button class="btn-icon" (click)="downloadBordereau(l)" title="Télécharger le bordereau PDF">
+                      <span class="material-icons">description</span>
+                    </button>
+                  </td>
+                  <td>
+                    <span class="material-icons expand-toggle" (click)="toggleExpand(l.id)">
+                      {{ expandedId === l.id ? 'expand_less' : 'expand_more' }}
+                    </span>
+                  </td>
+                </tr>
+                @if (expandedId === l.id) {
+                  <tr class="expand-row">
+                    <td colspan="7">
+                      @if (l.notes) { <p class="notes-line"><em>{{ l.notes }}</em></p> }
+                      <table class="sub-table">
+                        <thead>
+                          <tr><th>Code</th><th>Article</th><th class="text-right">Qté</th><th class="text-right">CMUP</th><th class="text-right">Montant</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (line of l.lines; track line.id) {
+                            <tr>
+                              <td>{{ line.productCode }}</td>
+                              <td>{{ line.description }}</td>
+                              <td class="text-right">{{ line.quantity }}</td>
+                              <td class="text-right">{{ fmt(line.unitCost ?? 0) }}</td>
+                              <td class="text-right">{{ fmt(line.montantTotal ?? 0) }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="text-right" style="font-weight:600">Total période</td>
+                <td class="text-right mono" style="font-weight:600">{{ fmt(grandTotal) }} FCFA</td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        }
+      </div>
+    </div>
+  }
+
+</div>

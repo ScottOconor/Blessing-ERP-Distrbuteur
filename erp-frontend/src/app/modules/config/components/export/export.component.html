@@ -1,0 +1,79 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title"><span class="material-icons">file_download</span> Exportation</h1>
+    <p class="page-sub">Exportez les données de chaque module vers Excel.</p>
+  </div>
+
+  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
+  @if (errorMsg)   { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div> }
+
+  @for (section of sections; track section.title) {
+    <div class="export-section">
+      <div class="section-title" [style.color]="section.color">
+        <span class="material-icons">{{ section.icon }}</span> {{ section.title }}
+      </div>
+      <div class="export-grid">
+        @for (item of section.items; track item.id) {
+          <div class="export-card">
+            <div class="export-card-head">
+              <div class="export-card-info">
+                <div class="export-card-label">{{ item.label }}</div>
+                <div class="export-card-desc">{{ item.description }}</div>
+              </div>
+            </div>
+
+            @if (item.hasJournalFilter || item.hasDateFilter || item.hasPartnerFilter || item.hasWarehouseFilter) {
+              <div class="export-filters">
+                @if (item.hasJournalFilter) {
+                  <div class="filter-group">
+                    <label>Journal</label>
+                    <select [(ngModel)]="item.journalId" class="form-control">
+                      <option [ngValue]="null">— Tous les journaux —</option>
+                      @for (j of journals; track j.id) { <option [ngValue]="j.id">{{ j.code }} - {{ j.name }}</option> }
+                    </select>
+                  </div>
+                }
+                @if (item.hasPartnerFilter) {
+                  <div class="filter-group">
+                    <label>{{ item.partnerKind === 'supplier' ? 'Fournisseur' : 'Client' }}</label>
+                    <select [(ngModel)]="item.partnerId" class="form-control">
+                      <option [ngValue]="null">— {{ item.partnerKind === 'supplier' ? 'Tous les fournisseurs' : 'Tous les clients' }} —</option>
+                      @for (p of partnerOptions(item); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+                    </select>
+                  </div>
+                }
+                @if (item.hasWarehouseFilter) {
+                  <div class="filter-group">
+                    <label>Entrepôt</label>
+                    <select [(ngModel)]="item.warehouseId" class="form-control">
+                      <option [ngValue]="null">— Tous les entrepôts —</option>
+                      @for (w of warehouses; track w.id) { <option [ngValue]="w.id">{{ w.name }}</option> }
+                    </select>
+                  </div>
+                }
+                @if (item.hasDateFilter) {
+                  <div class="filter-group">
+                    <label>Du</label>
+                    <input type="date" [(ngModel)]="item.dateFrom" class="form-control" />
+                  </div>
+                  <div class="filter-group">
+                    <label>Au</label>
+                    <input type="date" [(ngModel)]="item.dateTo" class="form-control" />
+                  </div>
+                }
+              </div>
+            }
+
+            <button class="btn-export" [disabled]="item.exporting" (click)="runExport(item.id)">
+              @if (item.exporting) {
+                <span class="material-icons spin">refresh</span> Export en cours…
+              } @else {
+                <span class="material-icons">file_download</span> Exporter
+              }
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

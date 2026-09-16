@@ -1,13 +1,31 @@
 <div class="page-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><span class="material-icons">local_shipping</span> Livraisons</h1>
-      <span class="badge-count">{{ pickings.length }}</span>
+      <h1 class="page-title"><span class="material-icons">swap_horiz</span> Expéditions inter-agences</h1>
     </div>
-    <button class="btn-primary" (click)="router.navigate(['/stock/livraisons/new'])">
-      <span class="material-icons">add</span> Nouvelle livraison
+    @if (activeTab === 'expeditions') {
+      <button class="btn-primary" (click)="router.navigate(['/stock/expeditions/new'])">
+        <span class="material-icons">add</span> Nouvelle expédition
+      </button>
+    }
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab-btn" [class.active]="activeTab === 'expeditions'" (click)="setTab('expeditions')">
+      <span class="material-icons">local_shipping</span>
+      Expéditions
+      <span class="tab-count">{{ outgoingCount }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'receptions'" (click)="setTab('receptions')">
+      <span class="material-icons">move_to_inbox</span>
+      Réceptions
+      <span class="tab-count" [class.tab-count-alert]="pendingReceptionCount > 0">{{ incomingCount }}</span>
+      @if (pendingReceptionCount > 0) {
+        <span class="pending-dot">{{ pendingReceptionCount }}</span>
+      }
     </button>
   </div>
+
   <div class="filter-bar">
     <div class="filter-date-group">
       <label>Du</label>
@@ -20,32 +38,82 @@
     <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <div class="card">
     @if (loading) {
       <div class="empty"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>
     } @else if (pickings.length === 0) {
-      <div class="empty"><span class="material-icons">local_shipping</span><p>Aucune livraison</p></div>
+      <div class="empty">
+        <span class="material-icons">{{ activeTab === 'receptions' ? 'move_to_inbox' : 'local_shipping' }}</span>
+        <p>{{ activeTab === 'receptions' ? 'Aucune réception inter-agences' : 'Aucune expédition inter-agences' }}</p>
+      </div>
     } @else {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Référence</th><th>Client</th><th>Origine</th>
-            <th>Date planifiée</th><th>Date faite</th><th>Statut</th>
-            <th class="text-right">Valeur</th><th></th>
+            <th>Référence</th>
+            <th>{{ activeTab === 'receptions' ? 'Agence émettrice' : 'Agence destinataire' }}</th>
+            <th>Entrepôt source</th>
+            <th>Entrepôt dest.</th>
+            <th>Date planifiée</th>
+            <th>Statut</th>
+            <th class="text-right">Valeur</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          @for (p of pickings; track p.id) {
-            <tr (click)="router.navigate(['/stock/livraisons', p.id])" class="clickable">
-              <td class="font-mono font-bold text-teal">{{ p.name }}</td>
-              <td>{{ p.partnerName || '—' }}</td>
-              <td class="text-muted">{{ p.origin || '—' }}</td>
-              <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
-              <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
-              <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
-              <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
-              <td><span class="material-icons chevron">chevron_right</span></td>
-            </tr>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="8">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (p of getGroupItems(row.key); track p.id) {
+                  <tr class="detail-row clickable" (click)="router.navigate(['/stock/expeditions', p.id])">
+                    <td class="font-mono font-bold text-teal">{{ p.name }}</td>
+                    <td class="font-bold">{{ agenceLabel(p) }}</td>
+                    <td class="text-muted small">{{ p.sourceWarehouseName || '—' }}</td>
+                    <td class="text-muted small">{{ p.destWarehouseName || '—' }}</td>
+                    <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                    <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                    <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                    <td><span class="material-icons chevron">chevron_right</span></td>
+                  </tr>
+                }
+              }
+            }
+          } @else {
+            @for (p of pickings; track p.id) {
+              <tr (click)="router.navigate(['/stock/expeditions', p.id])" class="clickable">
+                <td class="font-mono font-bold text-teal">{{ p.name }}</td>
+                <td class="font-bold">{{ agenceLabel(p) }}</td>
+                <td class="text-muted small">{{ p.sourceWarehouseName || '—' }}</td>
+                <td class="text-muted small">{{ p.destWarehouseName || '—' }}</td>
+                <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                <td><span class="material-icons chevron">chevron_right</span></td>
+              </tr>
+            }
           }
         </tbody>
       </table>

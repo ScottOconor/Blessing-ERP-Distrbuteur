@@ -8,7 +8,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "valuation_layers")
+@Table(name = "valuation_layers", indexes = {
+    // Une ligne par mouvement de stock, jamais purgée — grossit indéfiniment. L'écran Valorisation
+    // (getValuation/getStockReport) et le détail article interrogent par (product_id, company_id)
+    // trié par date sans aucun index existant jusqu'ici.
+    @Index(name = "idx_valuation_layers_product_company", columnList = "product_id, company_id, created_at"),
+    @Index(name = "idx_valuation_layers_company_created",  columnList = "company_id, created_at")
+})
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class ValuationLayer {
 

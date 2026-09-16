@@ -1,0 +1,180 @@
+// Shared responsive behaviour for the module top navbars.
+// Below $bp, the horizontal nav + right-side controls move into an
+// off-canvas drawer opened by a hamburger button, instead of squeezing
+// or scrolling horizontally.
+//
+// Markup contract expected in the layout template:
+//   <nav class="X-navbar">
+//     <div class="X-brand">...</div>
+//     <div class="nav-divider"></div>
+//     <button class="nav-hamburger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.active]="mobileMenuOpen"> ... </button>
+//     <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+//       <nav class="X-nav nav-links"> ...existing nav-link / nav-item-dropdown loop... </nav>
+//       <div class="nav-right"> ...existing right-side controls... </div>
+//     </div>
+//   </nav>
+//   @if (mobileMenuOpen) { <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div> }
+
+@mixin navbar-mobile-menu($bp: 960px) {
+  .nav-mobile-panel { display: contents; }
+
+  .nav-hamburger {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    background: none; border: 1px solid var(--navbar-border);
+    border-radius: var(--radius-sm); color: rgba(255,255,255,.85);
+    cursor: pointer; transition: var(--ease); flex-shrink: 0;
+
+    .material-icons { font-size: 20px; transition: transform .25s ease; }
+    &:hover { background: var(--navbar-hover); }
+    &.active {
+      background: var(--navbar-hover); border-color: rgba(255,255,255,.3);
+      .material-icons { transform: rotate(90deg); }
+    }
+  }
+
+  // z-index 40: must stay BELOW the navbar's own z-index (100, or 50 for the
+  // HR layout's sticky navbar). .nav-mobile-panel lives inside that navbar, so
+  // its own z-index (245) is only compared *within* the navbar's local
+  // stacking context — from the outside, the whole navbar+drawer is stacked
+  // at the navbar's z-index. A backdrop above that would sit on top of the
+  // drawer and swallow every click, closing the menu instead of activating
+  // the item underneath.
+  .nav-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 40; opacity: 0; animation: navBackdropIn .25s ease forwards;
+  }
+
+  @media (max-width: #{$bp}) {
+    .nav-hamburger { display: inline-flex; margin-left: auto; }
+
+    // The drawer is a page-surface overlay, not part of the permanently-dark
+    // top bar — it follows the app's light/dark theme like any other panel,
+    // so every color below comes from the theme-aware --bg-*/--text-*
+    // variables rather than the fixed --navbar-* ones (which assume a
+    // permanently dark background and would go low-contrast in light mode).
+    .nav-mobile-panel {
+      display: flex !important; flex-direction: column; align-items: stretch;
+      position: fixed; top: 50px; right: 0; bottom: 0;
+      width: min(300px, 84vw);
+      background: var(--bg-surface);
+      overflow-y: auto; padding: 6px 0 28px;
+      border-left: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      transform: translateX(100%);
+      visibility: hidden;
+      transition: transform .32s cubic-bezier(.16,1,.3,1), visibility 0s linear .32s;
+      z-index: 245;
+
+      &.open {
+        transform: translateX(0);
+        visibility: visible;
+        transition: transform .32s cubic-bezier(.16,1,.3,1);
+      }
+    }
+
+    .nav-links, .nav-right {
+      display: flex !important; flex-direction: column !important; align-items: stretch !important;
+      flex: none !important; width: 100%; overflow: visible !important;
+    }
+
+    .nav-right {
+      border-top: 1px solid var(--border);
+      margin: 10px 0 0 !important; padding: 14px 16px 0 !important;
+      gap: 10px !important;
+    }
+
+    .nav-link {
+      height: auto !important; width: 100%; padding: 13px 18px !important;
+      border-bottom: none !important; border-left: 3px solid transparent;
+      border-radius: 0 !important;
+      color: var(--text-primary) !important;
+
+      &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+      &.active {
+        border-left-color: var(--primary) !important;
+        background: var(--bg-elevated) !important;
+        color: var(--primary) !important;
+      }
+    }
+
+    // Only top-level items fade in; a .dropdown-toggle (also .nav-link, but
+    // nested inside .nav-item-dropdown) must stay fully opaque — its container
+    // is the one that gets the entrance animation below.
+    .nav-links > .nav-link { opacity: 0; }
+
+    .nav-mobile-panel.open {
+      .nav-links > .nav-link,
+      .nav-links > .nav-item-dropdown {
+        animation: navItemIn .22s ease forwards;
+        @for $i from 1 through 18 {
+          &:nth-child(#{$i}) { animation-delay: #{$i * 0.025}s; }
+        }
+      }
+    }
+
+    .nav-item-dropdown {
+      flex-direction: column !important; align-items: stretch !important;
+      opacity: 0;
+
+      .dropdown-panel {
+        display: none; position: static !important; box-shadow: none; border: none;
+        border-radius: 0; background: var(--bg-elevated); animation: none; padding: 4px 0;
+        min-width: 0; width: 100%;
+
+        // The desktop .dropdown-item colors (--text-primary/--text-muted) are
+        // already theme-aware, so no override is needed here — just re-indent
+        // to show hierarchy under its parent toggle.
+        .dropdown-item { padding-left: 46px; }
+      }
+      &.open .dropdown-panel { display: flex !important; animation: navAccordionIn .22s ease; }
+    }
+
+    .company-selector {
+      width: 100%;
+
+      .company-btn {
+        width: 100%; justify-content: space-between;
+        background: var(--bg-elevated) !important; border-color: var(--border) !important;
+        color: var(--text-primary) !important;
+      }
+      .company-dropdown {
+        position: static; box-shadow: none; border: none; margin-top: 6px;
+        width: 100%; animation: none; padding-left: 8px; background: var(--bg-elevated);
+      }
+      // .company-option already uses theme-aware --text-primary/--text-muted
+      // colors on desktop — no override needed.
+    }
+
+    .user-pill {
+      padding: 8px 2px; color: var(--text-primary) !important;
+      .company-name { color: var(--text-muted) !important; }
+    }
+
+    // Helpdesk/Config/HR use `.user-name` (not `.user-pill > .user-name-sm`)
+    // for the same purpose.
+    .user-name { color: var(--text-primary) !important; }
+
+    .btn-theme-toggle {
+      border-color: var(--border) !important; color: var(--text-secondary) !important;
+      &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+    }
+
+    .btn-nav-logout, .btn-logout {
+      border-color: var(--border) !important; color: var(--text-secondary) !important;
+      &:hover { background: var(--danger-bg) !important; border-color: var(--danger) !important; color: var(--danger) !important; }
+    }
+
+    // HR reuses one class for both the theme toggle and logout buttons.
+    .btn-icon-nav {
+      border-color: var(--border) !important; color: var(--text-secondary) !important;
+      &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+    }
+
+  }
+}
+
+@keyframes navBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes navAccordionIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes navItemIn { from { opacity: 0; } to { opacity: 1; } }

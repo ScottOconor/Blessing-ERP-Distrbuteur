@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "purchase_orders")
+@Table(name = "purchase_orders", indexes = {
+    @Index(name = "idx_purchase_orders_company_created", columnList = "company_id, created_at")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -33,6 +35,11 @@ public class PurchaseOrder {
     /** draft / confirmed / received / cancelled */
     @Builder.Default
     private String state = "draft";
+
+    /** Verrou optimiste — empêche une double confirmation concurrente
+     *  (deux requêtes passant toutes les deux le contrôle state=="draft" avant l'écriture). */
+    @Version
+    private Long version;
 
     private String notes;
 

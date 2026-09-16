@@ -1,3 +1,7 @@
+@if (loading) {
+  <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
+}
+
 <div class="page-container report-container">
 
   <div class="page-header no-print">
@@ -7,10 +11,10 @@
     </h1>
     @if (generated) {
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" (click)="exportPdf()">
+        <button class="btn btn-outline btn-pdf" (click)="exportPdf()">
           <span class="material-icons">picture_as_pdf</span> Exporter PDF
         </button>
-        <button class="btn btn-outline" (click)="exportExcel()">
+        <button class="btn btn-outline btn-excel" (click)="exportExcel()">
           <span class="material-icons">table_view</span> Exporter Excel
         </button>
       </div>
@@ -20,8 +24,31 @@
   <div class="report-header no-print">
     <div class="filters-bar" style="margin-bottom:0">
       <div class="filter-group">
-        <label>Date de clôture *</label>
+        <label>Type de période</label>
+        <select class="form-control" [(ngModel)]="periodType" (ngModelChange)="onPeriodTypeChange()">
+          <option value="monthly">Mensuel</option>
+          <option value="quarterly">Trimestriel</option>
+          <option value="yearly">Annuel</option>
+          <option value="custom">Personnalisé</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Du</label>
+        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>Au</label>
         <input type="date" class="form-control" [(ngModel)]="dateTo">
+      </div>
+      <div class="filter-group checkbox-group">
+        <label>
+          <input type="checkbox" [(ngModel)]="comparisonEnabled">
+          Comparaison N-1
+        </label>
+        <label>
+          <input type="checkbox" [(ngModel)]="includeUnposted">
+          Inclure non validées
+        </label>
       </div>
       <div class="filter-actions">
         <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
@@ -38,13 +65,11 @@
     </div>
   }
 
-  @if (loading) {
-    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
-  } @else if (generated) {
+  @if (generated) {
 
     <div class="bilan-print-header">
       <h2>BILAN AU {{ dateTo | date:'dd/MM/yyyy' }}</h2>
-      <div class="bilan-subtitle">SYSCOHADA RÉVISÉ</div>
+      <div class="bilan-subtitle">SYSCOHADA RÉVISÉ — du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
       <div class="bilan-printed">Imprimé le {{ today | date:'dd/MM/yyyy HH:mm' }}</div>
     </div>
 
@@ -53,52 +78,84 @@
         <thead>
           <tr class="bilan-thead-main">
             <th style="width:4%">REF</th>
-            <th style="width:21%">ACTIF</th>
-            <th class="text-right" style="width:8%">BRUT</th>
-            <th class="text-right" style="width:8%">AMORT.</th>
-            <th class="text-right" style="width:9%">NET N</th>
+            <th style="width:15%">ACTIF</th>
+            <th class="text-center fs-xs" style="width:7%">Cpte</th>
+            <th class="text-right" style="width:7%">BRUT N</th>
+            <th class="text-right" style="width:7%">AMORT.</th>
+            <th class="text-right" style="width:8%">NET N</th>
+            @if (comparisonEnabled) {
+              <th class="text-right" style="width:8%">NET N-1</th>
+            }
             <th class="passif-start text-center" style="width:4%">REF</th>
-            <th style="width:28%">PASSIF</th>
-            <th class="text-right" style="width:18%">NET N</th>
+            <th style="width:16%">PASSIF</th>
+            <th class="text-center fs-xs" style="width:7%">Cpte</th>
+            @if (comparisonEnabled) {
+              <th class="text-right" style="width:8%">NET N-1</th>
+            }
+            <th class="text-right" style="width:9%">NET N</th>
           </tr>
         </thead>
         <tbody>
           @for (i of rowIndices; track i) {
-@let actif = actifRows[i];
-@let passif = passifRows[i];
-            <tr [class.bilan-row-header]="actif.isHeader || passif.isHeader"
-                [class.bilan-row-total]="actif.isTotal || passif.isTotal">
-              <td class="bilan-ref mono">{{ (!actif.isHeader && !actif.isEmpty) ? actif.ref : '' }}</td>
-              <td [class.bilan-section-label]="actif.isHeader" [class.bilan-total-label]="actif.isTotal">{{ actif.label }}</td>
-              <td class="text-right mono">
-                @if (!actif.isHeader && !actif.isEmpty && actif.brut !== 0) { {{ actif.brut | number:'1.0-0' }} }
+@let actif = actifBody.at(i) ?? emptyRow;
+@let passif = passifBody.at(i) ?? emptyRow;
+            <tr>
+              <td class="bilan-ref mono" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">{{ (!actif.isEmpty && !actif.isTotal) ? actif.ref : '' }}</td>
+              <td [class.bilan-section-label]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">{{ actif.label }}</td>
+              <td class="text-center fs-xs text-muted" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">{{ actif.compte }}</td>
+              <td class="text-right mono" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">
+                @if (!actif.isEmpty && actif.brutN !== 0) { {{ actif.brutN | number:'1.0-0' }} }
               </td>
-              <td class="text-right mono">
-                @if (!actif.isHeader && !actif.isEmpty && actif.amort !== 0) { {{ actif.amort | number:'1.0-0' }} }
+              <td class="text-right mono" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">
+                @if (!actif.isEmpty && actif.amortN !== 0) { {{ actif.amortN | number:'1.0-0' }} }
               </td>
-              <td class="text-right mono fw-bold">
-                @if (!actif.isHeader && !actif.isEmpty) {
-                  {{ actif.net !== 0 || actif.isTotal ? (actif.net | number:'1.0-0') : '' }}
+              <td class="text-right mono fw-bold" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">
+                @if (!actif.isEmpty) {
+                  {{ actif.netN !== 0 || actif.isGrandTotal ? (actif.netN | number:'1.0-0') : '' }}
                 }
               </td>
-              <td class="passif-start bilan-ref mono">{{ (!passif.isHeader && !passif.isEmpty) ? passif.ref : '' }}</td>
-              <td [class.bilan-section-label]="passif.isHeader" [class.bilan-total-label]="passif.isTotal">{{ passif.label }}</td>
-              <td class="text-right mono fw-bold">
-                @if (!passif.isHeader && !passif.isEmpty) {
-                  {{ passif.net !== 0 || passif.isTotal ? (passif.net | number:'1.0-0') : '' }}
+              @if (comparisonEnabled) {
+                <td class="text-right mono" [class.bilan-td-total]="actif.isTotal || actif.isGrandTotal" [class.bilan-td-grandtotal]="actif.isGrandTotal">
+                  @if (!actif.isEmpty && actif.netN1 !== 0) { {{ actif.netN1 | number:'1.0-0' }} }
+                </td>
+              }
+              <td class="passif-start bilan-ref mono" [class.bilan-td-total]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-grandtotal]="passif.isGrandTotal">{{ (!passif.isEmpty && !passif.isTotal) ? passif.ref : '' }}</td>
+              <td [class.bilan-section-label]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-total]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-grandtotal]="passif.isGrandTotal">{{ passif.label }}</td>
+              <td class="text-center fs-xs text-muted" [class.bilan-td-total]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-grandtotal]="passif.isGrandTotal">{{ passif.compte }}</td>
+              @if (comparisonEnabled) {
+                <td class="text-right mono" [class.bilan-td-total]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-grandtotal]="passif.isGrandTotal">
+                  @if (!passif.isEmpty && passif.netN1 !== 0) { {{ passif.netN1 | number:'1.0-0' }} }
+                </td>
+              }
+              <td class="text-right mono fw-bold" [class.bilan-td-total]="passif.isTotal || passif.isGrandTotal" [class.bilan-td-grandtotal]="passif.isGrandTotal">
+                @if (!passif.isEmpty) {
+                  {{ passif.netN !== 0 || passif.isGrandTotal ? (passif.netN | number:'1.0-0') : '' }}
                 }
               </td>
             </tr>
           }
-        </tbody>
-        <tfoot>
-          <tr class="bilan-tfoot-total">
-            <td colspan="4" style="text-align:left;">BZ — TOTAL GÉNÉRAL ACTIF</td>
-            <td class="text-right mono">{{ totalActif | number:'1.0-0' }}</td>
-            <td class="passif-start" colspan="2" style="text-align:left;">BZ — TOTAL GÉNÉRAL PASSIF</td>
-            <td class="text-right mono">{{ totalPassif | number:'1.0-0' }}</td>
+          <!-- TOTAL GÉNÉRAL : BZ_ACTIF et BZ_PASSIF recombinés explicitement sur
+               une seule ligne (l'actif a un poste de plus que le passif — un
+               appariement par index les aurait mis sur deux lignes distinctes). -->
+          <tr class="bilan-row-finaltotal">
+            <td class="bilan-ref mono">{{ actifFinal.ref }}</td>
+            <td>{{ actifFinal.label }}</td>
+            <td class="text-center fs-xs text-muted">{{ actifFinal.compte }}</td>
+            <td class="text-right mono">{{ actifFinal.brutN !== 0 ? (actifFinal.brutN | number:'1.0-0') : '' }}</td>
+            <td class="text-right mono"></td>
+            <td class="text-right mono fw-bold">{{ actifFinal.netN | number:'1.0-0' }}</td>
+            @if (comparisonEnabled) {
+              <td class="text-right mono">{{ actifFinal.netN1 !== 0 ? (actifFinal.netN1 | number:'1.0-0') : '' }}</td>
+            }
+            <td class="passif-start bilan-ref mono">{{ passifFinal.ref }}</td>
+            <td>{{ passifFinal.label }}</td>
+            <td class="text-center fs-xs text-muted">{{ passifFinal.compte }}</td>
+            @if (comparisonEnabled) {
+              <td class="text-right mono">{{ passifFinal.netN1 !== 0 ? (passifFinal.netN1 | number:'1.0-0') : '' }}</td>
+            }
+            <td class="text-right mono fw-bold">{{ passifFinal.netN | number:'1.0-0' }}</td>
           </tr>
-        </tfoot>
+        </tbody>
       </table>
 
       <div [class]="isEquilibre ? 'bilan-equilibre ok' : 'bilan-equilibre warn'">
@@ -113,3 +170,4 @@
     </div>
   }
 </div>
+

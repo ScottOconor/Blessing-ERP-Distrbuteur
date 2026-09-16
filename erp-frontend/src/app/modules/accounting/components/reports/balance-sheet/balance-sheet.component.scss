@@ -1,14 +1,14 @@
-.mono { font-family: 'Courier New', monospace; }
+﻿.mono { font-family: 'Courier New', monospace; }
 .fw-bold { font-weight: 700; }
-.text-muted { color: #6c757d; }
+.text-muted { color: var(--text-muted); }
 .fs-xs { font-size: 10px; }
 .text-right { text-align: right; font-variant-numeric: tabular-nums; }
 .text-center { text-align: center; }
 
 .alert-error {
   display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px; background: #f8d7da; border: 1px solid #f5c6cb;
-  border-radius: 8px; color: #721c24; font-size: 13px;
+  padding: 12px 16px; background: var(--danger-bg); border: 1px solid var(--danger-bg);
+  border-radius: 8px; color: var(--danger); font-size: 13px;
   .material-icons { font-size: 18px; }
 }
 
@@ -26,11 +26,11 @@
   text-align: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--border);
 
   h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .bilan-subtitle { font-size: 12px; font-weight: 600; color: #444; }
-  .bilan-printed { font-size: 10px; color: #777; margin-top: 2px; }
+  .bilan-subtitle { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .bilan-printed { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 }
 
 /* ===== BILAN TABLE ===== */
@@ -39,18 +39,18 @@
 .bilan-full-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-surface);
   font-size: 11px;
-  border: 1px solid #333;
+  border: 1px solid var(--border);
 
   th, td {
     padding: 4px 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     vertical-align: middle;
   }
 
   thead .bilan-thead-main th {
-    background-color: #714B67;
+    background-color: var(--primary);
     color: white;
     font-weight: 700;
     font-size: 10px;
@@ -58,55 +58,57 @@
     padding: 6px;
   }
 
-  /* Première colonne du côté PASSIF — bordure gauche épaisse en guise de séparateur */
+  /* PremiÃ¨re colonne du cÃ´tÃ© PASSIF â€” bordure gauche Ã©paisse en guise de sÃ©parateur */
   .passif-start {
-    border-left: 3px solid #714B67 !important;
+    border-left: 3px solid var(--primary) !important;
   }
 
   tbody {
     tr {
-      &:nth-child(even) { background-color: #fafafa; }
+      &:nth-child(even) { background-color: var(--bg-elevated); }
       &:hover { background-color: #f5f0f7; }
     }
 
-    &.bilan-row-header td, tr.bilan-row-header td {
-      background-color: #e9ecef !important;
+    /* Sous-total / total — appliqué par CELLULE (pas par ligne entière) : l'actif
+       compte un poste de plus que le passif, donc les deux côtés d'une même
+       ligne ne sont pas forcément tous les deux un total. Styler toute la ligne
+       aurait mis en gras/gris à tort le côté qui n'en est pas un. */
+    .bilan-td-total {
+      background-color: var(--bg-elevated) !important;
       font-weight: 700;
     }
-
-    &.bilan-row-total td, tr.bilan-row-total td {
-      background-color: #f0eff4 !important;
-      font-weight: 700;
-      border-top: 1px solid #714B67;
+    .bilan-td-grandtotal {
+      border-top: 1px solid var(--primary);
     }
 
     .bilan-ref {
       text-align: center;
       font-weight: 700;
-      color: #714B67;
+      color: var(--primary);
       font-size: 10px;
     }
 
     .bilan-section-label {
       font-weight: 700;
-      color: #714B67;
-      background-color: #e9ecef;
+      color: var(--primary);
+      background-color: var(--bg-elevated);
       font-style: normal;
     }
 
     .bilan-total-label {
       font-weight: 700;
-      color: #333;
+      color: var(--text-primary);
       font-style: italic;
     }
-  }
 
-  tfoot .bilan-tfoot-total td {
-    background-color: #e8f5e8 !important;
-    font-weight: 700;
-    border-top: 2px solid #000;
-    border-bottom: 2px solid #000;
-    font-size: 11px;
+    /* TOTAL GÉNÉRAL — BZ_ACTIF et BZ_PASSIF recombinés sur une seule ligne */
+    &.bilan-row-finaltotal td, tr.bilan-row-finaltotal td {
+      background-color: var(--success-bg) !important;
+      font-weight: 700;
+      border-top: 2px solid var(--text-primary);
+      border-bottom: 2px solid var(--text-primary);
+      font-size: 11px;
+    }
   }
 }
 
@@ -123,21 +125,23 @@
   .material-icons { font-size: 20px; }
 
   &.ok {
-    background-color: #d4edda;
+    background-color: var(--success-bg);
     border: 1px solid #c3e6cb;
-    color: #155724;
+    color: var(--success);
     .material-icons { color: #28a745; }
   }
 
   &.warn {
     background-color: #fff3cd;
     border: 1px solid #ffeeba;
-    color: #856404;
+    color: var(--warning);
     .material-icons { color: #ffc107; }
   }
 }
 
 /* ===== PRINT ===== */
+@page { size: landscape; }
+
 @media print {
   .no-print { display: none !important; }
   .bilan-print-header { display: block !important; }
@@ -147,22 +151,21 @@
     th, td { padding: 2px 4px; }
 
     thead .bilan-thead-main th {
-      background-color: #714B67 !important;
+      background-color: var(--primary) !important;
       color: white !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
-    .passif-start { border-left: 3px solid #714B67 !important; }
+    .passif-start { border-left: 3px solid var(--primary) !important; }
 
-    tbody tr.bilan-row-header td { background-color: #e9ecef !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    tbody tr.bilan-row-total td { background-color: #f0eff4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-    tfoot .bilan-tfoot-total td { background-color: #e8f5e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody .bilan-td-total { background-color: var(--bg-elevated) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody tr.bilan-row-finaltotal td { background-color: var(--success-bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 
   .bilan-equilibre {
-    &.ok { background-color: #d4edda !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    &.ok { background-color: var(--success-bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     &.warn { background-color: #fff3cd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 }
+

@@ -6,6 +6,10 @@ export interface ReportRequest {
   displayAccount?: string; // 'all' | 'movement'
   resultSelection?: string; // 'customer' | 'supplier' | 'customer_supplier'
   accountIds?: number[];
+  periodType?: string;          // 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  includeUnposted?: boolean;    // inclure les écritures non validées
+  comparisonEnabled?: boolean;  // comparaison N-1
+  mode?: string;                // 'mensuel' | 'annuel' (compte de résultat)
 }
 
 export interface BalanceLine4Cols {
@@ -68,6 +72,7 @@ export interface BilanLine {
 export interface CompteResultatLine {
   code: string;
   label: string;
+  sign?: string;
   current: number;
   previous?: number;
   isTotal?: boolean;

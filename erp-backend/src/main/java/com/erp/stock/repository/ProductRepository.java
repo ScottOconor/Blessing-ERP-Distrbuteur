@@ -18,4 +18,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.defaultCode) LIKE LOWER(CONCAT('%',:q,'%'))) ORDER BY p.name")
     List<Product> search(@Param("cid") Long companyId, @Param("q") String query);
+
+    List<Product> findByCompanyIdAndCategoryId(Long companyId, Long categoryId);
 }

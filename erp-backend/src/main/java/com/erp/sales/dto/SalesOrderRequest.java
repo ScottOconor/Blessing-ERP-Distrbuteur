@@ -36,5 +36,7 @@ public class SalesOrderRequest {
         private String accountCode;       // compte de produit, ex: "701100"
         private Long categoryId;          // catégorie produit (ristourne, enlèvement)
         private boolean consigne;         // exclut PSA/ristourne/enlèvement
+        /** Rabais unitaire accordé à ce client (= salePrice - prixClient). 0 si aucun tarif. */
+        private BigDecimal rabaisUnitaire;
     }
 }

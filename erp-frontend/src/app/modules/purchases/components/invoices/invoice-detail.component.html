@@ -12,6 +12,15 @@
       @if (invoice?.state) {
         <span [class]="getStateBadge(invoice!.state!)">{{ getStateLabel(invoice!.state!) }}</span>
       }
+      @if (invoice?.reversalStatus === 'full') {
+        <span class="badge badge-reversed">
+          <span class="material-icons">swap_horiz</span> Extournée
+        </span>
+      } @else if (invoice?.reversalStatus === 'partial') {
+        <span class="badge badge-reversed-partial">
+          <span class="material-icons">swap_horiz</span> Partiellement extournée
+        </span>
+      }
       @if (invoice?.originalInvoiceName) {
         <span class="ecriture-ref">
           <span class="material-icons">link</span> {{ invoice!.originalInvoiceName }}
@@ -34,16 +43,23 @@
           <span class="material-icons">check_circle</span>
           {{ posting ? 'Validation...' : (isAvoir ? 'Valider l\'avoir' : 'Valider la facture') }}
         </button>
-        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
-          <span class="material-icons">cancel</span> Annuler
-        </button>
+        @if (canCancelInvoice) {
+          <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
+            <span class="material-icons">cancel</span> Annuler
+          </button>
+        }
       }
       @if (invoice?.state === 'posted' && isInvoice) {
         <button class="btn-payment" (click)="openPaymentForm()">
           <span class="material-icons">payments</span>
           Enregistrer un paiement
         </button>
-        <button class="btn-avoir" (click)="createAvoir()" [disabled]="creatingAvoir">
+        @if ((invoice?.partnerCreditDisponible || 0) > 0 && (invoice?.montantDu || 0) > 0) {
+          <button class="btn-payment" style="background:#017E84" (click)="openCreditForm()">
+            <span class="material-icons">redeem</span> Crédit ({{ invoice?.partnerCreditDisponible | number:'1.0-0' }})
+          </button>
+        }
+        <button class="btn-avoir" (click)="openAvoirModal()" [disabled]="creatingAvoir">
           <span class="material-icons">undo</span>
           {{ creatingAvoir ? 'Création...' : 'Créer un avoir' }}
         </button>
@@ -51,18 +67,41 @@
           <span class="material-icons">local_offer</span>
           {{ generatingRemises ? 'Génération...' : 'Générer remises' }}
         </button>
-        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
-          <span class="material-icons">cancel</span> {{ cancelling ? 'Annulation...' : 'Annuler la facture' }}
-        </button>
       }
       @if (invoice?.state === 'paid' && isInvoice) {
+        <button class="btn-avoir" (click)="openAvoirModal()" [disabled]="creatingAvoir">
+          <span class="material-icons">undo</span>
+          {{ creatingAvoir ? 'Création...' : 'Créer un avoir' }}
+        </button>
         <button class="btn-remise" (click)="generateRemises()" [disabled]="generatingRemises">
           <span class="material-icons">local_offer</span>
           {{ generatingRemises ? 'Génération...' : 'Générer remises' }}
         </button>
-        <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
-          <span class="material-icons">cancel</span> {{ cancelling ? 'Annulation...' : 'Annuler la facture' }}
+      }
+      @if (invoice?.state === 'partiellement_extournee' && isInvoice) {
+        @if (hasSoldeDu) {
+          <button class="btn-payment" (click)="openPaymentForm()">
+            <span class="material-icons">payments</span>
+            Enregistrer un paiement
+          </button>
+        }
+        <button class="btn-avoir" (click)="openAvoirModal()" [disabled]="creatingAvoir">
+          <span class="material-icons">undo</span>
+          Avoir complémentaire
         </button>
+      }
+      @if ((invoice?.state === 'posted' || invoice?.state === 'paid') && isAvoir) {
+        @if (hasSoldeDu) {
+          <button class="btn-payment" (click)="openPaymentForm()">
+            <span class="material-icons">payments</span>
+            Enregistrer un paiement
+          </button>
+        }
+        @if (canCancelInvoice) {
+          <button class="btn-danger" (click)="cancelInvoice()" [disabled]="cancelling">
+            <span class="material-icons">cancel</span> {{ cancelling ? 'Annulation...' : 'Annuler l\'avoir' }}
+          </button>
+        }
       }
       @if (invoice?.state === 'cancelled') {
         <button class="btn-warning" (click)="reverseEntries()" [disabled]="reversing">
@@ -117,6 +156,12 @@
               <span class="balance-tag balance-tag-zero">Soldé</span>
             }
           </div>
+          @if ((invoice.partnerCreditDisponible || 0) > 0) {
+            <div style="margin-top:6px;font-size:12px;color:#017E84;font-weight:500;display:flex;align-items:center;gap:4px">
+              <span class="material-icons" style="font-size:14px">redeem</span>
+              Crédit disponible : {{ invoice.partnerCreditDisponible | number:'1.0-2' }} FCFA
+            </div>
+          }
         </div>
       }
 
@@ -124,6 +169,15 @@
         <div class="info-label">Journal</div>
         <div class="info-value">{{ invoice.journalName }}</div>
       </div>
+      @if (invoice.receptionWarehouseName) {
+        <div class="info-card">
+          <div class="info-label">
+            <span class="material-icons" style="font-size:14px;vertical-align:middle">warehouse</span>
+            Entrepôt de réception
+          </div>
+          <div class="info-value">{{ invoice.receptionWarehouseName }}</div>
+        </div>
+      }
       <div class="info-card">
         <div class="info-label">Date</div>
         <div class="info-value">{{ invoice.date | date:'dd/MM/yyyy' }}</div>
@@ -132,7 +186,6 @@
         <div class="info-label">Échéance</div>
         <div class="info-value">{{ invoice.dateEcheance ? (invoice.dateEcheance | date:'dd/MM/yyyy') : '—' }}</div>
       </div>
-
 
       @if (invoice.purchaseOrderName) {
         <div class="info-card clickable" (click)="viewOrder()">
@@ -159,11 +212,13 @@
             <th>Code</th>
             <th>Désignation</th>
             <th class="text-right">Qté</th>
-            <th class="text-right">Prix U. HT</th>
-            <th class="text-right">Prix U. TTC</th>
+            <th class="text-right">P.U. HT</th>
+            <th class="text-right" style="color:#e65100">Rabais/u HT</th>
             <th class="text-right">TVA %</th>
-            <th class="text-right">Total HT</th>
-            <th class="text-right">Total TTC</th>
+            <th class="text-right">Total Cat. HT</th>
+            <th class="text-right" style="color:#e65100">− Rabais HT</th>
+            <th class="text-right">= Net HT</th>
+            <th class="text-right">Net TTC</th>
           </tr>
         </thead>
         <tbody>
@@ -172,11 +227,17 @@
               <td class="text-muted font-mono">{{ line.productCode || '—' }}</td>
               <td>{{ line.description }}</td>
               <td class="text-right">{{ line.quantity | number:'1.0-2' }}</td>
-              <td class="text-right">{{ line.prixUnitaire | number:'1.0-0' }}</td>
-              <td class="text-right">{{ (line.prixUnitaireTTC ?? 0) | number:'1.0-0' }}</td>
+              <td class="text-right font-bold">{{ linePrixCatalogue(line) | number:'1.0-0' }}</td>
+              <td class="text-right" style="color:#e65100;font-weight:600">
+                @if ((line.rabaisUnitaire ?? 0) > 0) { – {{ line.rabaisUnitaire | number:'1.0-0' }} } @else { — }
+              </td>
               <td class="text-right">{{ line.tauxTVA || 0 }}%</td>
-              <td class="text-right">{{ line.montantHT | number:'1.0-0' }}</td>
-              <td class="text-right font-bold">{{ line.montantTTC | number:'1.0-0' }}</td>
+              <td class="text-right">{{ lineTotalCatalogueHT(line) | number:'1.0-0' }}</td>
+              <td class="text-right" style="color:#e65100;font-weight:600">
+                @if ((line.totalRabaisLigne ?? 0) > 0) { – {{ line.totalRabaisLigne | number:'1.0-0' }} } @else { — }
+              </td>
+              <td class="text-right font-bold">{{ lineNetHT(line) | number:'1.0-0' }}</td>
+              <td class="text-right font-bold">{{ lineNetTTC(line) | number:'1.0-0' }}</td>
             </tr>
           }
         </tbody>
@@ -205,6 +266,10 @@
                 <th class="text-right">Déconsigne</th>
                 <th class="text-right">Qté Consigne</th>
                 <th class="text-right">Qté Déconsigne</th>
+                @if (totalRabaisHTCalc > 0) {
+                  <th class="text-right" style="color:#e65100">Rabais HT</th>
+                  <th class="text-right" style="color:#c0392b">Rabais TTC</th>
+                }
                 <th class="text-right col-net">Net à payer</th>
               </tr>
             </thead>
@@ -222,6 +287,10 @@
                 <td class="text-right">{{ deconsigneMontant | number:'1.0-0' }}</td>
                 <td class="text-right">{{ qteConsigne | number:'1.0-2' }}</td>
                 <td class="text-right">{{ qteDeconsigne | number:'1.0-2' }}</td>
+                @if (totalRabaisHTCalc > 0) {
+                  <td class="text-right" style="color:#e65100;font-weight:600">– {{ totalRabaisHTCalc | number:'1.0-0' }}</td>
+                  <td class="text-right" style="color:#c0392b;font-weight:700">– {{ totalRabaisTTCCalc | number:'1.0-0' }}</td>
+                }
                 <td class="text-right col-net"><strong>{{ (invoice.netAPayer ?? 0) | number:'1.0-0' }}</strong></td>
               </tr>
             </tbody>
@@ -270,6 +339,42 @@
       </div>
     }
 
+    <!-- Coûts d'enlèvement — informatif, non inclus dans la facture -->
+    @if (enlevementCosts.length > 0) {
+      <div class="card mb-16">
+        <div class="card-header recap-header">
+          <span class="material-icons">local_shipping</span> Coûts d'enlèvement
+          <span class="badge-info-only">calculés à titre informatif — non inclus dans la facture</span>
+        </div>
+        <table class="lines-table">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th class="text-right">Quantité</th>
+              <th class="text-right">Tarif/U. (FCFA)</th>
+              <th class="text-right col-remise">Total enlèvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of enlevementCosts; track c.categoryName) {
+              <tr>
+                <td>{{ c.categoryName }}</td>
+                <td class="text-right">{{ c.quantite | number:'1.0-2' }}</td>
+                <td class="text-right font-mono">{{ c.montantUnitaire | number:'1.0-0' }}</td>
+                <td class="text-right col-remise"><strong>{{ c.montantTotal | number:'1.0-0' }}</strong></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="recap-total-row">
+              <td colspan="3"><strong>Total enlèvements (informatif)</strong></td>
+              <td class="text-right col-remise"><strong>{{ totalEnlevement | number:'1.0-0' }} FCFA</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+
     <!-- Totaux & paiements -->
     <div class="bottom-section">
       <!-- Paiements -->
@@ -277,13 +382,13 @@
         <div class="card">
           <div class="card-header">
             <span>Paiements fournisseur</span>
-            @if (invoice.state === 'posted') {
+            @if (invoice.state === 'posted' || invoice.state === 'partiellement_extournee') {
               <button class="btn-add-payment" (click)="openPaymentForm()">
                 <span class="material-icons">add</span> Ajouter
               </button>
             }
           </div>
-          @if (!invoice.payments || invoice.payments.length === 0) {
+          @if ((!invoice.payments || invoice.payments.length === 0) && (!reconciliations || reconciliations.length === 0)) {
             <div class="no-payments">Aucun paiement enregistré</div>
           } @else {
             <table class="payments-table">
@@ -294,16 +399,45 @@
                   <th>Journal</th>
                   <th>Mémo</th>
                   <th class="text-right">Montant</th>
+                  <th style="width:36px"></th>
                 </tr>
               </thead>
               <tbody>
                 @for (p of invoice.payments; track p.id) {
-                  <tr>
+                  <tr [class.payment-reversed]="p.state === 'reversed'">
                     <td class="font-mono">{{ p.name }}</td>
                     <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
                     <td>{{ p.journalName }}</td>
                     <td class="text-muted">{{ p.memo || '—' }}</td>
-                    <td class="text-right text-success font-bold">{{ p.amount | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold" [class.text-success]="p.state !== 'reversed'" [class.text-muted]="p.state === 'reversed'">
+                      {{ p.amount | number:'1.0-0' }}
+                      @if (p.state === 'reversed') { <span class="tag-annule">Annulé</span> }
+                    </td>
+                    <td>
+                      @if (p.state !== 'reversed') {
+                        <button class="btn-reverse-payment" title="Annuler ce paiement" (click)="reversePayment(p.id!)">
+                          <span class="material-icons">undo</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          @if (reconciliations && reconciliations.length > 0) {
+            <div class="recon-divider">
+              <span class="material-icons">link</span> Versements rattachés (lettrage)
+            </div>
+            <table class="payments-table">
+              <tbody>
+                @for (r of reconciliations; track r.id) {
+                  <tr>
+                    <td class="font-mono">{{ r.accountMoveName }}</td>
+                    <td>{{ r.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ r.journalName }}</td>
+                    <td class="text-muted">{{ r.accountMoveRef || '—' }}</td>
+                    <td class="text-right recon-amount">{{ r.amount | number:'1.0-0' }}</td>
                   </tr>
                 }
               </tbody>
@@ -362,7 +496,7 @@
             <span>Reste dû</span>
             <span>{{ invoice.montantDu | number:'1.0-0' }} FCFA</span>
           </div>
-          @if (invoice.state === 'posted' || invoice.state === 'paid') {
+          @if (invoice.state === 'posted' || invoice.state === 'paid' || invoice.state === 'partiellement_extournee') {
             <div class="progress-section">
               <div class="progress-bar-lg">
                 <div class="progress-fill" [style.width]="getProgressPct() + '%'"></div>
@@ -373,6 +507,60 @@
         </div>
       </div>
     </div>
+
+    <!-- Rattachement de paiements (Lettrage) -->
+    <div class="card mb-16">
+      <div class="card-header">
+        <span class="material-icons" style="color:#00A09D;font-size:18px;margin-right:6px;vertical-align:middle">link</span>
+        Rattachement de versements (Lettrage)
+        @if (invoice.state === 'posted' || invoice.state === 'partiellement_extournee') {
+          <button class="btn-add-payment" (click)="openReconcileModal()">
+            <span class="material-icons">add_link</span> Rattacher un versement
+          </button>
+        }
+      </div>
+      @if (!reconciliations || reconciliations.length === 0) {
+        <div class="no-payments">Aucun versement rattaché</div>
+      } @else {
+        <table class="payments-table">
+          <thead>
+            <tr>
+              <th>Écriture</th>
+              <th>Date</th>
+              <th>Journal</th>
+              <th>Référence</th>
+              <th class="text-right">Montant rattaché</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reconciliations; track r.id) {
+              <tr>
+                <td class="font-mono">{{ r.accountMoveName }}</td>
+                <td>{{ r.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ r.journalName }}</td>
+                <td class="text-muted">{{ r.accountMoveRef || '—' }}</td>
+                <td class="text-right text-success font-bold">{{ r.amount | number:'1.0-0' }} FCFA</td>
+                <td>
+                  <button class="btn-icon-danger" (click)="unreconcile(r.id)" title="Délettrer">
+                    <span class="material-icons">link_off</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <app-audit-footer
+      [createdBy]="invoice.createdBy"
+      [createdAt]="invoice.createdAt"
+      [updatedBy]="invoice.updatedBy"
+      [updatedAt]="invoice.updatedAt">
+    </app-audit-footer>
+
+    <app-audit-trail entityType="PURCHASE_INVOICE" [entityId]="invoice.id ?? null"></app-audit-trail>
   }
 </div>
 
@@ -383,7 +571,7 @@
       <div class="pay-modal-hdr">
         <div class="pay-modal-title">
           <span class="material-icons">payments</span>
-          Nouveau paiement fournisseur
+          {{ isAvoir ? 'Enregistrer un remboursement fournisseur' : 'Nouveau paiement fournisseur' }}
         </div>
         <button class="pay-modal-close" (click)="closePaymentForm()">
           <span class="material-icons">close</span>
@@ -392,13 +580,13 @@
       <div class="pay-modal-body">
         <div class="pay-summary">
           <div class="pay-sum-row">
-            <span>Facture</span><strong>{{ invoice.name }}</strong>
+            <span>{{ isAvoir ? 'Avoir' : 'Facture' }}</span><strong>{{ invoice.name }}</strong>
           </div>
           <div class="pay-sum-row">
             <span>Fournisseur</span><span>{{ invoice.partnerName }}</span>
           </div>
           <div class="pay-sum-row">
-            <span>Reste dû</span>
+            <span>{{ isAvoir ? 'Reste à recevoir' : 'Reste dû' }}</span>
             <strong class="pay-due">{{ (invoice.montantDu ?? invoice.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong>
           </div>
         </div>
@@ -417,7 +605,11 @@
           </div>
           <div class="form-group">
             <label>Montant <span class="required">*</span></label>
-            <input type="number" [(ngModel)]="payment.amount" class="form-control" min="0" step="1" />
+            <input #payAmtInput type="text" [value]="fmtM(payment.amount)"
+              (focus)="payAmtInput.value = payment.amount > 0 ? payment.amount.toString() : ''"
+              (input)="payment.amount = parseM(payAmtInput.value)"
+              (blur)="payAmtInput.value = fmtM(payment.amount)"
+              class="form-control" placeholder="0" />
           </div>
           <div class="form-group">
             <label>Mémo / Référence</label>
@@ -438,11 +630,208 @@
   </div>
 }
 
+<!-- ══ Modal : Rattacher un versement (Lettrage Achats) ══ -->
+@if (showReconcileModal && invoice) {
+  <div class="pay-overlay" (click).self="showReconcileModal = false">
+    <div class="pay-modal" style="max-width:760px">
+      <div class="pay-modal-hdr">
+        <div class="pay-modal-title">
+          <span class="material-icons">add_link</span>
+          Rattacher un versement à la facture {{ invoice.name }}
+        </div>
+        <button class="pay-modal-close" (click)="showReconcileModal = false">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="pay-modal-body">
+        <div class="pay-summary" style="margin-bottom:12px">
+          <div class="pay-sum-row">
+            <span>Fournisseur</span><strong>{{ invoice.partnerName }}</strong>
+          </div>
+          <div class="pay-sum-row">
+            <span>Reste dû</span>
+            <strong class="pay-due">{{ (invoice.montantDu ?? 0) | number:'1.0-0' }} FCFA</strong>
+          </div>
+        </div>
+
+        @if (loadingMoves) {
+          <div class="loading-state" style="padding:20px">
+            <span class="material-icons spin">refresh</span> Chargement des versements...
+          </div>
+        } @else if (availableMoves.length === 0) {
+          <div class="no-payments">Aucun versement disponible pour ce fournisseur</div>
+        } @else {
+          <p style="font-size:13px;color:#6c757d;margin-bottom:8px">
+            Sélectionnez un versement à rattacher à cette facture :
+          </p>
+          <div style="overflow-x:auto;margin-bottom:14px">
+            <table class="payments-table">
+              <thead>
+                <tr>
+                  <th>Écriture</th>
+                  <th>Date</th>
+                  <th>Journal</th>
+                  <th>Réf.</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Lettré</th>
+                  <th class="text-right" style="color:#198754">Disponible</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of availableMoves; track m.moveId) {
+                  <tr [class.selected-row]="selectedMove?.moveId === m.moveId"
+                      style="cursor:pointer" (click)="selectMove(m)">
+                    <td class="font-mono">{{ m.moveName }}</td>
+                    <td>{{ m.moveDate | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ m.journalName }}</td>
+                    <td class="text-muted">{{ m.moveRef || '—' }}</td>
+                    <td class="text-right">{{ m.montantTotal | number:'1.0-0' }}</td>
+                    <td class="text-right text-muted">{{ m.montantLettre | number:'1.0-0' }}</td>
+                    <td class="text-right text-success font-bold">{{ m.montantDisponible | number:'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (selectedMove) {
+          <div class="pay-form-grid" style="margin-top:8px">
+            <div class="form-group">
+              <label>Montant à rattacher <span class="required">*</span></label>
+              <input #recAmtInput type="text" [value]="fmtM(reconcileForm.amount)"
+                (focus)="recAmtInput.value = reconcileForm.amount > 0 ? reconcileForm.amount.toString() : ''"
+                (input)="reconcileForm.amount = parseM(recAmtInput.value)"
+                (blur)="recAmtInput.value = fmtM(reconcileForm.amount)"
+                class="form-control" placeholder="0" />
+              <small style="color:#6c757d;font-size:11px">
+                Max : {{ Math.min(invoice.montantDu || 0, selectedMove.montantDisponible) | number:'1.0-0' }} FCFA
+              </small>
+            </div>
+            <div class="form-group">
+              <label>Date de rattachement</label>
+              <input type="date" [(ngModel)]="reconcileForm.date" class="form-control" />
+            </div>
+          </div>
+        }
+      </div>
+      <div class="pay-modal-ftr">
+        <button class="pay-btn-cancel" (click)="showReconcileModal = false">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="pay-btn-save" (click)="saveReconcile()"
+                [disabled]="savingReconcile || !selectedMove || reconcileForm.amount <= 0">
+          <span class="material-icons">{{ savingReconcile ? 'hourglass_empty' : 'link' }}</span>
+          {{ savingReconcile ? 'Rattachement...' : 'Confirmer le rattachement' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════ MODAL AVOIR ═══════════════ -->
+@if (showAvoirModal) {
+  <div class="modal-overlay" (click)="closeAvoirModal()">
+    <div class="avoir-modal" (click)="$event.stopPropagation()">
+      <div class="avoir-modal-hdr">
+        <div class="avoir-modal-title">
+          <span class="material-icons">undo</span> Créer un avoir
+        </div>
+        <button class="avoir-modal-close" (click)="closeAvoirModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="avoir-modal-body">
+        <!-- Date de l'avoir -->
+        <div class="avoir-date-row">
+          <label>Date de l'avoir</label>
+          <input type="date" class="form-control" [(ngModel)]="avoirDate">
+        </div>
+
+        <!-- Choix du type -->
+        <div class="avoir-type-choice">
+          <label class="avoir-type-option" [class.selected]="avoirType === 'integral'">
+            <input type="radio" name="avoirType" value="integral" [(ngModel)]="avoirType">
+            <span class="material-icons">article</span>
+            <div>
+              <strong>Avoir intégral</strong>
+              <p>Annulation totale de la facture — toutes les lignes sont reprises intégralement.</p>
+            </div>
+          </label>
+          <label class="avoir-type-option" [class.selected]="avoirType === 'partiel'">
+            <input type="radio" name="avoirType" value="partiel" [(ngModel)]="avoirType">
+            <span class="material-icons">edit_note</span>
+            <div>
+              <strong>Avoir partiel</strong>
+              <p>Remboursement partiel — choisissez les quantités à retourner.</p>
+            </div>
+          </label>
+        </div>
+
+        <!-- Lignes (avoir partiel) -->
+        @if (avoirType === 'partiel') {
+          <div class="avoir-lines-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th class="r">Qté facturée</th>
+                  <th class="r">Qté avoir</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of avoirLines; track line.lineId) {
+                  <tr [class.avoir-line-consigne]="line.isConsigne">
+                    <td>
+                      {{ line.description }}
+                      @if (line.isConsigne) {
+                        <span class="badge-consigne">Emballage</span>
+                      }
+                    </td>
+                    <td class="r muted">{{ line.originalQty }}</td>
+                    <td class="r">
+                      <input type="number" class="avoir-qty-input"
+                             [(ngModel)]="line.quantite"
+                             [min]="0" [max]="line.originalQty"
+                             step="1">
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @if (errorMsg) {
+          <div class="avoir-error">
+            <span class="material-icons">error_outline</span>{{ errorMsg }}
+          </div>
+        }
+      </div>
+
+      <div class="avoir-modal-ftr">
+        <button class="avoir-btn-cancel" (click)="closeAvoirModal()">Annuler</button>
+        <button class="avoir-btn-confirm" (click)="confirmAvoir()" [disabled]="creatingAvoir">
+          <span class="material-icons" [class.spin]="creatingAvoir">
+            {{ creatingAvoir ? 'hourglass_empty' : 'check_circle' }}
+          </span>
+          {{ creatingAvoir ? 'Création...' : 'Confirmer l\'avoir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showPrintModal && invoice) {
   <app-print-preview
     [purchaseInvoice]="invoice"
     [docType]="printDocType"
     [companyName]="printCompanyName"
+    [companyPhone]="printCompanyPhone"
+    [companyLogoUrl]="printCompanyLogoUrl"
+    [companyLogoDataUrl]="printCompanyLogoDataUrl"
+    [companyInfo]="printCompany"
     (closed)="closePrint()">
   </app-print-preview>
 }

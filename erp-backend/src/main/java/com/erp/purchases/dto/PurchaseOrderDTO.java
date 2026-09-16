@@ -28,6 +28,8 @@ public class PurchaseOrderDTO {
     private Long invoiceId;
     private String invoiceName;
     private String invoiceState;
+    /** Nom de l'entrepôt qui recevra physiquement la marchandise (Dépôt Achat résolu) — informatif */
+    private String receptionWarehouseName;
     private LocalDateTime createdAt;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

@@ -2,8 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EleaderService, EleaderConfig, EleaderEmballageMapping } from '../../../services/eleader.service';
-import { AccountingService } from '../../../../accounting/services/accounting.service';
-import { AccountJournal } from '../../../../../core/models/account.model';
 import { AuthService } from '../../../../../core/auth/auth.service';
 
 @Component({
@@ -24,12 +22,11 @@ export class EleaderConfigComponent implements OnInit {
     psaProductCode: 'PRC01',
     fraisEnlevementCode: 'ELV01',
     autoConfirm: false,
-    emballageMappings: []
+    emballageMappings: [],
+    extraConsigneCodes: []
   };
 
-  journals: AccountJournal[] = [];
-
-  // Formulaire nouveau mapping
+  // ── Emballage mappings ────────────────────────────────────────────────────
   showAddMapping = false;
   newMapping: EleaderEmballageMapping = { eleaderCode: '', erpProductCode: '', invoiceModel: 'ALL' };
   addingMapping = false;
@@ -38,8 +35,11 @@ export class EleaderConfigComponent implements OnInit {
 
   showLoadDefaultsConfirm = false;
 
+  // ── Codes consignes supplémentaires ──────────────────────────────────────
+  newConsigneCode = '';
+  consigneCodeError = '';
+
   // Valeurs de référence eLeader — uniquement pour pré-remplir le formulaire.
-  // L'utilisateur les ajuste puis clique sur Enregistrer pour les sauvegarder en base.
   private readonly DEFAULTS: EleaderEmballageMapping[] = [
     // ── Brasseries ────────────────────────────────────────────────────────
     { eleaderCode: 'VCBB65',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
@@ -90,42 +90,34 @@ export class EleaderConfigComponent implements OnInit {
 
   constructor(
     private eleaderService: EleaderService,
-    private accountingService: AccountingService,
     private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     const companyId = this.authService.getCompanyId();
     this.config.companyId = companyId;
-    this.loadData(companyId);
-  }
-
-  private loadData(companyId: number): void {
     this.loading = true;
-    this.accountingService.getJournals(companyId).subscribe({
-      next: (journals) => {
-        this.journals = journals.filter(j => j.type === 'sale');
-        this.eleaderService.getConfig(companyId).subscribe({
-          next: (cfg) => { this.config = cfg; this.loading = false; },
-          error: () => { this.loading = false; }
-        });
+    this.eleaderService.getConfig(companyId).subscribe({
+      next: (cfg) => {
+        this.config = { ...cfg, extraConsigneCodes: cfg.extraConsigneCodes ?? [] };
+        this.loading = false;
       },
       error: () => { this.loading = false; }
     });
   }
 
   save(): void {
-    if (!this.config.journalId) {
-      this.errorMsg = 'Le journal est obligatoire.';
-      return;
-    }
+    // Validation côté client
+    const mappingError = this.checkMappingDuplicates();
+    if (mappingError) { this.errorMsg = mappingError; return; }
+
     this.saving = true;
     this.errorMsg = '';
     this.successMsg = '';
     this.eleaderService.saveConfig(this.config).subscribe({
       next: (saved) => {
-        this.config = saved;
-        this.successMsg = 'Configuration enregistrée.';
+        this.config = { ...saved, extraConsigneCodes: saved.extraConsigneCodes ?? [] };
+        this.successMsg = 'Configuration enregistrée. Codes consignes rechargés.';
         this.saving = false;
       },
       error: (err) => {
@@ -135,34 +127,81 @@ export class EleaderConfigComponent implements OnInit {
     });
   }
 
+  // ── Gestion des mappings emballages ──────────────────────────────────────
+
   openAddMapping(): void {
     this.newMapping = { eleaderCode: '', erpProductCode: '', invoiceModel: 'ALL' };
     this.showAddMapping = true;
   }
 
   addMapping(): void {
-    if (!this.newMapping.eleaderCode || !this.newMapping.erpProductCode) {
+    if (!this.newMapping.eleaderCode || !this.newMapping.erpProductCode) return;
+
+    const key = this.newMapping.eleaderCode.trim().toUpperCase() + '|' + (this.newMapping.invoiceModel || 'ALL').toUpperCase();
+    const duplicate = this.config.emballageMappings.some(m =>
+      (m.eleaderCode.trim().toUpperCase() + '|' + (m.invoiceModel || 'ALL').toUpperCase()) === key
+    );
+    if (duplicate) {
+      this.errorMsg = `Code eLeader '${this.newMapping.eleaderCode.toUpperCase()}' déjà mappé pour le modèle ${this.newMapping.invoiceModel}. Supprimez d'abord l'entrée existante.`;
       return;
     }
-    this.addingMapping = true;
+
     this.config.emballageMappings = [
       ...this.config.emballageMappings,
       { ...this.newMapping }
     ];
     this.showAddMapping = false;
-    this.addingMapping = false;
+    this.errorMsg = '';
   }
 
   removeMapping(index: number): void {
     this.config.emballageMappings = this.config.emballageMappings.filter((_, i) => i !== index);
   }
 
-  /** Pré-remplit le tableau avec les codes de référence eLeader.
-   *  L'utilisateur peut les modifier avant d'enregistrer. */
+  /** Détecte les doublons dans la liste de mappings en mémoire. */
+  private checkMappingDuplicates(): string | null {
+    const seen = new Set<string>();
+    for (const m of this.config.emballageMappings) {
+      if (!m.eleaderCode) continue;
+      const key = m.eleaderCode.trim().toUpperCase() + '|' + (m.invoiceModel || 'ALL').toUpperCase();
+      if (seen.has(key)) {
+        return `Code eLeader en double : '${m.eleaderCode.toUpperCase()}' (modèle ${m.invoiceModel}). Supprimez le doublon.`;
+      }
+      seen.add(key);
+    }
+    return null;
+  }
+
+  // ── Gestion des codes consignes supplémentaires ───────────────────────────
+
+  addConsigneCode(): void {
+    this.consigneCodeError = '';
+    const code = this.newConsigneCode.trim().toUpperCase();
+    if (!code) return;
+
+    if (this.config.extraConsigneCodes.includes(code)) {
+      this.consigneCodeError = `Le code '${code}' est déjà dans la liste.`;
+      return;
+    }
+    this.config.extraConsigneCodes = [...this.config.extraConsigneCodes, code].sort();
+    this.newConsigneCode = '';
+  }
+
+  removeConsigneCode(index: number): void {
+    this.config.extraConsigneCodes = this.config.extraConsigneCodes.filter((_, i) => i !== index);
+    this.consigneCodeError = '';
+  }
+
+  // ── Chargement des défauts ───────────────────────────────────────────────
+
+  /** Pré-remplit le tableau avec les codes de référence eLeader. */
   loadDefaults(): void {
-    // Ajouter uniquement les codes non encore présents
-    const existing = new Set(this.config.emballageMappings.map(m => m.eleaderCode.toUpperCase()));
-    const toAdd = this.DEFAULTS.filter(d => !existing.has(d.eleaderCode.toUpperCase()));
+    const existing = new Set(this.config.emballageMappings.map(m =>
+      m.eleaderCode.toUpperCase() + '|' + (m.invoiceModel || 'ALL').toUpperCase()
+    ));
+    const toAdd = this.DEFAULTS.filter(d =>
+      !existing.has(d.eleaderCode.toUpperCase() + '|' + (d.invoiceModel || 'ALL').toUpperCase())
+    );
     this.config.emballageMappings = [...this.config.emballageMappings, ...toAdd];
     this.showLoadDefaultsConfirm = false;
   }

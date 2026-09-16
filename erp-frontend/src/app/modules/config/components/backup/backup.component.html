@@ -1,0 +1,232 @@
+<div class="backup-page">
+  <div class="page-title">
+    <span class="material-icons">backup</span>
+    Sauvegarde &amp; Restauration
+  </div>
+  <p class="page-subtitle">
+    Téléchargez une sauvegarde complète de la base de données ou exportez uniquement le paramétrage métier.
+  </p>
+
+  @if (successMsg) {
+    <div class="alert alert-success">
+      <span class="material-icons">check_circle</span> {{ successMsg }}
+      <button class="btn-close-alert" (click)="successMsg = ''">×</button>
+    </div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-error">
+      <span class="material-icons">error</span> {{ errorMsg }}
+      <button class="btn-close-alert" (click)="errorMsg = ''">×</button>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SAUVEGARDE BASE DE DONNÉES                                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <span class="material-icons">storage</span>
+    Sauvegarde complète de la base de données
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="material-icons">cloud_download</span>
+      Créer une sauvegarde BD
+    </div>
+    <div class="card-body">
+      <p class="card-desc">
+        Génère un fichier ZIP contenant l'intégralité de la base de données (toutes les transactions,
+        stocks, comptabilité, historique complet).
+      </p>
+      <div class="info-row">
+        <span class="material-icons info-icon">info</span>
+        <span>Inclut : toutes les données (ventes, achats, stock, comptabilité, utilisateurs), configuration et journaux de synchronisation.</span>
+      </div>
+      <button class="btn-primary" (click)="downloadBackup()" [disabled]="downloading">
+        <span class="material-icons">{{ downloading ? 'hourglass_empty' : 'download' }}</span>
+        {{ downloading ? 'Génération en cours...' : 'Télécharger la sauvegarde BD' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="card card-danger">
+    <div class="card-header danger">
+      <span class="material-icons">restore</span>
+      Restaurer la base de données
+    </div>
+    <div class="card-body">
+      <div class="warning-banner">
+        <span class="material-icons">warning</span>
+        <div>
+          <strong>Attention :</strong> Cette opération remplace <strong>toutes les données actuelles</strong> par celles du fichier de sauvegarde.
+          Après la restauration, rechargez la page.
+        </div>
+      </div>
+
+      @if (!confirmRestore) {
+        <div class="file-section">
+          <label class="file-label" for="restore-file-input">
+            <span class="material-icons">folder_open</span>
+            @if (selectedFile) { {{ selectedFile.name }} } @else { Sélectionner un fichier ZIP de sauvegarde }
+          </label>
+          <input id="restore-file-input" type="file" accept=".zip"
+                 class="file-input" (change)="onFileSelected($event)" />
+          @if (selectedFile) {
+            <button class="btn-danger" (click)="askConfirmRestore()">
+              <span class="material-icons">restore</span>
+              Restaurer depuis ce fichier
+            </button>
+          }
+        </div>
+      }
+
+      @if (confirmRestore) {
+        <div class="confirm-box">
+          <span class="material-icons confirm-icon">warning</span>
+          <p>Vous êtes sur le point de restaurer la base de données depuis :<br>
+            <strong>{{ selectedFile?.name }}</strong></p>
+          <p class="confirm-warn">Cette action est irréversible. Toutes les données actuelles seront écrasées.</p>
+          <div class="confirm-actions">
+            <button class="btn-secondary" (click)="cancelRestore()">Annuler</button>
+            <button class="btn-danger" (click)="doRestore()" [disabled]="restoring">
+              <span class="material-icons">{{ restoring ? 'hourglass_empty' : 'restore' }}</span>
+              {{ restoring ? 'Restauration en cours...' : 'Confirmer la restauration' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SAUVEGARDE CONFIGURATION MÉTIER                            -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div class="section-label" style="margin-top: 36px;">
+    <span class="material-icons">tune</span>
+    Sauvegarde du paramétrage métier
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="material-icons">settings_backup_restore</span>
+      Exporter la configuration
+    </div>
+    <div class="card-body">
+      <p class="card-desc">
+        Exporte uniquement le paramétrage métier dans un fichier ZIP portable et léger.
+        Idéal pour migrer la configuration vers une nouvelle instance ou la sauvegarder séparément.
+      </p>
+      <div class="config-domains">
+        <span class="domain-chip"><span class="material-icons">account_balance</span> Plan comptable</span>
+        <span class="domain-chip"><span class="material-icons">book</span> Journaux comptables</span>
+        <span class="domain-chip"><span class="material-icons">people</span> Clients &amp; Fournisseurs</span>
+        <span class="domain-chip"><span class="material-icons">sell</span> Prix préférentiels</span>
+        <span class="domain-chip"><span class="material-icons">local_shipping</span> Frais d'enlèvement</span>
+        <span class="domain-chip"><span class="material-icons">discount</span> Ristournes</span>
+        <span class="domain-chip"><span class="material-icons">inventory_2</span> Produits &amp; Catégories</span>
+        <span class="domain-chip"><span class="material-icons">manage_accounts</span> Utilisateurs &amp; Rôles</span>
+      </div>
+      <button class="btn-primary" (click)="downloadConfigBackup()" [disabled]="downloadingConfig">
+        <span class="material-icons">{{ downloadingConfig ? 'hourglass_empty' : 'download' }}</span>
+        {{ downloadingConfig ? 'Export en cours...' : 'Télécharger la configuration' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="card card-warning">
+    <div class="card-header warning-header">
+      <span class="material-icons">upload_file</span>
+      Importer une configuration
+    </div>
+    <div class="card-body">
+      <div class="info-row">
+        <span class="material-icons info-icon">info</span>
+        <span>La restauration est <strong>additive</strong> : les entrées existantes sont mises à jour, les nouvelles sont créées.
+          Aucune donnée transactionnelle n'est supprimée.</span>
+      </div>
+      <div class="warning-banner" style="margin-top: 12px;">
+        <span class="material-icons">person_add</span>
+        <div>Les nouveaux utilisateurs importés reçoivent le mot de passe temporaire
+          <strong>BlessingChange&#64;2025!</strong> avec obligation de le changer à la première connexion.</div>
+      </div>
+
+      @if (!confirmRestoreConfig) {
+        <div class="file-section">
+          <label class="file-label" for="restore-config-input">
+            <span class="material-icons">folder_open</span>
+            @if (selectedConfigFile) { {{ selectedConfigFile.name }} }
+            @else { Sélectionner un fichier ZIP de configuration }
+          </label>
+          <input id="restore-config-input" type="file" accept=".zip"
+                 class="file-input" (change)="onConfigFileSelected($event)" />
+          @if (selectedConfigFile) {
+            <button class="btn-primary" (click)="askConfirmRestoreConfig()">
+              <span class="material-icons">upload</span>
+              Importer cette configuration
+            </button>
+          }
+        </div>
+      }
+
+      @if (confirmRestoreConfig) {
+        <div class="confirm-box confirm-box-blue">
+          <span class="material-icons confirm-icon-blue">upload_file</span>
+          <p>Vous êtes sur le point d'importer la configuration depuis :<br>
+            <strong>{{ selectedConfigFile?.name }}</strong></p>
+          <p>Les données existantes seront mises à jour. Aucune suppression.</p>
+          <div class="confirm-actions">
+            <button class="btn-secondary" (click)="cancelRestoreConfig()">Annuler</button>
+            <button class="btn-primary" (click)="doRestoreConfig()" [disabled]="restoringConfig">
+              <span class="material-icons">{{ restoringConfig ? 'hourglass_empty' : 'upload' }}</span>
+              {{ restoringConfig ? 'Import en cours...' : "Confirmer l'import" }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- MAINTENANCE (SUPERADMIN uniquement)                        -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  @if (isSuperAdmin) {
+    <div class="section-label" style="margin-top: 36px;">
+      <span class="material-icons">build</span>
+      Maintenance (SuperAdmin)
+    </div>
+
+    <div class="card card-warning">
+      <div class="card-header warning-header">
+        <span class="material-icons">lock_reset</span>
+        Libérer les stocks réservés
+      </div>
+      <div class="card-body">
+        <p class="card-desc">
+          Remet à zéro toutes les quantités réservées puis les recalcule depuis les bons de commande
+          confirmés actifs. À utiliser si des factures annulées ont laissé du stock bloqué.
+        </p>
+        <div class="info-row">
+          <span class="material-icons info-icon">info</span>
+          <span>Les bons de commande en état <strong>facturé</strong> dont la facture est annulée seront
+          automatiquement remis en état <strong>confirmé</strong> pour être re-facturables.</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn-warning" (click)="releaseReservations()" [disabled]="releasingReservations">
+            <span class="material-icons">{{ releasingReservations ? 'hourglass_empty' : 'lock_reset' }}</span>
+            {{ releasingReservations ? 'Libération en cours...' : 'Libérer les stocks réservés' }}
+          </button>
+          <button class="btn-danger" (click)="releaseAllReservations()" [disabled]="releasingAllReservations">
+            <span class="material-icons">{{ releasingAllReservations ? 'hourglass_empty' : 'delete_sweep' }}</span>
+            {{ releasingAllReservations ? 'Libération en cours...' : 'Libérer TOUT le stock réservé' }}
+          </button>
+        </div>
+        <div class="info-row">
+          <span class="material-icons info-icon">warning</span>
+          <span>« Libérer TOUT le stock réservé » remet à zéro sans exception, sans recalcul — à utiliser
+          si des réservations restent bloquées malgré le bouton précédent (bons ou factures qui ne
+          peuvent plus être annulés directement).</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>

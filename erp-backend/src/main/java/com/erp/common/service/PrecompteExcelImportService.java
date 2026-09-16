@@ -53,8 +53,6 @@ public class PrecompteExcelImportService {
                     "taux_precompte", "tauxPrecompte",
                     "Taux (%)", "Taux(%)", "Taux", "taux",
                     "taux_precompte (%)", "Rate");
-            Integer colCompanyId = findCol(headers,
-                    "companyId", "company_id", "Société", "Societe");
 
             List<String> missing = new ArrayList<>();
             if (colPartner == null) missing.add("partenaire (partner_id / Partenaire)");
@@ -110,12 +108,16 @@ public class PrecompteExcelImportService {
                 }
 
                 // Résolution du partenaire depuis la map mémoire
-                Long effectiveCompanyId = resolveCompanyId(colCompanyId, row, companyId);
                 Partner partner = resolvePartnerFromMap(rawPartner, byName, byRef, byId);
                 if (partner == null) {
                     report.addError(i + 1, "Partenaire introuvable : \"" + rawPartner + "\"");
                     continue;
                 }
+                // companyId verrouillé sur celui du partenaire résolu — jamais sur une colonne du
+                // fichier (un companyId arbitraire dans l'Excel permettrait de créer un précompte
+                // rattaché à une autre société que celle du partenaire réel, voire à une société
+                // à laquelle l'utilisateur n'a pas accès).
+                Long effectiveCompanyId = partner.getCompany() != null ? partner.getCompany().getId() : companyId;
 
                 String rawType = getString(row.getCell(colType));
                 String normalizedType = normalizeType(rawType);
@@ -124,14 +126,19 @@ public class PrecompteExcelImportService {
                     continue;
                 }
 
-                String rawTaux = getString(row.getCell(colTaux));
-                BigDecimal taux = parseBigDecimal(rawTaux);
+                Cell tauxCell = row.getCell(colTaux);
+                String rawTaux = getString(tauxCell);
+                BigDecimal taux = parseTaux(tauxCell, rawTaux);
                 if (taux == null) {
                     report.addError(i + 1, "Taux invalide : \"" + rawTaux + "\"");
                     continue;
                 }
 
                 String key = partner.getId() + "_" + normalizedType;
+                if (toSaveMap.containsKey(key)) {
+                    report.addWarning(i + 1, "Doublon (partenaire + type) déjà présent dans ce fichier"
+                            + " — cette ligne remplace la valeur précédemment lue pour \"" + rawPartner + "\"");
+                }
                 // Priorité : 1) déjà en DB, 2) déjà vu dans ce batch, 3) nouveau
                 Precompte entity = existingPrecomptes.containsKey(key)
                         ? existingPrecomptes.get(key)
@@ -194,14 +201,6 @@ public class PrecompteExcelImportService {
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
-    private Long resolveCompanyId(Integer colCompanyId, Row row, Long defaultCompanyId) {
-        if (colCompanyId == null) return defaultCompanyId;
-        String raw = getString(row.getCell(colCompanyId));
-        if (raw.isBlank()) return defaultCompanyId;
-        try { return Long.parseLong(raw.trim()); }
-        catch (Exception ignored) { return defaultCompanyId; }
-    }
-
     private String normalizeType(String raw) {
         if (raw == null) return null;
         String v = raw.trim().toLowerCase();
@@ -262,6 +261,20 @@ public class PrecompteExcelImportService {
         catch (Exception e) { return null; }
     }
 
+    /** Une cellule numérique mise en forme "%" dans Excel (ex. affichage "5 %") stocke en réalité
+     *  la fraction sous-jacente (0.05), invisible via getNumericCellValue() seul — sans ce
+     *  contournement, un taux de précompte saisi comme "5%" serait importé comme 0.05 (100x trop petit). */
+    private BigDecimal parseTaux(Cell cell, String raw) {
+        if (cell != null && cell.getCellType() == CellType.NUMERIC) {
+            CellStyle style = cell.getCellStyle();
+            String fmt = style != null ? style.getDataFormatString() : null;
+            if (fmt != null && fmt.contains("%")) {
+                return BigDecimal.valueOf(cell.getNumericCellValue() * 100).setScale(4, java.math.RoundingMode.HALF_UP);
+            }
+        }
+        return parseBigDecimal(raw);
+    }
+
     // ─── ImportReport ──────────────────────────────────────────────────────────
 
     public static class ImportReport {
@@ -270,6 +283,7 @@ public class PrecompteExcelImportService {
         private int created;
         private int updated;
         private final List<String> errors = new ArrayList<>();
+        private final List<String> warnings = new ArrayList<>();
 
         public static ImportReport failure(String msg) {
             ImportReport r = new ImportReport();
@@ -282,12 +296,16 @@ public class PrecompteExcelImportService {
             errors.add("Ligne " + rowNumber + " : " + msg);
         }
 
+        public void addWarning(int rowNumber, String msg) {
+            warnings.add("Ligne " + rowNumber + " : " + msg);
+        }
+
         public void incrementCreated() { created++; }
         public void incrementUpdated() { updated++; }
 
         public void finish() {
-            message = String.format("Import terminé : %d créé(s), %d mis à jour, %d erreur(s)",
-                    created, updated, errors.size());
+            message = String.format("Import terminé : %d créé(s), %d mis à jour, %d erreur(s), %d avertissement(s)",
+                    created, updated, errors.size(), warnings.size());
             if (!errors.isEmpty()) success = false;
         }
 
@@ -298,6 +316,7 @@ public class PrecompteExcelImportService {
         public int getCreated()           { return created; }
         public int getUpdated()           { return updated; }
         public List<String> getErrors()   { return errors; }
+        public List<String> getWarnings() { return warnings; }
 
         public void setSuccess(boolean s)      { this.success = s; }
         public void setMessage(String m)       { this.message = m; }

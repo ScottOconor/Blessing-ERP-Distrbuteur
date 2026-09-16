@@ -38,16 +38,35 @@
           <div class="wh-header" (click)="selectWarehouse(wh.id!)">
             <div class="wh-icon"><span class="material-icons">warehouse</span></div>
             <div class="wh-info">
-              <div class="wh-name">{{ wh.name }}</div>
+              <div class="wh-name">
+                {{ wh.name }}
+                @if (wh.isDefault) {
+                  <span class="badge-default">Par défaut</span>
+                }
+              </div>
               <div class="wh-code">{{ wh.code }}</div>
             </div>
             <div class="wh-meta">
+              @if (wh.responsableName) {
+                <span class="meta-chip"><span class="material-icons">person</span> {{ wh.responsableName }}</span>
+              }
               @if (wh.stockJournalName) {
                 <span class="meta-chip"><span class="material-icons">book</span> {{ wh.stockJournalName }}</span>
+              }
+              @if (wh.salesJournalName) {
+                <span class="meta-chip meta-chip-sale"><span class="material-icons">receipt_long</span> {{ wh.salesJournalName }}</span>
+              }
+              @if (wh.cashJournalName) {
+                <span class="meta-chip meta-chip-cash"><span class="material-icons">payments</span> {{ wh.cashJournalName }}</span>
               }
               <span class="meta-chip loc"><span class="material-icons">location_on</span> {{ wh.stockLocationName || 'Stock' }}</span>
             </div>
             <div class="wh-actions">
+              @if (canEdit && !wh.isDefault) {
+                <button class="btn-icon btn-icon-default" (click)="setDefault(wh); $event.stopPropagation()" title="Définir comme magasin par défaut">
+                  <span class="material-icons">star_outline</span>
+                </button>
+              }
               @if (canEdit) {
                 <button class="btn-icon" (click)="openEdit(wh); $event.stopPropagation()" title="Modifier">
                   <span class="material-icons">edit</span>
@@ -76,9 +95,6 @@
                         <div class="loc-name">{{ loc.completeName || loc.name }}</div>
                         <div class="loc-usage">{{ usageLabel(loc.usage) }}</div>
                       </div>
-                      @if (loc.accountCode) {
-                        <span class="loc-account">{{ loc.accountCode }}</span>
-                      }
                     </div>
                   }
                 </div>
@@ -154,12 +170,35 @@
           </div>
         </div>
         <div class="form-group">
+          <label>Responsable de l'entrepôt</label>
+          <input type="text" [(ngModel)]="form.responsableName" class="form-control" placeholder="Ex: Jean Dupont" />
+          <small class="hint">Apparaît sur les bordereaux de réception de transfert.</small>
+        </div>
+        <div class="form-group">
           <label>Journal comptable stock</label>
           <select [(ngModel)]="form.stockJournalId" class="form-control">
             <option [ngValue]="null">— Aucun (pas d'écriture automatique) —</option>
             @for (j of journals; track j.id) { <option [value]="j.id">{{ j.code }} - {{ j.name }}</option> }
           </select>
           <small class="hint">Journal utilisé pour les écritures de valorisation des mouvements de stock.</small>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Journal de vente</label>
+            <select [(ngModel)]="form.salesJournalId" class="form-control">
+              <option [ngValue]="null">— Aucun —</option>
+              @for (j of saleJournals; track j.id) { <option [value]="j.id">{{ j.code }} - {{ j.name }}</option> }
+            </select>
+            <small class="hint">Pré-chargé sur les bons de commande créés depuis cet entrepôt.</small>
+          </div>
+          <div class="form-group">
+            <label>Journal de caisse / banque</label>
+            <select [(ngModel)]="form.cashJournalId" class="form-control">
+              <option [ngValue]="null">— Aucun —</option>
+              @for (j of cashBankJournals; track j.id) { <option [value]="j.id">{{ j.code }} - {{ j.name }}</option> }
+            </select>
+            <small class="hint">Pré-chargé sur les paiements des factures de cet entrepôt.</small>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

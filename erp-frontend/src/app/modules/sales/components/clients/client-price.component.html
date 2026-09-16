@@ -1,0 +1,231 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">sell</span>
+      Tarifs par client
+    </h1>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" placeholder="Rechercher un client…" [(ngModel)]="search" />
+    <div class="toolbar-actions">
+      <button class="btn-text" (click)="expandAll()">
+        <span class="material-icons">unfold_more</span> Tout développer
+      </button>
+      <button class="btn-text" (click)="collapseAll()">
+        <span class="material-icons">unfold_less</span> Tout réduire
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="empty"><span class="material-icons spin">refresh</span> Chargement…</div>
+  } @else {
+    <div class="accordion">
+      @for (g of filteredGroups; track g.client.id) {
+        <div class="acc-item" [class.open]="expandedIds.has(g.client.id ?? 0)">
+
+          <!-- En-tête client -->
+          <div class="acc-header" (click)="toggle(g)">
+            <div class="acc-left">
+              <span class="material-icons acc-chevron">
+                {{ expandedIds.has(g.client.id ?? 0) ? 'expand_less' : 'expand_more' }}
+              </span>
+              <span class="client-name">{{ g.client.name }}</span>
+              @if (g.client.ref) {
+                <span class="client-ref">{{ g.client.ref }}</span>
+              }
+            </div>
+            <div class="acc-right">
+              @if (g.prices !== null) {
+                @if (g.prices.length > 0) {
+                  <span class="badge-count">{{ g.prices.length }} tarif{{ g.prices.length > 1 ? 's' : '' }}</span>
+                } @else {
+                  <span class="badge-none">Aucun tarif</span>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- Contenu déroulé -->
+          @if (expandedIds.has(g.client.id ?? 0)) {
+            <div class="acc-body">
+              @if (g.loading) {
+                <div class="inner-loading">
+                  <span class="material-icons spin" style="font-size:18px">refresh</span> Chargement…
+                </div>
+              } @else {
+
+                <!-- Tableau des tarifs existants -->
+                @if (g.prices && g.prices.length > 0) {
+                  <table class="prices-table">
+                    <thead>
+                      <tr>
+                        <th>Article</th>
+                        <th class="text-right">Prix standard</th>
+                        <th class="text-right">Prix client</th>
+                        <th class="text-right rabais-col">Rabais / Majoration</th>
+                        <th class="actions-col"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of g.prices; track p.productId) {
+                        <tr [class.editing]="editingPriceId === p.id">
+                          <td>
+                            @if (p.productCode) {
+                              <span class="prod-code">[{{ p.productCode }}]</span>
+                            }
+                            {{ p.productName }}
+                          </td>
+                          <td class="text-right muted">{{ (p.salePriceStandard ?? 0) | number:'1.0-0' }} FCFA</td>
+                          <td class="text-right bold">
+                            @if (editingPriceId === p.id) {
+                              <input type="number" class="edit-input" [(ngModel)]="editForm.prixClient" min="0" />
+                            } @else {
+                              {{ p.prixClient | number:'1.0-0' }} FCFA
+                            }
+                          </td>
+                          <td class="text-right" [class.rabais-col]="(p.rabaisUnitaire ?? 0) >= 0" [class.surplus-col]="(p.rabaisUnitaire ?? 0) < 0">
+                            @if (editingPriceId === p.id) {
+                              <input type="number" class="edit-input" [(ngModel)]="editForm.rabaisUnitaire" />
+                            } @else {
+                              @if ((p.rabaisUnitaire ?? 0) >= 0) {
+                                – {{ (p.rabaisUnitaire ?? 0) | number:'1.0-0' }} FCFA
+                              } @else {
+                                + {{ -(p.rabaisUnitaire ?? 0) | number:'1.0-0' }} FCFA
+                              }
+                            }
+                          </td>
+                          <td class="actions-col">
+                            @if (editingPriceId === p.id) {
+                              <button class="btn-save" (click)="saveEdit(g, p)" [disabled]="saving" title="Enregistrer">
+                                <span class="material-icons">check</span>
+                              </button>
+                              <button class="btn-cancel" (click)="cancelEdit()" title="Annuler">
+                                <span class="material-icons">close</span>
+                              </button>
+                            } @else {
+                              <button class="btn-edit" (click)="startEdit(p)" title="Modifier">
+                                <span class="material-icons">edit</span>
+                              </button>
+                              <button class="btn-delete" (click)="deletePrice(g, p)" title="Supprimer">
+                                <span class="material-icons">delete_outline</span>
+                              </button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                } @else if (!addingGroupId || addingGroupId !== g.client.id) {
+                  <div class="inner-empty">Aucun tarif configuré pour ce client.</div>
+                }
+
+                <!-- Formulaire d'ajout inline -->
+                @if (addingGroupId === g.client.id) {
+                  <div class="add-form-row">
+                    <div class="add-form-title">
+                      <span class="material-icons">add_circle_outline</span>
+                      Nouveau tarif pour <strong>{{ g.client.name }}</strong>
+                    </div>
+                    <div class="add-fields">
+
+                      <!-- Autocomplete article -->
+                      <div class="add-field add-field-product">
+                        <label>Article *</label>
+                        <div class="autocomplete-wrap">
+                          <input
+                            type="text"
+                            class="add-input"
+                            placeholder="Code ou nom de l'article…"
+                            [(ngModel)]="addForm.productSearch"
+                            (ngModelChange)="onProductSearch()"
+                            (blur)="hideProductSuggestions()"
+                            autocomplete="off" />
+                          @if (addForm.showSuggestions) {
+                            <div class="suggest-list">
+                              @for (prod of addForm.suggestions; track prod.id) {
+                                <button type="button" class="suggest-item" (mousedown)="selectProduct(prod)">
+                                  @if (prod.defaultCode) {
+                                    <span class="suggest-code">[{{ prod.defaultCode }}]</span>
+                                  }
+                                  <span class="suggest-name">{{ prod.name }}</span>
+                                  <span class="suggest-price">{{ (prod.salePrice ?? 0) | number:'1.0-0' }} FCFA</span>
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Prix standard (lecture seule) -->
+                      @if (addForm.productId) {
+                        <div class="add-field add-field-sm">
+                          <label>Prix standard</label>
+                          <div class="std-price-badge">{{ addForm.salePriceStandard | number:'1.0-0' }} FCFA</div>
+                        </div>
+                      }
+
+                      <!-- Prix client -->
+                      <div class="add-field add-field-sm">
+                        <label>Prix client *</label>
+                        <input type="number" class="add-input text-right"
+                               [(ngModel)]="addForm.prixClient" min="0"
+                               placeholder="0" />
+                      </div>
+
+                      <!-- Différence calculée (rabais ou majoration) -->
+                      @if (addForm.productId) {
+                        <div class="add-field add-field-sm">
+                          <label>{{ addDiff >= 0 ? 'Rabais/u' : 'Majoration/u' }}</label>
+                          <div class="rabais-badge"
+                               [class.positive]="addDiff > 0"
+                               [class.surplus]="addDiff < 0">
+                            {{ addDiff >= 0 ? '– ' : '+ ' }}{{ (addDiff < 0 ? -addDiff : addDiff) | number:'1.0-0' }} FCFA
+                          </div>
+                        </div>
+                      }
+
+                    </div>
+
+                    <div class="add-actions">
+                      <button class="btn-add-cancel" (click)="cancelAdd()">
+                        <span class="material-icons">close</span> Annuler
+                      </button>
+                      <button class="btn-add-save"
+                              (click)="saveAdd(g)"
+                              [disabled]="!addForm.productId || addForm.prixClient <= 0 || addSaving">
+                        @if (addSaving) { <span class="material-icons spin" style="font-size:16px">refresh</span> }
+                        @else { <span class="material-icons">check</span> }
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Bouton Ajouter -->
+                @if (addingGroupId !== g.client.id) {
+                  <div class="add-btn-bar">
+                    <button class="btn-add-tarif" (click)="startAdd(g)">
+                      <span class="material-icons">add</span>
+                      Ajouter un tarif
+                    </button>
+                  </div>
+                }
+
+              }
+            </div>
+          }
+
+        </div>
+      }
+
+      @if (filteredGroups.length === 0 && !loading) {
+        <div class="empty">
+          <span class="material-icons">people</span>
+          <p>Aucun client trouvé</p>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,5 +1,6 @@
 package com.erp.auth.filter;
 
+import com.erp.auth.TenantAuthenticationDetails;
 import com.erp.auth.service.JwtService;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
@@ -12,7 +13,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -47,13 +47,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             username = jwtService.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                // Rechargé à chaque requête (pas de cache) : reflète l'état "actif" courant,
+                // donc un compte désactivé après émission du JWT est immédiatement bloqué ici.
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails) && userDetails.isEnabled()) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(new TenantAuthenticationDetails(
+                            jwtService.extractCompanyId(jwt), request.getRemoteAddr()));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }

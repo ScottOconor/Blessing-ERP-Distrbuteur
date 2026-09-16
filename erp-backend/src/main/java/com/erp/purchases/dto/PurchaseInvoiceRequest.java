@@ -30,10 +30,13 @@ public class PurchaseInvoiceRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LineRequest {
+        private Long productId;
         private String productCode;
         private String description;
         private BigDecimal quantity;
         private BigDecimal prixUnitaire;
+        /** Rabais unitaire HT déjà résolu côté client (prix catalogue - prix net) */
+        private BigDecimal rabaisUnitaire;
         private BigDecimal tauxTVA;
         private String accountCode;
         /** Catégorie produit (pour calcul précompte) */

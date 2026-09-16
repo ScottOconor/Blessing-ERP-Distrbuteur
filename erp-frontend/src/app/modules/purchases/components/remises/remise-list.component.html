@@ -1,8 +1,7 @@
 <div class="page-container">
-
-  <!-- Input file caché pour import -->
   <input #importInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImportFileChange($event)" />
 
+  <!-- Header -->
   <div class="page-header">
     <div class="header-left">
       <span class="material-icons page-icon">discount</span>
@@ -19,127 +18,32 @@
         <button class="btn-import" (click)="triggerImport()" [disabled]="importLoading">
           <span class="material-icons">upload_file</span> {{ importLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
-        <button class="btn-new" (click)="openNewRms()"><span class="material-icons">add</span> Nouvelle remise</button>
-      } @else if (activeTab === 'paiements') {
-        <button class="btn-new" (click)="openNewPmt()"><span class="material-icons">add</span> Nouveau règlement</button>
+        <button class="btn-new" (click)="openNewRms()">
+          <span class="material-icons">add</span> Nouvelle remise
+        </button>
+      }
+      @if (activeTab === 'guinness') {
+        <button class="btn-new" (click)="openGuinessModal()">
+          <span class="material-icons">autorenew</span> Générer remises Guinness
+        </button>
       }
     </div>
   </div>
 
+  <!-- Tabs -->
   <div class="tabs-bar">
-    <button class="tab-btn" [class.active]="activeTab === 'config'" (click)="activeTab = 'config'">
+    <button class="tab-btn" [class.active]="activeTab === 'config'" (click)="onTabChange('config')">
       <span class="material-icons">settings</span> Configuration
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'paiements'" (click)="activeTab = 'paiements'">
-      <span class="material-icons">payments</span> Règlements
+    <button class="tab-btn" [class.active]="activeTab === 'brasseries'" (click)="onTabChange('brasseries')">
+      <span class="material-icons">local_bar</span> Brasseries
     </button>
-    <button class="tab-btn" [class.active]="activeTab === 'reglements'" (click)="activeTab = 'reglements'; loadGroups()">
-      <span class="material-icons">account_balance_wallet</span> Paiement remises
+    <button class="tab-btn" [class.active]="activeTab === 'guinness'" (click)="onTabChange('guinness')">
+      <span class="material-icons">sports_bar</span> Guinness
     </button>
   </div>
 
-  <!-- ===================== RÈGLEMENTS GROUPÉS TAB ===================== -->
-  @if (activeTab === 'reglements') {
-    <div class="card">
-      @if (factureMsg) {
-        <div style="margin-bottom:12px;padding:10px 16px;background:#d1fae5;border-radius:6px;color:#065f46;display:flex;align-items:center;gap:8px">
-          <span class="material-icons" style="font-size:18px">check_circle</span> {{ factureMsg }}
-        </div>
-      }
-      @if (factureError) {
-        <div style="margin-bottom:12px;padding:10px 16px;background:#fee2e2;border-radius:6px;color:#991b1b;display:flex;align-items:center;gap:8px">
-          <span class="material-icons" style="font-size:18px">error</span> {{ factureError }}
-        </div>
-      }
-      @if (loadingGroups) {
-        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
-      } @else if (groups.length === 0) {
-        <div class="empty-state">
-          <span class="material-icons">account_balance_wallet</span>
-          <p>Aucun règlement confirmé à payer.</p>
-        </div>
-      } @else {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:32px"></th>
-              <th>Fournisseur</th>
-              <th class="text-right">Total à payer (FCFA)</th>
-              <th class="text-right">Règlements</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (group of groups; track group.partnerId) {
-              <tr class="group-row" (click)="togglePartner(group.partnerId)" style="cursor:pointer">
-                <td>
-                  <span class="material-icons" style="font-size:18px;vertical-align:middle;color:#666">
-                    {{ expandedPartners.has(group.partnerId) ? 'expand_less' : 'expand_more' }}
-                  </span>
-                </td>
-                <td class="font-bold">{{ group.partnerName }}</td>
-                <td class="text-right font-mono font-bold" style="color:#017E84">{{ group.totalAmount | number:'1.0-2' }}</td>
-                <td class="text-right">{{ group.paiements.length }}</td>
-                <td class="actions-cell" (click)="$event.stopPropagation()">
-                  @if (group.paiements[0]?.generatedInvoiceId) {
-                    <button class="btn-action confirm" (click)="openFacture(group.paiements[0].generatedInvoiceId!)">
-                      <span class="material-icons" style="font-size:16px">open_in_new</span> Voir facture
-                    </button>
-                  } @else {
-                    <button class="btn-action confirm"
-                      [disabled]="generatingFacture === group.partnerId"
-                      (click)="generateFactureForPartner(group)">
-                      <span class="material-icons" style="font-size:16px">
-                        {{ generatingFacture === group.partnerId ? 'hourglass_empty' : 'receipt_long' }}
-                      </span>
-                      {{ generatingFacture === group.partnerId ? 'Génération…' : 'Générer facture' }}
-                    </button>
-                  }
-                </td>
-              </tr>
-              @if (expandedPartners.has(group.partnerId)) {
-                <tr>
-                  <td colspan="5" style="padding:0 0 8px 40px;background:#f9fafb">
-                    <table class="lines-table" style="width:100%;margin-top:4px">
-                      <thead>
-                        <tr>
-                          <th>Référence</th>
-                          <th>Facture source</th>
-                          <th>Date</th>
-                          <th class="ar">Montant (FCFA)</th>
-                          <th>État</th>
-                          <th>Facture générée</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (p of group.paiements; track p.id) {
-                          <tr>
-                            <td>{{ p.name }}</td>
-                            <td>{{ p.invoiceName ?? '—' }}</td>
-                            <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
-                            <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
-                            <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
-                            <td>
-                              @if (p.generatedInvoiceId) {
-                                <a style="color:#017E84;cursor:pointer;text-decoration:underline" (click)="openFacture(p.generatedInvoiceId!)">
-                                  {{ p.generatedInvoiceName }}
-                                </a>
-                              } @else { — }
-                            </td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </td>
-                </tr>
-              }
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-  }
-
+  <!-- ===================== CONFIG TAB ===================== -->
   @if (activeTab === 'config') {
     <div class="card">
       @if (loadingRms) {
@@ -156,9 +60,9 @@
             <tr>
               <th>Fournisseur</th>
               <th>Catégorie</th>
-              <th>Type</th>
               <th class="text-right">Montant HT / unité</th>
               <th class="text-right">TTC / unité</th>
+              <th>Type</th>
               <th></th>
             </tr>
           </thead>
@@ -167,10 +71,16 @@
               <tr>
                 <td class="font-bold">{{ r.partnerName }}</td>
                 <td>{{ r.categoryName }}</td>
-                <td><span class="badge" [class.badge-brasserie]="r.typeRemise==='brasserie'" [class.badge-guinness]="r.typeRemise==='guinness'">{{ r.typeRemise || '—' }}</span></td>
                 <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-2' }}</td>
-                <td class="text-right font-mono" style="color:#017E84;font-weight:600">
-                  {{ r.montantTTCUnitaire | number:'1.0-2' }}
+                <td class="text-right font-mono" style="color:#017E84;font-weight:600">{{ r.montantTTCUnitaire | number:'1.0-2' }}</td>
+                <td>
+                  @if (r.typeRemise === 'brasserie') {
+                    <span class="badge badge-brasserie">Brasserie</span>
+                  } @else if (r.typeRemise === 'guinness') {
+                    <span class="badge badge-guinness">Guinness</span>
+                  } @else {
+                    <span class="badge badge-ht">Autre</span>
+                  }
                 </td>
                 <td class="actions-cell">
                   <button class="btn-icon" (click)="editRms(r)"><span class="material-icons">edit</span></button>
@@ -184,98 +94,210 @@
     </div>
   }
 
-  @if (activeTab === 'paiements') {
-    <div class="card">
-      @if (loadingPmt) {
-        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
-      } @else if (paiements.length === 0) {
-        <div class="empty-state">
-          <span class="material-icons">payments</span>
-          <p>Aucun règlement de remise.</p>
-          <button class="btn-new" (click)="openNewPmt()"><span class="material-icons">add</span> Créer</button>
+  <!-- ===================== BRASSERIES TAB ===================== -->
+  @if (activeTab === 'brasseries') {
+    @if (quarterMsg) {
+      <div class="alert-success"><span class="material-icons">check_circle</span> {{ quarterMsg }}</div>
+    }
+    @if (quarterError) {
+      <div class="alert-error"><span class="material-icons">error</span> {{ quarterError }}</div>
+    }
+    @if (loadingBrasseries) {
+      <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+    } @else {
+      @for (qg of brasseriesByQuarter; track $index) {
+        @let qKey = 'Q' + qg.quarter + '-' + qg.year;
+        @let qLabel = QUARTERS.find(q => q.q === qg.quarter)?.label ?? '';
+        <div class="quarter-card">
+          <div class="quarter-header" (click)="toggleQuarter(qKey)">
+            <div class="quarter-title">
+              <span class="material-icons quarter-icon">calendar_today</span>
+              <strong>Trimestre {{ qg.quarter }} {{ qg.year }}</strong>
+              <span class="quarter-sub">{{ qLabel }}</span>
+              @if (qg.partners.length > 0) {
+                <span class="badge-count">{{ qg.partners.length }} fournisseur(s)</span>
+                <span class="quarter-total">{{ qg.totalAmount | number:'1.0-2' }} FCFA</span>
+              }
+            </div>
+            <div class="quarter-actions" (click)="$event.stopPropagation()">
+              @if (qg.year === currentYear) {
+                <button class="btn-generate"
+                  [disabled]="generatingQuarter === qKey"
+                  (click)="generateQuarter(qg.quarter)">
+                  <span class="material-icons" style="font-size:16px">
+                    {{ generatingQuarter === qKey ? 'hourglass_empty' : 'autorenew' }}
+                  </span>
+                  {{ generatingQuarter === qKey ? 'Génération…' : 'Générer remises' }}
+                </button>
+              }
+              <span class="material-icons expand-icon">
+                {{ expandedQuarters.has(qKey) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
+          </div>
+
+          @if (expandedQuarters.has(qKey)) {
+            <div class="quarter-body">
+              @if (qg.partners.length === 0) {
+                <div class="empty-quarter">Aucun règlement pour ce trimestre.</div>
+              } @else {
+                @for (pg of qg.partners; track pg.partnerId) {
+                  @let partnerKey = qKey + '-' + pg.partnerId;
+                  <div class="partner-row" (click)="toggleBrasseriePartner(partnerKey)">
+                    <span class="material-icons" style="font-size:16px;color:#666">
+                      {{ expandedBrasserieKeys.has(partnerKey) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                    <span class="partner-name">{{ pg.partnerName }}</span>
+                    <span class="partner-count">{{ pg.paiements.length }} règlement(s)</span>
+                    <span class="partner-total">{{ pg.totalAmount | number:'1.0-2' }} FCFA</span>
+                    @if (hasDrafts(pg.paiements)) {
+                      <span class="partner-actions" (click)="$event.stopPropagation()">
+                        <button class="btn-confirm-all" (click)="confirmAllBrasserie(pg.paiements)">
+                          <span class="material-icons" style="font-size:14px">done_all</span> Confirmer tout
+                        </button>
+                      </span>
+                    }
+                  </div>
+                  @if (expandedBrasserieKeys.has(partnerKey)) {
+                    <div class="partner-details">
+                      <table class="lines-table">
+                        <thead>
+                          <tr>
+                            <th>Référence</th>
+                            <th>Facture source</th>
+                            <th>Date</th>
+                            <th class="ar">Montant TTC</th>
+                            <th>État</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (p of pg.paiements; track p.id) {
+                            <tr>
+                              <td>{{ p.name }}</td>
+                              <td>{{ p.invoiceName ?? '—' }}</td>
+                              <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                              <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
+                              <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
+                              <td class="actions-cell">
+                                @if (p.state === 'draft') {
+                                  <button class="btn-action confirm" (click)="confirmBrasseriePmt(p.id!)">Confirmer</button>
+                                  <button class="btn-icon danger" (click)="cancelBrasseriePmt(p.id!)">
+                                    <span class="material-icons">close</span>
+                                  </button>
+                                }
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                }
+              }
+            </div>
+          }
         </div>
-      } @else {
+      }
+    }
+  }
+
+  <!-- ===================== GUINNESS TAB ===================== -->
+  @if (activeTab === 'guinness') {
+    @if (guinessMsg) {
+      <div class="alert-success"><span class="material-icons">check_circle</span> {{ guinessMsg }}</div>
+    }
+    @if (guinessError && !showGuinessModal) {
+      <div class="alert-error"><span class="material-icons">error</span> {{ guinessError }}</div>
+    }
+    @if (loadingGuiness) {
+      <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+    } @else if (guinessByFournisseur.length === 0) {
+      <div class="card">
+        <div class="empty-state">
+          <span class="material-icons">sports_bar</span>
+          <p>Aucun règlement Guinness. Utilisez le bouton "Générer remises Guinness".</p>
+        </div>
+      </div>
+    } @else {
+      <div class="card">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Référence</th><th>Fournisseur</th><th>Date</th>
-              <th class="text-right">Montant</th><th>État</th><th></th>
+              <th style="width:32px"></th>
+              <th>Fournisseur</th>
+              <th class="text-right">Total (FCFA)</th>
+              <th class="text-right">Règlements</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of paiements; track p.id) {
-              <tr>
-                <td class="ref-col">{{ p.name }}</td>
-                <td class="font-bold">{{ p.partnerName }}</td>
-                <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
-                <td class="text-right font-mono font-bold">{{ p.totalAmount | number:'1.0-2' }}</td>
-                <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
-                <td class="actions-cell">
-                  @if (p.state === 'draft') {
-                    <button class="btn-action confirm" (click)="confirmPmt(p.id!)">Confirmer</button>
-                    <button class="btn-icon danger" (click)="cancelPmt(p.id!)"><span class="material-icons">close</span></button>
+            @for (pg of guinessByFournisseur; track pg.partnerId) {
+              <tr class="group-row" (click)="toggleGuinessPartner(pg.partnerId)" style="cursor:pointer">
+                <td>
+                  <span class="material-icons" style="font-size:18px;color:#666">
+                    {{ expandedGuinessKeys.has(pg.partnerId) ? 'expand_less' : 'expand_more' }}
+                  </span>
+                </td>
+                <td class="font-bold">{{ pg.partnerName }}</td>
+                <td class="text-right font-mono font-bold" style="color:#017E84">{{ pg.totalAmount | number:'1.0-2' }}</td>
+                <td class="text-right">{{ pg.paiements.length }}</td>
+                <td class="actions-cell" (click)="$event.stopPropagation()">
+                  @if (hasDrafts(pg.paiements)) {
+                    <button class="btn-confirm-all" (click)="confirmAllGuiness(pg.paiements)">
+                      <span class="material-icons" style="font-size:14px">done_all</span> Confirmer tout
+                    </button>
                   }
                 </td>
               </tr>
+              @if (expandedGuinessKeys.has(pg.partnerId)) {
+                <tr>
+                  <td colspan="5" style="padding:0 0 8px 40px;background:#f9fafb">
+                    <table class="lines-table" style="width:100%;margin-top:4px">
+                      <thead>
+                        <tr>
+                          <th>Référence</th>
+                          <th>Facture source</th>
+                          <th>Date</th>
+                          <th class="ar">Montant TTC</th>
+                          <th>État</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (p of pg.paiements; track p.id) {
+                          <tr>
+                            <td>{{ p.name }}</td>
+                            <td>{{ p.invoiceName ?? '—' }}</td>
+                            <td>{{ p.date | date:'dd/MM/yyyy' }}</td>
+                            <td class="ar font-mono">{{ p.totalAmount | number:'1.0-2' }}</td>
+                            <td><span class="badge" [ngClass]="stateBadge(p.state)">{{ stateLabel(p.state) }}</span></td>
+                            <td class="actions-cell">
+                              @if (p.state === 'draft') {
+                                <button class="btn-action confirm" (click)="confirmGuinessPmt(p.id!)">Confirmer</button>
+                                <button class="btn-icon danger" (click)="cancelGuinessPmt(p.id!)">
+                                  <span class="material-icons">close</span>
+                                </button>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
-      }
-    </div>
+      </div>
+    }
   }
+
+
+
 </div>
 
-<!-- IMPORT PREVIEW MODAL -->
-@if (showImportModal) {
-  <div class="modal-overlay" (click)="closeImportModal()">
-    <div class="modal-box modal-wide" (click)="$event.stopPropagation()" style="position:relative">
-      @if (importLoading) {
-        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
-          <div class="spinner"></div>
-          <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
-          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importRows.length }} ligne(s) en cours de traitement</p>
-        </div>
-      }
-      <div class="modal-header">
-        <span class="material-icons">upload_file</span>
-        <h2>Aperçu import remises ({{ importRows.length }} ligne(s))</h2>
-        <button class="btn-close-modal" (click)="closeImportModal()"><span class="material-icons">close</span></button>
-      </div>
-      <div style="overflow-x:auto;max-height:50vh;padding:0 20px">
-        <table class="rst-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Fournisseur</th>
-              <th>Catégorie d'article</th>
-              <th class="text-right">Montant remise</th>
-              <th>Actif</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of importRows; track $index; let i = $index) {
-              <tr>
-                <td class="text-muted">{{ i + 1 }}</td>
-                <td class="font-bold">{{ row['Fournisseur'] || '—' }}</td>
-                <td>{{ row["Catégorie d'article"] || '—' }}</td>
-                <td class="text-right font-mono">{{ row['Montant de la remise'] || '—' }}</td>
-                <td>{{ row['Actif'] || 'Oui' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel" (click)="closeImportModal()">Annuler</button>
-        <button class="btn-save" (click)="confirmImport()">
-          <span class="material-icons">check_circle</span> Confirmer ({{ importRows.length }} remise(s))
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- REMISE MODAL -->
+<!-- ===================== REMISE MODAL ===================== -->
 @if (showRmsModal) {
   <div class="modal-overlay" (click.self)="showRmsModal = false">
     <div class="modal-box">
@@ -284,7 +306,9 @@
         <h2>{{ editingRms ? 'Modifier remise' : 'Nouvelle remise' }}</h2>
         <button class="btn-close-modal" (click)="showRmsModal = false"><span class="material-icons">close</span></button>
       </div>
-      @if (rmsError) { <div class="modal-error"><span class="material-icons">error</span>{{ rmsError }}</div> }
+      @if (rmsError) {
+        <div class="modal-error"><span class="material-icons">error</span>{{ rmsError }}</div>
+      }
       <div class="modal-body">
         <div class="form-grid">
           <div class="form-group">
@@ -302,15 +326,15 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Type <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="rmsForm.typeRemise">
-              <option value="brasserie">Brasseries</option>
-              <option value="guinness">Guinness</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>Montant HT / unité (FCFA) <span class="req">*</span></label>
             <input type="number" class="form-control" [(ngModel)]="rmsForm.montantFixe" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select class="form-control" [(ngModel)]="rmsForm.typeRemise">
+              <option value="brasserie">Brasserie</option>
+              <option value="guinness">Guinness</option>
+            </select>
           </div>
         </div>
       </div>
@@ -324,78 +348,81 @@
   </div>
 }
 
-<!-- PAIEMENT MODAL -->
-@if (showPmtModal) {
-  <div class="modal-overlay" (click.self)="showPmtModal = false">
-    <div class="modal-box modal-wide">
+<!-- ===================== GUINNESS GÉNÉRATION MODAL ===================== -->
+@if (showGuinessModal) {
+  <div class="modal-overlay" (click.self)="showGuinessModal = false">
+    <div class="modal-box" style="max-width:460px">
       <div class="modal-header">
-        <span class="material-icons">payments</span>
-        <h2>Nouveau règlement remise</h2>
-        <button class="btn-close-modal" (click)="showPmtModal = false"><span class="material-icons">close</span></button>
+        <span class="material-icons">sports_bar</span>
+        <h2>Générer remises Guinness</h2>
+        <button class="btn-close-modal" (click)="showGuinessModal = false"><span class="material-icons">close</span></button>
       </div>
-      @if (pmtError) { <div class="modal-error"><span class="material-icons">error</span>{{ pmtError }}</div> }
+      @if (guinessError) {
+        <div class="modal-error"><span class="material-icons">error</span>{{ guinessError }}</div>
+      }
       <div class="modal-body">
+        <p style="margin-bottom:16px;color:#555;font-size:14px">
+          Sélectionnez la période sur laquelle générer les règlements Guinness depuis toutes les factures d'achats validées.
+        </p>
         <div class="form-grid">
           <div class="form-group">
-            <label>Fournisseur <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="pmtForm.partnerId">
-              <option [value]="0">-- Sélectionner --</option>
-              @for (s of suppliers; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
-            </select>
+            <label>Date de début <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="guinessDateStart" />
           </div>
           <div class="form-group">
-            <label>Date</label>
-            <input type="date" class="form-control" [(ngModel)]="pmtForm.date" />
-          </div>
-          <div class="form-group form-full">
-            <label>Notes</label>
-            <textarea class="form-control" [(ngModel)]="pmtForm.notes" rows="2"></textarea>
-          </div>
-        </div>
-        <div class="lines-section">
-          <div class="lines-header">
-            <span class="lines-title">Lignes de remise</span>
-            <button class="btn-add-line" (click)="addPmtLine()"><span class="material-icons">add</span> Ajouter</button>
-          </div>
-          @if (pmtForm.lines.length > 0) {
-            <div class="lines-wrap">
-              <table class="lines-table">
-                <thead>
-                  <tr>
-                    <th>#</th><th>Catégorie</th><th class="ar">Qté achetée</th>
-                    <th class="ar">Montant unit.</th><th class="ar">Total</th><th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (line of pmtForm.lines; track $index; let i = $index) {
-                    <tr>
-                      <td class="ln">{{ i + 1 }}</td>
-                      <td>
-                        <select class="inp" [(ngModel)]="line.categoryId">
-                          <option [value]="0">-- Catégorie --</option>
-                          @for (cat of categories; track cat.id) { <option [value]="cat.id">{{ cat.name }}</option> }
-                        </select>
-                      </td>
-                      <td class="ar"><input type="number" class="inp ar" [(ngModel)]="line.quantite" min="0" /></td>
-                      <td class="ar"><input type="number" class="inp ar" [(ngModel)]="line.montantUnitaire" min="0" /></td>
-                      <td class="ar amt">{{ getPmtLineTotal(line) | number:'1.0-2' }}</td>
-                      <td><button class="btn-del" (click)="removePmtLine(i)"><span class="material-icons">delete</span></button></td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-          <div class="pmt-total">
-            <span>Total :</span>
-            <span class="total-val">{{ getTotalPmt() | number:'1.0-2' }} FCFA</span>
+            <label>Date de fin <span class="req">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="guinessDateEnd" />
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-cancel" (click)="showPmtModal = false">Annuler</button>
-        <button class="btn-save" (click)="savePmt()" [disabled]="savingPmt">
-          <span class="material-icons">save</span> Enregistrer
+        <button class="btn-cancel" (click)="showGuinessModal = false">Annuler</button>
+        <button class="btn-save" (click)="generateGuiness()" [disabled]="generatingGuiness">
+          <span class="material-icons">{{ generatingGuiness ? 'hourglass_empty' : 'autorenew' }}</span>
+          {{ generatingGuiness ? 'Génération…' : 'Générer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ===================== IMPORT MODAL ===================== -->
+@if (showImportModal) {
+  <div class="modal-overlay" (click)="closeImportModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:700px;position:relative">
+      @if (importLoading) {
+        <div style="position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
+          <div class="spinner"></div>
+          <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
+        </div>
+      }
+      <div class="modal-header">
+        <span class="material-icons">upload_file</span>
+        <h2>Aperçu import remises ({{ importRows.length }} ligne(s))</h2>
+        <button class="btn-close-modal" (click)="closeImportModal()"><span class="material-icons">close</span></button>
+      </div>
+      <div style="overflow-x:auto;max-height:50vh;padding:0 20px">
+        <table class="rst-table">
+          <thead>
+            <tr><th>#</th><th>Fournisseur</th><th>Catégorie</th><th>Type</th><th class="text-right">Montant</th></tr>
+          </thead>
+          <tbody>
+            @for (row of importRows; track $index; let i = $index) {
+              <tr>
+                <td class="text-muted">{{ i + 1 }}</td>
+                <td class="font-bold">{{ row['Fournisseur'] || '—' }}</td>
+                <td>{{ row["Catégorie d'article"] || '—' }}</td>
+                <td>{{ row['Type (brasserie/guinness)'] || '—' }}</td>
+                <td class="text-right font-mono">{{ row['Montant de la remise'] || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeImportModal()">Annuler</button>
+        <button class="btn-save" (click)="confirmImport()">
+          <span class="material-icons">check_circle</span> Confirmer ({{ importRows.length }} remise(s))
         </button>
       </div>
     </div>

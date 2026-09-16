@@ -79,14 +79,35 @@
               <tbody>
                 @for (line of lines; track $index; let i = $index) {
                   <tr>
-                    <td>
+                    <td class="td-product">
                       @if (isDraft) {
-                        <select class="line-select" [(ngModel)]="line.productId" (ngModelChange)="onProductChange(i)">
-                          <option [ngValue]="null">— Choisir —</option>
-                          @for (p of products; track p.id) {
-                            <option [value]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+                        <div class="product-autocomplete">
+                          <input
+                            #productInput
+                            type="text"
+                            class="line-input"
+                            [(ngModel)]="line.productSearch"
+                            (input)="onProductSearch(i)"
+                            (focus)="line.showSuggestions = true"
+                            (blur)="hideSuggestions(i)"
+                            (keydown.enter)="onProductEnter(i, $event)"
+                            placeholder="Rechercher un article..."
+                            autocomplete="off"
+                          />
+                          @if (line.showSuggestions) {
+                            <div class="suggestions-list">
+                              @for (p of filteredProducts(i); track p.id) {
+                                <button type="button" class="suggestion-item" (mousedown)="selectProduct(i, p)">
+                                  @if (p.defaultCode) { <span class="prod-code">[{{ p.defaultCode }}]</span> }
+                                  {{ p.name }}
+                                </button>
+                              }
+                              @if (filteredProducts(i).length === 0) {
+                                <div class="suggestion-empty">Aucun résultat</div>
+                              }
+                            </div>
                           }
-                        </select>
+                        </div>
                       } @else {
                         <span class="font-bold">{{ productName(line.productId) }}</span>
                       }
@@ -98,7 +119,7 @@
                     </td>
                     <td>
                       @if (isDraft) {
-                        <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDemanded" min="0" (ngModelChange)="line.qtyDone = line.qtyDemanded" />
+                        <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDemanded" min="0" (ngModelChange)="line.qtyDone = line.qtyDemanded" (keydown.enter)="onLineEnter()" />
                       } @else { <span class="text-right-cell">{{ line.qtyDemanded }}</span> }
                     </td>
                     <td>
@@ -108,7 +129,7 @@
                     </td>
                     <td>
                       @if (isDraft) {
-                        <input type="number" class="line-input text-right" [(ngModel)]="line.priceUnit" min="0" />
+                        <input type="number" class="line-input text-right" [(ngModel)]="line.priceUnit" min="0" (keydown.enter)="onLineEnter()" />
                       } @else { <span class="text-right-cell">{{ line.priceUnit | number:'1.0-0' }}</span> }
                     </td>
                     <td class="text-right-cell font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
@@ -144,26 +165,18 @@
             <div class="form-group">
               <label>Type d'opération</label>
               @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedTypeId">
+                <select class="form-control" [(ngModel)]="selectedTypeId" (change)="onTypeChange()">
                   @for (t of pickingTypes; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
                 </select>
               } @else { <div class="form-value">{{ picking?.pickingTypeName }}</div> }
             </div>
             <div class="form-group">
               <label>Emplacement source</label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedSrcId">
-                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value">{{ locationName(picking?.locationId!) }}</div> }
+              <div class="form-value">{{ isNew ? locationName(selectedSrcId) : locationName(picking?.locationId!) }}</div>
             </div>
             <div class="form-group">
               <label>Emplacement destination</label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedDestId">
-                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value">{{ locationName(picking?.locationDestId!) }}</div> }
+              <div class="form-value">{{ isNew ? locationName(selectedDestId) : locationName(picking?.locationDestId!) }}</div>
             </div>
             <div class="form-group">
               <label>Fournisseur</label>
@@ -193,5 +206,16 @@
         </div>
       </div>
     </div>
+
+    @if (picking) {
+      <app-audit-footer
+        [createdBy]="picking.createdBy"
+        [createdAt]="picking.createdAt"
+        [updatedBy]="picking.updatedBy"
+        [updatedAt]="picking.updatedAt">
+      </app-audit-footer>
+
+      <app-audit-trail entityType="STOCK_PICKING" [entityId]="picking.id ?? null"></app-audit-trail>
+    }
   }
 </div>

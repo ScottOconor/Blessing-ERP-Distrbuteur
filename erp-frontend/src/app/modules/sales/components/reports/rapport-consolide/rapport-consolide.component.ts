@@ -58,10 +58,10 @@ export class RapportConsolideComponent implements OnInit {
   }
 
   /** Taux de remise moyen pour une ligne */
-  tauxRemise(line: { montantHT: number; remise: number }): number {
-    if (!line.montantHT || line.montantHT === 0) return 0;
+  tauxRemise(line: { caHT: number; remise: number }): number {
+    if (!line.caHT || line.caHT === 0) return 0;
     // remise est calculée sur HT net → on calcule le % brut approximatif
-    const htBrut = line.montantHT + line.remise;
+    const htBrut = line.caHT + line.remise;
     if (htBrut === 0) return 0;
     return Math.round((line.remise / htBrut) * 100 * 100) / 100;
   }

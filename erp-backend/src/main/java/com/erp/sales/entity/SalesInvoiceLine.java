@@ -6,7 +6,9 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "sales_invoice_lines")
+@Table(name = "sales_invoice_lines", indexes = {
+    @Index(name = "idx_sales_invoice_lines_invoice_id", columnList = "invoice_id")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -60,9 +62,13 @@ public class SalesInvoiceLine {
     @Column(precision = 20, scale = 2)
     private BigDecimal precompte;
 
-    /** Frais d'enlèvement pour cette ligne = montantEnlevement * quantite */
+    /** Frais d'enlèvement HT pour cette ligne = montantEnlevement (HT) * quantite */
     @Column(name = "frais_enlevement", precision = 20, scale = 2)
     private BigDecimal fraisEnlevement;
+
+    /** TVA sur les frais d'enlèvement de cette ligne = fraisEnlevement * tauxTVA */
+    @Column(name = "frais_enlevement_tva", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementTVA;
 
     /** Prix unitaire TTC (prixUnitaire * (1 + tauxTVA/100)) */
     @Column(name = "prix_unitaire_ttc", precision = 20, scale = 4)
@@ -81,4 +87,19 @@ public class SalesInvoiceLine {
     @Builder.Default
     @Column(name = "guinness_taxe", precision = 20, scale = 2)
     private BigDecimal guinessTaxe = BigDecimal.ZERO;
+
+    /** Rabais unitaire accordé à ce client = salePrice standard - prixClient (0 si pas de tarif client) */
+    @Builder.Default
+    @Column(name = "rabais_unitaire", precision = 20, scale = 2)
+    private BigDecimal rabaisUnitaire = BigDecimal.ZERO;
+
+    /** Montant total du rabais HT sur cette ligne = quantite × rabaisUnitaire */
+    @Builder.Default
+    @Column(name = "total_rabais_ligne", precision = 20, scale = 2)
+    private BigDecimal totalRabaisLigne = BigDecimal.ZERO;
+
+    /** Montant total du rabais TTC sur cette ligne = rabais HT × (1 + TVA% + précompte%) */
+    @Builder.Default
+    @Column(name = "total_rabais_ligne_ttc", precision = 20, scale = 2)
+    private BigDecimal totalRabaisLigneTTC = BigDecimal.ZERO;
 }

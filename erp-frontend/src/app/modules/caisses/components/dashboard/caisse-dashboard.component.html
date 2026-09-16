@@ -1,0 +1,119 @@
+<div class="dashboard-page">
+  <div class="page-header">
+    <div class="page-title">
+      <span class="material-icons">dashboard</span>
+      <div>
+        <h1>Tableau de bord — Caisses</h1>
+        <p>Vue d'ensemble de toutes vos caisses</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-outline" (click)="router.navigate(['/caisses/gestion'])">
+        <span class="material-icons">settings</span>
+        Gérer les caisses
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <span class="material-icons spin">sync</span>
+      Chargement…
+    </div>
+  }
+
+  @if (error) {
+    <div class="error-state">
+      <span class="material-icons">error_outline</span>
+      {{ error }}
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (caisses.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">point_of_sale</span>
+        <h3>Aucune caisse configurée</h3>
+        <p>Créez votre première caisse dans la section Gestion des caisses.</p>
+        <button class="btn-primary" (click)="router.navigate(['/caisses/gestion'])">
+          <span class="material-icons">add</span>
+          Créer une caisse
+        </button>
+      </div>
+    } @else {
+      <div class="caisses-grid">
+        @for (caisse of caisses; track caisse.id) {
+          <div class="caisse-card" [class.cloturee]="caisse.status === 'CLOTUREE'">
+            <!-- Header card -->
+            <div class="card-top">
+              <div class="caisse-icon">
+                <span class="material-icons">point_of_sale</span>
+              </div>
+              <div class="caisse-info">
+                <div class="caisse-name">{{ caisse.name }}</div>
+                @if (caisse.code) {
+                  <div class="caisse-code">{{ caisse.code }}</div>
+                }
+              </div>
+              <div class="status-badge" [class.ouverte]="caisse.status === 'OUVERTE'" [class.cloturee]="caisse.status === 'CLOTUREE'">
+                <span class="material-icons">{{ caisse.status === 'OUVERTE' ? 'lock_open' : 'lock' }}</span>
+                {{ caisse.status }}
+              </div>
+            </div>
+
+            <!-- Solde -->
+            <div class="solde-section">
+              <div class="solde-label">Solde actuel</div>
+              <div class="solde-value">{{ formatAmount(caisse.soldeActuel) }}</div>
+            </div>
+
+            <!-- Méta -->
+            <div class="caisse-meta">
+              @if (caisse.journalName) {
+                <div class="meta-item">
+                  <span class="material-icons">book</span>
+                  {{ caisse.journalName }}
+                </div>
+              }
+              @if (caisse.responsableName) {
+                <div class="meta-item">
+                  <span class="material-icons">person</span>
+                  {{ caisse.responsableName }}
+                </div>
+              }
+              @if (caisse.lastSessionDate) {
+                <div class="meta-item">
+                  <span class="material-icons">event</span>
+                  Dernière clôture : {{ caisse.lastSessionDate | date:'dd/MM/yyyy' }}
+                </div>
+              }
+            </div>
+
+            <!-- Actions -->
+            <div class="card-actions">
+              @if (caisse.status === 'OUVERTE') {
+                <button class="btn-entree" (click)="newEntree(caisse)">
+                  <span class="material-icons">add_circle</span>
+                  Entrée
+                </button>
+                <button class="btn-sortie" (click)="newSortie(caisse)">
+                  <span class="material-icons">remove_circle</span>
+                  Sortie
+                </button>
+                <button class="btn-cloture" (click)="cloturerCaisse(caisse)">
+                  <span class="material-icons">lock</span>
+                  Clôturer
+                </button>
+              } @else {
+                <button class="btn-outline-sm" (click)="viewBrouillard(caisse)">
+                  <span class="material-icons">receipt_long</span>
+                  Voir brouillard
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

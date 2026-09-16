@@ -7,7 +7,7 @@
       <p class="page-subtitle">Entrées, sorties et transferts par période</p>
     </div>
     <div class="header-actions no-print">
-      <button class="btn-secondary" (click)="exportPdf()">
+      <button class="btn-secondary btn-pdf" (click)="exportPdf()">
         <span class="material-icons">print</span> Imprimer
       </button>
     </div>
@@ -163,7 +163,7 @@
                 <tr class="detail-row">
                   <td class="detail-label-cell">
                     <span class="indent-icon material-icons">subdirectory_arrow_right</span>
-                    <span class="type-badge {{ typeColor(m.pickingTypeCode) }} small">{{ typeLabel(m.pickingTypeCode) }}</span>
+                    <span class="type-badge {{ typeColor(m.moveDirection || m.pickingTypeCode) }} small">{{ typeLabel(m.moveDirection || m.pickingTypeCode) }}</span>
                     @if (groupBy !== 'product' && m.productCode) {
                       <span class="code-badge">{{ m.productCode }}</span>
                     }
@@ -177,22 +177,22 @@
                     <span class="text-muted small ml-4">{{ fmtDate(m.dateDone) }}</span>
                   </td>
                   <td class="col-num mono col-green">
-                    {{ m.pickingTypeCode === 'incoming' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'incoming' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
                   </td>
                   <td class="col-num mono col-green">
-                    {{ m.pickingTypeCode === 'incoming' ? fmt(m.subtotalValue || 0) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'incoming' ? fmt(m.subtotalValue || 0) : '' }}
                   </td>
                   <td class="col-num mono col-red">
-                    {{ m.pickingTypeCode === 'outgoing' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'outgoing' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
                   </td>
                   <td class="col-num mono col-red">
-                    {{ m.pickingTypeCode === 'outgoing' ? fmt(m.subtotalValue || 0) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'outgoing' ? fmt(m.subtotalValue || 0) : '' }}
                   </td>
                   <td class="col-num mono col-blue no-print">
-                    {{ m.pickingTypeCode === 'internal' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'internal' ? fmt(m.qtyDone || m.qtyDemanded, 2) : '' }}
                   </td>
                   <td class="col-num mono col-blue no-print">
-                    {{ m.pickingTypeCode === 'internal' ? fmt(m.subtotalValue || 0) : '' }}
+                    {{ (m.moveDirection || m.pickingTypeCode) === 'internal' ? fmt(m.subtotalValue || 0) : '' }}
                   </td>
                   <td class="no-print"></td>
                 </tr>

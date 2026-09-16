@@ -17,6 +17,7 @@ public class StockPickingRequest {
     private String origin;
     private String notes;
     private Long agencyId;
+    private Long remoteAgencyId;
     private Long companyId;
     private List<MoveRequest> moves;
 

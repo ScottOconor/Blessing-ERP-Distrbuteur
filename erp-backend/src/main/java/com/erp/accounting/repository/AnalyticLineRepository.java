@@ -73,6 +73,11 @@ public interface AnalyticLineRepository extends JpaRepository<AnalyticLine, Long
         @Param("to") LocalDate to
     );
 
+    /** Chargement en masse pour l'affichage de listes d'écritures (cf. AccountingService#getJournalEntries)
+     *  — évite une requête par ligne d'écriture. */
+    @Query("SELECT l FROM AnalyticLine l JOIN FETCH l.analyticAccount WHERE l.moveLine.id IN :moveLineIds")
+    List<AnalyticLine> findByMoveLineIdIn(@Param("moveLineIds") List<Long> moveLineIds);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM AnalyticLine l WHERE l.moveLine.id = :moveLineId")
     void deleteByMoveLineId(@Param("moveLineId") Long moveLineId);

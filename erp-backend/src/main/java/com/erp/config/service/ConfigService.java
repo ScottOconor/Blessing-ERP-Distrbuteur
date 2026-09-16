@@ -1,27 +1,31 @@
 package com.erp.config.service;
 
 import com.erp.accounting.init.OhadaDataInitializer;
+import com.erp.auth.SecurityUtils;
 import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.config.DataSeeder;
+import com.erp.common.service.TenantGuard;
 import com.erp.config.dto.*;
-import com.erp.config.entity.CompanyGroup;
 import com.erp.config.entity.Role;
 import com.erp.config.entity.RolePermission;
-import com.erp.config.repository.CompanyGroupRepository;
 import com.erp.config.repository.RolePermissionRepository;
 import com.erp.config.repository.RoleRepository;
-import com.erp.sales.repository.SalesInvoiceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,71 +33,61 @@ import java.util.stream.Collectors;
 @Transactional
 public class ConfigService {
 
-    private static final Set<String> SYSTEM_ROLE_CODES = Set.of(
-            DataSeeder.SUPER_ADMIN, DataSeeder.ADMIN,
-            DataSeeder.SUPER_AUDITEUR, DataSeeder.AUDITEUR, DataSeeder.CONTROLEUR);
+    private final CompanyRepository         companyRepository;
+    private final RoleRepository            roleRepository;
+    private final RolePermissionRepository  permissionRepository;
+    private final UserRepository            userRepository;
+    private final PasswordEncoder           passwordEncoder;
+    private final OhadaDataInitializer      companyInitializer;
+    private final TenantGuard               tenantGuard;
+    private final com.erp.audit.service.AuditService auditService;
 
-    private final CompanyGroupRepository groupRepository;
-    private final CompanyRepository companyRepository;
-    private final RoleRepository roleRepository;
-    private final RolePermissionRepository permissionRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final SalesInvoiceRepository invoiceRepository;
-    private final OhadaDataInitializer companyInitializer;
+    // ── Entreprises ───────────────────────────────────────────────────────
 
-    // ======================== GROUPES ========================
-
-    public List<CompanyGroupDTO> getAllGroups() {
-        return groupRepository.findAll().stream().map(this::toGroupDTO).collect(Collectors.toList());
-    }
-
-    public CompanyGroupDTO getGroup(Long id) {
-        return toGroupDTO(groupRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable")));
-    }
-
-    @Transactional
-    public CompanyGroupDTO createGroup(CompanyGroupDTO dto) {
-        if (groupRepository.existsByCode(dto.getCode()))
-            throw new IllegalArgumentException("Code groupe déjà utilisé : " + dto.getCode());
-        CompanyGroup g = groupRepository.save(CompanyGroup.builder()
-                .name(dto.getName()).code(dto.getCode())
-                .description(dto.getDescription()).active(true).build());
-        DataSeeder.seedDefaultCustomRolesForGroup(roleRepository, g);
-        return toGroupDTO(g);
-    }
-
-    @Transactional
-    public CompanyGroupDTO updateGroup(Long id, CompanyGroupDTO dto) {
-        CompanyGroup g = groupRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
-        g.setName(dto.getName());
-        g.setDescription(dto.getDescription());
-        g.setActive(dto.isActive());
-        return toGroupDTO(groupRepository.save(g));
-    }
-
-    // ======================== COMPANIES ========================
-
-    public List<CompanyDTO> getCompaniesByGroup(Long groupId) {
-        return companyRepository.findByGroupId(groupId).stream()
-                .map(this::toCompanyDTO).collect(Collectors.toList());
-    }
-
+    @Transactional(readOnly = true)
     public List<CompanyDTO> getAllCompanies() {
         return companyRepository.findAll().stream().map(this::toCompanyDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    /** Consommé à la fois par l'écran admin "Société" (authentifié, détail complet) et par le
+     *  chargement du branding avant connexion (AppBrandingService.apply(), appelé dès ngOnInit,
+     *  donc nécessairement non authentifié) — la route est permitAll côté SecurityConfig, mais on
+     *  ne renvoie le détail sensible (RCCM/NIF/adresse/tél/email) qu'à un appelant réellement
+     *  authentifié, jamais au principal "anonymous" que Spring Security attache par défaut. */
+    public CompanyDTO getCompany(Long id) {
+        Company c = companyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
+        if (!isRealAuthentication()) {
+            return toPublicBrandingDTO(c);
+        }
+        tenantGuard.check(c.getId());
+        return toCompanyDTO(c);
+    }
+
+    private boolean isRealAuthentication() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken);
+    }
+
+    /** Sous-ensemble public : uniquement ce que l'écran de connexion affiche avant authentification
+     *  (nom, appName pour le titre/favicon, indicateur de logo) — jamais RCCM/NIF/adresse/tél/email. */
+    private CompanyDTO toPublicBrandingDTO(Company c) {
+        return CompanyDTO.builder()
+                .id(c.getId()).name(c.getName()).sigle(c.getSigle())
+                .logoContentType(c.getLogoContentType())
+                .appName(c.getAppName()).hasAppLogo(c.getAppLogoData() != null && c.getAppLogoData().length > 0)
+                .active(c.isActive())
+                .build();
+    }
+
     @Transactional
     public CompanyDTO createCompany(CompanyDTO dto) {
-        CompanyGroup group = groupRepository.findById(dto.getGroupId())
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
         Company c = companyRepository.save(Company.builder()
                 .name(dto.getName()).sigle(dto.getSigle()).rccm(dto.getRccm())
                 .nif(dto.getNif()).adresse(dto.getAdresse()).telephone(dto.getTelephone())
-                .email(dto.getEmail()).logoUrl(dto.getLogoUrl())
-                .group(group).active(true).build());
+                .email(dto.getEmail()).logoUrl(dto.getLogoUrl()).active(true)
+                .fiscalYearStartMonth(normalizeFiscalYearStartMonth(dto.getFiscalYearStartMonth())).build());
         companyInitializer.initializeCompany(c);
         return toCompanyDTO(c);
     }
@@ -102,43 +96,45 @@ public class ConfigService {
     public CompanyDTO updateCompany(Long id, CompanyDTO dto) {
         Company c = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
+        tenantGuard.check(c.getId());
         c.setName(dto.getName()); c.setSigle(dto.getSigle()); c.setRccm(dto.getRccm());
         c.setNif(dto.getNif()); c.setAdresse(dto.getAdresse()); c.setTelephone(dto.getTelephone());
         c.setEmail(dto.getEmail()); c.setLogoUrl(dto.getLogoUrl()); c.setActive(dto.isActive());
-        if (dto.getGroupId() != null) {
-            c.setGroup(groupRepository.findById(dto.getGroupId())
-                    .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable")));
-        }
+        c.setFiscalYearStartMonth(normalizeFiscalYearStartMonth(dto.getFiscalYearStartMonth()));
+        if (dto.getAppName() != null && !dto.getAppName().isBlank()) c.setAppName(dto.getAppName().trim());
         return toCompanyDTO(companyRepository.save(c));
     }
 
-    // ======================== ROLES ========================
+    /** Janvier par défaut ; borne à [1,12] pour éviter une valeur invalide en base. */
+    private Integer normalizeFiscalYearStartMonth(Integer month) {
+        if (month == null || month < 1 || month > 12) return 1;
+        return month;
+    }
 
+    // ── Rôles ─────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<RoleDTO> getAllRoles() {
+        return roleRepository.findByActiveTrue().stream().map(this::toRoleDTO).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<RoleDTO> getSystemRoles() {
         return roleRepository.findByIsSystemTrue().stream().map(this::toRoleDTO).collect(Collectors.toList());
     }
 
-    public List<RoleDTO> getRolesForGroup(Long groupId) {
-        CompanyGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
-        return roleRepository.findByGroupOrIsSystemTrue(group).stream()
-                .map(this::toRoleDTO).collect(Collectors.toList());
-    }
-
     @Transactional
-    public RoleDTO createCustomRole(Long groupId, RoleDTO dto) {
-        CompanyGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
+    public RoleDTO createRole(RoleDTO dto) {
         Role role = roleRepository.save(Role.builder()
-                .label(dto.getLabel()).isSystem(false).group(group).active(true).build());
-        if (dto.getPermissions() != null) {
-            savePermissions(role, dto.getPermissions());
-        }
+                .label(dto.getLabel()).isSystem(false).active(true).build());
+        if (dto.getPermissions() != null) savePermissions(role, dto.getPermissions());
+        auditService.log("ROLE", role.getId(), role.getLabel(),
+                "CREATED", "Rôle créé", SecurityUtils.currentCompanyId());
         return toRoleDTO(role);
     }
 
     @Transactional
-    public RoleDTO updateCustomRole(Long roleId, RoleDTO dto) {
+    public RoleDTO updateRole(Long roleId, RoleDTO dto) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"));
         if (role.isSystem()) throw new IllegalArgumentException("Impossible de modifier un rôle système");
@@ -147,223 +143,156 @@ public class ConfigService {
         if (dto.getPermissions() != null) {
             permissionRepository.deleteByRole(role);
             savePermissions(role, dto.getPermissions());
+            auditService.log("ROLE", role.getId(), role.getLabel(),
+                    "PERMISSIONS_CHANGED", "Permissions du rôle modifiées", SecurityUtils.currentCompanyId());
         }
         return toRoleDTO(role);
     }
 
     @Transactional
-    public void deleteCustomRole(Long roleId) {
+    public void deleteRole(Long roleId) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"));
         if (role.isSystem()) throw new IllegalArgumentException("Impossible de supprimer un rôle système");
         permissionRepository.deleteByRole(role);
         roleRepository.delete(role);
+        auditService.log("ROLE", roleId, role.getLabel(),
+                "DELETED", "Rôle supprimé", SecurityUtils.currentCompanyId());
     }
 
-    private void savePermissions(Role role, List<RoleDTO.PermissionDTO> perms) {
-        List<RolePermission> entities = perms.stream().map(p -> RolePermission.builder()
-                .role(role).module(p.getModule()).resource(p.getResource()).action(p.getAction()).build())
-                .collect(Collectors.toList());
-        permissionRepository.saveAll(entities);
+    // ── Utilisateurs ──────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findByActiveTrue().stream().map(this::toUserDTO).collect(Collectors.toList());
     }
 
-    // ======================== UTILISATEURS ========================
-
-    public List<UserDTO> getUsersByGroup(Long groupId) {
-        return userRepository.findAllByGroupId(groupId).stream()
-                .map(this::toUserDTO).collect(Collectors.toList());
-    }
-
-    public List<UserDTO> getUsersByCompany(Long companyId) {
-        return userRepository.findAllByCompanyId(companyId).stream()
-                .map(this::toUserDTO).collect(Collectors.toList());
+    @Transactional(readOnly = true)
+    public UserDTO getUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
+        return toUserDTO(user);
     }
 
     @Transactional
     public UserDTO createUser(CreateUserRequest req) {
+        // Pas de @NotBlank sur CreateUserRequest.password : ce DTO est aussi réutilisé par
+        // updateUser, où un mot de passe null/blanc signifie explicitement "ne pas changer" —
+        // la validation de non-vacuité ne s'applique donc qu'à la création, ici.
+        if (req.getPassword() == null || req.getPassword().isBlank())
+            throw new IllegalArgumentException("Le mot de passe est obligatoire");
         if (userRepository.existsByUsername(req.getUsername()))
             throw new IllegalArgumentException("Nom d'utilisateur déjà utilisé");
         if (req.getEmail() != null && userRepository.existsByEmail(req.getEmail()))
             throw new IllegalArgumentException("Email déjà utilisé");
 
-        Role role = roleRepository.findById(req.getRoleId())
-                .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"));
+        Role role = req.getRoleId() != null
+                ? roleRepository.findById(req.getRoleId()).orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"))
+                : null;
 
-        User.UserBuilder ub = User.builder()
+        Long currentCompanyId = SecurityUtils.currentCompanyId();
+        Company company = currentCompanyId != null ? companyRepository.findById(currentCompanyId).orElse(null) : null;
+
+        User user = User.builder()
                 .username(req.getUsername()).email(req.getEmail())
                 .fullName(req.getFullName())
                 .password(passwordEncoder.encode(req.getPassword()))
-                .role(role).active(true).mustChangePassword(true);
-
-        if (role.getCode() != null && SYSTEM_ROLE_CODES.contains(role.getCode())) {
-            if (req.getGroupId() == null)
-                throw new IllegalArgumentException("L'identifiant du groupe est requis pour ce rôle système");
-            CompanyGroup group = groupRepository.findById(req.getGroupId())
-                    .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
-            ub.group(group);
-        } else {
-            if (req.getCompanyId() == null)
-                throw new IllegalArgumentException("L'identifiant de l'entreprise est requis pour ce rôle");
-            Company company = companyRepository.findById(req.getCompanyId())
-                    .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
-            ub.company(company);
-        }
-
-        return toUserDTO(userRepository.save(ub.build()));
+                .role(role).company(company).active(true).mustChangePassword(true).build();
+        return toUserDTO(userRepository.save(user));
     }
 
     @Transactional
     public UserDTO updateUser(Long id, CreateUserRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
         if (req.getFullName() != null) user.setFullName(req.getFullName());
-        if (req.getEmail() != null) user.setEmail(req.getEmail());
+        if (req.getEmail()    != null) user.setEmail(req.getEmail());
         if (req.getPassword() != null && !req.getPassword().isBlank())
             user.setPassword(passwordEncoder.encode(req.getPassword()));
-        if (req.getRoleId() != null) {
-            Role role = roleRepository.findById(req.getRoleId())
-                    .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"));
-            user.setRole(role);
-            if (role.getCode() != null && SYSTEM_ROLE_CODES.contains(role.getCode())) {
-                if (req.getGroupId() != null) {
-                    user.setGroup(groupRepository.findById(req.getGroupId())
-                            .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable")));
-                    user.setCompany(null);
-                }
-            } else if (req.getCompanyId() != null) {
-                user.setCompany(companyRepository.findById(req.getCompanyId())
-                        .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable")));
-                user.setGroup(null);
-            }
-        }
+        if (req.getRoleId() != null)
+            user.setRole(roleRepository.findById(req.getRoleId())
+                    .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable")));
         return toUserDTO(userRepository.save(user));
     }
 
     @Transactional
     public void toggleUserActive(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
+        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
         user.setActive(!user.isActive());
         userRepository.save(user);
+        auditService.log("USER", id, user.getUsername(),
+                user.isActive() ? "ACTIVATED" : "DEACTIVATED",
+                user.isActive() ? "Utilisateur activé" : "Utilisateur désactivé",
+                user.getCompany() != null ? user.getCompany().getId() : null);
     }
 
-    // ======================== GROUP DASHBOARD ========================
+    // ── Logo ──────────────────────────────────────────────────────────────
 
-    @Transactional(readOnly = true)
-    public GroupDashboardDTO getGroupDashboard(Long groupId) {
-        CompanyGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new IllegalArgumentException("Groupe introuvable"));
-
-        List<Company> companies = companyRepository.findByGroupId(groupId);
-        List<Long> companyIds = companies.stream().map(Company::getId).collect(Collectors.toList());
-
-        LocalDate today = LocalDate.now();
-        int year = today.getYear();
-        int month = today.getMonthValue();
-
-        // Stats par company
-        Map<Long, Object[]> todayMap = new HashMap<>();
-        Map<Long, BigDecimal> dueMap = new HashMap<>();
-        Map<Long, Object[]> monthMap = new HashMap<>();
-
-        if (!companyIds.isEmpty()) {
-            invoiceRepository.todayStatsByCompanies(companyIds, today)
-                    .forEach(r -> todayMap.put((Long) r[0], r));
-            invoiceRepository.totalDueByCompanies(companyIds)
-                    .forEach(r -> dueMap.put((Long) r[0], (BigDecimal) r[1]));
-            invoiceRepository.monthStatsByCompanies(companyIds, year, month)
-                    .forEach(r -> monthMap.put((Long) r[0], r));
-        }
-
-        List<GroupDashboardDTO.CompanyStats> stats = companies.stream().map(c -> {
-            Object[] t = todayMap.get(c.getId());
-            Object[] m = monthMap.get(c.getId());
-            return GroupDashboardDTO.CompanyStats.builder()
-                    .companyId(c.getId())
-                    .companyName(c.getName())
-                    .sigle(c.getSigle())
-                    .invoicesToday(t != null ? ((Number) t[1]).longValue() : 0L)
-                    .caToday(t != null ? (BigDecimal) t[2] : BigDecimal.ZERO)
-                    .dueAmount(dueMap.getOrDefault(c.getId(), BigDecimal.ZERO))
-                    .caMonth(m != null ? (BigDecimal) m[1] : BigDecimal.ZERO)
-                    .invoicesMonth(m != null ? ((Number) m[2]).longValue() : 0L)
-                    .build();
-        }).collect(Collectors.toList());
-
-        BigDecimal totalCAToday = stats.stream().map(GroupDashboardDTO.CompanyStats::getCaToday)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        long totalInvoicesToday = stats.stream().mapToLong(GroupDashboardDTO.CompanyStats::getInvoicesToday).sum();
-        BigDecimal totalDue = stats.stream().map(GroupDashboardDTO.CompanyStats::getDueAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalCAMonth = stats.stream().map(GroupDashboardDTO.CompanyStats::getCaMonth)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return GroupDashboardDTO.builder()
-                .groupId(groupId).groupName(group.getName())
-                .companies(stats)
-                .totalCAToday(totalCAToday).totalInvoicesToday(totalInvoicesToday)
-                .totalDue(totalDue).totalCAMonth(totalCAMonth)
-                .build();
-    }
-
-    // ======================== COMPANY DASHBOARD (single company, centralized sans groupe) ========================
-
-    @Transactional(readOnly = true)
-    public GroupDashboardDTO getCompanyDashboard(Long companyId) {
-        Company company = companyRepository.findById(companyId)
+    @Transactional
+    public void uploadLogo(Long id, byte[] data, String contentType) {
+        Company c = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
-
-        List<Long> ids = List.of(companyId);
-        LocalDate today = LocalDate.now();
-        int year = today.getYear();
-        int month = today.getMonthValue();
-
-        Map<Long, Object[]> todayMap = new HashMap<>();
-        Map<Long, BigDecimal> dueMap = new HashMap<>();
-        Map<Long, Object[]> monthMap = new HashMap<>();
-
-        invoiceRepository.todayStatsByCompanies(ids, today).forEach(r -> todayMap.put((Long) r[0], r));
-        invoiceRepository.totalDueByCompanies(ids).forEach(r -> dueMap.put((Long) r[0], (BigDecimal) r[1]));
-        invoiceRepository.monthStatsByCompanies(ids, year, month).forEach(r -> monthMap.put((Long) r[0], r));
-
-        Object[] t = todayMap.get(companyId);
-        Object[] m = monthMap.get(companyId);
-        GroupDashboardDTO.CompanyStats stat = GroupDashboardDTO.CompanyStats.builder()
-                .companyId(company.getId()).companyName(company.getName()).sigle(company.getSigle())
-                .invoicesToday(t != null ? ((Number) t[1]).longValue() : 0L)
-                .caToday(t != null ? (BigDecimal) t[2] : BigDecimal.ZERO)
-                .dueAmount(dueMap.getOrDefault(companyId, BigDecimal.ZERO))
-                .caMonth(m != null ? (BigDecimal) m[1] : BigDecimal.ZERO)
-                .invoicesMonth(m != null ? ((Number) m[2]).longValue() : 0L)
-                .build();
-
-        return GroupDashboardDTO.builder()
-                .groupId(null).groupName(company.getName())
-                .companies(List.of(stat))
-                .totalCAToday(stat.getCaToday()).totalInvoicesToday(stat.getInvoicesToday())
-                .totalDue(stat.getDueAmount()).totalCAMonth(stat.getCaMonth())
-                .build();
+        tenantGuard.check(c.getId());
+        c.setLogoData(data);
+        c.setLogoContentType(contentType);
+        companyRepository.save(c);
     }
 
-    // ======================== MAPPERS ========================
-
-    private CompanyGroupDTO toGroupDTO(CompanyGroup g) {
-        List<CompanyDTO> companies = companyRepository.findByGroupId(g.getId()).stream()
-                .map(this::toCompanyDTO).collect(Collectors.toList());
-        return CompanyGroupDTO.builder()
-                .id(g.getId()).name(g.getName()).code(g.getCode())
-                .description(g.getDescription()).active(g.isActive())
-                .companies(companies).build();
+    @Transactional
+    public void uploadAppLogo(Long id, byte[] data, String contentType) {
+        Company c = companyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
+        tenantGuard.check(c.getId());
+        c.setAppLogoData(data);
+        c.setAppLogoContentType(contentType);
+        companyRepository.save(c);
     }
+
+    // GET .../logo et .../app-logo restent volontairement SANS tenantGuard.check : ce sont les
+    // deux seules routes /api/config/companies/** consultées avant connexion (écran de login,
+    // permitAll dans SecurityConfig) — il n'y a alors aucun SecurityContext authentifié, donc
+    // SecurityUtils.currentCompanyId() lèverait une IllegalStateException et casserait l'écran de
+    // login pour tout le monde. Seul le détail complet (GET simple /companies/{id}, RCCM/NIF/etc.)
+    // exige une authentification ; le logo binaire seul n'est pas une donnée sensible.
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> getLogoResponse(Long id) {
+        Company c = companyRepository.findById(id).orElse(null);
+        if (c == null || c.getLogoData() == null || c.getLogoData().length == 0)
+            return ResponseEntity.notFound().build();
+        String ct = c.getLogoContentType() != null ? c.getLogoContentType() : MediaType.IMAGE_PNG_VALUE;
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, ct)
+                .header(HttpHeaders.CACHE_CONTROL, "max-age=86400")
+                .body(c.getLogoData());
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> getAppLogoResponse(Long id) {
+        Company c = companyRepository.findById(id).orElse(null);
+        if (c == null || c.getAppLogoData() == null || c.getAppLogoData().length == 0)
+            return ResponseEntity.notFound().build();
+        String ct = c.getAppLogoContentType() != null ? c.getAppLogoContentType() : MediaType.IMAGE_PNG_VALUE;
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, ct)
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .body(c.getAppLogoData());
+    }
+
+    // ── Mappers ───────────────────────────────────────────────────────────
 
     private CompanyDTO toCompanyDTO(Company c) {
         return CompanyDTO.builder()
                 .id(c.getId()).name(c.getName()).sigle(c.getSigle())
                 .rccm(c.getRccm()).nif(c.getNif()).adresse(c.getAdresse())
                 .telephone(c.getTelephone()).email(c.getEmail()).logoUrl(c.getLogoUrl())
-                .groupId(c.getGroup() != null ? c.getGroup().getId() : null)
-                .groupName(c.getGroup() != null ? c.getGroup().getName() : null)
-                .active(c.isActive()).build();
+                .logoData(c.getLogoData()).logoContentType(c.getLogoContentType())
+                .appName(c.getAppName()).hasAppLogo(c.getAppLogoData() != null && c.getAppLogoData().length > 0)
+                .active(c.isActive()).fiscalYearStartMonth(c.getFiscalYearStartMonth())
+                .lockDate(c.getLockDate()).build();
     }
 
     private RoleDTO toRoleDTO(Role r) {
@@ -374,7 +303,6 @@ public class ConfigService {
         return RoleDTO.builder()
                 .id(r.getId()).code(r.getCode()).label(r.getLabel())
                 .isSystem(r.isSystem()).active(r.isActive())
-                .groupId(r.getGroup() != null ? r.getGroup().getId() : null)
                 .permissions(perms).build();
     }
 
@@ -383,13 +311,20 @@ public class ConfigService {
                 .id(u.getId()).username(u.getUsername()).email(u.getEmail())
                 .fullName(u.getFullName()).active(u.isActive())
                 .mustChangePassword(u.isMustChangePassword())
-                .roleId(u.getRole() != null ? u.getRole().getId() : null)
-                .roleCode(u.getRole() != null ? u.getRole().getCode() : null)
-                .roleLabel(u.getRole() != null ? u.getRole().getLabel() : null)
-                .groupId(u.getGroup() != null ? u.getGroup().getId() : null)
-                .groupName(u.getGroup() != null ? u.getGroup().getName() : null)
-                .companyId(u.getCompany() != null ? u.getCompany().getId() : null)
-                .companyName(u.getCompany() != null ? u.getCompany().getName() : null)
+                .roleId(u.getRole()   != null ? u.getRole().getId()    : null)
+                .roleCode(u.getRole() != null ? u.getRole().getCode()  : null)
+                .roleLabel(u.getRole()!= null ? u.getRole().getLabel() : null)
                 .build();
+    }
+
+    private void savePermissions(Role role, List<RoleDTO.PermissionDTO> perms) {
+        Set<String> seen = new HashSet<>();
+        List<RolePermission> entities = perms.stream()
+                .filter(p -> p.getModule() != null && p.getResource() != null && p.getAction() != null)
+                .filter(p -> seen.add(p.getModule() + "|" + p.getResource() + "|" + p.getAction()))
+                .map(p -> RolePermission.builder()
+                        .role(role).module(p.getModule()).resource(p.getResource()).action(p.getAction()).build())
+                .collect(Collectors.toList());
+        permissionRepository.saveAll(entities);
     }
 }

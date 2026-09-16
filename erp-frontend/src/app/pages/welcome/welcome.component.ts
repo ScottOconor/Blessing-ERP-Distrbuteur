@@ -2,14 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { AppBrandingService } from '../../core/services/app-branding.service';
+import { ModuleService, BUSINESS_MODULES, BusinessModuleMeta } from '../../core/services/module.service';
 
-interface Module {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  route: string;
+interface Module extends BusinessModuleMeta {
   available: boolean;
 }
 
@@ -28,70 +25,19 @@ export class WelcomeComponent implements OnInit {
 
   modules: Module[] = [];
 
-  private allModules: Module[] = [
-    {
-      id: 'accounting',
-      name: 'Comptabilité',
-      description: 'Journaux, écritures, rapports financiers',
-      icon: 'calculate',
-      color: '#714B67',
-      route: '/accounting',
-      available: true
-    },
-    {
-      id: 'sales',
-      name: 'Ventes',
-      description: 'Bons de commande, factures clients',
-      icon: 'point_of_sale',
-      color: '#017E84',
-      route: '/sales',
-      available: true
-    },
-    {
-      id: 'purchases',
-      name: 'Achats',
-      description: 'Commandes fournisseurs, réceptions et mise à jour du stock',
-      icon: 'local_shipping',
-      color: '#00A09D',
-      route: '/purchases',
-      available: true
-    },
-    {
-      id: 'stock',
-      name: 'Stock',
-      description: 'Articles, entrepôts, réceptions, livraisons, transferts inter-dépôts',
-      icon: 'inventory_2',
-      color: '#2c7be5',
-      route: '/stock',
-      available: true
-    },
-    {
-      id: 'config',
-      name: 'Configuration',
-      description: 'Groupes, entreprises, utilisateurs, rôles & permissions',
-      icon: 'admin_panel_settings',
-      color: '#2c3e50',
-      route: '/config',
-      available: true
-    },
-    {
-      id: 'hr',
-      name: 'Ressources Humaines',
-      description: 'Employés, congés, paie',
-      icon: 'people',
-      color: '#16C79A',
-      route: '/hr',
-      available: false
-    }
-  ];
-
   userRole = '';
 
-  constructor(public authService: AuthService, private router: Router) {}
+  constructor(
+    public authService: AuthService, private router: Router, public themeService: ThemeService,
+    public branding: AppBrandingService, private moduleService: ModuleService
+  ) {}
 
   ngOnInit(): void {
     this.loadUserInfo();
-    this.buildModules();
+    this.moduleService.getModules(this.authService.getCompanyId()).subscribe({
+      next: () => this.buildModules(),
+      error: () => this.buildModules() // fail-open : si l'appel échoue, tout reste affiché
+    });
   }
 
   private loadUserInfo(): void {
@@ -110,47 +56,23 @@ export class WelcomeComponent implements OnInit {
   }
 
   private buildModules(): void {
-    // Correspondance id module → code permission
-    const modulePermMap: Record<string, string> = {
-      accounting: 'COMPTABILITE',
-      sales:      'VENTES',
-      purchases:  'ACHATS',
-      stock:      'STOCK'
-    };
-
-    this.modules = this.allModules
+    this.modules = BUSINESS_MODULES
       .filter(m => {
-        if (!m.available) return false;
-        // CONFIG : toujours visible (au moins le changement de mot de passe)
-        if (m.id === 'config') return true;
-        const permModule = modulePermMap[m.id];
-        if (!permModule) return true;
-        // Rôles système (centralisés) : accès total
-        if (this.authService.isCentralized()) return true;
-        // Rôles custom : doit avoir au moins une permission dans le module
-        return this.authService.hasAnyModulePermission(permModule);
+        if (!this.moduleService.isInstalledCached(m.code)) return false;
+        if (this.authService.isPrivileged()) return true;
+        return this.authService.hasAnyModulePermission(m.code);
       })
-      .map(m => {
-        if (m.id === 'config') {
-          return {
-            ...m,
-            description: this.authService.canManageUsers()
-              ? 'Groupes, entreprises, utilisateurs, rôles & permissions'
-              : 'Paramètres & changement de mot de passe'
-          };
-        }
-        return m;
-      });
+      .map(m => ({ ...m, available: true }));
+  }
+
+  goToExtraApps(): void {
+    this.router.navigate(['/extra-apps']);
   }
 
   navigateTo(module: Module): void {
     if (module.available) {
       this.router.navigate([module.route]);
     }
-  }
-
-  goToGroupHome(): void {
-    this.router.navigate(['/group-home']);
   }
 
   logout(): void {

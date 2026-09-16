@@ -1,0 +1,2782 @@
+{
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/.github/modernize/java-upgrade/hooks/scripts/recordToolUse.ps1": {
+    "mtime": 1787615039.1402526,
+    "ast_hash": "9ecf230451dfd20ff4e0a2a01e80a4e6",
+    "semantic_hash": "9ecf230451dfd20ff4e0a2a01e80a4e6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/.github/modernize/java-upgrade/hooks/scripts/recordToolUse.sh": {
+    "mtime": 1787615039.1402526,
+    "ast_hash": "e25ae501603ce6bf738198f5ce32ba83",
+    "semantic_hash": "e25ae501603ce6bf738198f5ce32ba83"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/mvnw": {
+    "mtime": 1774864956.0,
+    "ast_hash": "b27efda478259e53fe9f30f6cfbe1c83",
+    "semantic_hash": "b27efda478259e53fe9f30f6cfbe1c83"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/ErpApplication.java": {
+    "mtime": 1785496279.2578287,
+    "ast_hash": "8ae1a262ad0070892b3074b804c5fc08",
+    "semantic_hash": "8ae1a262ad0070892b3074b804c5fc08"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/controller/AccountController.java": {
+    "mtime": 1782204209.0,
+    "ast_hash": "37ea076af6dd49f2b03a4368540cde74",
+    "semantic_hash": "37ea076af6dd49f2b03a4368540cde74"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/controller/AnalyticController.java": {
+    "mtime": 1775304826.0,
+    "ast_hash": "f64f6d664a58229194e8c86efebe6bce",
+    "semantic_hash": "f64f6d664a58229194e8c86efebe6bce"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/controller/FiscalClosureController.java": {
+    "mtime": 1786984664.9354055,
+    "ast_hash": "37497cd99c065d4897bdf93746cb7a73",
+    "semantic_hash": "37497cd99c065d4897bdf93746cb7a73"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/controller/ImportController.java": {
+    "mtime": 1781779758.0,
+    "ast_hash": "745dd4ac6e9e4f28490811215d6e7b20",
+    "semantic_hash": "745dd4ac6e9e4f28490811215d6e7b20"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/controller/ReportController.java": {
+    "mtime": 1786383199.4432504,
+    "ast_hash": "2cfbbddfc1856dc80d3841cc2d760c5e",
+    "semantic_hash": "2cfbbddfc1856dc80d3841cc2d760c5e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AccountAccountDTO.java": {
+    "mtime": 1775028374.0,
+    "ast_hash": "2bc80990177f0fdcb4b5d68be53f2d83",
+    "semantic_hash": "2bc80990177f0fdcb4b5d68be53f2d83"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AccountJournalDTO.java": {
+    "mtime": 1775028380.0,
+    "ast_hash": "5e375c7c3ee382040816d57730c0d90e",
+    "semantic_hash": "5e375c7c3ee382040816d57730c0d90e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AccountMoveDTO.java": {
+    "mtime": 1782203982.0,
+    "ast_hash": "e40e53d19712099d16a61c3b806ed571",
+    "semantic_hash": "e40e53d19712099d16a61c3b806ed571"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AccountMoveLineDTO.java": {
+    "mtime": 1775047538.0,
+    "ast_hash": "eb3f180131e6d6ceb76dcecb0d0df36d",
+    "semantic_hash": "eb3f180131e6d6ceb76dcecb0d0df36d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AnalyticAccountDTO.java": {
+    "mtime": 1775045442.0,
+    "ast_hash": "d8f13a9cd75ad7bf81cf81dba7379b5d",
+    "semantic_hash": "d8f13a9cd75ad7bf81cf81dba7379b5d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AnalyticDistributionItemDTO.java": {
+    "mtime": 1775047522.0,
+    "ast_hash": "70b62a2ee34d7e50877a9cb1b102e050",
+    "semantic_hash": "70b62a2ee34d7e50877a9cb1b102e050"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/AnalyticLineDTO.java": {
+    "mtime": 1775045448.0,
+    "ast_hash": "c1cbd1c36cbdec16b7171f45da905e3d",
+    "semantic_hash": "c1cbd1c36cbdec16b7171f45da905e3d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/BalanceLine6ColsDTO.java": {
+    "mtime": 1775028434.0,
+    "ast_hash": "d152da68fc86081f3176f06d93e9dd1a",
+    "semantic_hash": "d152da68fc86081f3176f06d93e9dd1a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/BalanceLineDTO.java": {
+    "mtime": 1775028426.0,
+    "ast_hash": "09aee5308228af5ae5cfedaf7aedc182",
+    "semantic_hash": "09aee5308228af5ae5cfedaf7aedc182"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/FiscalClosureExecuteRequest.java": {
+    "mtime": 1786984409.7281008,
+    "ast_hash": "53fbdb6516f9cfbc5c1b3ab18bb65f58",
+    "semantic_hash": "53fbdb6516f9cfbc5c1b3ab18bb65f58"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/FiscalClosureExecuteResponse.java": {
+    "mtime": 1786984432.1161404,
+    "ast_hash": "8cbf7cc22ff26a4d8c842c00e3e6309d",
+    "semantic_hash": "8cbf7cc22ff26a4d8c842c00e3e6309d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/FiscalClosurePreviewRequest.java": {
+    "mtime": 1786984391.4003494,
+    "ast_hash": "1ff92e92dddaec0eeaf36a1e25ff01c9",
+    "semantic_hash": "1ff92e92dddaec0eeaf36a1e25ff01c9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/FiscalClosurePreviewResponse.java": {
+    "mtime": 1786984401.7322092,
+    "ast_hash": "5bf5899d61c49fc18f843171c47828ef",
+    "semantic_hash": "5bf5899d61c49fc18f843171c47828ef"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/ImportResult.java": {
+    "mtime": 1775317722.0,
+    "ast_hash": "851ed160c505c3f2cc3266a16b6700a5",
+    "semantic_hash": "851ed160c505c3f2cc3266a16b6700a5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/JournalDailyBalanceDTO.java": {
+    "mtime": 1776090284.0,
+    "ast_hash": "7f02ddb851b6071578ba4e45e1dd06a0",
+    "semantic_hash": "7f02ddb851b6071578ba4e45e1dd06a0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/JournalEntryRequest.java": {
+    "mtime": 1775045560.0,
+    "ast_hash": "d7ee05544294bdc23b82ce208782ea8c",
+    "semantic_hash": "d7ee05544294bdc23b82ce208782ea8c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/JournalPreviewDTO.java": {
+    "mtime": 1781086810.0,
+    "ast_hash": "5ba6b8b0adf61f93c6698066645c9815",
+    "semantic_hash": "5ba6b8b0adf61f93c6698066645c9815"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/PartnerBalanceLineDTO.java": {
+    "mtime": 1775028440.0,
+    "ast_hash": "3de8b636ae3d035e559068abedbda3f1",
+    "semantic_hash": "3de8b636ae3d035e559068abedbda3f1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/PartnerDTO.java": {
+    "mtime": 1778423696.0,
+    "ast_hash": "b9f66e9a2a6747ab45a0a4c6de926262",
+    "semantic_hash": "b9f66e9a2a6747ab45a0a4c6de926262"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/dto/ReportRequest.java": {
+    "mtime": 1786123629.8769093,
+    "ast_hash": "83c402339f5ae36e42d42c9e3be71c7d",
+    "semantic_hash": "83c402339f5ae36e42d42c9e3be71c7d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AccountAccount.java": {
+    "mtime": 1787331803.183142,
+    "ast_hash": "1cfd540ea51c1f7181aa76197cd3e08c",
+    "semantic_hash": "1cfd540ea51c1f7181aa76197cd3e08c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AccountJournal.java": {
+    "mtime": 1775028290.0,
+    "ast_hash": "446b9e67b6719c626df2335e01aa87bb",
+    "semantic_hash": "446b9e67b6719c626df2335e01aa87bb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AccountMove.java": {
+    "mtime": 1787615585.573545,
+    "ast_hash": "1ab4f6931efa69cbd874436321f22064",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AccountMoveLine.java": {
+    "mtime": 1787331819.6258903,
+    "ast_hash": "c9f902e3d1b9a866609550df34312eb2",
+    "semantic_hash": "c9f902e3d1b9a866609550df34312eb2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AnalyticAccount.java": {
+    "mtime": 1775045416.0,
+    "ast_hash": "a79b482982e605d388d7a39ca618e806",
+    "semantic_hash": "a79b482982e605d388d7a39ca618e806"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AnalyticDistributionItem.java": {
+    "mtime": 1775047514.0,
+    "ast_hash": "255a437504664a0761d512795d2dc791",
+    "semantic_hash": "255a437504664a0761d512795d2dc791"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/AnalyticLine.java": {
+    "mtime": 1775045428.0,
+    "ast_hash": "4031cde9036e5dff011d2c692c8845f9",
+    "semantic_hash": "4031cde9036e5dff011d2c692c8845f9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/JournalDailyBalance.java": {
+    "mtime": 1776090258.0,
+    "ast_hash": "2a56d925d01216413504bc365991ce58",
+    "semantic_hash": "2a56d925d01216413504bc365991ce58"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/entity/Partner.java": {
+    "mtime": 1778326296.0,
+    "ast_hash": "556a101c5823c0c8b9bea7f85f678704",
+    "semantic_hash": "556a101c5823c0c8b9bea7f85f678704"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/init/OhadaDataInitializer.java": {
+    "mtime": 1782737488.0,
+    "ast_hash": "bc9eda5043c78dc8edb71b2a13e0c510",
+    "semantic_hash": "bc9eda5043c78dc8edb71b2a13e0c510"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AccountAccountRepository.java": {
+    "mtime": 1778834396.0,
+    "ast_hash": "bb9ce59d3c8c2b5f1c5ba685873ae92c",
+    "semantic_hash": "bb9ce59d3c8c2b5f1c5ba685873ae92c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AccountJournalRepository.java": {
+    "mtime": 1787615646.7778275,
+    "ast_hash": "ffe7ba67b51aa34c182f38692e46b594",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AccountMoveLineRepository.java": {
+    "mtime": 1787655156.4131212,
+    "ast_hash": "eabe2f66ec236c242eb1a73a7c3507bd",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AccountMoveRepository.java": {
+    "mtime": 1786984354.2448537,
+    "ast_hash": "517b90a78022e61eb145fe04b071b401",
+    "semantic_hash": "517b90a78022e61eb145fe04b071b401"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AnalyticAccountRepository.java": {
+    "mtime": 1776110146.0,
+    "ast_hash": "427757ae488c60cbff54a40ca8f37058",
+    "semantic_hash": "427757ae488c60cbff54a40ca8f37058"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AnalyticDistributionItemRepository.java": {
+    "mtime": 1787331742.7014122,
+    "ast_hash": "90ef516182a3cfbfcda1ac309f14ce7c",
+    "semantic_hash": "90ef516182a3cfbfcda1ac309f14ce7c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/AnalyticLineRepository.java": {
+    "mtime": 1787331772.0579996,
+    "ast_hash": "8db64df9d0951c3f1dc60535732f1c62",
+    "semantic_hash": "8db64df9d0951c3f1dc60535732f1c62"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/JournalDailyBalanceRepository.java": {
+    "mtime": 1776090278.0,
+    "ast_hash": "cdb7c85d8e342d39b73c0324aaf4819e",
+    "semantic_hash": "cdb7c85d8e342d39b73c0324aaf4819e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/repository/PartnerRepository.java": {
+    "mtime": 1778251056.0,
+    "ast_hash": "20034afa3394a1d5defcda6c2fcbae72",
+    "semantic_hash": "20034afa3394a1d5defcda6c2fcbae72"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/AccountingService.java": {
+    "mtime": 1787654765.8375669,
+    "ast_hash": "d70251b5a03842ec33616f8037b31536",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/AnalyticService.java": {
+    "mtime": 1787643297.4272819,
+    "ast_hash": "0eaed8df52778c5b79c7551028af4967",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/FiscalClosureService.java": {
+    "mtime": 1787642443.433363,
+    "ast_hash": "6fad367fd883ab4a0c308b07c429f2e6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/FiscalLockGuard.java": {
+    "mtime": 1786983360.8423834,
+    "ast_hash": "3b0b78827c4825438a94fab464c969c3",
+    "semantic_hash": "3b0b78827c4825438a94fab464c969c3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/ImportService.java": {
+    "mtime": 1782230066.0,
+    "ast_hash": "8749f3a97ce94b47e9ae9919330353a7",
+    "semantic_hash": "8749f3a97ce94b47e9ae9919330353a7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/accounting/service/ReportService.java": {
+    "mtime": 1786984322.497285,
+    "ast_hash": "5f7640b895ac2ac8deb5b0fe127bbd56",
+    "semantic_hash": "5f7640b895ac2ac8deb5b0fe127bbd56"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/audit/controller/AuditController.java": {
+    "mtime": 1782299724.0,
+    "ast_hash": "dd42aa27088c7ea09228252e83a6c4d2",
+    "semantic_hash": "dd42aa27088c7ea09228252e83a6c4d2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/audit/dto/AuditLogDTO.java": {
+    "mtime": 1780911369.0,
+    "ast_hash": "fd49c81f9c219344632ad7201e5cefd9",
+    "semantic_hash": "fd49c81f9c219344632ad7201e5cefd9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/audit/entity/AuditLog.java": {
+    "mtime": 1782295594.0,
+    "ast_hash": "c043870373484793ae3c540e9c15eb55",
+    "semantic_hash": "c043870373484793ae3c540e9c15eb55"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/audit/repository/AuditLogRepository.java": {
+    "mtime": 1782299687.0,
+    "ast_hash": "81c83d080f6f39a78e3d18bbe113382d",
+    "semantic_hash": "81c83d080f6f39a78e3d18bbe113382d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/audit/service/AuditService.java": {
+    "mtime": 1780911360.0,
+    "ast_hash": "c9ded3689645f15312243d7fc2553c21",
+    "semantic_hash": "c9ded3689645f15312243d7fc2553c21"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/controller/AuthController.java": {
+    "mtime": 1787586538.3537743,
+    "ast_hash": "ac70a41caabaddeee804ae7a27a1697d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/dto/AuthRequest.java": {
+    "mtime": 1775028206.0,
+    "ast_hash": "c1b757c3099c839b9b1f29e9a93f3e89",
+    "semantic_hash": "c1b757c3099c839b9b1f29e9a93f3e89"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/dto/AuthResponse.java": {
+    "mtime": 1780333916.0,
+    "ast_hash": "e32eb04cb90f8c5bc4dec378a481a428",
+    "semantic_hash": "e32eb04cb90f8c5bc4dec378a481a428"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/entity/User.java": {
+    "mtime": 1787586499.4140751,
+    "ast_hash": "56bfbb55c3be811dcbb139bbb6b2ff38",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/filter/JwtAuthFilter.java": {
+    "mtime": 1787586531.7784817,
+    "ast_hash": "97f470beba50c66fc45be6c4881fd2fe",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/repository/UserRepository.java": {
+    "mtime": 1780333741.0,
+    "ast_hash": "0ead9abe67427aaf636fd82c50a7f1ea",
+    "semantic_hash": "0ead9abe67427aaf636fd82c50a7f1ea"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/service/JwtService.java": {
+    "mtime": 1785493803.8754714,
+    "ast_hash": "d2992110d03c246bf0d1e6b0c4ad6dd5",
+    "semantic_hash": "d2992110d03c246bf0d1e6b0c4ad6dd5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/service/UserDetailsServiceImpl.java": {
+    "mtime": 1781278233.0,
+    "ast_hash": "0782ddbccda4e41b7f2efe14aa512d36",
+    "semantic_hash": "0782ddbccda4e41b7f2efe14aa512d36"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/controller/CaisseController.java": {
+    "mtime": 1780639147.0,
+    "ast_hash": "c12989f73494b4ba79e511b6a7753788",
+    "semantic_hash": "c12989f73494b4ba79e511b6a7753788"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/dto/AddOperationRequest.java": {
+    "mtime": 1780653095.0,
+    "ast_hash": "b0d46b0618578a9f9dea0f6e52cf871e",
+    "semantic_hash": "b0d46b0618578a9f9dea0f6e52cf871e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/dto/BrouillardDTO.java": {
+    "mtime": 1780639039.0,
+    "ast_hash": "83a147411f6375c5fcb55b084810e8a3",
+    "semantic_hash": "83a147411f6375c5fcb55b084810e8a3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/dto/CaisseDTO.java": {
+    "mtime": 1780639016.0,
+    "ast_hash": "3b3a2f562a1edc1bc83695a519ee10a1",
+    "semantic_hash": "3b3a2f562a1edc1bc83695a519ee10a1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/dto/CaisseOperationDTO.java": {
+    "mtime": 1780639025.0,
+    "ast_hash": "6f9c44efb0068a05f02bc7fca3572043",
+    "semantic_hash": "6f9c44efb0068a05f02bc7fca3572043"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/dto/CaisseSessionDTO.java": {
+    "mtime": 1780639031.0,
+    "ast_hash": "ca3a7c21e94c3c440e36701252a036a8",
+    "semantic_hash": "ca3a7c21e94c3c440e36701252a036a8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/entity/Caisse.java": {
+    "mtime": 1780638977.0,
+    "ast_hash": "8c6abe2d016cb2b462c5d98343bf1ce1",
+    "semantic_hash": "8c6abe2d016cb2b462c5d98343bf1ce1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/entity/CaisseOperation.java": {
+    "mtime": 1780911692.0,
+    "ast_hash": "55a4c294463bce618c6a6e2418e793b9",
+    "semantic_hash": "55a4c294463bce618c6a6e2418e793b9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/entity/CaisseSession.java": {
+    "mtime": 1780639003.0,
+    "ast_hash": "4260b6e826c8b6c065cca216cfdfeecd",
+    "semantic_hash": "4260b6e826c8b6c065cca216cfdfeecd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/entity/CaisseStatus.java": {
+    "mtime": 1780638982.0,
+    "ast_hash": "9b3daf908c720de6ad70686935107d8b",
+    "semantic_hash": "9b3daf908c720de6ad70686935107d8b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/entity/OperationType.java": {
+    "mtime": 1780638994.0,
+    "ast_hash": "4b4fef27f6bf6a21f07ced3c883f5cb7",
+    "semantic_hash": "4b4fef27f6bf6a21f07ced3c883f5cb7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/repository/CaisseOperationRepository.java": {
+    "mtime": 1780639059.0,
+    "ast_hash": "87750dbaa8b40f2ee3bde9754ad4acfd",
+    "semantic_hash": "87750dbaa8b40f2ee3bde9754ad4acfd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/repository/CaisseRepository.java": {
+    "mtime": 1780639051.0,
+    "ast_hash": "ef54ec7b1c95a682e44d9e68e0b9f741",
+    "semantic_hash": "ef54ec7b1c95a682e44d9e68e0b9f741"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/repository/CaisseSessionRepository.java": {
+    "mtime": 1780639065.0,
+    "ast_hash": "d2fd23704873c1ceb1b9c83444525082",
+    "semantic_hash": "d2fd23704873c1ceb1b9c83444525082"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/caisse/service/CaisseService.java": {
+    "mtime": 1787654326.8697956,
+    "ast_hash": "9fa392b6a2414db0b4874859a6270f81",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/ConsigneCodes.java": {
+    "mtime": 1787617695.1946945,
+    "ast_hash": "28d335b86d7c066fb1aa54ea66a4811b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/GlobalExceptionHandler.java": {
+    "mtime": 1787657471.1630015,
+    "ast_hash": "c54f8ae3dfd8337cca336cd271e59c8a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/controller/EnlevementController.java": {
+    "mtime": 1787619000.656634,
+    "ast_hash": "61d219b640b914e4c11a5114a48447a2",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/controller/InterAgencyErpController.java": {
+    "mtime": 1786383222.0354767,
+    "ast_hash": "8d069d9cd00f2db53110e861e712d3cb",
+    "semantic_hash": "8d069d9cd00f2db53110e861e712d3cb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/controller/PrecompteController.java": {
+    "mtime": 1787654502.2224045,
+    "ast_hash": "24ad6f16cae3b697ce93d57dd5778543",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/controller/PrecompteImportDTO.java": {
+    "mtime": 1778272442.0,
+    "ast_hash": "c13109a085821507d334cc2f2547c8f4",
+    "semantic_hash": "c13109a085821507d334cc2f2547c8f4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/controller/PrecompteImportResultDTO.java": {
+    "mtime": 1787654496.9904845,
+    "ast_hash": "9ffcea497ae2280284fff6ad34784271",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/dto/EnlevementDTO.java": {
+    "mtime": 1787618983.7531443,
+    "ast_hash": "2f11173cf9d6a72733db3b4df9c59821",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/dto/EnlevementRapportDTO.java": {
+    "mtime": 1780595588.0,
+    "ast_hash": "984982ab1d85da259d38bf9654222ce0",
+    "semantic_hash": "984982ab1d85da259d38bf9654222ce0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/dto/PrecompteDTO.java": {
+    "mtime": 1776156892.0,
+    "ast_hash": "e72557a5ead598283d201ba129066f70",
+    "semantic_hash": "e72557a5ead598283d201ba129066f70"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/entity/Company.java": {
+    "mtime": 1786983193.9114175,
+    "ast_hash": "abe93015d8d17333c1d50e81c54f75ef",
+    "semantic_hash": "abe93015d8d17333c1d50e81c54f75ef"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/entity/Enlevement.java": {
+    "mtime": 1784910833.9206276,
+    "ast_hash": "996aa5fa886f0ebb56421a49baec5feb",
+    "semantic_hash": "996aa5fa886f0ebb56421a49baec5feb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/entity/EnlevementClient.java": {
+    "mtime": 1778334242.0,
+    "ast_hash": "35f0dbf7c0fc0cd1c52493c210971dc1",
+    "semantic_hash": "35f0dbf7c0fc0cd1c52493c210971dc1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/entity/Precompte.java": {
+    "mtime": 1776156760.0,
+    "ast_hash": "9b9abb807d246d5892329177b6faefb5",
+    "semantic_hash": "9b9abb807d246d5892329177b6faefb5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/repository/CompanyRepository.java": {
+    "mtime": 1787657749.6030781,
+    "ast_hash": "8616d6ee65ef5b0425794583b9ac63cc",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/repository/EnlevementClientRepository.java": {
+    "mtime": 1778335770.0,
+    "ast_hash": "c51045c4a9006c5bc7259d9b1b929727",
+    "semantic_hash": "c51045c4a9006c5bc7259d9b1b929727"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/repository/EnlevementRepository.java": {
+    "mtime": 1780316618.0,
+    "ast_hash": "b9eaea5f0cdcd51847a1f77a63752240",
+    "semantic_hash": "b9eaea5f0cdcd51847a1f77a63752240"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/repository/PrecompteRepository.java": {
+    "mtime": 1787646088.3648705,
+    "ast_hash": "a64553f72f2cc488cad0961e12ede3f7",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/service/EnlevementService.java": {
+    "mtime": 1787615848.0544689,
+    "ast_hash": "ee35e4757e3868e061bc290ce227f7ce",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/service/PrecompteExcelImportService.java": {
+    "mtime": 1787654412.4662027,
+    "ast_hash": "116eb1531010fe69166a6647dd0e01df",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/service/PrecompteService.java": {
+    "mtime": 1787619719.66825,
+    "ast_hash": "04804e680a30fb3235bae7be20d549bf",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/AuditorAwareImpl.java": {
+    "mtime": 1782808309.0,
+    "ast_hash": "503e0ca0923f4c460790fd0199dc981e",
+    "semantic_hash": "503e0ca0923f4c460790fd0199dc981e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/CorsConfig.java": {
+    "mtime": 1780333851.0,
+    "ast_hash": "8f4204e52e80c9763268c8670b87bf42",
+    "semantic_hash": "8f4204e52e80c9763268c8670b87bf42"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/DataSeeder.java": {
+    "mtime": 1787586613.4780953,
+    "ast_hash": "a0c0ca0bc92c904900025ca4fbe222a3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/InterAgencyApiKeyFilter.java": {
+    "mtime": 1787615414.779657,
+    "ast_hash": "bf7b656ec50367a11ebaa722db4dd687",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/JpaAuditingConfig.java": {
+    "mtime": 1782808301.0,
+    "ast_hash": "d98e6882907f59ba96c35b6b40818a22",
+    "semantic_hash": "d98e6882907f59ba96c35b6b40818a22"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/SecurityConfig.java": {
+    "mtime": 1787620426.728786,
+    "ast_hash": "5202d6c754d7c26e0b1dacdb7ff68cde",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/SpaController.java": {
+    "mtime": 1778252748.0,
+    "ast_hash": "f1f1e84143b4cd90371caf706a929315",
+    "semantic_hash": "f1f1e84143b4cd90371caf706a929315"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/BackupController.java": {
+    "mtime": 1782168831.0,
+    "ast_hash": "fcdc3187e1c3b6b22ff60a8021140feb",
+    "semantic_hash": "fcdc3187e1c3b6b22ff60a8021140feb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/ChangePasswordController.java": {
+    "mtime": 1776848688.0,
+    "ast_hash": "df3c12c671823a9dd8cd00856010ee1d",
+    "semantic_hash": "df3c12c671823a9dd8cd00856010ee1d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/ConfigController.java": {
+    "mtime": 1787620519.3801453,
+    "ast_hash": "06184821f8de4d745b9c201639aaeaf9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/InterAgencyController.java": {
+    "mtime": 1786991739.640828,
+    "ast_hash": "8a84d38b3638db5bcad7283d669a96c8",
+    "semantic_hash": "8a84d38b3638db5bcad7283d669a96c8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/ModuleController.java": {
+    "mtime": 1783099393.0,
+    "ast_hash": "6209e1344a760f016ad9d3ebcdf1cf50",
+    "semantic_hash": "6209e1344a760f016ad9d3ebcdf1cf50"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/controller/RemoteAgencyController.java": {
+    "mtime": 1780333861.0,
+    "ast_hash": "3efa1235a47740520798e9f504ecd43e",
+    "semantic_hash": "3efa1235a47740520798e9f504ecd43e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/CompanyDTO.java": {
+    "mtime": 1786983206.703404,
+    "ast_hash": "a7a6db5769862f41a209f25c687d70a6",
+    "semantic_hash": "a7a6db5769862f41a209f25c687d70a6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/CreateUserRequest.java": {
+    "mtime": 1780333908.0,
+    "ast_hash": "053d2423e9539230ebd16072ba1e1a3e",
+    "semantic_hash": "053d2423e9539230ebd16072ba1e1a3e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/ModuleStateDTO.java": {
+    "mtime": 1783099363.0,
+    "ast_hash": "f7266841e9bf30644086b3e038167332",
+    "semantic_hash": "f7266841e9bf30644086b3e038167332"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/RemoteAgencyDTO.java": {
+    "mtime": 1780504643.0,
+    "ast_hash": "692fb4e267488c9d5cd993073d46f603",
+    "semantic_hash": "692fb4e267488c9d5cd993073d46f603"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/RoleDTO.java": {
+    "mtime": 1780333902.0,
+    "ast_hash": "cdf006c41c94060a76c95a1da355b2b7",
+    "semantic_hash": "cdf006c41c94060a76c95a1da355b2b7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/dto/UserDTO.java": {
+    "mtime": 1780333895.0,
+    "ast_hash": "d2b153bef48a84ef6fcaee16be94cd8d",
+    "semantic_hash": "d2b153bef48a84ef6fcaee16be94cd8d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/entity/AppSettings.java": {
+    "mtime": 1780339504.0,
+    "ast_hash": "f859ecd4174d729d0cf6ab33fe2dc1ea",
+    "semantic_hash": "f859ecd4174d729d0cf6ab33fe2dc1ea"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/entity/ModuleInstall.java": {
+    "mtime": 1783099339.0,
+    "ast_hash": "50139ba6281971fdaa0c12a3d187f454",
+    "semantic_hash": "50139ba6281971fdaa0c12a3d187f454"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/entity/RemoteAgency.java": {
+    "mtime": 1785334013.506156,
+    "ast_hash": "f3c4e49c38e9108700ce167f5c669791",
+    "semantic_hash": "f3c4e49c38e9108700ce167f5c669791"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/entity/Role.java": {
+    "mtime": 1780333712.0,
+    "ast_hash": "356db9538560afcd9147ad0034cd5794",
+    "semantic_hash": "356db9538560afcd9147ad0034cd5794"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/entity/RolePermission.java": {
+    "mtime": 1778232606.0,
+    "ast_hash": "fc520d9895c5d055523b2f1ebf342ac1",
+    "semantic_hash": "fc520d9895c5d055523b2f1ebf342ac1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/permission/PermissionFilter.java": {
+    "mtime": 1787619458.2195048,
+    "ast_hash": "4b47dad0372c409b29ec4b795c167b48",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/permission/PermissionRule.java": {
+    "mtime": 1781278165.0,
+    "ast_hash": "7a5aa379991a9867b572382d74caa199",
+    "semantic_hash": "7a5aa379991a9867b572382d74caa199"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/permission/PermissionService.java": {
+    "mtime": 1787619512.429994,
+    "ast_hash": "acedbe16686c164ded69168828880f88",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/repository/AppSettingsRepository.java": {
+    "mtime": 1780339505.0,
+    "ast_hash": "e5222f27f64b67faa10b97187648dda2",
+    "semantic_hash": "e5222f27f64b67faa10b97187648dda2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/repository/ModuleInstallRepository.java": {
+    "mtime": 1783099352.0,
+    "ast_hash": "30324186e35858e7a38d451e48dac3ef",
+    "semantic_hash": "30324186e35858e7a38d451e48dac3ef"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/repository/RemoteAgencyRepository.java": {
+    "mtime": 1780333789.0,
+    "ast_hash": "e76f3caa76695cf94ee1d94c74af4510",
+    "semantic_hash": "e76f3caa76695cf94ee1d94c74af4510"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/repository/RolePermissionRepository.java": {
+    "mtime": 1781283940.0,
+    "ast_hash": "01a583cc8f53f4b7bd1c1a3b5fb4cd0f",
+    "semantic_hash": "01a583cc8f53f4b7bd1c1a3b5fb4cd0f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/repository/RoleRepository.java": {
+    "mtime": 1780333749.0,
+    "ast_hash": "30aeb941d97396508b930ddcd3ea95d0",
+    "semantic_hash": "30aeb941d97396508b930ddcd3ea95d0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/BackupService.java": {
+    "mtime": 1782140446.0,
+    "ast_hash": "efbc0c73eb382f9f88f5b7058816737d",
+    "semantic_hash": "efbc0c73eb382f9f88f5b7058816737d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/ConfigExportService.java": {
+    "mtime": 1782214440.0,
+    "ast_hash": "99dd573d001670a2b4ee3077ae4b06f7",
+    "semantic_hash": "99dd573d001670a2b4ee3077ae4b06f7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/ConfigService.java": {
+    "mtime": 1787620529.3207843,
+    "ast_hash": "fdd67f0757ffaf07f69ce48dfa504440",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/HubConfigService.java": {
+    "mtime": 1785324270.942859,
+    "ast_hash": "7b14c8f15f35a6c16c0a4799a00b545e",
+    "semantic_hash": "7b14c8f15f35a6c16c0a4799a00b545e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/InterAgencyKeyService.java": {
+    "mtime": 1780339934.0,
+    "ast_hash": "b57a0caed04ea4429f973c9e625c5819",
+    "semantic_hash": "b57a0caed04ea4429f973c9e625c5819"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/ModuleService.java": {
+    "mtime": 1787659994.2673638,
+    "ast_hash": "acbfbad9e76b2905b54ae754077211a8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/config/service/RemoteAgencyService.java": {
+    "mtime": 1785334028.6023803,
+    "ast_hash": "b5a8fa230390750f8b542526d2bb2b30",
+    "semantic_hash": "b5a8fa230390750f8b542526d2bb2b30"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/controller/EleaderController.java": {
+    "mtime": 1787586935.4793193,
+    "ast_hash": "5f90e6fa7da1674cdc1eabccdc2a6e35",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/dto/EleaderConfigDTO.java": {
+    "mtime": 1781962399.0,
+    "ast_hash": "96c7e3a27a803a13ec6370aed40a69db",
+    "semantic_hash": "96c7e3a27a803a13ec6370aed40a69db"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/dto/EleaderEmballageMappingDTO.java": {
+    "mtime": 1778250842.0,
+    "ast_hash": "586c32084031bf3a04521e7a659f7402",
+    "semantic_hash": "586c32084031bf3a04521e7a659f7402"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/dto/EleaderImportLogDTO.java": {
+    "mtime": 1778253304.0,
+    "ast_hash": "20246a6db3844553b265f738df6a1fd8",
+    "semantic_hash": "20246a6db3844553b265f738df6a1fd8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/dto/EleaderImportResultDTO.java": {
+    "mtime": 1778250858.0,
+    "ast_hash": "d20a340b38bccc4c3b7661e6ab1db775",
+    "semantic_hash": "d20a340b38bccc4c3b7661e6ab1db775"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/entity/EleaderConfig.java": {
+    "mtime": 1781962389.0,
+    "ast_hash": "55e6ac0dd18d9943d5aa3a10acaa16fd",
+    "semantic_hash": "55e6ac0dd18d9943d5aa3a10acaa16fd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/entity/EleaderEmballageMapping.java": {
+    "mtime": 1778250812.0,
+    "ast_hash": "7622c8eb11a36dc3ffe7a7f224c064b0",
+    "semantic_hash": "7622c8eb11a36dc3ffe7a7f224c064b0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/entity/EleaderImportLog.java": {
+    "mtime": 1778253298.0,
+    "ast_hash": "dbc6b35ab0f786f278cfb80351e6ca84",
+    "semantic_hash": "dbc6b35ab0f786f278cfb80351e6ca84"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/repository/EleaderConfigRepository.java": {
+    "mtime": 1778250862.0,
+    "ast_hash": "d941f35bdb33dd8f15313e0920cebfc0",
+    "semantic_hash": "d941f35bdb33dd8f15313e0920cebfc0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/repository/EleaderEmballageMappingRepository.java": {
+    "mtime": 1778250868.0,
+    "ast_hash": "0a6206d8a85b173146246b05651e699a",
+    "semantic_hash": "0a6206d8a85b173146246b05651e699a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/repository/EleaderImportLogRepository.java": {
+    "mtime": 1778314404.0,
+    "ast_hash": "6837f51112e68975a07fbc99f188504f",
+    "semantic_hash": "6837f51112e68975a07fbc99f188504f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/service/EleaderConfigService.java": {
+    "mtime": 1787642806.2047632,
+    "ast_hash": "aa04310b3cf0980159b3e15d457b85fa",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/service/EleaderImportService.java": {
+    "mtime": 1787661448.5062253,
+    "ast_hash": "52e0253874c35469c2e559332f49cad9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/eleader/service/EleaderPdfParserService.java": {
+    "mtime": 1778335414.0,
+    "ast_hash": "e97d2ac6af76967cb2c32df348b17769",
+    "semantic_hash": "e97d2ac6af76967cb2c32df348b17769"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/controller/HelpdeskController.java": {
+    "mtime": 1786983732.9693222,
+    "ast_hash": "c138b206336b0922f956c5f40f9de299",
+    "semantic_hash": "c138b206336b0922f956c5f40f9de299"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/controller/HelpdeskSyncController.java": {
+    "mtime": 1781281667.0,
+    "ast_hash": "896f2a333746f5776a37618d1d634ec1",
+    "semantic_hash": "896f2a333746f5776a37618d1d634ec1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/dto/TicketCommentDTO.java": {
+    "mtime": 1781281659.0,
+    "ast_hash": "08fc97daec21f01312e6b5b5ae0abe16",
+    "semantic_hash": "08fc97daec21f01312e6b5b5ae0abe16"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/dto/TicketDTO.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "1c5868d268928b3b2f7fb7ca51038837",
+    "semantic_hash": "1c5868d268928b3b2f7fb7ca51038837"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/dto/TicketStatsDTO.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "d25ac443b3b3d76d7dd652199b0b4739",
+    "semantic_hash": "d25ac443b3b3d76d7dd652199b0b4739"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/entity/Ticket.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "4dd5a2d90d4387da094461943900e308",
+    "semantic_hash": "4dd5a2d90d4387da094461943900e308"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/entity/TicketCategory.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "754cd7b8d86e6c8f0a395ef57d887863",
+    "semantic_hash": "754cd7b8d86e6c8f0a395ef57d887863"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/entity/TicketComment.java": {
+    "mtime": 1781281648.0,
+    "ast_hash": "864e9442ee7f788327454866beef7862",
+    "semantic_hash": "864e9442ee7f788327454866beef7862"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/entity/TicketPriority.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "e71872c335eb6d8c8107052b08f40518",
+    "semantic_hash": "e71872c335eb6d8c8107052b08f40518"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/entity/TicketStatus.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "e141c548ae97300adab45071ca9d47ec",
+    "semantic_hash": "e141c548ae97300adab45071ca9d47ec"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/repository/TicketCommentRepository.java": {
+    "mtime": 1781254650.0,
+    "ast_hash": "b2d7fc4e3a32b979dcb63d98fe0f9e84",
+    "semantic_hash": "b2d7fc4e3a32b979dcb63d98fe0f9e84"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/repository/TicketRepository.java": {
+    "mtime": 1781258503.0,
+    "ast_hash": "e8c04fc4427c828d31acc21ee8fb4be8",
+    "semantic_hash": "e8c04fc4427c828d31acc21ee8fb4be8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/helpdesk/service/HelpdeskService.java": {
+    "mtime": 1787661350.8208346,
+    "ast_hash": "65f7dd39d7745e177eb4be63f24a36da",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/controller/HrController.java": {
+    "mtime": 1783487266.0,
+    "ast_hash": "abbbddcfcf3e3547c476ea8e67c4bc23",
+    "semantic_hash": "abbbddcfcf3e3547c476ea8e67c4bc23"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/controller/LeaveController.java": {
+    "mtime": 1783537000.0,
+    "ast_hash": "66ae1e0b96c51a8e09c2743c8106d3e9",
+    "semantic_hash": "66ae1e0b96c51a8e09c2743c8106d3e9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/controller/PayrollController.java": {
+    "mtime": 1783068781.0,
+    "ast_hash": "2aa316ecded780dfb78067d05c875f42",
+    "semantic_hash": "2aa316ecded780dfb78067d05c875f42"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/dto/LeaveBalanceSummary.java": {
+    "mtime": 1783536944.0,
+    "ast_hash": "0174a30812bb5e395e458b332112be4a",
+    "semantic_hash": "0174a30812bb5e395e458b332112be4a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/dto/PayrollRegisterDTO.java": {
+    "mtime": 1783068732.0,
+    "ast_hash": "b568711b63eff58cee0a7a4983654aaf",
+    "semantic_hash": "b568711b63eff58cee0a7a4983654aaf"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/dto/PayslipDTO.java": {
+    "mtime": 1783537103.0,
+    "ast_hash": "0eb09cb47bc58e7a0d842ff3fdde6232",
+    "semantic_hash": "0eb09cb47bc58e7a0d842ff3fdde6232"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/dto/PayslipRequest.java": {
+    "mtime": 1783077034.0,
+    "ast_hash": "04160c963745b0409e0c39c4b6920554",
+    "semantic_hash": "04160c963745b0409e0c39c4b6920554"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/dto/PayslipRunRequest.java": {
+    "mtime": 1783053381.0,
+    "ast_hash": "b88d4389e438b3a3e31c9fe092ef8fdd",
+    "semantic_hash": "b88d4389e438b3a3e31c9fe092ef8fdd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/Department.java": {
+    "mtime": 1783052916.0,
+    "ast_hash": "dca9c638d7e21b178401ca18afc55fd2",
+    "semantic_hash": "dca9c638d7e21b178401ca18afc55fd2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/Echelon.java": {
+    "mtime": 1783487160.0,
+    "ast_hash": "de2eeb77a7f7a46976f7d7b31e09391e",
+    "semantic_hash": "de2eeb77a7f7a46976f7d7b31e09391e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/Employee.java": {
+    "mtime": 1783052948.0,
+    "ast_hash": "7fa007f959da89e83471da8c9daa8b03",
+    "semantic_hash": "7fa007f959da89e83471da8c9daa8b03"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/EmployeeContract.java": {
+    "mtime": 1783487278.0,
+    "ast_hash": "cae5e60dfb5eb261e8f00b53529e8a86",
+    "semantic_hash": "cae5e60dfb5eb261e8f00b53529e8a86"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/JobPosition.java": {
+    "mtime": 1783052930.0,
+    "ast_hash": "46122e7df78ed86859d439104df6cf1f",
+    "semantic_hash": "46122e7df78ed86859d439104df6cf1f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/LeaveBalance.java": {
+    "mtime": 1783536875.0,
+    "ast_hash": "80a523fb1d0ba9efc44ad9eda5062ca0",
+    "semantic_hash": "80a523fb1d0ba9efc44ad9eda5062ca0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/LeaveDeclaration.java": {
+    "mtime": 1783536864.0,
+    "ast_hash": "30d0468a63d1a0777bd642382843e14b",
+    "semantic_hash": "30d0468a63d1a0777bd642382843e14b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/LeaveType.java": {
+    "mtime": 1783536853.0,
+    "ast_hash": "95dbced3947e64e22cbd0ad7ae19bdbc",
+    "semantic_hash": "95dbced3947e64e22cbd0ad7ae19bdbc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/Payslip.java": {
+    "mtime": 1783053065.0,
+    "ast_hash": "7d3ae2461144c7c3df78050cea84c467",
+    "semantic_hash": "7d3ae2461144c7c3df78050cea84c467"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/PayslipInput.java": {
+    "mtime": 1783053092.0,
+    "ast_hash": "3a140fb0756cf3d71d306a26df993d28",
+    "semantic_hash": "3a140fb0756cf3d71d306a26df993d28"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/PayslipInputType.java": {
+    "mtime": 1783087368.0,
+    "ast_hash": "77efa0e0c22e7d536f12446785583a3b",
+    "semantic_hash": "77efa0e0c22e7d536f12446785583a3b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/PayslipLine.java": {
+    "mtime": 1783053081.0,
+    "ast_hash": "37dcc656b0190607c7b576fc38e05395",
+    "semantic_hash": "37dcc656b0190607c7b576fc38e05395"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/PayslipRun.java": {
+    "mtime": 1783053010.0,
+    "ast_hash": "79ef80704df28d5743cdf735242b02e3",
+    "semantic_hash": "79ef80704df28d5743cdf735242b02e3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/PayslipWorkedDays.java": {
+    "mtime": 1783076890.0,
+    "ast_hash": "1f8082fd7cf52dd8952f8567f46883fd",
+    "semantic_hash": "1f8082fd7cf52dd8952f8567f46883fd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/ProfessionalCategory.java": {
+    "mtime": 1783083868.0,
+    "ast_hash": "417174dc2a05e35c0cbc1804626d8527",
+    "semantic_hash": "417174dc2a05e35c0cbc1804626d8527"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/SalaryRule.java": {
+    "mtime": 1787618740.8049548,
+    "ast_hash": "ed83ec7efc541a6877c5a4cbd6a4e971",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/SalaryRuleCategory.java": {
+    "mtime": 1783081295.0,
+    "ast_hash": "5604e423ea2345daedd6a210340aa45c",
+    "semantic_hash": "5604e423ea2345daedd6a210340aa45c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/entity/WorkedDaysType.java": {
+    "mtime": 1783076880.0,
+    "ast_hash": "0c5c7f47924b879395557fad80cd3728",
+    "semantic_hash": "0c5c7f47924b879395557fad80cd3728"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/init/LeaveTypeSeeder.java": {
+    "mtime": 1783536935.0,
+    "ast_hash": "5e68474974e4d3019ccb337bfa1b3d84",
+    "semantic_hash": "5e68474974e4d3019ccb337bfa1b3d84"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/init/OrganisationSeeder.java": {
+    "mtime": 1783085458.0,
+    "ast_hash": "d08568896cdd11e4fc8807965ce13a59",
+    "semantic_hash": "d08568896cdd11e4fc8807965ce13a59"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/init/PayrollSeeder.java": {
+    "mtime": 1787618819.3423073,
+    "ast_hash": "1824839c53e3dc53bd61a5732ece05e5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/init/ProfessionalCategorySeeder.java": {
+    "mtime": 1783084574.0,
+    "ast_hash": "0e9bddc96c8e1c1cdbd5af4dadfabb39",
+    "semantic_hash": "0e9bddc96c8e1c1cdbd5af4dadfabb39"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/DepartmentRepository.java": {
+    "mtime": 1783053153.0,
+    "ast_hash": "12df0d5921c4ad530fbff3326b6b858b",
+    "semantic_hash": "12df0d5921c4ad530fbff3326b6b858b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/EchelonRepository.java": {
+    "mtime": 1783487174.0,
+    "ast_hash": "0b738a632a64eed38a41249db135a202",
+    "semantic_hash": "0b738a632a64eed38a41249db135a202"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/EmployeeContractRepository.java": {
+    "mtime": 1783053175.0,
+    "ast_hash": "f3b35903176f3cc671411d0185b61fd0",
+    "semantic_hash": "f3b35903176f3cc671411d0185b61fd0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/EmployeeRepository.java": {
+    "mtime": 1783053144.0,
+    "ast_hash": "c441a96ec4625734e95faa5ce0bbefe5",
+    "semantic_hash": "c441a96ec4625734e95faa5ce0bbefe5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/JobPositionRepository.java": {
+    "mtime": 1783053164.0,
+    "ast_hash": "9b2df3fffb2fe63af7a904ad6409f08c",
+    "semantic_hash": "9b2df3fffb2fe63af7a904ad6409f08c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/LeaveBalanceRepository.java": {
+    "mtime": 1783536913.0,
+    "ast_hash": "10ae064e4867a5cd57becaaee7fe6076",
+    "semantic_hash": "10ae064e4867a5cd57becaaee7fe6076"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/LeaveDeclarationRepository.java": {
+    "mtime": 1787618378.1947498,
+    "ast_hash": "9fed28515b1576f7c2fe57e8de0777b7",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/LeaveTypeRepository.java": {
+    "mtime": 1783536882.0,
+    "ast_hash": "fa937f5e2914138f3da885954773c939",
+    "semantic_hash": "fa937f5e2914138f3da885954773c939"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipInputRepository.java": {
+    "mtime": 1783053227.0,
+    "ast_hash": "bf17a724475ed652ca68b6d0bd48e2af",
+    "semantic_hash": "bf17a724475ed652ca68b6d0bd48e2af"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipInputTypeRepository.java": {
+    "mtime": 1783076939.0,
+    "ast_hash": "cb5fc23e82f84b5c14ea27c53dbaca2c",
+    "semantic_hash": "cb5fc23e82f84b5c14ea27c53dbaca2c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipLineRepository.java": {
+    "mtime": 1783053216.0,
+    "ast_hash": "2fdc5a49b1eb0ce5e9713cc68bc04b71",
+    "semantic_hash": "2fdc5a49b1eb0ce5e9713cc68bc04b71"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipRepository.java": {
+    "mtime": 1783053205.0,
+    "ast_hash": "c7eca96e6c2cd8b4dd64671363d72967",
+    "semantic_hash": "c7eca96e6c2cd8b4dd64671363d72967"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipRunRepository.java": {
+    "mtime": 1783053237.0,
+    "ast_hash": "0876bd9f0751c11fedd4cefcdf9c043a",
+    "semantic_hash": "0876bd9f0751c11fedd4cefcdf9c043a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/PayslipWorkedDaysRepository.java": {
+    "mtime": 1783076947.0,
+    "ast_hash": "f2dcaa3d3388bd49310ff34ba7104868",
+    "semantic_hash": "f2dcaa3d3388bd49310ff34ba7104868"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/ProfessionalCategoryRepository.java": {
+    "mtime": 1783083889.0,
+    "ast_hash": "4b172ae0bdf255f7fa2b424dd87fe97e",
+    "semantic_hash": "4b172ae0bdf255f7fa2b424dd87fe97e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/SalaryRuleCategoryRepository.java": {
+    "mtime": 1783053194.0,
+    "ast_hash": "d8f44f88cb7af1656dbf91cf29865f93",
+    "semantic_hash": "d8f44f88cb7af1656dbf91cf29865f93"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/SalaryRuleRepository.java": {
+    "mtime": 1783053184.0,
+    "ast_hash": "7dc9403274d238b2264f293aecd39655",
+    "semantic_hash": "7dc9403274d238b2264f293aecd39655"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/repository/WorkedDaysTypeRepository.java": {
+    "mtime": 1783076928.0,
+    "ast_hash": "7e466b53fbe1ecc60e353a5bd52a1f86",
+    "semantic_hash": "7e466b53fbe1ecc60e353a5bd52a1f86"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/service/HrService.java": {
+    "mtime": 1787660302.2320743,
+    "ast_hash": "9170b9651dfb63aa8087045e375b809e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/service/LeaveService.java": {
+    "mtime": 1787661399.1234846,
+    "ast_hash": "d536d0e47e870ada5089dd4eea1fc51a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/service/PayrollEngine.java": {
+    "mtime": 1787661595.634777,
+    "ast_hash": "1fccab4336c61003201396024c44dd20",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/hr/service/PayrollService.java": {
+    "mtime": 1787645708.4095094,
+    "ast_hash": "d9060d8cf4e8a2a0fe9da2e9f383f023",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/BuildIdentityService.java": {
+    "mtime": 1785345081.2761316,
+    "ast_hash": "ce39c0260034dcb684ec39073a0c418e",
+    "semantic_hash": "ce39c0260034dcb684ec39073a0c418e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/FingerprintService.java": {
+    "mtime": 1785332807.179915,
+    "ast_hash": "d3ee68f68a0374367fb73c3e74389fd2",
+    "semantic_hash": "d3ee68f68a0374367fb73c3e74389fd2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/LicenseEnforcementFilter.java": {
+    "mtime": 1786988766.3467498,
+    "ast_hash": "9817acfc285c517a59fc4cf0029fef45",
+    "semantic_hash": "9817acfc285c517a59fc4cf0029fef45"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/LicenseService.java": {
+    "mtime": 1787660935.1407177,
+    "ast_hash": "10bf52b523de90342c46ad09650a7f18",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/LicenseStartupListener.java": {
+    "mtime": 1785333180.4941776,
+    "ast_hash": "229eab45468eacd0fbd25d6b59330508",
+    "semantic_hash": "229eab45468eacd0fbd25d6b59330508"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/LicenseStatus.java": {
+    "mtime": 1785312222.1173646,
+    "ast_hash": "66bf12f5f892be1481bd3d05b2dd8116",
+    "semantic_hash": "66bf12f5f892be1481bd3d05b2dd8116"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/RuntimePackaging.java": {
+    "mtime": 1785332436.7883773,
+    "ast_hash": "5a2220c20675226c1b0f3b66a130d7b8",
+    "semantic_hash": "5a2220c20675226c1b0f3b66a130d7b8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/license/controller/LicenseController.java": {
+    "mtime": 1785338709.4463608,
+    "ast_hash": "a6eba50cf62ebd6f78e420f047664b33",
+    "semantic_hash": "a6eba50cf62ebd6f78e420f047664b33"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/controller/PurchaseController.java": {
+    "mtime": 1787330516.5391757,
+    "ast_hash": "7bf16af91a1fd80e00a08150e8107d61",
+    "semantic_hash": "7bf16af91a1fd80e00a08150e8107d61"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/controller/PurchaseStatsController.java": {
+    "mtime": 1786377514.611504,
+    "ast_hash": "abe31619fbcd18ed5b40bb1523daff26",
+    "semantic_hash": "abe31619fbcd18ed5b40bb1523daff26"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/controller/RemiseController.java": {
+    "mtime": 1779855516.0,
+    "ast_hash": "1bff4f8a5c8d9b55812940d3848e090c",
+    "semantic_hash": "1bff4f8a5c8d9b55812940d3848e090c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PrixFournisseurArticleDTO.java": {
+    "mtime": 1782734864.0,
+    "ast_hash": "cba7766995b658298890bdc2ae00082c",
+    "semantic_hash": "cba7766995b658298890bdc2ae00082c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseAvailableMoveDTO.java": {
+    "mtime": 1779454512.0,
+    "ast_hash": "e9c8cb658cfa54b27b542603bfeccd48",
+    "semantic_hash": "e9c8cb658cfa54b27b542603bfeccd48"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseAvoirRequest.java": {
+    "mtime": 1783772996.0,
+    "ast_hash": "5bbf6f349fd9154e7730a333998f6427",
+    "semantic_hash": "5bbf6f349fd9154e7730a333998f6427"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseInvoiceDTO.java": {
+    "mtime": 1783968556.0,
+    "ast_hash": "ba311876262d9254d4b937a58d2344cc",
+    "semantic_hash": "ba311876262d9254d4b937a58d2344cc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseInvoicePaymentRequest.java": {
+    "mtime": 1775222524.0,
+    "ast_hash": "940bf6db7dd0b396d2ce3bb62872dfe1",
+    "semantic_hash": "940bf6db7dd0b396d2ce3bb62872dfe1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseInvoiceReconciliationDTO.java": {
+    "mtime": 1779454504.0,
+    "ast_hash": "08d1a8299c20bd03d837c4f627cab892",
+    "semantic_hash": "08d1a8299c20bd03d837c4f627cab892"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseInvoiceRequest.java": {
+    "mtime": 1782803826.0,
+    "ast_hash": "bf2fa3ec16f63c0eb68e816d781dd30b",
+    "semantic_hash": "bf2fa3ec16f63c0eb68e816d781dd30b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseOrderDTO.java": {
+    "mtime": 1783708792.0,
+    "ast_hash": "2e94b753cfcc69e8a52fae1018c66797",
+    "semantic_hash": "2e94b753cfcc69e8a52fae1018c66797"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseOrderRequest.java": {
+    "mtime": 1776239490.0,
+    "ast_hash": "c4217fb2019a350b09ec4e48bde86277",
+    "semantic_hash": "c4217fb2019a350b09ec4e48bde86277"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseReconcileRequest.java": {
+    "mtime": 1779454522.0,
+    "ast_hash": "96bf8efdb7c034a4f361968f6fa831d2",
+    "semantic_hash": "96bf8efdb7c034a4f361968f6fa831d2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseStatsLine.java": {
+    "mtime": 1786377433.2821133,
+    "ast_hash": "0a955b9cd9ceb1d456d87f89a686282b",
+    "semantic_hash": "0a955b9cd9ceb1d456d87f89a686282b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseStatsRequest.java": {
+    "mtime": 1786377427.6801379,
+    "ast_hash": "fdb805cf134ef4a0a71bbc3cad6f13d9",
+    "semantic_hash": "fdb805cf134ef4a0a71bbc3cad6f13d9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseStatsResponse.java": {
+    "mtime": 1786377446.3539996,
+    "ast_hash": "6a6522647afc1790db0a42a0f11c0b2e",
+    "semantic_hash": "6a6522647afc1790db0a42a0f11c0b2e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/PurchaseStatsSupplier.java": {
+    "mtime": 1786377439.5000803,
+    "ast_hash": "eb90111786b0ceb8c44c79267d9d2b65",
+    "semantic_hash": "eb90111786b0ceb8c44c79267d9d2b65"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/RemiseDTO.java": {
+    "mtime": 1777027454.0,
+    "ast_hash": "b28d57c93a67f15b06173d1e598ba422",
+    "semantic_hash": "b28d57c93a67f15b06173d1e598ba422"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/dto/RemisePaiementDTO.java": {
+    "mtime": 1780595653.0,
+    "ast_hash": "3a294b44e98f0bbe894165b3d10bf2a7",
+    "semantic_hash": "3a294b44e98f0bbe894165b3d10bf2a7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PrixFournisseurArticle.java": {
+    "mtime": 1782734848.0,
+    "ast_hash": "4a100c298933ccdd44fde4db0fb4e477",
+    "semantic_hash": "4a100c298933ccdd44fde4db0fb4e477"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseInvoice.java": {
+    "mtime": 1787657675.2067363,
+    "ast_hash": "489d63596713fc6cb92b4cbbac096504",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseInvoiceLine.java": {
+    "mtime": 1787331911.0372226,
+    "ast_hash": "257c2ab01bafbce7f8eda94d8ecc6cc1",
+    "semantic_hash": "257c2ab01bafbce7f8eda94d8ecc6cc1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseInvoicePayment.java": {
+    "mtime": 1783772726.0,
+    "ast_hash": "aebdd4159f3531c563c61b0d864e7299",
+    "semantic_hash": "aebdd4159f3531c563c61b0d864e7299"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseInvoiceReconciliation.java": {
+    "mtime": 1779454480.0,
+    "ast_hash": "aa22338a61e6f90f63a8070989ce4fc6",
+    "semantic_hash": "aa22338a61e6f90f63a8070989ce4fc6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseOrder.java": {
+    "mtime": 1787657665.742769,
+    "ast_hash": "6b7722225e39925558ede43e7721bca8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/PurchaseOrderLine.java": {
+    "mtime": 1787331884.8302417,
+    "ast_hash": "14b5f012a406ef6b3f351f6223d3a8e4",
+    "semantic_hash": "14b5f012a406ef6b3f351f6223d3a8e4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/Remise.java": {
+    "mtime": 1776184680.0,
+    "ast_hash": "bfb1d8e3b7c39876f4bd53f0af0eae30",
+    "semantic_hash": "bfb1d8e3b7c39876f4bd53f0af0eae30"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/RemisePaiement.java": {
+    "mtime": 1779623240.0,
+    "ast_hash": "c5bf78c5f2d62d90f35959f97637b530",
+    "semantic_hash": "c5bf78c5f2d62d90f35959f97637b530"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/entity/RemisePaiementLine.java": {
+    "mtime": 1776156816.0,
+    "ast_hash": "890a1841e240e5619964c30f42619dbc",
+    "semantic_hash": "890a1841e240e5619964c30f42619dbc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PrixFournisseurArticleRepository.java": {
+    "mtime": 1782734856.0,
+    "ast_hash": "259a70acc390b8eb412d15fad62adb14",
+    "semantic_hash": "259a70acc390b8eb412d15fad62adb14"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PurchaseInvoiceLineRepository.java": {
+    "mtime": 1786377420.6359057,
+    "ast_hash": "72f4b038309e6a03620505650b16c499",
+    "semantic_hash": "72f4b038309e6a03620505650b16c499"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PurchaseInvoicePaymentRepository.java": {
+    "mtime": 1779460630.0,
+    "ast_hash": "2a13f171a293cf8d3f587a258924d4e8",
+    "semantic_hash": "2a13f171a293cf8d3f587a258924d4e8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PurchaseInvoiceReconciliationRepository.java": {
+    "mtime": 1779460608.0,
+    "ast_hash": "f7978f0f21c08d510b21f2d018dd9457",
+    "semantic_hash": "f7978f0f21c08d510b21f2d018dd9457"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PurchaseInvoiceRepository.java": {
+    "mtime": 1787653610.6621509,
+    "ast_hash": "f157dc8d12bd084bc955aef931a1506d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/PurchaseOrderRepository.java": {
+    "mtime": 1787330302.182921,
+    "ast_hash": "7430f1d46b302c51e9e7ac93a8cc71fe",
+    "semantic_hash": "7430f1d46b302c51e9e7ac93a8cc71fe"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/RemisePaiementRepository.java": {
+    "mtime": 1786535788.105115,
+    "ast_hash": "89672be7b66a3541b967c44a4fa9e4f5",
+    "semantic_hash": "89672be7b66a3541b967c44a4fa9e4f5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/repository/RemiseRepository.java": {
+    "mtime": 1779623272.0,
+    "ast_hash": "426ee4628f4cc51f58d9cad445f825d0",
+    "semantic_hash": "426ee4628f4cc51f58d9cad445f825d0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/service/PurchaseService.java": {
+    "mtime": 1787660063.6458848,
+    "ast_hash": "5f4b0afd02cb219ae27075c9b0d3407e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/service/PurchaseStatsService.java": {
+    "mtime": 1787643127.22855,
+    "ast_hash": "35513db56ba6d796c2d731a1ff91e050",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/purchases/service/RemiseService.java": {
+    "mtime": 1787661178.0557177,
+    "ast_hash": "b8a4de71332374abc3613fe6d692328d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/controller/RistourneController.java": {
+    "mtime": 1780075456.0,
+    "ast_hash": "c479a5a473b89aea570c8f573ad6ae07",
+    "semantic_hash": "c479a5a473b89aea570c8f573ad6ae07"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/controller/SalesController.java": {
+    "mtime": 1787330249.6849926,
+    "ast_hash": "60ff2cf978f7bd2ec6dc7bb6c446b952",
+    "semantic_hash": "60ff2cf978f7bd2ec6dc7bb6c446b952"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/controller/SalesStatsController.java": {
+    "mtime": 1780074706.0,
+    "ast_hash": "d025b56e4a017ab08f8050bbb7321bc6",
+    "semantic_hash": "d025b56e4a017ab08f8050bbb7321bc6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/AvailableCreditDTO.java": {
+    "mtime": 1785172539.8613896,
+    "ast_hash": "71fe5d67ba1e07b5a494ac6dbc3e3f73",
+    "semantic_hash": "71fe5d67ba1e07b5a494ac6dbc3e3f73"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/AvailableMoveDTO.java": {
+    "mtime": 1779454336.0,
+    "ast_hash": "fe8614f0d15a5ca098d6dac0fd4f5371",
+    "semantic_hash": "fe8614f0d15a5ca098d6dac0fd4f5371"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/AvoirRequest.java": {
+    "mtime": 1782300472.0,
+    "ast_hash": "10dec83461950568054638c6af9dd7d8",
+    "semantic_hash": "10dec83461950568054638c6af9dd7d8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/InvoicePaymentDTO.java": {
+    "mtime": 1777030576.0,
+    "ast_hash": "05ccddb1bfd9448dcf13fd664e9f6d44",
+    "semantic_hash": "05ccddb1bfd9448dcf13fd664e9f6d44"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/InvoicePaymentRequest.java": {
+    "mtime": 1775143878.0,
+    "ast_hash": "916c1c9f02eb6ea043a52a140445a1eb",
+    "semantic_hash": "916c1c9f02eb6ea043a52a140445a1eb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/PrixClientArticleDTO.java": {
+    "mtime": 1780403020.0,
+    "ast_hash": "a0aca78e76f503583f26ae70be1727c5",
+    "semantic_hash": "a0aca78e76f503583f26ae70be1727c5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/ReconcileRequest.java": {
+    "mtime": 1779454342.0,
+    "ast_hash": "c1e622ed937798bc34bc292c69419a8c",
+    "semantic_hash": "c1e622ed937798bc34bc292c69419a8c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/RistourneDTO.java": {
+    "mtime": 1777027448.0,
+    "ast_hash": "efab3a198f2b2d36644af33c12126b2c",
+    "semantic_hash": "efab3a198f2b2d36644af33c12126b2c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/RistournePaiementDTO.java": {
+    "mtime": 1780593254.0,
+    "ast_hash": "0dbdf40587efdbdff5cfbb8578f6b885",
+    "semantic_hash": "0dbdf40587efdbdff5cfbb8578f6b885"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesInvoiceDTO.java": {
+    "mtime": 1784910975.6501095,
+    "ast_hash": "55a73aac211257dc5fa0e1051c5c465e",
+    "semantic_hash": "55a73aac211257dc5fa0e1051c5c465e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesInvoiceReconciliationDTO.java": {
+    "mtime": 1779454326.0,
+    "ast_hash": "0b0b47863447f3513401b05797918466",
+    "semantic_hash": "0b0b47863447f3513401b05797918466"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesInvoiceRequest.java": {
+    "mtime": 1784909528.0264413,
+    "ast_hash": "60a5088e497737f2984a1a6eab572123",
+    "semantic_hash": "60a5088e497737f2984a1a6eab572123"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesOrderDTO.java": {
+    "mtime": 1781957680.0,
+    "ast_hash": "dae6f4d3e7a6243d1870bda34ac6953a",
+    "semantic_hash": "dae6f4d3e7a6243d1870bda34ac6953a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesOrderRequest.java": {
+    "mtime": 1780405063.0,
+    "ast_hash": "f0a57c1725f657ac80b24f8f4d626343",
+    "semantic_hash": "f0a57c1725f657ac80b24f8f4d626343"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesStatsClient.java": {
+    "mtime": 1782326010.0,
+    "ast_hash": "3bf6510c3f424a956246661a3d3aef1f",
+    "semantic_hash": "3bf6510c3f424a956246661a3d3aef1f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesStatsLine.java": {
+    "mtime": 1782326001.0,
+    "ast_hash": "3f2b9b8a1abbad9204f22f8282d90b85",
+    "semantic_hash": "3f2b9b8a1abbad9204f22f8282d90b85"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesStatsRequest.java": {
+    "mtime": 1780591457.0,
+    "ast_hash": "53adc0546a3bf75f14da209b6d449b57",
+    "semantic_hash": "53adc0546a3bf75f14da209b6d449b57"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/dto/SalesStatsResponse.java": {
+    "mtime": 1782326017.0,
+    "ast_hash": "414110ed73e6e51ef16af702f515c580",
+    "semantic_hash": "414110ed73e6e51ef16af702f515c580"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/InvoicePayment.java": {
+    "mtime": 1777030570.0,
+    "ast_hash": "9af9571b6fc6f115e599130364052a81",
+    "semantic_hash": "9af9571b6fc6f115e599130364052a81"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/PrixClientArticle.java": {
+    "mtime": 1780403005.0,
+    "ast_hash": "e46aff2d64f0d4e24bd6596ea3e11e58",
+    "semantic_hash": "e46aff2d64f0d4e24bd6596ea3e11e58"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/Ristourne.java": {
+    "mtime": 1776156780.0,
+    "ast_hash": "0833259aad02311a71c137df8400d16f",
+    "semantic_hash": "0833259aad02311a71c137df8400d16f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/RistournePaiement.java": {
+    "mtime": 1776691826.0,
+    "ast_hash": "8655c5f0df5a0fca2f7fb6a5e204c639",
+    "semantic_hash": "8655c5f0df5a0fca2f7fb6a5e204c639"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/RistournePaiementLine.java": {
+    "mtime": 1776156796.0,
+    "ast_hash": "1db8e5fa8c8999e1e933c4bdc060d903",
+    "semantic_hash": "1db8e5fa8c8999e1e933c4bdc060d903"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/SalesInvoice.java": {
+    "mtime": 1787657654.0600708,
+    "ast_hash": "cfdf0a3c82df006b95dac96dcab05bd9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/SalesInvoiceLine.java": {
+    "mtime": 1787331859.7714303,
+    "ast_hash": "b7e7d680dad7f519f49e8d538870eb91",
+    "semantic_hash": "b7e7d680dad7f519f49e8d538870eb91"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/SalesInvoiceReconciliation.java": {
+    "mtime": 1779454308.0,
+    "ast_hash": "eb70a7b3534bc39c15343a601f6d04af",
+    "semantic_hash": "eb70a7b3534bc39c15343a601f6d04af"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/SalesOrder.java": {
+    "mtime": 1787657622.1417537,
+    "ast_hash": "86a0f45701bc75a0ef534a959fd3d615",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/entity/SalesOrderLine.java": {
+    "mtime": 1787331840.480517,
+    "ast_hash": "6c31e54a8f6d68b92336857caee45fbd",
+    "semantic_hash": "6c31e54a8f6d68b92336857caee45fbd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/InvoicePaymentRepository.java": {
+    "mtime": 1780927883.0,
+    "ast_hash": "ffa49951f4175c29c9d2e020f505033b",
+    "semantic_hash": "ffa49951f4175c29c9d2e020f505033b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/PrixClientArticleRepository.java": {
+    "mtime": 1782148371.0,
+    "ast_hash": "b97cd8fbaa61bcd938b1452033a5c997",
+    "semantic_hash": "b97cd8fbaa61bcd938b1452033a5c997"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/RistournePaiementRepository.java": {
+    "mtime": 1786543219.6081774,
+    "ast_hash": "f5569a3b2d7bb9fd6503f6597fe05100",
+    "semantic_hash": "f5569a3b2d7bb9fd6503f6597fe05100"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/RistourneRepository.java": {
+    "mtime": 1780053686.0,
+    "ast_hash": "5f49e2d6e024909a4d97787bb1f946f3",
+    "semantic_hash": "5f49e2d6e024909a4d97787bb1f946f3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/SalesInvoiceLineRepository.java": {
+    "mtime": 1782326304.0,
+    "ast_hash": "65b8a2403713869af0731133736a6c72",
+    "semantic_hash": "65b8a2403713869af0731133736a6c72"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/SalesInvoiceReconciliationRepository.java": {
+    "mtime": 1779454318.0,
+    "ast_hash": "ea365b3b2e3f8e2de639ca0524c003a1",
+    "semantic_hash": "ea365b3b2e3f8e2de639ca0524c003a1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/SalesInvoiceRepository.java": {
+    "mtime": 1787329964.2486813,
+    "ast_hash": "f20a1064fd2c2fe299bf83d05211259c",
+    "semantic_hash": "f20a1064fd2c2fe299bf83d05211259c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/repository/SalesOrderRepository.java": {
+    "mtime": 1787330216.717418,
+    "ast_hash": "66fed035ccce94f869eec18f72aaabc7",
+    "semantic_hash": "66fed035ccce94f869eec18f72aaabc7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/service/RistourneService.java": {
+    "mtime": 1787661133.1294777,
+    "ast_hash": "66acce91462686760bd75912466d239a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/service/SalesService.java": {
+    "mtime": 1787660033.8860788,
+    "ast_hash": "f2bb214a615e2426a256fcc3022ffcb3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sales/service/SalesStatsService.java": {
+    "mtime": 1787643112.0152333,
+    "ast_hash": "ef33c36043ec23393941a38d6fb12d83",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/controller/StockController.java": {
+    "mtime": 1787587061.4540136,
+    "ast_hash": "8ad5da7d867afbfbaf74c44c8d8cbfe8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/AgencyDTO.java": {
+    "mtime": 1775191636.0,
+    "ast_hash": "ac415b69cab3b402a5b1ce82e6de149c",
+    "semantic_hash": "ac415b69cab3b402a5b1ce82e6de149c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/CasseBordereauDTO.java": {
+    "mtime": 1785146079.901428,
+    "ast_hash": "513aae84f109de4d4f2f0886f7da7b2f",
+    "semantic_hash": "513aae84f109de4d4f2f0886f7da7b2f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/DirectReceptionRequest.java": {
+    "mtime": 1781941148.0,
+    "ast_hash": "b106cbec4c2432f841d760f289ce67e8",
+    "semantic_hash": "b106cbec4c2432f841d760f289ce67e8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/InterAgencyTransferPayload.java": {
+    "mtime": 1780339836.0,
+    "ast_hash": "54c33a2b3227169ef66e594508c02a99",
+    "semantic_hash": "54c33a2b3227169ef66e594508c02a99"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/InventorySheetDTO.java": {
+    "mtime": 1780631639.0,
+    "ast_hash": "1e05a7ed1cdfd5d7aa3137f1525e2a85",
+    "semantic_hash": "1e05a7ed1cdfd5d7aa3137f1525e2a85"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/ProductCategoryDTO.java": {
+    "mtime": 1779811770.0,
+    "ast_hash": "e994ca2c4a6d2902d9b4000d8329d6c4",
+    "semantic_hash": "e994ca2c4a6d2902d9b4000d8329d6c4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/ProductDTO.java": {
+    "mtime": 1786962107.6911361,
+    "ast_hash": "7264695c803463a6a19c628b0290a4f3",
+    "semantic_hash": "7264695c803463a6a19c628b0290a4f3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/ReceptionBordereauDTO.java": {
+    "mtime": 1779791130.0,
+    "ast_hash": "48645163c7ac865a1728d5dc5758fd5b",
+    "semantic_hash": "48645163c7ac865a1728d5dc5758fd5b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockAdjustmentDTO.java": {
+    "mtime": 1775204098.0,
+    "ast_hash": "b22c8d4470c48a0a68b85c7add257c49",
+    "semantic_hash": "b22c8d4470c48a0a68b85c7add257c49"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockAdjustmentRequest.java": {
+    "mtime": 1782324906.0,
+    "ast_hash": "95b6947190f789b5a8bb5f59edadbd70",
+    "semantic_hash": "95b6947190f789b5a8bb5f59edadbd70"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockDashboardDTO.java": {
+    "mtime": 1775164610.0,
+    "ast_hash": "447fad2b9fa426154145d28887e31f4b",
+    "semantic_hash": "447fad2b9fa426154145d28887e31f4b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockDetailedLocationDTO.java": {
+    "mtime": 1780143892.0,
+    "ast_hash": "98d33427e2260acfa929780fe1c7beb8",
+    "semantic_hash": "98d33427e2260acfa929780fe1c7beb8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockDetailedMoveDTO.java": {
+    "mtime": 1780143889.0,
+    "ast_hash": "74019885f263352adfb655d44a0a1461",
+    "semantic_hash": "74019885f263352adfb655d44a0a1461"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockDetailedProductDTO.java": {
+    "mtime": 1780143893.0,
+    "ast_hash": "63c5f044205504f0936919726c439ad4",
+    "semantic_hash": "63c5f044205504f0936919726c439ad4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockLocationDTO.java": {
+    "mtime": 1779812828.0,
+    "ast_hash": "e7c94b5afcbc3dd9cc7d9b8c7e238561",
+    "semantic_hash": "e7c94b5afcbc3dd9cc7d9b8c7e238561"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockLossDTO.java": {
+    "mtime": 1785141130.8110876,
+    "ast_hash": "64dbd764453ed6722ab50d8e0e19cc7d",
+    "semantic_hash": "64dbd764453ed6722ab50d8e0e19cc7d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockLossRequest.java": {
+    "mtime": 1785141151.1310718,
+    "ast_hash": "65ee1ad446c35881e755b9912bc45229",
+    "semantic_hash": "65ee1ad446c35881e755b9912bc45229"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockMoveDTO.java": {
+    "mtime": 1782493413.0,
+    "ast_hash": "d6fb2c83def4eec9416b619b13086938",
+    "semantic_hash": "d6fb2c83def4eec9416b619b13086938"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockPickingDTO.java": {
+    "mtime": 1785342899.3839812,
+    "ast_hash": "e3291161883a9ac4aee7900344f670fd",
+    "semantic_hash": "e3291161883a9ac4aee7900344f670fd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockPickingRequest.java": {
+    "mtime": 1780334811.0,
+    "ast_hash": "975d4c7174bd781a64c61249ae3d1c0c",
+    "semantic_hash": "975d4c7174bd781a64c61249ae3d1c0c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockPickingTypeDTO.java": {
+    "mtime": 1775164570.0,
+    "ast_hash": "a970303682b7c77f354bb725d4dae4e2",
+    "semantic_hash": "a970303682b7c77f354bb725d4dae4e2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockQuantDTO.java": {
+    "mtime": 1778165034.0,
+    "ast_hash": "39c354adb1d600f0c7d04635ab171083",
+    "semantic_hash": "39c354adb1d600f0c7d04635ab171083"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockReportLineDTO.java": {
+    "mtime": 1780143885.0,
+    "ast_hash": "aec281f75c05f1a85ad2ddb763b13883",
+    "semantic_hash": "aec281f75c05f1a85ad2ddb763b13883"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/StockReportWarehouseDTO.java": {
+    "mtime": 1780143887.0,
+    "ast_hash": "3620ad2d2eeee6606482a129a1066991",
+    "semantic_hash": "3620ad2d2eeee6606482a129a1066991"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/ValuationLayerDTO.java": {
+    "mtime": 1775204190.0,
+    "ast_hash": "6c79f3d2aa7d81f591618e87de0e3d3c",
+    "semantic_hash": "6c79f3d2aa7d81f591618e87de0e3d3c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/dto/WarehouseDTO.java": {
+    "mtime": 1782822917.0,
+    "ast_hash": "8b6676f96844de095690a39d0d7c4178",
+    "semantic_hash": "8b6676f96844de095690a39d0d7c4178"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/Agency.java": {
+    "mtime": 1775191630.0,
+    "ast_hash": "58679a554e3074144e9b56db18b78b7a",
+    "semantic_hash": "58679a554e3074144e9b56db18b78b7a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/Product.java": {
+    "mtime": 1786962093.571812,
+    "ast_hash": "622f00c8d6a874985f4d44e4358b097f",
+    "semantic_hash": "622f00c8d6a874985f4d44e4358b097f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/ProductCategory.java": {
+    "mtime": 1779811762.0,
+    "ast_hash": "ad57925cf6f9b00ac15228d6eccc7b03",
+    "semantic_hash": "ad57925cf6f9b00ac15228d6eccc7b03"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockAdjustment.java": {
+    "mtime": 1775204110.0,
+    "ast_hash": "cba3b1519afa6d6859da31109bbdd4b3",
+    "semantic_hash": "cba3b1519afa6d6859da31109bbdd4b3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockLocation.java": {
+    "mtime": 1779812822.0,
+    "ast_hash": "b0bce878d254d221d9f2f0b1e898e9c7",
+    "semantic_hash": "b0bce878d254d221d9f2f0b1e898e9c7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockLoss.java": {
+    "mtime": 1785141021.3351731,
+    "ast_hash": "b491470b570095e4c09ca6a02a20246d",
+    "semantic_hash": "b491470b570095e4c09ca6a02a20246d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockLossLine.java": {
+    "mtime": 1785141042.8351564,
+    "ast_hash": "b50a3e5754df1fe02c962a8f7b6eec37",
+    "semantic_hash": "b50a3e5754df1fe02c962a8f7b6eec37"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockMove.java": {
+    "mtime": 1775164440.0,
+    "ast_hash": "79ff79d4e543991ca2d332bceaea79f8",
+    "semantic_hash": "79ff79d4e543991ca2d332bceaea79f8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockPicking.java": {
+    "mtime": 1787657689.8110595,
+    "ast_hash": "a90de8bbb6dabecc4b774357c5c8d8c2",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockPickingType.java": {
+    "mtime": 1775164418.0,
+    "ast_hash": "46f6bc49c4361ba089fc3053d5785b04",
+    "semantic_hash": "46f6bc49c4361ba089fc3053d5785b04"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/StockQuant.java": {
+    "mtime": 1787616135.1726055,
+    "ast_hash": "3e16f0d08f4473a2f8b73a25d8d99e0b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/ValuationLayer.java": {
+    "mtime": 1775164456.0,
+    "ast_hash": "8a52c9d42ed25bf23954376e4d5c79b7",
+    "semantic_hash": "8a52c9d42ed25bf23954376e4d5c79b7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/Warehouse.java": {
+    "mtime": 1782740361.0,
+    "ast_hash": "f4fe61c10a46baa3be1dd574e94ba1e0",
+    "semantic_hash": "f4fe61c10a46baa3be1dd574e94ba1e0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/AgencyRepository.java": {
+    "mtime": 1775191642.0,
+    "ast_hash": "94b918160f786c9057695812e1a08c3a",
+    "semantic_hash": "94b918160f786c9057695812e1a08c3a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/ProductCategoryRepository.java": {
+    "mtime": 1776162784.0,
+    "ast_hash": "6749b243dc7b0a3bfd1d1d2cd5535f6e",
+    "semantic_hash": "6749b243dc7b0a3bfd1d1d2cd5535f6e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/ProductRepository.java": {
+    "mtime": 1776110592.0,
+    "ast_hash": "728f391994310a8cf3894d24125158db",
+    "semantic_hash": "728f391994310a8cf3894d24125158db"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockAdjustmentRepository.java": {
+    "mtime": 1775204116.0,
+    "ast_hash": "f122b76409798a5506111da052327059",
+    "semantic_hash": "f122b76409798a5506111da052327059"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockLocationRepository.java": {
+    "mtime": 1775164484.0,
+    "ast_hash": "7b39158a75567b37cb33b04b3b08da99",
+    "semantic_hash": "7b39158a75567b37cb33b04b3b08da99"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockLossRepository.java": {
+    "mtime": 1785141074.0591319,
+    "ast_hash": "078ee71fe335907ed8849fedf9dcf41e",
+    "semantic_hash": "078ee71fe335907ed8849fedf9dcf41e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockMoveRepository.java": {
+    "mtime": 1784547415.0,
+    "ast_hash": "3385d1b2de844fc936fe5b96e8b636f9",
+    "semantic_hash": "3385d1b2de844fc936fe5b96e8b636f9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockPickingRepository.java": {
+    "mtime": 1783003217.0,
+    "ast_hash": "7b78b492125fe5afd1910a5c11bb6ee4",
+    "semantic_hash": "7b78b492125fe5afd1910a5c11bb6ee4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockPickingTypeRepository.java": {
+    "mtime": 1775164492.0,
+    "ast_hash": "493d8b412c89d6ffc5b484754b7f9a08",
+    "semantic_hash": "493d8b412c89d6ffc5b484754b7f9a08"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/StockQuantRepository.java": {
+    "mtime": 1778409456.0,
+    "ast_hash": "2250608638c6e31093eb779c5ac99719",
+    "semantic_hash": "2250608638c6e31093eb779c5ac99719"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/ValuationLayerRepository.java": {
+    "mtime": 1775164520.0,
+    "ast_hash": "9f8fbff27a29c25aecc685beea83ba47",
+    "semantic_hash": "9f8fbff27a29c25aecc685beea83ba47"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/WarehouseRepository.java": {
+    "mtime": 1782739181.0,
+    "ast_hash": "79ce024277e122727c55de358d6e5276",
+    "semantic_hash": "79ce024277e122727c55de358d6e5276"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/BordereauExportService.java": {
+    "mtime": 1787132017.3112526,
+    "ast_hash": "1d25a20437fd5f177826dbeada67d2c4",
+    "semantic_hash": "1d25a20437fd5f177826dbeada67d2c4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/InterAgencyReceptionService.java": {
+    "mtime": 1787617229.9093485,
+    "ast_hash": "5ec047723fa7390ab4242a342c3bca14",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/StockReportService.java": {
+    "mtime": 1787617472.1075215,
+    "ast_hash": "c7138ceac3fdf9c6a4e3845344546aec",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/StockService.java": {
+    "mtime": 1787660179.6331062,
+    "ast_hash": "e6fae71257dc940274c6301982de9f96",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/WarehouseDataInitializer.java": {
+    "mtime": 1776108588.0,
+    "ast_hash": "0e245b5d4fb672e19a8cedc621f5ab4c",
+    "semantic_hash": "0e245b5d4fb672e19a8cedc621f5ab4c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/RabbitMQConfig.java": {
+    "mtime": 1786554510.4965208,
+    "ast_hash": "1bb8bc9027c31b2c2b5d92b303c4b5df",
+    "semantic_hash": "1bb8bc9027c31b2c2b5d92b303c4b5df"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/controller/SpokeHealthController.java": {
+    "mtime": 1780742085.0,
+    "ast_hash": "054dca873e375a748caf03c42868ab15",
+    "semantic_hash": "054dca873e375a748caf03c42868ab15"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/controller/SyncStatusController.java": {
+    "mtime": 1787148745.732377,
+    "ast_hash": "ad1e285e6631c7d52fb8a3edbee7e084",
+    "semantic_hash": "ad1e285e6631c7d52fb8a3edbee7e084"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/dto/OutboxEventDTO.java": {
+    "mtime": 1780396140.0,
+    "ast_hash": "447f908b2876eb27d0424bca0da0fd98",
+    "semantic_hash": "447f908b2876eb27d0424bca0da0fd98"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/dto/SpokeSnapshotPayload.java": {
+    "mtime": 1787148213.070815,
+    "ast_hash": "040bed771cb3824b633242970fb933a1",
+    "semantic_hash": "040bed771cb3824b633242970fb933a1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/dto/SyncSummaryDTO.java": {
+    "mtime": 1780396146.0,
+    "ast_hash": "a3df9c6e8185107cf6e76e2151d09b52",
+    "semantic_hash": "a3df9c6e8185107cf6e76e2151d09b52"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/entity/OutboxEvent.java": {
+    "mtime": 1780396113.0,
+    "ast_hash": "5aeecea7e7b6dc8afe39294ff0c54779",
+    "semantic_hash": "5aeecea7e7b6dc8afe39294ff0c54779"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/entity/OutboxStatus.java": {
+    "mtime": 1780396087.0,
+    "ast_hash": "813618283ab1a0db1165fed91a797cbd",
+    "semantic_hash": "813618283ab1a0db1165fed91a797cbd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/entity/SyncEventType.java": {
+    "mtime": 1785141391.9548836,
+    "ast_hash": "20dd4a57c53a6df6379c918288fa2dc3",
+    "semantic_hash": "20dd4a57c53a6df6379c918288fa2dc3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/repository/OutboxEventRepository.java": {
+    "mtime": 1787153061.7221355,
+    "ast_hash": "3eaa948c17ac734e4127d63da28d2468",
+    "semantic_hash": "3eaa948c17ac734e4127d63da28d2468"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/service/SnapshotScheduler.java": {
+    "mtime": 1787050148.9853513,
+    "ast_hash": "59f0bb4750dbaeb1a147114a0433c6f4",
+    "semantic_hash": "59f0bb4750dbaeb1a147114a0433c6f4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/service/SnapshotService.java": {
+    "mtime": 1787617373.2027824,
+    "ast_hash": "ceaaaeb28ddb13ea04eca25f490ef273",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/service/SyncDispatcherScheduler.java": {
+    "mtime": 1787153119.9400895,
+    "ast_hash": "3b54997c0ff3d9e5145b4d34d52d2660",
+    "semantic_hash": "3b54997c0ff3d9e5145b4d34d52d2660"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/sync/service/SyncEventPublisher.java": {
+    "mtime": 1780396189.0,
+    "ast_hash": "b3c1245517412d66ab2a36cbf3d2f594",
+    "semantic_hash": "b3c1245517412d66ab2a36cbf3d2f594"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/license/build-id.txt": {
+    "mtime": 1785345011.2565491,
+    "ast_hash": "62c71e4690e8f02a11217d8b8414ccdc",
+    "semantic_hash": "62c71e4690e8f02a11217d8b8414ccdc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/.claude/settings.json": {
+    "mtime": 1787584140.26403,
+    "ast_hash": "bfee062c3962c14264fd704e975a6b38",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/SecurityUtils.java": {
+    "mtime": 1787586513.4324946,
+    "ast_hash": "6ac647bf62198c3105fcd1c40b623b92",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/auth/TenantAuthenticationDetails.java": {
+    "mtime": 1787586505.8853407,
+    "ast_hash": "6af9e2b4b750f44b85d873be52499f90",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/common/service/TenantGuard.java": {
+    "mtime": 1787586554.240092,
+    "ast_hash": "e6a8c366ea869bdeb43cdf3ca3f55c16",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/entity/ProductWarehouseValuation.java": {
+    "mtime": 1787616459.0783155,
+    "ast_hash": "1dbcae84cb3c13e654058ecaa5ca7358",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/repository/ProductWarehouseValuationRepository.java": {
+    "mtime": 1787616465.3062363,
+    "ast_hash": "b2293557972a4f1b014232ba77924e96",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/java/com/erp/stock/service/ProductValuationService.java": {
+    "mtime": 1787616858.8972008,
+    "ast_hash": "91608cafa51d51fb0abcfdeaf2641268",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-22GHGFL3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f4d069ef2eec9f1ae046fec70b4ca322",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-22HSKVQM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "bb1bd3950cb59bc7f488b399e6b8eceb",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-2EXKBDPP.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "a592206ff1d8d85e23e6dfdf0b1e6a18",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-2HXFWRPE.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9d92c7caabd1aafb4b840caa7f8342ab",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-2NL3O26S.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "cb6af5e4bca3fd3ca68d5655765dba2f",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-3UVLDYKX.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0d1e06dead2ea012ab9e64db7a7361f1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4AVVHGSQ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "a2496827fe7900161c5d5efafda662ba",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4DVTPN4F.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "e7f2d8b4def7cef454bf3f64f3ad0fb4",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4MGJV7UP.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "2335614cace111666bb900b282e01548",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4PQ4YHI2.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8be310d1135d0ec8827b4543da70339e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4UNQJUCH.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "908d23b8592dc6ea953f45596209a999",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-4XJEJNFZ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "a91ecb5599e3a36749fdeeb23ea8af3d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-5CXN7CZ3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "51b8e058a3aea0d83fd319ceef3857cd",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-5HMLH53R.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f859b1e7b0f60402cd36d6bf406b791d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-5TVQNYRK.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7c28a43e22a057c546a332d68eff516e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-5WVFZA4V.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8942efefb73887d620a88d3dcd249ca6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-63NDYRXM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6b6665f29261df1b88624515543e6399",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-63YCV4IC.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0baa359c74d4c28ce0e7b7a84dc80e7c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-6SEYSZIE.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f16cf73c9f2a50669da060ae9e59bf24",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-744Z27MH.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7b05d63ba772a2d422c1c436fca9d078",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-7B4AINK5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f927e543c6f874374b1b6180d08c4e6a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-7I22ISB7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "382ee29aed0d2de60f8a34a6aece3b8c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-7JFWSYEL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9da689670b6dec7e492a865abc26510a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-7N3ULNND.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "077cecd798ff8b8c32fe545e48fc4fd8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-7ZCLLXXM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "25b46b7f4637dd186d15bc3a881a0416",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-AN3SDMHS.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9c2ce7e7fa8a9c62294b32b417da120b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-AWKASJG5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "738c685e54b40f89fbe97beffd9dce93",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-BAAUUGKK.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0959b34e888e6eb3ba6fb666da42ebbd",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-BH7ESTN5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "5c82362a4bd27eb81957d845fee6955c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-BMIMO7X4.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8055b07d82ba3a73c44aa10cae09e69e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-BNECIPLL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8e9b6a103b494deb914a24c37702cdc9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-BSL4MFW6.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "b450569e6bf915201c1b2df52c4cd04e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-C4JDUZW5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f1de9128780cf943c5dd6c1a8e08caf0",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-C6WETUOT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "bed3d4548ff6ead9d2b20e785d86d51b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-CEUFEELE.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "12c67d3651ee095a09a9e8fe99826930",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-CFF75LPW.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0a1a39e6365e9e2b56b775c2223f6ebe",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-CHRYTCYQ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "137d9f80877021bb8e33d30aced5d4a5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-CPOTWVXM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9f754a21e48caa1c90243e825f5dde2a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-DDVBGRXJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "193f2572c1bf7b9bbb2d46747e6ff987",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-DE3DSTRZ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8e5322170e93caddc769708ac0f00be5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-DEJY7ISL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1f418f103f9c7c8d4db4037e6456eff1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-DVYFHFQ4.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3b00255d0ed4d85525457057e9031145",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-EL57LW2I.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "12a91ecb554216d3759876e98fa51fcc",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-EQKK75YP.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7406d519a4153d096bbbf9389deeeb33",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-FFOYP62L.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1ff19a0a253671652ca8ee11b2e4301e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-FI7PMQ4X.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "fa7d79dde3807f6f0fcbc3854f4f4eca",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-FK6H3RFT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3180b362432ae8ddafb28a3ddb10d0bf",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-G323EQKJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1b6731a95b527b3ca237875f70f94204",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-GDBBOEXU.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7fd2c6b6d38c3e9faf96e6f95ae1e733",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-GGMNHEMD.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "038a1bd7b6b17dc5efd6732299c581c7",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-GUHSJ4H4.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "20e10600f486bf28617307417de8c6e0",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-H6KBNWM3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "5c82f42f1321641a5a1770fea5d9c3a2",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-HFUY2L4N.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "e28b02e2ebe15b27522352e66e0e84a3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-HKXCZRZ3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f0e19bbef1bab897dd7b89e020fc8fa8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-HNYSAK2L.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3a91fa480595439a6625e2b07cd5edc1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-HSXODE5B.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "e015a70085427a1c67bb54dcb465ff81",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-I327QUZW.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "bb5feaa9c6e4efaa10e115408195cc56",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-I4W2NZUM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "341c33e9dec8662adbc558e70d57d9fb",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-I7QRLZVT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "d2add9795d3ae94d040941e4f5d24b80",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-IAWNWJRQ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0db319afc7250b045b5d62dfcab77cb4",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-INNW63LI.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "8d0758ca6d560ca9ec1615c5939a8c0f",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-IOBAOF6Q.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "838c543decff4a93f9abd947eea6591a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-IQ52UTU7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6d561275b8e0745335aafb79e309519f",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-IY37CFAG.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "b8571ab68a40716d5f1f0a17a2f35953",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-J5HF7U7S.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "fa82836a286221390de871e6f1fb6277",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-J73ETHPY.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3bb05e4c6d1e3cdde2c371b59d477c5c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-JDADKY2H.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "55e0479e8ddd468f030617f1b0944b56",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-JFIMBW7O.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "144fe7f007c55bee20dea0f87f885f00",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-JH7ZTDCS.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "dd0c008c28ef3079ded40abc2bff7c31",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-JL4IJZNJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "d1c67c8ee9815f829a42620e269e1b97",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-K5BT7YRS.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9a4a6e7d26d4d142849c6d30fab1e852",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-KZIAVVK4.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "912691172e488d1afdd6f1bc15fcef3b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-LD7JO3RX.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "ee022d543ae6f4ed43e2e6af1bb5f8d9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-LINFRKDG.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "61efcbef3a6b8e8083243acc60238ff8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-LJCFJLO2.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "08b95f2a92a8fbd5959b19131fb67b70",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-M6RCVFFT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7700266008bfe664df8576db042ca4f4",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MB6QKNAL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "4069ca55c53b18f5744f5990b9e673f8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MFSK2DKP.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7f391debb8bb6aa2c27453c25d850b92",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MGSQONBJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6f1e38ae9da1995cc10b0f6d151467ed",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MJH2XJUL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0e285942d6a700e704abdbdf196357aa",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MKKJVG5S.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "45ee273223fbd479b373b3d880e005ea",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MSBYUR7D.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "41982989a053e2ef7ff6b282dfee5d27",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-MSVRK5RL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "225d082e34b1b5c6d0590cde947845fe",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NFTJ6NLC.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "eeba7b6edb41b890347b251602980ee6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NFW6N3OB.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "036ab0bd025f199b7803b45a4c66b1d1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NIZI6IYG.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6fdc693d2635f62fbd6e090b38914a33",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NKS42JE6.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "5b26b8ce2a81d05072ba17d598373bb3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NMCXD7EF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "cf5f00ecfa74c0b1b097a06b18ccd4a5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NW6TALJM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1de96272f00fe179fc75e5494a081472",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-NXG7XWYF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9d9d202aac4e3d4cbb881ad6bdfefb95",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-O6NYYN54.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "de5cb9a4810b0dc28126c2b24f783e25",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OAQT2DMB.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "fbc6effdc405748958ac51350bab8940",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OAZFJO3R.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "2893d8bc7427cb1eb3fb10651f03332c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-ODCQKRC5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "42f648a25b1dc9fbc60f5552da9ba8f5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OHFIYWRN.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1aa8fb0848328c7fd21cb380e75ec1bc",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OLM22WBR.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "74f28a510eb90d3e79adc9da5b9a0dd3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OQKQBNT6.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3bb8f21c182a9b990d398bc25dc0d412",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-OZIYHIG4.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "5be2780f9f6266c3a7cbf60cbd8f1ed7",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-P6I7MEW3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6de2d5e4548f826e45610883d130af00",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PCNEIDV7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "6eec583cc9456decdc5246ae0705adbe",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PF6YZVJZ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "812b58b050acaf580da06c4e2ffe2fc8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PLBGUOMT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "5050c66ed53e844680e543e091425afb",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PSTM77IZ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "2f56149307e1116124a2c0b04b72da2e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PSW27XG3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1f4670973a8fbef97aa985e470db86ee",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-PUHJUCYH.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "93ed042ea07d4a63252737ca6d7dde94",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-Q5ZWRL6U.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "1570efb8950de342e5ec70b0cbd0b205",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QCGXT7RB.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7d29344bedbd04a05e7ee9ef8ae41f7f",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QEGKPTR3.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "afda7cf2ec47b18d77832fa7eaa188e6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QL3WC7AB.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "685a61cd3832e45aec266d0bd953f4ae",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QSU6NAIL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "80d93c72129c486be6af714aab22a8b3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QSZMK3OD.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3a3460b0db68c42ac2770fa4b2dce3f1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-QYMRHFWM.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "d9a9467632336cd1ee39516a8eecfaac",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-R7H5AMDD.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "e0dd8299744922890e3f214d495aa56b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-RK3XNAWT.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "771e25ec1f4202bbd8f07abfde7b3d95",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-RRX5DX4H.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "d0fd773a7ded4b03c275204940fdb7e1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-S3PKBG27.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c9cb79094816275d69ed5d969ff933b1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-SGYZZ3T7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "a7583d803590f846423ad4b26a35cb30",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-SMAMF5CS.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "48602034f551e4ac7051c6ae2972504a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-SRLZ6LUC.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "3cd56d54d53345e013dedcfc80cfa047",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-SVNLFZSF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "919009489441e7e61b899433f7275e4b",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-SYDG7O52.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "b63537a8235f8c0a8586f49ed1638ec8",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-T343J7WJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c8db9207019f8b5654d99ab7607e8e49",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-T6YZVPER.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "103809c4305cd0d1be20b5eac09cc2c4",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-TDI4OUWI.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9d8d43ad1c9f0c95f15fca8e996941f6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-THW5NFSY.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "9aec8cc2806b4e1bde0946a4972927a6",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-TSRGIXR5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "4951adc246139c025e1b7195444c7ae7",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-U4BIZWJZ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0d5d324d2c59d8b728c5b06d33b23cdf",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-U7UNESHL.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f9fd5b63bb2f455661b1afe09549da19",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-UCE6CWHK.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c92cdde0a22acca6f4b31a1c702c6356",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-UQC7O3HA.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "a64387d2152416f0f075f04947809f5e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-UZ372DVF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "96d6bb0534ff1ffa35fb019a8e46e820",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-VF22QBET.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "b8a111d34b30b9db3eff719edfd7c017",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-VMLHXQYG.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "99a4a4371e0c7a44f624531af01af484",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-VS3ESDRR.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "0af13468aa2a16ae9a1c2148808c3688",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-W4EY7BLF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c750804bdc173ea55d9f26bdc9cf8644",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-WLFUGAJD.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "7141fed6900160c934155614401c51d3",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-WS2WCANR.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "b7dd32ca7bb274d3fa23f81f7ccf351e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-WUCZV7ZP.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "fa954c64278601e982a134d61c9de7d9",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-X4HEVVJK.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "2761aea7db6470a403a892dcd5e27c64",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-XE4Y3KSJ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c9b4a20a55d3e8dd388074e9ef3e3b4c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-XJSG4Z5K.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f43bd9e3cec7fabbedea34c95de3ad55",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-XSAXH5LE.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f67732dfa1ff431e736840ad7cc7b797",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-Y6R5OFF2.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "f014d79024d50064e9dde5ab99bffd17",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-YLNDOPQQ.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "30ecd28ac3e8479e8ff8771ec20c41cd",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-Z5JL4GC7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "283de2226c2640f7ac864321d9a43834",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-Z7PW6LCN.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "34843c27d47999a8d3252c152ff0b156",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-Z7ZPCFLF.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "753e2dffd993bb794942166539be1a68",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-ZAZADJT2.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "d1eb2e1815c455f475388c111f216917",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-ZIT2XKX7.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "79d3837b06b21e5353c22ac0875a444c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-ZKQFV4AX.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "ea65e76ba44f4f1bd91d560129811b7a",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/chunk-ZRNANK6R.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "268083008ede73fe6b3fe96c8ed47aa1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/main-OTSDDHF5.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "c9c7d6d53a4c0324b42d49588cfcc55c",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/polyfills-RV3JTMEC.js": {
+    "mtime": 1787152816.3499045,
+    "ast_hash": "e10328949db848a45f408a464e7e4c27",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/prerendered-routes.json": {
+    "mtime": 1787152816.3539045,
+    "ast_hash": "d5eabf3e8b1c211a1474cb10914ca1c1",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/CLAUDE.md": {
+    "mtime": 1787584140.26403,
+    "ast_hash": "1f727d85915d8f61a17ef639a18e919f",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/3rdpartylicenses.txt": {
+    "mtime": 1787152816.3539045,
+    "ast_hash": "71de817dff2b25653155a49f4199f20d",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/main/resources/static/index.html": {
+    "mtime": 1787152816.3539045,
+    "ast_hash": "f9aede84980a781ec2f329cf2f02575e",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/auth/SecurityUtilsTest.java": {
+    "mtime": 1787619186.0271957,
+    "ast_hash": "9247298f23e104494c5387406df1b352",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/auth/filter/JwtAuthFilterTest.java": {
+    "mtime": 1787619206.5666063,
+    "ast_hash": "e0f79459be582b074507db8c3805f359",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/common/GlobalExceptionHandlerTest.java": {
+    "mtime": 1787619759.0111635,
+    "ast_hash": "d88f7d3dcfda29f5d5af5395740da616",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/common/service/TenantGuardTest.java": {
+    "mtime": 1787619171.2556207,
+    "ast_hash": "fcd22e62b0f0d3b8d683b0926fa0d3af",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/config/permission/PermissionFilterTest.java": {
+    "mtime": 1787620107.4855635,
+    "ast_hash": "7468aa24d9921b38b97792c1116eac11",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/hr/service/LeaveServiceOverlapTest.java": {
+    "mtime": 1787660442.7137547,
+    "ast_hash": "077f56ca1ba399725e35d91879f4a260",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/hr/service/PayrollEngineTest.java": {
+    "mtime": 1787619341.9787629,
+    "ast_hash": "4e9e8ea5183a7163c85c74018cb4b6ab",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/sales/service/RistourneServiceTest.java": {
+    "mtime": 1787620288.1285958,
+    "ast_hash": "bf2a7bb66aad871f37d966642dc569a5",
+    "semantic_hash": ""
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-backend/src/test/java/com/erp/stock/service/ProductValuationServiceTest.java": {
+    "mtime": 1787619710.7004979,
+    "ast_hash": "b4b7fc7d8f4a2e739c839511d113c6f8",
+    "semantic_hash": ""
+  }
+}

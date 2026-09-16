@@ -29,6 +29,9 @@ public class StockMoveDTO {
     private String pickingTypeCode;   // incoming / outgoing / internal
     private LocalDateTime dateDone;
     private String partnerName;
+    // Direction réelle calculée depuis les emplacements (fiable même pour déconsignes)
+    // "incoming" | "outgoing" | "internal"
+    private String moveDirection;
     // Stock disponible à la source
     private BigDecimal availableQty;
 }

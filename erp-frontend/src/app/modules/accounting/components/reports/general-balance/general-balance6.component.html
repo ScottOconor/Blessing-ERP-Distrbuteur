@@ -1,71 +1,77 @@
-<div class="page-container report-container">
+<div class="page-container">
 
-  <!-- ===== HEADER (écran seulement) ===== -->
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
   <div class="page-header no-print">
-    <h1 class="page-title">
-      <span class="material-icons">table_chart</span>
-      Balance Générale — 6 Colonnes
-    </h1>
+    <div class="header-left">
+      <span class="material-icons page-icon">table_chart</span>
+      <div>
+        <h1 class="page-title">Balance Générale — 6 Colonnes</h1>
+        <p class="page-sub">Soldes initiaux + mouvements + soldes finaux par compte</p>
+      </div>
+    </div>
     @if (generated) {
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" (click)="exportPdf()">
-          <span class="material-icons">picture_as_pdf</span> Exporter PDF
+      <div class="header-actions">
+        <button class="btn-outline" (click)="print()">
+          <span class="material-icons">print</span> Imprimer
         </button>
-        <button class="btn btn-outline" (click)="exportExcel()">
-          <span class="material-icons">table_view</span> Exporter Excel
+        <button class="btn-outline btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+        <button class="btn-outline btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
         </button>
       </div>
     }
   </div>
 
-  <!-- ===== FILTRES ===== -->
-  <div class="report-header no-print">
-    <div class="filters-bar" style="margin-bottom:0">
+  <!-- ══ FILTRES ══════════════════════════════════════════════════════════ -->
+  <div class="filters-card no-print">
+    <div class="filter-grid">
       <div class="filter-group">
-        <label>Période du *</label>
-        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+        <label>Période du</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateFrom">
       </div>
       <div class="filter-group">
-        <label>Au *</label>
-        <input type="date" class="form-control" [(ngModel)]="dateTo">
-      </div>
-      <div class="filter-group" style="flex:1">
-        <label>Journaux (Ctrl+clic)</label>
-        <select class="form-control" multiple style="height:60px" #jSelect
-(change)="onJournalChange(jSelect.selectedOptions)"
-          >
-          @for (j of journals; track j.id) {
-            <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
-          }
-        </select>
+        <label>au</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateTo">
       </div>
       <div class="filter-group">
         <label>Afficher</label>
-        <select class="form-control" [(ngModel)]="displayAccount">
+        <select class="form-ctl" [(ngModel)]="displayAccount">
           <option value="all">Tous les comptes</option>
           <option value="movement">Avec mouvements</option>
         </select>
       </div>
-      <div class="filter-actions">
-        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
-          @if (loading) { <span class="spinner-sm"></span> }
-          <span class="material-icons">play_arrow</span> Générer
+      <div class="filter-group">
+        <label>Journaux</label>
+        <div class="j-chips">
+          <button class="j-chip" [class.active]="selectedJournalIds.length === 0" (click)="selectedJournalIds = []">Tous</button>
+          @for (j of journals; track j.id) {
+            <button class="j-chip" [class.active]="selectedJournalIds.includes(j.id!)" (click)="toggleJournal(j.id!)">{{ j.code }}</button>
+          }
+        </div>
+      </div>
+      <div class="filter-group filter-btn-col">
+        <label>&nbsp;</label>
+        <button class="btn-generate" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="btn-spinner"></span> Génération… }
+          @else { <span class="material-icons">play_arrow</span> Générer }
         </button>
       </div>
     </div>
+    @if (errorMsg) {
+      <div class="alert-err"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
+    }
   </div>
 
-  @if (errorMsg) {
-    <div class="alert-error mb-3 no-print">
-      <span class="material-icons">error_outline</span>{{ errorMsg }}
-    </div>
-  }
-
   @if (loading) {
-    <div class="no-print" style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <p>Génération en cours…</p>
+    </div>
+
   } @else if (generated) {
 
-    <!-- ===== EN-TÊTE D'IMPRESSION ===== -->
     <div class="rpt-print-header">
       <h2>Balance Générale à 6 Colonnes</h2>
       <div class="rpt-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
@@ -75,7 +81,6 @@
     @if (lines.length === 0) {
       <div class="empty-state no-print">
         <span class="material-icons">table_chart</span>
-        <h3>Aucune donnée</h3>
         <p>Aucun mouvement pour cette période.</p>
       </div>
     } @else {
@@ -83,11 +88,11 @@
         <table class="rpt-table">
           <thead>
             <tr class="rpt-thead-group">
-              <th rowspan="2" style="width:10%">N°Compte</th>
+              <th rowspan="2" style="width:10%">N° Compte</th>
               <th rowspan="2" style="width:26%">Libellé du Compte</th>
-              <th colspan="2" style="width:21%;text-align:center">Soldes Initiaux</th>
-              <th colspan="2" style="width:21%;text-align:center">Mouvements Période</th>
-              <th colspan="2" style="width:22%;text-align:center">Soldes Finaux</th>
+              <th colspan="2" style="text-align:center">Soldes Initiaux</th>
+              <th colspan="2" style="text-align:center">Mouvements Période</th>
+              <th colspan="2" style="text-align:center">Soldes Finaux</th>
             </tr>
             <tr class="rpt-thead-sub">
               <th class="text-right">Débit</th>
@@ -113,9 +118,8 @@
             }
           </tbody>
           <tfoot>
-            <!-- Totaux comptes de bilan -->
             <tr class="rpt-tfoot-bilan">
-              <td colspan="2">Totaux comptes de bilan</td>
+              <td colspan="2">Totaux comptes de bilan (cl. 1–5)</td>
               <td class="text-right mono">{{ bilanTotals.initD > 0 ? (bilanTotals.initD | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ bilanTotals.initC > 0 ? (bilanTotals.initC | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ bilanTotals.mvtD > 0 ? (bilanTotals.mvtD | number:'1.2-2') : '—' }}</td>
@@ -123,9 +127,8 @@
               <td class="text-right mono">{{ bilanTotals.finD > 0 ? (bilanTotals.finD | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ bilanTotals.finC > 0 ? (bilanTotals.finC | number:'1.2-2') : '—' }}</td>
             </tr>
-            <!-- Totaux comptes de gestion -->
             <tr class="rpt-tfoot-gestion">
-              <td colspan="2">Totaux comptes de gestion</td>
+              <td colspan="2">Totaux comptes de gestion (cl. 6–8)</td>
               <td class="text-right mono">{{ gestionTotals.initD > 0 ? (gestionTotals.initD | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ gestionTotals.initC > 0 ? (gestionTotals.initC | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ gestionTotals.mvtD > 0 ? (gestionTotals.mvtD | number:'1.2-2') : '—' }}</td>
@@ -133,9 +136,8 @@
               <td class="text-right mono">{{ gestionTotals.finD > 0 ? (gestionTotals.finD | number:'1.2-2') : '—' }}</td>
               <td class="text-right mono">{{ gestionTotals.finC > 0 ? (gestionTotals.finC | number:'1.2-2') : '—' }}</td>
             </tr>
-            <!-- Totaux de la balance -->
             <tr class="rpt-tfoot-total">
-              <td colspan="2">Totaux de la balance</td>
+              <td colspan="2">TOTAUX DE LA BALANCE</td>
               <td class="text-right mono">{{ totals.initD | number:'1.2-2' }}</td>
               <td class="text-right mono">{{ totals.initC | number:'1.2-2' }}</td>
               <td class="text-right mono">{{ totals.mvtD | number:'1.2-2' }}</td>
@@ -146,14 +148,13 @@
           </tfoot>
         </table>
 
-        <!-- Message d'équilibre -->
         <div [class]="isEquilibre ? 'rpt-equilibre ok' : 'rpt-equilibre warn'">
           @if (isEquilibre) {
             <span class="material-icons">check_circle</span>
-            <strong>✓ Balance équilibrée</strong> — Les mouvements nets de bilan et de gestion s'équilibrent correctement.
+            <strong>Balance équilibrée</strong> — Les mouvements nets de bilan et de gestion s'équilibrent.
           } @else {
             <span class="material-icons">warning</span>
-            <strong>⚠ Déséquilibre détecté</strong> — Les totaux nets de bilan et gestion ne s'équilibrent pas sur la période.
+            <strong>Déséquilibre détecté</strong> — Les totaux nets de bilan et gestion ne s'équilibrent pas.
           }
         </div>
       </div>

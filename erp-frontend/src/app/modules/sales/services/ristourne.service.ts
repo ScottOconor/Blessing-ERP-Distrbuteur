@@ -26,6 +26,15 @@ export interface RistournePaiementLine {
   montantTTC?: number;
 }
 
+export interface RistourneArticleLine {
+  productCode?: string;
+  productName?: string;
+  categoryName?: string;
+  quantite: number;
+  montantUnitaire: number;
+  montantTotal: number;
+}
+
 export interface RistournePaiement {
   id?: number;
   name?: string;
@@ -43,6 +52,7 @@ export interface RistournePaiement {
   typeRistourne?: string;
   createdAt?: string;
   lines: RistournePaiementLine[];
+  articleLines?: RistourneArticleLine[];
 }
 
 export interface PartnerGroup {
@@ -95,6 +105,14 @@ export class RistourneService {
     let params = new HttpParams().set('companyId', companyId);
     if (type) params = params.set('type', type);
     return this.http.get<RistournePaiement[]>(`${this.base}/paiements`, { params });
+  }
+
+  getRapport(companyId: number, dateFrom: string, dateTo: string): Observable<RistournePaiement[]> {
+    const params = new HttpParams()
+      .set('companyId', companyId)
+      .set('dateFrom', dateFrom)
+      .set('dateTo', dateTo);
+    return this.http.get<RistournePaiement[]>(`${this.base}/rapport`, { params });
   }
 
   getPaiement(id: number): Observable<RistournePaiement> {

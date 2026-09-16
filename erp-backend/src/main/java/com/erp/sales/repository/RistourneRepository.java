@@ -12,6 +12,8 @@ public interface RistourneRepository extends JpaRepository<Ristourne, Long> {
 
     List<Ristourne> findByCompanyIdAndActiveTrue(Long companyId);
 
+    List<Ristourne> findByCompanyId(Long companyId);
+
     Optional<Ristourne> findByPartnerIdAndCategoryIdAndCompanyId(
             Long partnerId, Long categoryId, Long companyId);
 }

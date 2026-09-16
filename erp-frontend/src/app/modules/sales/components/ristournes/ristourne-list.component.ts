@@ -7,6 +7,7 @@ import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { NotificationService } from '../../../../core/services/notification.service';
 
 const RST_HEADERS = ['Client', "Catégorie d'article", 'Type de ristourne', 'Montant de la ristourne', 'Ristourne TTC', 'Actif'];
 const RST_SAMPLE  = ['Client ABC', 'Bières', 'Brasserie', '261.21', '318.02', 'OUI'];
@@ -72,6 +73,34 @@ export class RistourneListComponent implements OnInit {
   factureMsg = '';
   factureError = '';
 
+  // Clients accordéon (config tab)
+  expandedClients = new Set<number>();
+
+  get clientGroups(): { partnerId: number; partnerName: string; items: Ristourne[]; nbBrasserie: number; nbGuinness: number; nbAutre: number }[] {
+    const map = new Map<number, { partnerName: string; items: Ristourne[] }>();
+    for (const r of this.ristournes) {
+      const id = r.partnerId;
+      if (!map.has(id)) map.set(id, { partnerName: r.partnerName || '?', items: [] });
+      map.get(id)!.items.push(r);
+    }
+    return Array.from(map.entries())
+      .map(([partnerId, v]) => ({
+        partnerId, ...v,
+        nbBrasserie: v.items.filter(i => i.typeRistourne === 'brasserie').length,
+        nbGuinness:  v.items.filter(i => i.typeRistourne === 'guinness').length,
+        nbAutre:     v.items.filter(i => !i.typeRistourne).length,
+      }))
+      .sort((a, b) => a.partnerName.localeCompare(b.partnerName));
+  }
+
+  toggleClient(id: number): void {
+    if (this.expandedClients.has(id)) this.expandedClients.delete(id);
+    else this.expandedClients.add(id);
+  }
+
+  expandAll():   void { this.clientGroups.forEach(g => this.expandedClients.add(g.partnerId)); }
+  collapseAll(): void { this.expandedClients.clear(); }
+
   readonly TYPE_OPTS = [
     { value: '', label: 'Autre (HT × 1.1925)' },
     { value: 'brasserie', label: 'Brasserie (HT × (1 + précompte% + 19.25%))' },
@@ -90,7 +119,8 @@ export class RistourneListComponent implements OnInit {
     private salesSvc: SalesService,
     private stockSvc: StockService,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -146,7 +176,10 @@ export class RistourneListComponent implements OnInit {
 
   deleteRst(id: number): void {
     if (!confirm('Supprimer cette ristourne ?')) return;
-    this.svc.delete(id).subscribe(() => this.loadRistournes());
+    this.svc.delete(id).subscribe({
+      next: () => this.loadRistournes(),
+      error: err => this.notificationService.notify(err?.error?.message ?? 'Erreur lors de la suppression.', 'error')
+    });
   }
 
   // ===== Brasseries tab =====
@@ -197,25 +230,48 @@ export class RistourneListComponent implements OnInit {
 
   confirmBrasseriePmt(id: number): void {
     if (!confirm('Confirmer ce règlement ?')) return;
-    this.svc.confirmPaiement(id).subscribe(() => this.loadBrasseries());
+    this.quarterError = '';
+    this.svc.confirmPaiement(id).subscribe({
+      next: () => this.loadBrasseries(),
+      error: err => this.quarterError = err?.error?.message ?? 'Erreur lors de la confirmation.'
+    });
   }
 
   cancelBrasseriePmt(id: number): void {
     if (!confirm('Annuler ce règlement ?')) return;
-    this.svc.cancelPaiement(id).subscribe(() => this.loadBrasseries());
+    this.quarterError = '';
+    this.svc.cancelPaiement(id).subscribe({
+      next: () => this.loadBrasseries(),
+      error: err => this.quarterError = err?.error?.message ?? 'Erreur lors de l\'annulation.'
+    });
   }
 
   confirmAllBrasserie(paiements: RistournePaiement[]): void {
     const drafts = paiements.filter(p => p.state === 'draft');
     if (drafts.length === 0) return;
     if (!confirm(`Confirmer les ${drafts.length} règlement(s) en brouillon ?`)) return;
-    let done = 0;
+    this.quarterMsg = '';
+    this.quarterError = '';
+    let done = 0, failed = 0, lastError = '';
     for (const p of drafts) {
-      this.svc.confirmPaiement(p.id!).subscribe(() => {
-        done++;
-        if (done === drafts.length) this.loadBrasseries();
+      this.svc.confirmPaiement(p.id!).subscribe({
+        next: () => {
+          done++;
+          if (done + failed === drafts.length) this.finishConfirmAllBrasserie(done, failed, lastError);
+        },
+        error: (err) => {
+          failed++;
+          lastError = err?.error?.message || err?.message || 'Erreur inconnue';
+          if (done + failed === drafts.length) this.finishConfirmAllBrasserie(done, failed, lastError);
+        }
       });
     }
+  }
+
+  private finishConfirmAllBrasserie(done: number, failed: number, lastError: string): void {
+    this.quarterError = failed > 0 ? `${done} confirmé(s), ${failed} échec(s) — ${lastError}` : '';
+    this.quarterMsg = failed === 0 ? `${done} règlement(s) confirmé(s).` : '';
+    this.loadBrasseries();
   }
 
   // ===== Guinness tab =====
@@ -267,25 +323,48 @@ export class RistourneListComponent implements OnInit {
 
   confirmGuinessPmt(id: number): void {
     if (!confirm('Confirmer ce règlement ?')) return;
-    this.svc.confirmPaiement(id).subscribe(() => this.loadGuiness());
+    this.guinessError = '';
+    this.svc.confirmPaiement(id).subscribe({
+      next: () => this.loadGuiness(),
+      error: err => this.guinessError = err?.error?.message ?? 'Erreur lors de la confirmation.'
+    });
   }
 
   cancelGuinessPmt(id: number): void {
     if (!confirm('Annuler ce règlement ?')) return;
-    this.svc.cancelPaiement(id).subscribe(() => this.loadGuiness());
+    this.guinessError = '';
+    this.svc.cancelPaiement(id).subscribe({
+      next: () => this.loadGuiness(),
+      error: err => this.guinessError = err?.error?.message ?? 'Erreur lors de l\'annulation.'
+    });
   }
 
   confirmAllGuiness(paiements: RistournePaiement[]): void {
     const drafts = paiements.filter(p => p.state === 'draft');
     if (drafts.length === 0) return;
     if (!confirm(`Confirmer les ${drafts.length} règlement(s) en brouillon ?`)) return;
-    let done = 0;
+    this.guinessMsg = '';
+    this.guinessError = '';
+    let done = 0, failed = 0, lastError = '';
     for (const p of drafts) {
-      this.svc.confirmPaiement(p.id!).subscribe(() => {
-        done++;
-        if (done === drafts.length) this.loadGuiness();
+      this.svc.confirmPaiement(p.id!).subscribe({
+        next: () => {
+          done++;
+          if (done + failed === drafts.length) this.finishConfirmAllGuiness(done, failed, lastError);
+        },
+        error: (err) => {
+          failed++;
+          lastError = err?.error?.message || err?.message || 'Erreur inconnue';
+          if (done + failed === drafts.length) this.finishConfirmAllGuiness(done, failed, lastError);
+        }
       });
     }
+  }
+
+  private finishConfirmAllGuiness(done: number, failed: number, lastError: string): void {
+    this.guinessError = failed > 0 ? `${done} confirmé(s), ${failed} échec(s) — ${lastError}` : '';
+    this.guinessMsg = failed === 0 ? `${done} règlement(s) confirmé(s).` : '';
+    this.loadGuiness();
   }
 
   // ===== Règlements tab =====

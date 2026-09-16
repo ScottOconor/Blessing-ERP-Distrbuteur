@@ -1,0 +1,248 @@
+<div class="page-container">
+
+  <!-- ═══ EN-TÊTE ══════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">shopping_cart</span>
+      Statistiques d'achats
+    </h1>
+    @if (generated && data && data.suppliers.length > 0) {
+      <div class="export-actions">
+        <button class="btn-export btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
+        </button>
+        <button class="btn-export btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ PANNEAU FILTRES / REGROUPEMENT ═══════════════════════════════════ -->
+  <div class="filter-panel">
+
+    <!-- Regroupement -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">account_tree</span> Regroupement
+      </div>
+      <div class="group-chips">
+        @for (opt of [
+          {k:'fournisseur', label:'Par fournisseur', icon:'store'},
+          {k:'category',    label:'Par catégorie',    icon:'category'},
+          {k:'product',     label:'Par produit',      icon:'inventory_2'},
+          {k:'agent',       label:'Par agent',        icon:'badge'},
+          {k:'warehouse',   label:'Par entrepôt',     icon:'warehouse'}
+        ]; track opt.k) {
+          <button class="group-chip" [class.active]="groupBy === opt.k" (click)="groupBy = opt.k">
+            <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Période -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">date_range</span> Période
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Du</label>
+          <input type="date" class="form-input" [(ngModel)]="dateFrom">
+        </div>
+        <div class="input-group">
+          <label>Au</label>
+          <input type="date" class="form-input" [(ngModel)]="dateTo">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres optionnels -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">filter_alt</span> Filtres optionnels
+      </div>
+      <div class="filters-grid">
+        <div class="input-group">
+          <label>Fournisseur</label>
+          <select class="form-input" [(ngModel)]="selectedPartnerId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (s of suppliers; track s.id) {
+              <option [ngValue]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Catégorie</label>
+          <select class="form-input" [(ngModel)]="selectedCategoryId">
+            <option [ngValue]="null">— Toutes —</option>
+            @for (cat of categories; track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Produit</label>
+          <select class="form-input" [(ngModel)]="selectedProductId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (p of products; track p.id) {
+              <option [ngValue]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Entrepôt</label>
+          <select class="form-input" [(ngModel)]="selectedWarehouseId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (w of warehouses; track w.id) {
+              <option [ngValue]="w.id">{{ w.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Agent</label>
+          <input type="text" class="form-input" [(ngModel)]="agentSearch" placeholder="Identifiant…">
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-footer">
+      <button class="btn-reset" (click)="reset()">
+        <span class="material-icons">restart_alt</span> Réinitialiser
+      </button>
+      <button class="btn-generate" (click)="generate()" [disabled]="loading">
+        @if (loading) {
+          <span class="material-icons spin">hourglass_empty</span> Génération…
+        } @else {
+          <span class="material-icons">play_arrow</span> Générer
+        }
+      </button>
+    </div>
+
+    @if (errorMsg) {
+      <div class="alert-error">
+        <span class="material-icons">error_outline</span> {{ errorMsg }}
+      </div>
+    }
+  </div>
+
+  <!-- ═══ RÉSULTATS ══════════════════════════════════════════════════════════ -->
+  @if (generated) {
+    @if (!data || data.suppliers.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">search_off</span>
+        <p>Aucun achat sur cette période avec ces filtres.</p>
+      </div>
+    } @else {
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-label">Factures</span>
+          <span class="kpi-val">{{ data.totalInvoices }}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">{{ groupLabel }}s</span>
+          <span class="kpi-val">{{ data.suppliers.length }}</span>
+        </div>
+        <div class="kpi-card kpi-ca">
+          <span class="kpi-label">Montant HT</span>
+          <span class="kpi-val">{{ data.grandTotalHT | number:'1.0-0' }} <small>FCFA</small></span>
+        </div>
+        <div class="kpi-card kpi-ttc">
+          <span class="kpi-label">Montant TTC</span>
+          <span class="kpi-val">{{ data.grandTotalTTC | number:'1.0-0' }} <small>FCFA</small></span>
+        </div>
+        <div class="kpi-card kpi-remise">
+          <span class="kpi-label">Total remise</span>
+          <span class="kpi-val">{{ data.grandTotalRemise | number:'1.0-0' }} <small>FCFA</small></span>
+        </div>
+      </div>
+
+      <!-- Tableau par groupe -->
+      @for (group of data.suppliers; track group.supplierName) {
+        <div class="group-block">
+          <div class="group-header">
+            <div class="group-name">
+              <span class="group-type-badge">{{ groupLabel }}</span>
+              {{ group.supplierName }}
+              @if (group.supplierRef) { <span class="ref-tag">{{ group.supplierRef }}</span> }
+            </div>
+            @if (group.agent && data.groupBy === 'fournisseur') {
+              <span class="agent-tag">
+                <span class="material-icons">badge</span> {{ group.agent }}
+              </span>
+            }
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="col-prod">Produit</th>
+                  <th class="col-num">Qté</th>
+                  <th class="col-num">Px achat HT</th>
+                  <th class="col-num">Montant HT</th>
+                  <th class="col-num">Remise</th>
+                  <th class="col-num">Montant TTC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of group.lines; track l.productCode) {
+                  <tr>
+                    <td>
+                      @if (l.productCode) { <span class="code-tag">{{ l.productCode }}</span> }
+                      {{ l.productName }}
+                    </td>
+                    <td class="num">{{ l.qty | number:'1.0-2' }}</td>
+                    <td class="num">{{ l.prixAchat | number:'1.0-0' }}</td>
+                    <td class="num">{{ l.montantHT | number:'1.0-0' }}</td>
+                    <td class="num muted">{{ l.remise | number:'1.0-0' }}</td>
+                    <td class="num">{{ l.montantTTC | number:'1.0-0' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="sub-row">
+                  <td class="sub-label">Sous-total</td>
+                  <td class="num bold">{{ group.totalQty | number:'1.0-2' }}</td>
+                  <td></td>
+                  <td class="num bold">{{ group.totalHT | number:'1.0-0' }}</td>
+                  <td class="num bold">{{ group.totalRemise | number:'1.0-0' }}</td>
+                  <td class="num bold">{{ group.totalTTC | number:'1.0-0' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Total général -->
+      <div class="grand-total">
+        <span class="gt-label">TOTAL GÉNÉRAL</span>
+        <div class="gt-items">
+          <div class="gt-item">
+            <span>Qté</span>
+            <strong>{{ data.grandTotalQty | number:'1.0-2' }}</strong>
+          </div>
+          <div class="gt-item">
+            <span>Montant HT</span>
+            <strong>{{ data.grandTotalHT | number:'1.0-0' }} FCFA</strong>
+          </div>
+          <div class="gt-item">
+            <span>Remise</span>
+            <strong>{{ data.grandTotalRemise | number:'1.0-0' }} FCFA</strong>
+          </div>
+          <div class="gt-item">
+            <span>Montant TTC</span>
+            <strong>{{ data.grandTotalTTC | number:'1.0-0' }} FCFA</strong>
+          </div>
+        </div>
+      </div>
+
+    }
+  }
+
+</div>

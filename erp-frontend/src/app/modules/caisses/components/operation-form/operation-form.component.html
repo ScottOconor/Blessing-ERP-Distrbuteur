@@ -1,0 +1,150 @@
+<div class="op-form-page">
+  <div class="page-header">
+    <button class="btn-back" (click)="cancel()">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <div class="page-title">
+      <span class="material-icons" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'">
+        {{ type === 'ENTREE' ? 'add_circle' : 'remove_circle' }}
+      </span>
+      <div>
+        <h1>{{ type === 'ENTREE' ? 'Nouvelle entrée de caisse' : 'Nouvelle sortie de caisse' }}</h1>
+        <p>{{ type === 'ENTREE' ? 'Enregistrer un encaissement' : 'Enregistrer un décaissement' }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-grid">
+
+      <!-- Caisse -->
+      <div class="form-row full">
+        <label>Caisse *</label>
+        <select [(ngModel)]="form.caisseId" [class.placeholder]="!form.caisseId">
+          <option [value]="0">— Sélectionner une caisse ouverte —</option>
+          @for (c of caisses; track c.id) {
+            <option [value]="c.id">{{ c.name }} — {{ c.journalName }}</option>
+          }
+        </select>
+        @if (loading && caisses.length === 0) {
+          <span class="hint">Chargement des caisses…</span>
+        }
+        @if (!loading && caisses.length === 0) {
+          <span class="hint warn">Aucune caisse ouverte. Vérifiez la gestion des caisses.</span>
+        }
+        @if (selectedCaisse && selectedCaisse.soldeActuel != null) {
+          <div class="solde-preview">
+            <span class="material-icons">account_balance_wallet</span>
+            Solde actuel : <strong>{{ formatAmount(selectedCaisse.soldeActuel) }}</strong>
+            @if (form.montant) {
+              <span class="solde-after">
+                → après opération :
+                <strong [class.positive]="type === 'ENTREE'" [class.negative]="type === 'SORTIE'">
+                  {{ formatAmount((selectedCaisse.soldeActuel || 0) + (type === 'ENTREE' ? +form.montant : -form.montant)) }}
+                </strong>
+              </span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Date + Montant -->
+      <div class="form-row">
+        <label>Date *</label>
+        <input type="date" [(ngModel)]="form.date" />
+      </div>
+      <div class="form-row">
+        <label>Montant (FCFA) *</label>
+        <input type="text" appAmountInput inputmode="decimal" [(ngModel)]="form.montant" placeholder="0" />
+      </div>
+
+      <!-- Libellé -->
+      <div class="form-row full">
+        <label>Libellé</label>
+        <input type="text" [(ngModel)]="form.libelle" placeholder="Description de l'opération" />
+      </div>
+
+      <!-- Référence + Tiers (autocomplete partenaire) -->
+      <div class="form-row">
+        <label>Référence</label>
+        <input type="text" [(ngModel)]="form.reference" placeholder="N° pièce, reçu…" />
+      </div>
+
+      <!-- Tiers autocomplete -->
+      <div class="form-row ac-wrap tiers-wrap">
+        <label>Tiers (client / fournisseur)</label>
+        <div class="ac-field">
+          <span class="material-icons ac-icon">person_search</span>
+          <input type="text"
+                 [(ngModel)]="tiersSearch"
+                 (input)="filterPartners()"
+                 (focus)="showTiersDrop = true; filterPartners()"
+                 placeholder="Rechercher un client ou fournisseur…" />
+          @if (form.tiersName) {
+            <button class="ac-clear" (click)="clearPartner()" type="button">
+              <span class="material-icons">close</span>
+            </button>
+          }
+        </div>
+        @if (showTiersDrop && filteredPartners.length > 0) {
+          <div class="ac-dropdown">
+            @for (p of filteredPartners; track p.id) {
+              <button type="button" class="ac-item" (click)="selectPartner(p)">
+                <span class="partner-avatar">{{ p.name.charAt(0).toUpperCase() }}</span>
+                <span class="partner-info">
+                  <span class="partner-name">{{ p.name }}</span>
+                  @if (p.ref) { <span class="partner-ref">{{ p.ref }}</span> }
+                </span>
+                <span class="partner-type" [class.client]="p.type === 'customer'" [class.supplier]="p.type === 'supplier'">
+                  {{ getPartnerTypeLabel(p.type) }}
+                </span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Compte de contrepartie -->
+      <div class="form-row full ac-wrap account-wrap">
+        <label>Compte de contrepartie *</label>
+        <div class="ac-field">
+          <span class="material-icons ac-icon">account_tree</span>
+          <input type="text"
+                 [(ngModel)]="accountSearch"
+                 (input)="filterAccounts()"
+                 (focus)="showAccountDrop = true; filterAccounts()"
+                 placeholder="Rechercher un compte (code ou libellé)…" />
+          @if (form.compteContrepartieId) {
+            <button class="ac-clear" (click)="clearAccount()" type="button">
+              <span class="material-icons">close</span>
+            </button>
+          }
+        </div>
+        @if (showAccountDrop && filteredAccounts.length > 0) {
+          <div class="ac-dropdown">
+            @for (acc of filteredAccounts; track acc.id) {
+              <button type="button" class="ac-item" (click)="selectAccount(acc)">
+                <span class="ac-code">{{ acc.code }}</span>
+                <span class="ac-name">{{ acc.name }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+    </div>
+
+    <div class="form-footer">
+      <button class="btn-cancel" (click)="cancel()">Annuler</button>
+      <button class="btn-submit"
+              [class.entree]="type === 'ENTREE'"
+              [class.sortie]="type === 'SORTIE'"
+              (click)="submit()"
+              [disabled]="saving || !form.caisseId || !form.montant || !form.compteContrepartieId">
+        @if (saving) { <span class="material-icons spin">sync</span> }
+        @else { <span class="material-icons">{{ type === 'ENTREE' ? 'add_circle' : 'remove_circle' }}</span> }
+        {{ saving ? 'Enregistrement…' : (type === 'ENTREE' ? 'Enregistrer l\'entrée' : 'Enregistrer la sortie') }}
+      </button>
+    </div>
+  </div>
+</div>

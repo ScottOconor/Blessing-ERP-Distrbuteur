@@ -16,7 +16,11 @@ import java.util.List;
  * Règlement d'une remise fournisseur.
  */
 @Entity
-@Table(name = "remise_paiements")
+@Table(name = "remise_paiements", indexes = {
+    // Même besoin côté achats que RistournePaiement (dashboard + snapshot horaire).
+    @Index(name = "idx_remise_paiements_company_state_date", columnList = "company_id, state, date"),
+    @Index(name = "idx_remise_paiements_partner",            columnList = "partner_id, company_id")
+})
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class RemisePaiement {
 
@@ -31,6 +35,10 @@ public class RemisePaiement {
     private Partner partner;
 
     private LocalDate date;
+
+    /** Date effective du passage à l'état "done" (avoir fournisseur généré) */
+    @Column(name = "date_paiement")
+    private LocalDate datePaiement;
 
     /** draft / confirmed / done / cancelled */
     @Builder.Default
@@ -60,6 +68,10 @@ public class RemisePaiement {
     @OneToMany(mappedBy = "paiement", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<RemisePaiementLine> lines = new ArrayList<>();
+
+    /** Type de génération : brasserie / guinness */
+    @Column(name = "type_remise")
+    private String typeRemise;
 
     @Column(name = "company_id", nullable = false)
     private Long companyId;

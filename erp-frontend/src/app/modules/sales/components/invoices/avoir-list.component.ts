@@ -6,7 +6,7 @@ import { forkJoin } from 'rxjs';
 import { SalesService, SalesInvoice, SalesInvoiceLine, SalesClient } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
-import { StockService, Product } from '../../../stock/services/stock.service';
+import { StockService, Product, Warehouse } from '../../../stock/services/stock.service';
 import { AccountJournal } from '../../../../core/models/account.model';
 
 @Component({
@@ -46,6 +46,9 @@ export class AvoirListComponent implements OnInit {
   activeSuggestionIdx: number | null = null;
   searchTimer: any = null;
   dropdownRect: { top: number; left: number; width: number } | null = null;
+  warehouses: Warehouse[] = [];
+  defaultWarehouseId: number | null = null;
+  selectedWarehouseId: number | null = null;
 
   @HostListener('window:scroll', [])
   @HostListener('window:resize', [])
@@ -126,24 +129,48 @@ export class AvoirListComponent implements OnInit {
     this.activeSuggestionIdx = null;
     this.showModal = true;
 
-    if (this.clients.length === 0 || this.journals.length === 0 || this.allProducts.length === 0) {
-      forkJoin({
-        clients: this.salesService.getClients(this.companyId),
-        journals: this.accountingService.getJournals(this.companyId),
-        products: this.stockService.getProducts(this.companyId)
-      }).subscribe({
-        next: ({ clients, journals, products }) => {
-          this.clients = clients;
-          this.journals = journals.filter(j => j.type === 'sale');
-          this.allProducts = products.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');
-          if (this.journals.length > 0 && !this.avoirForm.journalId) {
-            this.avoirForm.journalId = this.journals[0].id!;
-          }
-        }
+    // Charger les entrepôts (pour le menu déroulant) puis les données de l'entrepôt sélectionné.
+    if (this.warehouses.length === 0) {
+      this.stockService.getWarehouses(this.companyId).subscribe({
+        next: (whs) => {
+          this.warehouses = whs;
+          const def = whs.find(w => w.isDefault) ?? whs[0] ?? null;
+          this.defaultWarehouseId = def?.id ?? null;
+          this.selectedWarehouseId = this.defaultWarehouseId;
+          this.loadCreateData(this.selectedWarehouseId);
+        },
+        error: () => this.loadCreateData(null)
       });
-    } else if (this.journals.length > 0 && !this.avoirForm.journalId) {
-      this.avoirForm.journalId = this.journals[0].id!;
+    } else {
+      this.selectedWarehouseId = this.selectedWarehouseId ?? this.defaultWarehouseId;
+      this.loadCreateData(this.selectedWarehouseId);
     }
+  }
+
+  private loadCreateData(whId: number | null): void {
+    forkJoin({
+      clients: this.salesService.getClients(this.companyId),
+      journals: this.accountingService.getJournals(this.companyId),
+      products: this.stockService.getProducts(this.companyId, whId ?? undefined)
+    }).subscribe({
+      next: ({ clients, journals, products }) => {
+        this.clients = clients;
+        this.journals = journals.filter(j => j.type === 'sale');
+        this.allProducts = products.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');
+        if (this.journals.length > 0 && !this.avoirForm.journalId) {
+          this.avoirForm.journalId = this.journals[0].id!;
+        }
+      }
+    });
+  }
+
+  /** Recharge les produits (quantités dispo) pour l'entrepôt choisi. Le stock du retour partira de cet entrepôt. */
+  onWarehouseChange(): void {
+    this.stockService.getProducts(this.companyId, this.selectedWarehouseId ?? undefined).subscribe({
+      next: (products) => {
+        this.allProducts = products.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');
+      }
+    });
   }
 
   closeModal(): void {
@@ -264,7 +291,7 @@ export class AvoirListComponent implements OnInit {
     line.productCode = product.defaultCode || '';
     line.description = product.name;
     line.prixUnitaire = product.salePrice || 0;
-    line.tauxTVA = this.TVA_DEFAULT;
+    line.tauxTVA = product.exemptTva ? 0 : this.TVA_DEFAULT;
     line.accountCode = '701100';
     this.lineSearches[i] = product.defaultCode ? `[${product.defaultCode}] ${product.name}` : product.name;
     this.activeSuggestionIdx = null;
@@ -279,6 +306,72 @@ export class AvoirListComponent implements OnInit {
     this.lineSearches[i] = '';
     this.lineSearchResults[i] = [];
     this.activeSuggestionIdx = i;
+  }
+
+  // ── Group By ─────────────────────────────────────────────────────────────────
+  groupBy = '';
+  expandedGroups = new Set<string>();
+
+  groupByOptions = [
+    { key: 'mois',   label: 'Mois',   icon: 'calendar_month' },
+    { key: 'client', label: 'Client', icon: 'person' },
+    { key: 'statut', label: 'Statut', icon: 'label' }
+  ];
+
+  get groupedRows(): { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesInvoice[] }[] {
+    if (!this.groupBy) return [];
+    const map = new Map<string, { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesInvoice[] }>();
+    for (const item of this.filteredAvoirs) {
+      let key: string, label: string;
+      switch (this.groupBy) {
+        case 'mois':
+          key = (item.date || '').substring(0, 7);
+          label = key ? this.fmtMonth(key) : '(Sans date)';
+          break;
+        case 'client':
+          key = label = item.partnerName || '(Sans client)';
+          break;
+        case 'statut':
+          key = item.state || '?';
+          label = this.getStateLabel(item.state || '');
+          break;
+        default: key = label = '?';
+      }
+      if (!map.has(key)) map.set(key, { key, label, count: 0, totalHT: 0, totalTTC: 0, items: [] });
+      const g = map.get(key)!;
+      g.count++;
+      g.totalHT  += item.totalHT  || 0;
+      g.totalTTC += item.totalTTC || 0;
+      g.items.push(item);
+    }
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => a.label.localeCompare(b.label));
+    return arr;
+  }
+
+  setGroupBy(key: string): void {
+    this.groupBy = this.groupBy === key ? '' : key;
+    this.expandedGroups.clear();
+  }
+
+  toggleGroup(key: string): void {
+    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
+    else this.expandedGroups.add(key);
+  }
+
+  isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
+
+  getGroupItems(key: string): SalesInvoice[] {
+    return this.groupedRows.find(g => g.key === key)?.items ?? [];
+  }
+
+  fmtMonth(ym: string): string {
+    const [y, m] = ym.split('-');
+    return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+  }
+
+  fmtN(v: number): string {
+    return new Intl.NumberFormat('fr-FR').format(v || 0);
   }
 
   saveAvoir(): void {
@@ -297,7 +390,12 @@ export class AvoirListComponent implements OnInit {
 
     this.saving = true;
     this.errorMsg = '';
-    const payload: SalesInvoice = { ...this.avoirForm, companyId: this.companyId, type: 'credit_note' };
+    const payload: SalesInvoice = {
+      ...this.avoirForm,
+      companyId: this.companyId,
+      type: 'credit_note',
+      warehouseId: this.selectedWarehouseId ?? this.defaultWarehouseId ?? undefined
+    };
 
     this.salesService.createAvoirManuel(payload).subscribe({
       next: (created) => {

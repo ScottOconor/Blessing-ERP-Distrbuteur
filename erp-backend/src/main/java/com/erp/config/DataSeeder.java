@@ -2,9 +2,9 @@ package com.erp.config;
 
 import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
-import com.erp.config.entity.CompanyGroup;
+import com.erp.common.entity.Company;
+import com.erp.common.repository.CompanyRepository;
 import com.erp.config.entity.Role;
-import com.erp.config.repository.CompanyGroupRepository;
 import com.erp.config.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,34 +22,51 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class DataSeeder implements ApplicationRunner {
 
-    private final RoleRepository roleRepository;
-    private final CompanyGroupRepository groupRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JdbcTemplate jdbc;
+    private final RoleRepository    roleRepository;
+    private final UserRepository    userRepository;
+    private final CompanyRepository companyRepository;
+    private final PasswordEncoder   passwordEncoder;
+    private final JdbcTemplate      jdbc;
 
-    // Codes des rôles système
-    public static final String SUPER_ADMIN    = "SUPER_ADMIN";
-    public static final String ADMIN          = "ADMIN";
-    public static final String SUPER_AUDITEUR = "SUPER_AUDITEUR";
-    public static final String AUDITEUR       = "AUDITEUR";
-    public static final String CONTROLEUR     = "CONTROLEUR";
+    public static final String SUPER_ADMIN = "SUPER_ADMIN";
+    public static final String ADMIN       = "ADMIN";
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         migrateRolePermissionsSchema();
-        cleanLegacyUsers();
         seedRoles();
-        seedDefaultGroupAndSuperAdmin();
+        seedSuperAdmin();
+        assignDefaultCompanyToOrphanUsers();
     }
 
-    /**
-     * Migration idempotente de la table role_permissions :
-     * - Supprime l'ancienne contrainte unique (role_id, module, action)
-     * - Remplace les resource NULL par 'ALL' (données existantes)
-     * Hibernate ajoute la nouvelle colonne resource et la contrainte (role_id, module, resource, action).
-     */
+    /** Déploiement mono-société : TOUT utilisateur (y compris SUPER_ADMIN/ADMIN) doit être
+     *  rattaché à l'unique société de l'instance. Une version antérieure excluait les comptes
+     *  privilégiés de ce rattachement (l'idée étant qu'ils contournent déjà TenantGuard, donc pas
+     *  besoin de société) — en pratique ça laissait ces comptes avec un companyId NULL dans le
+     *  JWT/la réponse de login, ce qui casse tout code qui lit SecurityUtils.currentCompanyId()
+     *  directement (hors TenantGuard) pour déterminer sous quelle société agir, et le frontend qui
+     *  s'attend à un companyId exploitable après connexion. Incident vécu en clientèle : un
+     *  compte SUPER_ADMIN avec companyId NULL semblait "bloqué"/accès refusé après connexion.
+     *  Tourne à CHAQUE démarrage (pas seulement à l'installation) : se corrige tout seul si ce
+     *  cas se reproduit un jour (nouvel admin créé sans société, restauration de sauvegarde...),
+     *  sans intervention manuelle sur la base. Sans effet tant qu'aucune société n'existe encore
+     *  (première installation avant création de la société via l'IHM). */
+    private void assignDefaultCompanyToOrphanUsers() {
+        Company defaultCompany = companyRepository.findAll().stream()
+                .min(java.util.Comparator.comparing(Company::getId))
+                .orElse(null);
+        if (defaultCompany == null) return;
+
+        userRepository.findAll().stream()
+                .filter(u -> u.getCompany() == null)
+                .forEach(u -> {
+                    u.setCompany(defaultCompany);
+                    userRepository.save(u);
+                    log.info("Utilisateur {} rattaché à la société {}", u.getUsername(), defaultCompany.getId());
+                });
+    }
+
     private void migrateRolePermissionsSchema() {
         jdbc.execute("""
             DO $$
@@ -88,9 +105,7 @@ public class DataSeeder implements ApplicationRunner {
         log.info("Migration role_permissions schema OK");
     }
 
-    /** Supprime les utilisateurs sans rôle créés par l'ancien initialiseur */
     private void cleanLegacyUsers() {
-        // Guard : skip if the table doesn't exist yet (fresh install)
         Boolean exists = jdbc.queryForObject(
             "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users')",
             Boolean.class);
@@ -105,57 +120,20 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedRoles() {
-        seedRole(SUPER_ADMIN,    "Super Administrateur");
-        seedRole(ADMIN,          "Administrateur");
-        seedRole(SUPER_AUDITEUR, "Super Auditeur");
-        seedRole(AUDITEUR,       "Auditeur");
-        seedRole(CONTROLEUR,     "Contrôleur");
+        seedRole(SUPER_ADMIN, "Super Administrateur");
+        seedRole(ADMIN,       "Administrateur");
         log.info("Rôles système vérifiés/seedés");
-    }
-
-    /** Crée les rôles personnalisés par défaut pour un groupe si aucun n'existe encore. */
-    public static void seedDefaultCustomRolesForGroup(RoleRepository roleRepository, CompanyGroup group) {
-        if (roleRepository.existsByGroupAndIsSystemFalse(group)) return;
-        for (String label : new String[]{"Responsable", "Commercial", "Comptable", "Opérateur"}) {
-            roleRepository.save(Role.builder()
-                    .label(label).isSystem(false).group(group).active(true).build());
-        }
-    }
-
-    private void seedDefaultCustomRoles(CompanyGroup group) {
-        boolean created = !roleRepository.existsByGroupAndIsSystemFalse(group);
-        seedDefaultCustomRolesForGroup(roleRepository, group);
-        if (created) log.info("Rôles personnalisés par défaut créés pour le groupe : {}", group.getName());
     }
 
     private void seedRole(String code, String label) {
         if (!roleRepository.existsByCode(code)) {
             roleRepository.save(Role.builder()
-                    .code(code)
-                    .label(label)
-                    .isSystem(true)
-                    .active(true)
-                    .build());
+                    .code(code).label(label).isSystem(true).active(true).build());
             log.info("Rôle créé : {}", code);
         }
     }
 
-    private void seedDefaultGroupAndSuperAdmin() {
-        // Groupe par défaut pour les super admins (équipe dev)
-        CompanyGroup devGroup = groupRepository.findByCode("DEV_GROUP").orElseGet(() -> {
-            CompanyGroup g = groupRepository.save(CompanyGroup.builder()
-                    .name("Groupe Administration Système")
-                    .code("DEV_GROUP")
-                    .description("Groupe interne équipe de développement")
-                    .active(true)
-                    .build());
-            log.info("Groupe dev créé : {}", g.getName());
-            return g;
-        });
-
-        seedDefaultCustomRoles(devGroup);
-
-        // Super admin initial
+    private void seedSuperAdmin() {
         if (!userRepository.existsByUsername("superadmin")) {
             Role superAdminRole = roleRepository.findByCode(SUPER_ADMIN)
                     .orElseThrow(() -> new IllegalStateException("Rôle SUPER_ADMIN introuvable"));
@@ -166,7 +144,6 @@ public class DataSeeder implements ApplicationRunner {
                     .fullName("Super Administrateur")
                     .password(passwordEncoder.encode("Admin@2024!"))
                     .role(superAdminRole)
-                    .group(devGroup)
                     .active(true)
                     .mustChangePassword(true)
                     .build());

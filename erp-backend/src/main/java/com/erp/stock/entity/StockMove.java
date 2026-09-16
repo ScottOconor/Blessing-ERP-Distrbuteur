@@ -6,7 +6,19 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "stock_moves")
+@Table(name = "stock_moves", indexes = {
+    // findAllDoneByCompany / findDoneOrInTransitByCompany / findDoneByCompanyBetween-From-To —
+    // toutes filtrent sur (company_id, state='done') puis trient par id ; sans cet index, chacune
+    // scannait la table entière (des dizaines de milliers de lignes dans une agence active).
+    @Index(name = "idx_stock_moves_company_state", columnList = "company_id,state"),
+    // findDoneByProduct / countMovesForAdjustment / sumIncomingBefore / sumOutgoingBefore /
+    // sumInQtyBetween / sumOutQtyBetween — filtrent toutes sur (product_id, state='done').
+    @Index(name = "idx_stock_moves_product_state", columnList = "product_id,state"),
+    // findByPickingId + le JOIN FETCH m.picking utilisé par findDetailedMovements — Hibernate
+    // crée la contrainte de clé étrangère sur picking_id mais Postgres n'indexe pas
+    // automatiquement les colonnes de FK.
+    @Index(name = "idx_stock_moves_picking", columnList = "picking_id")
+})
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class StockMove {
 

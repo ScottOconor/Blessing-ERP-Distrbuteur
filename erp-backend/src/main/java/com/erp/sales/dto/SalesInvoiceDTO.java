@@ -50,8 +50,12 @@ public class SalesInvoiceDTO {
 
     /** Ristourne TTC déduite */
     private BigDecimal totalRistourne;
-    /** Frais d'enlèvement TTC */
+    /** Frais d'enlèvement TTC (HT + TVA) */
     private BigDecimal fraisEnlevementTTC;
+    /** Frais d'enlèvement HT */
+    private BigDecimal fraisEnlevementHT;
+    /** TVA sur les frais d'enlèvement */
+    private BigDecimal fraisEnlevementTVA;
     /** Précompte total (retenue source) */
     private BigDecimal totalPrecompte;
     /** Total liquide nu = base de calcul ristourne */
@@ -61,10 +65,18 @@ public class SalesInvoiceDTO {
     /** Total taxe Guinness (300 par ligne catégorie Guinness) */
     private BigDecimal totalGuinessTaxe;
 
+    /** Total rabais HT accordés aux clients */
+    private BigDecimal totalRabais;
+    /** Total rabais TTC accordés aux clients, déduit du net à payer */
+    private BigDecimal totalRabaisTTC;
+
     private List<LineDTO> lines;
     private List<RistourneDetailDTO> ristourneDetails;
     private List<InvoicePaymentDTO> payments;
     private LocalDateTime createdAt;
+    private String createdBy;
+    private String updatedBy;
+    private LocalDateTime updatedAt;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class RistourneDetailDTO {
@@ -95,9 +107,19 @@ public class SalesInvoiceDTO {
         private BigDecimal montantTTC;
         private BigDecimal precompte;
         private BigDecimal fraisEnlevement;
+        private BigDecimal fraisEnlevementTVA;
         private BigDecimal prixUnitaireTTC;
         private boolean consigne;
         private String categoryName;
+        private String uomName;
         private BigDecimal guinessTaxe;
+        /** Rabais unitaire HT accordé à ce client pour cet article */
+        private BigDecimal rabaisUnitaire;
+        /** Rabais unitaire TTC = rabaisUnitaire × (1 + TVA% + Précompte%) */
+        private BigDecimal rabaisUnitaireTTC;
+        /** Montant total du rabais HT sur cette ligne */
+        private BigDecimal totalRabaisLigne;
+        /** Montant total du rabais TTC sur cette ligne */
+        private BigDecimal totalRabaisLigneTTC;
     }
 }

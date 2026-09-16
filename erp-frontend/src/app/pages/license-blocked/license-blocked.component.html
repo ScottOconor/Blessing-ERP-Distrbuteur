@@ -1,0 +1,23 @@
+<div class="license-page">
+  <div class="license-card">
+    <span class="material-icons icon">block</span>
+    <h1>Application bloquée sur cette machine</h1>
+
+    @if (status?.status === 'BLOCKED_FINGERPRINT_MISMATCH') {
+      <p>
+        Cette installation ne correspond plus à la machine sur laquelle la licence a été
+        délivrée. Contactez votre fournisseur pour faire réémettre la licence.
+      </p>
+    } @else {
+      <p>{{ status?.message || "Cette installation ne peut pas être utilisée en l'état." }}</p>
+    }
+
+    @if (status?.contactEmail || status?.contactPhone) {
+      <div class="contact">
+        <div class="contact-title">Contact support</div>
+        @if (status?.contactEmail) { <div>{{ status?.contactEmail }}</div> }
+        @if (status?.contactPhone) { <div>{{ status?.contactPhone }}</div> }
+      </div>
+    }
+  </div>
+</div>

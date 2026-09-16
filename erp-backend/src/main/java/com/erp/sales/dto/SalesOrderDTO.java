@@ -33,8 +33,16 @@ public class SalesOrderDTO {
     private BigDecimal totalTTC;
     private BigDecimal totalRemise;
 
+    // Remplis depuis la facture liée quand le bon est confirmé
+    private BigDecimal totalPrecompte;
+    private BigDecimal fraisEnlevementTTC;
+    private BigDecimal totalRabais;
+    private BigDecimal totalRabaisTTC;
+    private BigDecimal netAPayer;
+
     private List<LineDTO> lines;
     private LocalDateTime createdAt;
+    private String createdBy;
 
     // Facture liée (si confirmé)
     private Long invoiceId;
@@ -60,5 +68,8 @@ public class SalesOrderDTO {
         private BigDecimal montantHT;
         private BigDecimal montantTVA;
         private BigDecimal montantTTC;
+        private BigDecimal rabaisUnitaire;
+        private BigDecimal totalRabaisLigne;
+        private BigDecimal totalRabaisLigneTTC;
     }
 }

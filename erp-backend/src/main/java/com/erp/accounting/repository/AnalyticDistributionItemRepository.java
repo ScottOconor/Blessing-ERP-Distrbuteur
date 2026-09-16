@@ -13,4 +13,9 @@ public interface AnalyticDistributionItemRepository extends JpaRepository<Analyt
 
     @Query("SELECT d FROM AnalyticDistributionItem d JOIN FETCH d.analyticAccount WHERE d.moveLine.id = :moveLineId")
     List<AnalyticDistributionItem> findByMoveLineId(@Param("moveLineId") Long moveLineId);
+
+    /** Chargement en masse pour l'affichage de listes d'écritures (cf. AccountingService#getJournalEntries)
+     *  — évite une requête par ligne d'écriture. */
+    @Query("SELECT d FROM AnalyticDistributionItem d JOIN FETCH d.analyticAccount WHERE d.moveLine.id IN :moveLineIds")
+    List<AnalyticDistributionItem> findByMoveLineIdIn(@Param("moveLineIds") List<Long> moveLineIds);
 }

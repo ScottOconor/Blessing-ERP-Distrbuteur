@@ -1,0 +1,441 @@
+<div class="sync-dash">
+
+  <!-- ── HEADER ── -->
+  <div class="dash-header">
+    <div>
+      <h1 class="dash-title">
+        <span class="material-icons">hub</span>
+        Synchronisation Hub
+      </h1>
+      <p class="dash-sub">Suivi de l'envoi des opérations de ce spoke vers le Hub central</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-action btn-hub-test" (click)="testHub()" [disabled]="testingHub">
+        <span class="material-icons" [class.spinning]="testingHub">wifi_tethering</span>
+        {{ testingHub ? 'Test...' : 'Tester Hub' }}
+      </button>
+      <button class="btn-action btn-snapshot" (click)="forceSnapshot()" [disabled]="snapshotting"
+              title="Envoie l'état complet du système au Hub, sans limite d'historique (factures, avoirs, bons de commande...) — à utiliser pour rattraper des documents restés bloqués">
+        <span class="material-icons" [class.spinning]="snapshotting">cloud_upload</span>
+        {{ snapshotting ? 'Snapshot...' : 'Envoyer snapshot' }}
+      </button>
+      <button class="btn-action btn-dispatch" (click)="forceDispatch()" [disabled]="dispatching">
+        <span class="material-icons" [class.spinning]="dispatching">send</span>
+        {{ dispatching ? 'Envoi...' : 'Forcer envoi' }}
+      </button>
+      <button class="btn-action btn-refresh" (click)="loadAll()" [disabled]="loading">
+        <span class="material-icons" [class.spinning]="loading">refresh</span>
+        Rafraîchir
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPI GLOBAUX ── -->
+  <div class="kpi-row">
+    <div class="kpi kpi-pending">
+      <div class="kpi-icon"><span class="material-icons">schedule</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ summary?.pending ?? '—' }}</span>
+        <span class="kpi-lbl">En attente d'envoi</span>
+      </div>
+    </div>
+    <div class="kpi kpi-sent">
+      <div class="kpi-icon"><span class="material-icons">check_circle</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ summary?.sent ?? '—' }}</span>
+        <span class="kpi-lbl">Envoyés au Hub</span>
+      </div>
+    </div>
+    <div class="kpi kpi-failed" [class.kpi-failed-alert]="(summary?.failed ?? 0) > 0">
+      <div class="kpi-icon"><span class="material-icons">error</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ summary?.failed ?? '—' }}</span>
+        <span class="kpi-lbl">Échecs d'envoi</span>
+      </div>
+      @if ((summary?.failed ?? 0) > 0) {
+        <div class="kpi-failed-actions">
+          <button class="btn-retry-all" (click)="retryAll()" [disabled]="retrying">
+            <span class="material-icons">replay</span>
+            {{ retrying ? '...' : 'Réessayer tout' }}
+          </button>
+          <button class="btn-clear-failed" (click)="clearFailed()" [disabled]="clearingFailed"
+                  title="Supprime définitivement ces événements — ils ne remonteront plus jamais au Hub">
+            <span class="material-icons">delete_sweep</span>
+            {{ clearingFailed ? '...' : 'Vider les échecs' }}
+          </button>
+        </div>
+      }
+    </div>
+    <div class="kpi kpi-total">
+      <div class="kpi-icon"><span class="material-icons">swap_horiz</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ summary?.total ?? '—' }}</span>
+        <span class="kpi-lbl">Total opérations</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BARRE DE PROGRESSION EN TEMPS RÉEL ── -->
+  @if (progress) {
+    <div class="progress-band">
+      <div class="progress-meta">
+        <div class="progress-label">
+          <span class="material-icons">sync</span>
+          <strong>Progression globale</strong>
+          <span class="progress-pct">{{ progress.progressPct }}%</span>
+        </div>
+        <div class="progress-detail">
+          <span class="pd-chip pd-sent">
+            <span class="material-icons">check_circle</span>
+            {{ progress.sent }} envoyés
+          </span>
+          <span class="pd-chip pd-pending">
+            <span class="material-icons">schedule</span>
+            {{ progress.pending }} en attente
+          </span>
+          @if (progress.failed > 0) {
+            <span class="pd-chip pd-failed">
+              <span class="material-icons">error</span>
+              {{ progress.failed }} échoués
+            </span>
+          }
+          @if (progress.lastBatchSize > 0) {
+            <span class="pd-chip pd-batch">
+              <span class="material-icons">bolt</span>
+              Dernier batch : {{ progress.lastBatchSent }}/{{ progress.lastBatchSize }}
+            </span>
+          }
+          @if (progress.lastDispatchAt) {
+            <span class="pd-chip pd-time">
+              <span class="material-icons">access_time</span>
+              Dernier envoi : {{ fmtDate(progress.lastDispatchAt) }}
+            </span>
+          }
+        </div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar"
+             [style.width.%]="progress.progressPct"
+             [class.bar-full]="progress.progressPct === 100"
+             [class.bar-warn]="progress.failed > 0">
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── RÉSULTAT TEST HUB ── -->
+  @if (hubTest) {
+    <div class="hub-test-result" [class.hub-ok]="hubTest.reachable" [class.hub-fail]="!hubTest.reachable">
+      <span class="material-icons">{{ hubTest.reachable ? 'check_circle' : 'cancel' }}</span>
+      <div class="hub-test-body">
+        <strong>{{ hubTest.reachable ? 'Broker RabbitMQ accessible' : 'Broker RabbitMQ injoignable' }}</strong>
+        <span class="hub-test-url">{{ hubTest.hubUrl }}</span>
+        <span class="hub-test-url" style="opacity:0.6">Exchange : {{ hubTest.exchange }} · Queue : {{ hubTest.queue }}</span>
+        @if (hubTest.reachable && hubTest.latencyMs !== null) {
+          <span class="hub-test-latency">{{ hubTest.latencyMs }} ms</span>
+        }
+        @if (!hubTest.reachable) {
+          <span class="hub-test-error">{{ hubTest.message }}</span>
+        }
+      </div>
+      <button class="btn-icon" (click)="hubTest = null" title="Fermer"><span class="material-icons">close</span></button>
+    </div>
+  }
+
+  <!-- ── MINI STATS PAR MODULE ── -->
+  @if (summary) {
+    <div class="module-stats-row">
+      @for (tab of tabs; track tab.id) {
+        <div class="module-card" [class.active]="activeTab === tab.id" (click)="selectTab(tab.id)">
+          <div class="mc-header">
+            <span class="material-icons mc-icon">{{ tab.icon }}</span>
+            <span class="mc-label">{{ tab.label }}</span>
+          </div>
+          <div class="mc-badges">
+            @if (moduleStats(tab.id).pending > 0) {
+              <span class="mc-badge b-pending">{{ moduleStats(tab.id).pending }} en attente</span>
+            }
+            @if (moduleStats(tab.id).failed > 0) {
+              <span class="mc-badge b-failed">{{ moduleStats(tab.id).failed }} échoué(s)</span>
+            }
+            @if (moduleStats(tab.id).pending === 0 && moduleStats(tab.id).failed === 0) {
+              <span class="mc-badge b-ok">
+                <span class="material-icons" style="font-size:12px">check</span>
+                OK — {{ moduleStats(tab.id).sent }} envoyé(s)
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── TABLE ÉVÉNEMENTS ── -->
+  <div class="events-section">
+
+    <!-- Onglets modules -->
+    <div class="events-toolbar">
+      <div class="tabs">
+        @for (tab of tabs; track tab.id) {
+          <button class="tab-btn" [class.active]="activeTab === tab.id" (click)="selectTab(tab.id)">
+            <span class="material-icons">{{ tab.icon }}</span>
+            {{ tab.label }}
+            @if (moduleStats(tab.id).pending > 0) {
+              <span class="tab-badge b-pending">{{ moduleStats(tab.id).pending }}</span>
+            }
+            @if (moduleStats(tab.id).failed > 0) {
+              <span class="tab-badge b-failed">{{ moduleStats(tab.id).failed }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <!-- Filtres statut -->
+      <div class="status-filters">
+        @for (f of statusFilters; track f.value) {
+          <button class="filter-btn" [class.active]="activeStatus === f.value"
+                  [class]="'filter-btn filter-btn-' + f.cls" (click)="selectStatus(f.value)">
+            {{ f.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table class="events-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Opération</th>
+            <th>Réf. entité</th>
+            <th>Statut</th>
+            <th>Date opération</th>
+            <th>Dernière tentative</th>
+            <th>Tentatives</th>
+            <th>Erreur</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading) {
+            @for (i of [1,2,3,4,5]; track i) {
+              <tr class="skel-row">
+                <td colspan="9"><div class="skel-line"></div></td>
+              </tr>
+            }
+          } @else if (events.length === 0) {
+            <tr>
+              <td colspan="9" class="empty-row">
+                <span class="material-icons">inbox</span>
+                Aucune opération trouvée
+              </td>
+            </tr>
+          } @else {
+            @for (ev of events; track ev.id) {
+              <tr class="event-row clickable-row"
+                  [class.row-failed]="ev.status === 'FAILED'"
+                  [class.row-selected]="detailEvent?.id === ev.id"
+                  (click)="openDetail(ev)">
+                <td class="cell-id">{{ ev.id }}</td>
+                <td class="cell-label">
+                  {{ ev.eventLabel }}
+                  @if (activeTab === 'TOUS') {
+                    <span class="mod-chip mod-{{ ev.eventModule }}">{{ ev.eventModule }}</span>
+                  }
+                </td>
+                <td class="cell-ref">
+                  <span class="ref-chip">{{ ev.entityId }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class]="statusClass(ev.status)">
+                    {{ statusLabel(ev.status) }}
+                  </span>
+                </td>
+                <td class="cell-date">{{ fmtDate(ev.createdAt) }}</td>
+                <td class="cell-date">{{ fmtDate(ev.lastAttemptAt) }}</td>
+                <td class="cell-retries">
+                  @if (ev.retryCount > 0) {
+                    <span class="retry-count" [class.high]="ev.retryCount >= 3">{{ ev.retryCount }}</span>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td class="cell-error">
+                  @if (ev.errorMessage) {
+                    <span class="error-msg" [title]="ev.errorMessage">
+                      {{ ev.errorMessage.length > 40 ? ev.errorMessage.slice(0, 40) + '…' : ev.errorMessage }}
+                    </span>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td class="cell-action">
+                  @if (ev.status === 'FAILED') {
+                    <button class="btn-retry-one" (click)="retryOne(ev, $event)"
+                            [disabled]="retryingId === ev.id">
+                      <span class="material-icons">{{ retryingId === ev.id ? 'hourglass_empty' : 'replay' }}</span>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button class="page-btn" (click)="prevPage()" [disabled]="currentPage === 0">
+          <span class="material-icons">chevron_left</span>
+        </button>
+        <span class="page-info">Page {{ currentPage + 1 }} / {{ totalPages }} ({{ totalEvents }} entrées)</span>
+        <button class="page-btn" (click)="nextPage()" [disabled]="currentPage + 1 >= totalPages">
+          <span class="material-icons">chevron_right</span>
+        </button>
+      </div>
+    }
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANNEAU DE DÉTAIL (DRAWER LATÉRAL)
+══════════════════════════════════════════════════════ -->
+@if (detailEvent) {
+  <!-- Overlay -->
+  <div class="detail-overlay" (click)="closeDetail()"></div>
+
+  <!-- Drawer -->
+  <aside class="detail-drawer">
+
+    <!-- En-tête drawer -->
+    <div class="detail-header">
+      <div class="detail-title-row">
+        <span class="badge" [class]="statusClass(detailEvent.status)">
+          {{ statusLabel(detailEvent.status) }}
+        </span>
+        <span class="detail-module-chip">{{ detailEvent.eventModule }}</span>
+      </div>
+      <h2 class="detail-event-label">{{ detailEvent.eventLabel }}</h2>
+      <button class="btn-close-detail" (click)="closeDetail()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- Métadonnées -->
+      <section class="detail-section">
+        <h3 class="section-title">
+          <span class="material-icons">info</span>
+          Informations
+        </h3>
+        <dl class="detail-dl">
+          <div class="dl-row">
+            <dt>ID événement</dt>
+            <dd><span class="mono-chip">{{ detailEvent.id }}</span></dd>
+          </div>
+          <div class="dl-row">
+            <dt>Spoke</dt>
+            <dd><span class="mono-chip">{{ detailEvent.spokeId }}</span></dd>
+          </div>
+          <div class="dl-row">
+            <dt>Réf. entité</dt>
+            <dd><span class="mono-chip">{{ detailEvent.entityId }}</span></dd>
+          </div>
+          <div class="dl-row">
+            <dt>Type technique</dt>
+            <dd><span class="mono-chip small">{{ detailEvent.eventType }}</span></dd>
+          </div>
+          <div class="dl-row">
+            <dt>Date de création</dt>
+            <dd>{{ fmtDate(detailEvent.createdAt) }}</dd>
+          </div>
+          @if (detailEvent.lastAttemptAt) {
+            <div class="dl-row">
+              <dt>Dernière tentative</dt>
+              <dd>{{ fmtDate(detailEvent.lastAttemptAt) }}</dd>
+            </div>
+          }
+          @if (detailEvent.retryCount > 0) {
+            <div class="dl-row">
+              <dt>Tentatives</dt>
+              <dd>
+                <span class="retry-count" [class.high]="detailEvent.retryCount >= 3">
+                  {{ detailEvent.retryCount }} / 5
+                </span>
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
+
+      <!-- Message d'erreur -->
+      @if (detailEvent.errorMessage) {
+        <section class="detail-section">
+          <h3 class="section-title error-title">
+            <span class="material-icons">error</span>
+            Erreur d'envoi
+          </h3>
+          <div class="error-block">{{ detailEvent.errorMessage }}</div>
+        </section>
+      }
+
+      <!-- Action retry -->
+      @if (detailEvent.status === 'FAILED') {
+        <div class="detail-actions">
+          <button class="btn-action btn-dispatch"
+                  (click)="retryOne(detailEvent, $event); closeDetail()"
+                  [disabled]="retryingId === detailEvent.id">
+            <span class="material-icons">replay</span>
+            Réessayer cet envoi
+          </button>
+        </div>
+      }
+
+      <!-- Payload -->
+      <section class="detail-section">
+        <h3 class="section-title">
+          <span class="material-icons">data_object</span>
+          Données transmises au Hub
+        </h3>
+
+        @if (detailLoading) {
+          <div class="payload-loading">
+            <span class="material-icons spinning">refresh</span>
+            Chargement...
+          </div>
+        } @else if (!detailPayload) {
+          <p class="text-muted">Aucune donnée disponible.</p>
+        } @else if (isObject(detailPayload) && !isArray(detailPayload)) {
+          <!-- Vue structurée clé/valeur -->
+          <div class="payload-kv">
+            @for (key of payloadKeys(); track key) {
+              <div class="kv-row">
+                <span class="kv-key">{{ key }}</span>
+                <span class="kv-val">
+                  @if (isObject(payloadValue(key))) {
+                    <span class="kv-nested">{{ payloadValue(key) | json }}</span>
+                  } @else {
+                    {{ payloadValue(key) ?? '—' }}
+                  }
+                </span>
+              </div>
+            }
+          </div>
+          <!-- JSON brut dépliable -->
+          <details class="raw-json-details">
+            <summary>Voir JSON brut</summary>
+            <pre class="payload-raw">{{ formatPayload() }}</pre>
+          </details>
+        } @else {
+          <pre class="payload-raw">{{ formatPayload() }}</pre>
+        }
+      </section>
+
+    </div>
+  </aside>
+}

@@ -8,51 +8,37 @@
 
     <div class="nav-divider"></div>
 
-    <div class="cfg-nav">
-      @for (item of navItems; track item.route) {
-        <a class="nav-link" [class.active]="isActive(item.route)" (click)="router.navigate([item.route])">
-          <span class="material-icons">{{ item.icon }}</span>
-          {{ item.label }}
-        </a>
-      }
-    </div>
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
 
-    <div class="cfg-user">
-      @if (isCentralized) {
-        <button class="btn-group-home" (click)="router.navigate(['/group-home'])" title="Espace groupe">
-          <span class="material-icons">corporate_fare</span>
-          <span>Groupe</span>
-        </button>
-      }
-      @if (isCentralized) {
-        <div class="company-selector" [class.open]="showCompanyPicker">
-          <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
-            <span class="material-icons">business</span>
-            <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
-            <span class="material-icons arrow">expand_more</span>
-          </button>
-          @if (showCompanyPicker) {
-            <div class="company-dropdown">
-              @for (c of companies; track c.id) {
-                <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
-                  <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
-                  <span class="company-opt-name">{{ c.name }}</span>
-                  @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
-                </button>
-              }
-            </div>
-          }
-        </div>
-      }
-      <div class="user-badge">
-        <span class="user-initials">{{ authService.getUserInitials() }}</span>
+    <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+      <div class="cfg-nav nav-links">
+        @for (item of navItems; track item.route) {
+          <a class="nav-link" [class.active]="isActive(item.route)" (click)="navigateTo(item.route)">
+            <span class="material-icons">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        }
       </div>
-      <span class="user-name">{{ authService.getUserDisplayName() }}</span>
-      <button class="btn-logout" (click)="logout()" title="Déconnexion">
-        <span class="material-icons">logout</span>
-      </button>
+
+      <div class="cfg-user nav-right">
+        <div class="user-badge">
+          <span class="user-initials">{{ authService.getUserInitials() }}</span>
+        </div>
+        <span class="user-name">{{ authService.getUserDisplayName() }}</span>
+        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <button class="btn-logout" (click)="logout()" title="Déconnexion">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
     </div>
   </nav>
+  @if (mobileMenuOpen) {
+    <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
+  }
 
   <main class="cfg-content">
     <router-outlet />

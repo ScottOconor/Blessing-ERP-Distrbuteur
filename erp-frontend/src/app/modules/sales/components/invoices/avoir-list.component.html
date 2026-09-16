@@ -35,6 +35,23 @@
     <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
+  <!-- ── Regrouper par ──────────────────────────────────────── -->
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
@@ -58,25 +75,62 @@
           </tr>
         </thead>
         <tbody>
-          @for (avoir of filteredAvoirs; track avoir.id) {
-            <tr class="clickable-row" (click)="openAvoir(avoir)">
-              <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
-              <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
-              <td>{{ avoir.partnerName }}</td>
-              <td>
-                @if (avoir.originalInvoiceName) {
-                  <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
-              <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
-              <td>
-                @if (avoir.accountMoveName) {
-                  <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
-            </tr>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="4">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+                <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
+                <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
+                <td></td><td></td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (avoir of getGroupItems(row.key); track avoir.id) {
+                  <tr class="detail-row clickable-row" (click)="openAvoir(avoir)">
+                    <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
+                    <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ avoir.partnerName }}</td>
+                    <td>
+                      @if (avoir.originalInvoiceName) {
+                        <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
+                    <td>
+                      @if (avoir.accountMoveName) {
+                        <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
+                  </tr>
+                }
+              }
+            }
+          } @else {
+            @for (avoir of filteredAvoirs; track avoir.id) {
+              <tr class="clickable-row" (click)="openAvoir(avoir)">
+                <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
+                <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ avoir.partnerName }}</td>
+                <td>
+                  @if (avoir.originalInvoiceName) {
+                    <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
+                <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
+                <td>
+                  @if (avoir.accountMoveName) {
+                    <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
+              </tr>
+            }
           }
         </tbody>
       </table>
@@ -119,6 +173,14 @@
             <select [(ngModel)]="avoirForm.journalId" class="form-control">
               @for (j of journals; track j.id) {
                 <option [value]="j.id">{{ j.code }} - {{ j.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Entrepôt</label>
+            <select [(ngModel)]="selectedWarehouseId" (ngModelChange)="onWarehouseChange()" class="form-control">
+              @for (w of warehouses; track w.id) {
+                <option [ngValue]="w.id">{{ w.name }}</option>
               }
             </select>
           </div>

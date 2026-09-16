@@ -16,8 +16,6 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
   const module: string | undefined = route.data['permModule'];
   if (!module) return true;
 
-  if (auth.isCentralized()) return true;
-
   // CONFIG : toujours visible (au moins "Changer mot de passe")
   if (module === 'CONFIG') return true;
 

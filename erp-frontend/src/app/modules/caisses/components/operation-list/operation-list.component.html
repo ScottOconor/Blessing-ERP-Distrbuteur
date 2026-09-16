@@ -1,0 +1,93 @@
+<div class="op-list-page">
+  <div class="page-header">
+    <div class="page-title">
+      <span class="material-icons" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'">
+        {{ type === 'ENTREE' ? 'add_circle' : 'remove_circle' }}
+      </span>
+      <div>
+        <h1>Historique des {{ type === 'ENTREE' ? 'entrées' : 'sorties' }}</h1>
+        <p>{{ operations.length }} opération(s)</p>
+      </div>
+    </div>
+    <button class="btn-new" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'" (click)="newOperation()">
+      <span class="material-icons">add</span>
+      Nouvelle {{ type === 'ENTREE' ? 'entrée' : 'sortie' }}
+    </button>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-row">
+    <select [(ngModel)]="filterCaisseId" (change)="load()">
+      <option [value]="0">Toutes les caisses</option>
+      @for (c of caisses; track c.id) {
+        <option [value]="c.id">{{ c.name }}</option>
+      }
+    </select>
+    <div class="date-range">
+      <span class="material-icons">date_range</span>
+      <input type="date" [(ngModel)]="filterDateFrom" (change)="load()" placeholder="Du" />
+      <span>→</span>
+      <input type="date" [(ngModel)]="filterDateTo" (change)="load()" placeholder="Au" />
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-row"><span class="material-icons spin">sync</span> Chargement…</div>
+  }
+
+  @if (!loading && operations.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">{{ type === 'ENTREE' ? 'add_circle' : 'remove_circle' }}</span>
+      <p>Aucune {{ type === 'ENTREE' ? 'entrée' : 'sortie' }} enregistrée.</p>
+    </div>
+  }
+
+  @if (!loading && operations.length > 0) {
+    <div class="table-wrap">
+      <table class="op-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Caisse</th>
+            <th>Référence</th>
+            <th>Libellé</th>
+            <th>Tiers</th>
+            <th>Compte contrepartie</th>
+            <th class="text-right">Montant</th>
+            <th>Par</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (op of operations; track op.id) {
+            <tr>
+              <td class="date-col">{{ op.date | date:'dd/MM/yyyy' }}</td>
+              <td class="fw-bold">{{ op.caisseName }}</td>
+              <td class="mono">{{ op.reference || '—' }}</td>
+              <td>{{ op.libelle || '—' }}</td>
+              <td>{{ op.tiersName || '—' }}</td>
+              <td class="mono">
+                @if (op.compteContrepartieCode) {
+                  <span class="compte-badge">{{ op.compteContrepartieCode }}</span>
+                }
+                {{ op.compteContrepartieName || '—' }}
+              </td>
+              <td class="text-right amount" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'">
+                {{ formatAmount(op.montant) }}
+              </td>
+              <td class="text-muted small">{{ op.createdBy || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" class="total-label">Total</td>
+            <td class="text-right total-amount" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'">
+              {{ formatAmount(totalMontant) }}
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+</div>

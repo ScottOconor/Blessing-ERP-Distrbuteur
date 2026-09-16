@@ -7,6 +7,10 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,7 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "purchase_invoices")
+@Table(name = "purchase_invoices", indexes = {
+    @Index(name = "idx_purchase_invoices_company_type",    columnList = "company_id, type"),
+    @Index(name = "idx_purchase_invoices_partner_company", columnList = "partner_id, company_id")
+})
+@EntityListeners(AuditingEntityListener.class)
 @Data
 @Builder
 @NoArgsConstructor
@@ -34,6 +42,11 @@ public class PurchaseInvoice {
 
     /** draft / posted / paid / cancelled */
     private String state;
+
+    /** Verrou optimiste — empêche une double validation concurrente (deux requêtes passant
+     *  toutes les deux le contrôle state=="draft" avant de générer l'écriture comptable). */
+    @Version
+    private Long version;
 
     /** invoice (facture fournisseur) / credit_note (avoir fournisseur) */
     private String type;
@@ -112,10 +125,50 @@ public class PurchaseInvoice {
     @Column(name = "net_a_payer", precision = 20, scale = 2)
     private BigDecimal netAPayer;
 
+    /** Total des rabais/RRR obtenus des fournisseurs (HT) sur cette facture */
+    @Column(name = "total_rabais_ht", precision = 20, scale = 2)
+    private BigDecimal totalRabaisHT;
+
+    /** Total des rabais/RRR obtenus (TTC) — déduit du net à payer (comme en ventes) */
+    @Column(name = "total_rabais_ttc", precision = 20, scale = 2)
+    private BigDecimal totalRabaisTTC;
+
     /** Entrepôt de réception (obligatoire sur les factures fournisseurs) */
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
     @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // ── Traçabilité des actions métier ─────────────────────────────────────
+    @Column(name = "confirmed_by")
+    private String confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
+
+    @Column(name = "cancelled_by")
+    private String cancelledBy;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    /** Non null = les écritures comptables de cette facture (+ écriture de stock pour les avoirs)
+     *  ont été extournées via reverseInvoiceEntries(). Ne dit rien des paiements individuels,
+     *  extournables séparément — voir PurchaseInvoicePayment.state="reversed". */
+    @Column(name = "entries_reversed_at")
+    private LocalDateTime entriesReversedAt;
 }

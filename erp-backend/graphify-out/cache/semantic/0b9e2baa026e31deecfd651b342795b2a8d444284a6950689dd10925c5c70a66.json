@@ -1,0 +1,1 @@
+{"nodes": [{"id": "sync_rabbitmqconfig_rabbitmqconfig", "label": "RabbitMQConfig", "file_type": "code", "source_file": "src/main/java/com/erp/sync/RabbitMQConfig.java", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

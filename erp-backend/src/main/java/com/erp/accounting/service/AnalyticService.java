@@ -6,6 +6,7 @@ import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
+import com.erp.common.service.TenantGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class AnalyticService {
     private final CompanyRepository companyRepo;
     private final AccountMoveRepository moveRepo;
     private final AccountMoveLineRepository moveLineRepo;
+    private final TenantGuard tenantGuard;
 
     // ===================== COMPTES ANALYTIQUES =====================
 
@@ -53,7 +55,9 @@ public class AnalyticService {
     }
 
     public AnalyticAccountDTO createAccount(AnalyticAccountDTO dto) {
-        Company company = companyRepo.findById(dto.getCompanyId())
+        // dto.getCompanyId() vient du client — ne jamais lui faire confiance pour choisir sous
+        // quelle société le compte analytique est créé (même correctif que les autres services).
+        Company company = companyRepo.findById(com.erp.auth.SecurityUtils.currentCompanyId())
                 .orElseThrow(() -> new EntityNotFoundException("Company not found"));
 
         AnalyticAccount parent = null;
@@ -77,6 +81,7 @@ public class AnalyticService {
     public AnalyticAccountDTO updateAccount(Long id, AnalyticAccountDTO dto) {
         AnalyticAccount account = analyticAccountRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Analytic account not found: " + id));
+        tenantGuard.check(account.getCompany() != null ? account.getCompany().getId() : null);
 
         account.setCode(dto.getCode());
         account.setName(dto.getName());
@@ -96,6 +101,7 @@ public class AnalyticService {
     public void deleteAccount(Long id) {
         AnalyticAccount account = analyticAccountRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Analytic account not found: " + id));
+        tenantGuard.check(account.getCompany() != null ? account.getCompany().getId() : null);
         account.setActive(false);
         analyticAccountRepo.save(account);
     }

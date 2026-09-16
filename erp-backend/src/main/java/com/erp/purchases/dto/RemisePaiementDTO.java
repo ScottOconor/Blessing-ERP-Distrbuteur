@@ -20,15 +20,28 @@ public class RemisePaiementDTO {
     /** Facture remise générée (FA-xxx) */
     private Long generatedInvoiceId;
     private String generatedInvoiceName;
+    private String typeRemise;
     private Long companyId;
     private String notes;
     private LocalDateTime createdAt;
     private List<LineDTO> lines;
+    /** Lignes par article individuel */
+    private List<ArticleLineDTO> articleLines;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class LineDTO {
         private Long id;
         private Long categoryId;
+        private String categoryName;
+        private BigDecimal quantite;
+        private BigDecimal montantUnitaire;
+        private BigDecimal montantTotal;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class ArticleLineDTO {
+        private String productCode;
+        private String productName;
         private String categoryName;
         private BigDecimal quantite;
         private BigDecimal montantUnitaire;

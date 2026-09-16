@@ -1,0 +1,4 @@
+# External config (contains secrets)
+config/application.properties
+logs/
+target/

@@ -70,7 +70,7 @@ export class MovementAnalysisComponent implements OnInit {
 
   applyFilter(): void {
     let result = [...this.moves];
-    if (this.typeFilter) result = result.filter(m => m.pickingTypeCode === this.typeFilter);
+    if (this.typeFilter) result = result.filter(m => (m.moveDirection || m.pickingTypeCode) === this.typeFilter);
     const q = this.search.toLowerCase().trim();
     if (q) result = result.filter(m =>
       (m.productName || '').toLowerCase().includes(q) ||
@@ -106,8 +106,8 @@ export class MovementAnalysisComponent implements OnInit {
           subLabel = undefined;
           break;
         case 'type':
-          key   = m.pickingTypeCode || 'unknown';
-          label = this.typeLabel(m.pickingTypeCode);
+          key   = (m.moveDirection || m.pickingTypeCode) || 'unknown';
+          label = this.typeLabel(m.moveDirection || m.pickingTypeCode);
           break;
         case 'month':
           if (m.dateDone) {
@@ -135,10 +135,11 @@ export class MovementAnalysisComponent implements OnInit {
       const g = map.get(key)!;
       const qty = m.qtyDone || m.qtyDemanded || 0;
       const val = m.subtotalValue || 0;
+      const dir = m.moveDirection || m.pickingTypeCode || 'internal';
 
-      if (m.pickingTypeCode === 'incoming') {
+      if (dir === 'incoming') {
         g.qtyEntrees += qty; g.valEntrees += val;
-      } else if (m.pickingTypeCode === 'outgoing') {
+      } else if (dir === 'outgoing') {
         g.qtySorties += qty; g.valSorties += val;
       } else {
         g.qtyTransferts += qty; g.valTransferts += val;

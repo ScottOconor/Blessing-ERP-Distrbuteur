@@ -6,7 +6,9 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "purchase_invoice_lines")
+@Table(name = "purchase_invoice_lines", indexes = {
+    @Index(name = "idx_purchase_invoice_lines_invoice_id", columnList = "invoice_id")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,6 +24,9 @@ public class PurchaseInvoiceLine {
     private PurchaseInvoice invoice;
 
     private String productCode;
+
+    @Column(name = "product_id")
+    private Long productId;
 
     @Column(nullable = false)
     private String description;
@@ -66,4 +71,12 @@ public class PurchaseInvoiceLine {
     /** Catégorie de produit (pour calcul remise fournisseur) */
     @Column(name = "category_id")
     private Long categoryId;
+
+    /** Rabais unitaire HT obtenu du fournisseur (standardPrice - prixFournisseur) */
+    @Column(name = "rabais_unitaire", precision = 20, scale = 4)
+    private BigDecimal rabaisUnitaire;
+
+    /** Montant total du rabais HT sur cette ligne = rabaisUnitaire × quantité */
+    @Column(name = "total_rabais_ligne", precision = 20, scale = 2)
+    private BigDecimal totalRabaisLigne;
 }

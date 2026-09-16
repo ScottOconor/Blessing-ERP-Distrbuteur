@@ -7,6 +7,10 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,7 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sales_invoices")
+@Table(name = "sales_invoices", indexes = {
+    @Index(name = "idx_sales_invoices_company_type",    columnList = "company_id, type"),
+    @Index(name = "idx_sales_invoices_partner_company", columnList = "partner_id, company_id")
+})
+@EntityListeners(AuditingEntityListener.class)
 @Data
 @Builder
 @NoArgsConstructor
@@ -34,6 +42,11 @@ public class SalesInvoice {
 
     /** draft / posted / paid / cancelled */
     private String state;
+
+    /** Verrou optimiste — empêche une double validation concurrente (deux requêtes passant
+     *  toutes les deux le contrôle state=="draft" avant de générer l'écriture comptable). */
+    @Version
+    private Long version;
 
     /** invoice (facture) / credit_note (avoir) */
     private String type;
@@ -96,9 +109,17 @@ public class SalesInvoice {
     @Column(name = "total_ristourne", precision = 20, scale = 2)
     private BigDecimal totalRistourne;
 
-    /** Total frais d'enlèvement TTC */
+    /** Total frais d'enlèvement TTC (HT + TVA) */
     @Column(name = "frais_enlevement_ttc", precision = 20, scale = 2)
     private BigDecimal fraisEnlevementTTC;
+
+    /** Total frais d'enlèvement HT */
+    @Column(name = "frais_enlevement_ht", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementHT;
+
+    /** Total TVA sur les frais d'enlèvement */
+    @Column(name = "frais_enlevement_tva", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementTVA;
 
     /** Total précompte (retenue à la source) */
     @Column(name = "total_precompte", precision = 20, scale = 2)
@@ -119,10 +140,46 @@ public class SalesInvoice {
     @Column(name = "total_guinness_taxe", precision = 20, scale = 2)
     private BigDecimal totalGuinessTaxe;
 
+    /** Total rabais HT accordés sur cette facture (= Σ totalRabaisLigne) */
+    @Column(name = "total_rabais", precision = 20, scale = 2)
+    @Builder.Default
+    private BigDecimal totalRabais = BigDecimal.ZERO;
+
+    /** Total rabais TTC accordés, déduit du net à payer */
+    @Column(name = "total_rabais_ttc", precision = 20, scale = 2)
+    @Builder.Default
+    private BigDecimal totalRabaisTTC = BigDecimal.ZERO;
+
     /** Entrepôt de départ pour les mouvements de stock (obligatoire sur les factures) */
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
     @CreationTimestamp
+    @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private String updatedBy;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // ── Traçabilité des actions métier ─────────────────────────────────────
+    @Column(name = "confirmed_by")
+    private String confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
+
+    @Column(name = "cancelled_by")
+    private String cancelledBy;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 }

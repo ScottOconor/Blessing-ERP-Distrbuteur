@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -45,8 +46,10 @@ public class RemiseController {
     // ===== Règlements remises =====
 
     @GetMapping("/paiements")
-    public ResponseEntity<List<RemisePaiementDTO>> getAllPaiements(@RequestParam Long companyId) {
-        return ResponseEntity.ok(service.getAllPaiements(companyId));
+    public ResponseEntity<List<RemisePaiementDTO>> getAllPaiements(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) String type) {
+        return ResponseEntity.ok(service.getAllPaiements(companyId, type));
     }
 
     @GetMapping("/paiements/{id}")
@@ -81,8 +84,9 @@ public class RemiseController {
 
     @GetMapping("/paiements/grouped")
     public ResponseEntity<List<RemiseService.PartnerGroup>> getGrouped(
-            @RequestParam Long companyId) {
-        return ResponseEntity.ok(service.getGroupedPaiements(companyId));
+            @RequestParam Long companyId,
+            @RequestParam(required = false) String type) {
+        return ResponseEntity.ok(service.getGroupedPaiements(companyId, type));
     }
 
     @PostMapping("/paiements/generate-facture")
@@ -93,5 +97,30 @@ public class RemiseController {
         List<Long> ids = ((List<Number>) req.get("paiementIds"))
                 .stream().map(Number::longValue).toList();
         return ResponseEntity.ok(service.generateFacture(ids, companyId));
+    }
+
+    @PostMapping("/paiements/generate-by-quarter")
+    public ResponseEntity<Map<String, Object>> generateByQuarter(@RequestBody Map<String, Object> req) {
+        Long companyId = Long.valueOf(req.get("companyId").toString());
+        int quarter = Integer.parseInt(req.get("quarter").toString());
+        int year = Integer.parseInt(req.get("year").toString());
+        return ResponseEntity.ok(service.generateByQuarter(quarter, year, companyId));
+    }
+
+    @PostMapping("/paiements/generate-by-period")
+    public ResponseEntity<Map<String, Object>> generateByPeriod(@RequestBody Map<String, Object> req) {
+        Long companyId = Long.valueOf(req.get("companyId").toString());
+        LocalDate dateStart = LocalDate.parse(req.get("dateStart").toString());
+        LocalDate dateEnd = LocalDate.parse(req.get("dateEnd").toString());
+        return ResponseEntity.ok(service.generateByPeriod(dateStart, dateEnd, companyId));
+    }
+
+    @GetMapping("/rapport")
+    public ResponseEntity<List<RemisePaiementDTO>> getRapport(
+            @RequestParam Long companyId,
+            @RequestParam String dateFrom,
+            @RequestParam String dateTo) {
+        return ResponseEntity.ok(service.getRapportPeriode(
+                LocalDate.parse(dateFrom), LocalDate.parse(dateTo), companyId));
     }
 }

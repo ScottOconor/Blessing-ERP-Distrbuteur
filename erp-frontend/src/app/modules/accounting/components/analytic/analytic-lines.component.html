@@ -1,119 +1,138 @@
 <div class="page-container">
 
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">
-        <span class="material-icons">receipt_long</span>
-        Grand Livre Analytique
-      </h1>
-      <p class="page-subtitle">Détail des mouvements analytiques par compte</p>
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="page-header no-print">
+    <div class="header-left">
+      <span class="material-icons page-icon">receipt_long</span>
+      <div>
+        <h1 class="page-title">Journal Analytique</h1>
+        <p class="page-sub">Détail des mouvements par compte analytique</p>
+      </div>
     </div>
+    @if (lines.length > 0) {
+      <div class="header-actions">
+        <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénérer depuis les écritures validées">
+          <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
+          {{ recalculating ? 'Recalcul…' : 'Recalculer' }}
+        </button>
+      </div>
+    }
   </div>
 
-  <!-- FILTRES -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <div class="form-row cols-4">
-        <div class="form-group">
-          <label>Compte analytique</label>
-          <select class="form-control" [(ngModel)]="filters.analyticAccountId">
-            <option [ngValue]="null">— Tous —</option>
-            @for (a of analyticAccounts; track a.id) {
-              <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Du</label>
-          <input type="date" class="form-control" [(ngModel)]="filters.from">
-        </div>
-        <div class="form-group">
-          <label>Au</label>
-          <input type="date" class="form-control" [(ngModel)]="filters.to">
-        </div>
-        <div class="form-group" style="display:flex;align-items:flex-end;gap:6px">
-          <button class="btn btn-primary" (click)="load()" style="flex:1">
-            <span class="material-icons">search</span>
+  <!-- ══ FILTRES ══════════════════════════════════════════════════════════ -->
+  <div class="filters-card no-print">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Compte analytique</label>
+        <select class="form-ctl" [(ngModel)]="filters.analyticAccountId">
+          <option [ngValue]="null">– Tous –</option>
+          @for (a of analyticAccounts; track a.id) {
+            <option [ngValue]="a.id">{{ a.code }} – {{ a.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Du</label>
+        <input type="date" class="form-ctl" [(ngModel)]="filters.from">
+      </div>
+      <div class="filter-group">
+        <label>au</label>
+        <input type="date" class="form-ctl" [(ngModel)]="filters.to">
+      </div>
+      <div class="filter-group filter-btn-col">
+        <label>&nbsp;</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn-generate" (click)="load()" [disabled]="loading">
+            @if (loading) { <span class="btn-spinner"></span> }
+            @else { <span class="material-icons">search</span> }
             Rechercher
           </button>
-          <button class="btn btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénérer les lignes depuis les écritures validées">
-            <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
-          </button>
+          @if (lines.length === 0) {
+            <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénérer depuis les écritures validées">
+              <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
+            </button>
+          }
         </div>
       </div>
     </div>
   </div>
 
-  <!-- RÉSULTATS -->
-  <div class="card">
-    <div class="card-header">
-      <h3 style="font-size:14px">
-        <span class="material-icons" style="font-size:18px;color:#714B67">table_rows</span>
-        Lignes analytiques ({{ lines.length }})
-      </h3>
+  <!-- ══ RÉSULTATS ══════════════════════════════════════════════════════ -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <p>Chargement…</p>
     </div>
-    <div class="card-body" style="padding:0;overflow-x:auto">
-      @if (loading) {
-        <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
-      } @else if (lines.length === 0) {
-        <div style="text-align:center;padding:40px;color:#aaa">
-          <span class="material-icons" style="font-size:40px;display:block;margin-bottom:8px">receipt_long</span>
-          Aucune ligne analytique sur la période
+
+  } @else if (lines.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">receipt_long</span>
+      <p>Aucune ligne analytique sur la période sélectionnée</p>
+    </div>
+
+  } @else {
+    <div class="content-card">
+      <div class="content-card-header">
+        <div class="card-title-left">
+          <span class="material-icons" style="color:#2563eb;font-size:20px">table_rows</span>
+          <span>Lignes analytiques</span>
+          <span class="badge-count">{{ lines.length }}</span>
         </div>
-      } @else {
-        <table class="data-table">
+      </div>
+      <div class="table-wrap">
+        <table class="gl-table">
           <thead>
             <tr>
               <th>Date</th>
               <th>Compte analytique</th>
               <th>Compte général</th>
               <th>Libellé</th>
-              <th style="text-align:right">Débit</th>
-              <th style="text-align:right">Crédit</th>
+              <th class="r">Débit</th>
+              <th class="r">Crédit</th>
             </tr>
           </thead>
           <tbody>
             @for (line of lines; track line.id) {
               <tr>
-                <td>{{ line.date | date:'dd/MM/yyyy' }}</td>
+                <td class="date-col">{{ line.date | date:'dd/MM/yyyy' }}</td>
                 <td>
-                  <strong style="color:#714B67">{{ line.analyticAccountCode }}</strong>
+                  <span class="analytic-code">{{ line.analyticAccountCode }}</span>
                   <span class="text-muted"> — {{ line.analyticAccountName }}</span>
                 </td>
                 <td>
                   @if (line.generalAccountCode) {
-                    <span style="font-family:monospace;font-size:12px">{{ line.generalAccountCode }}</span>
+                    <span class="mono">{{ line.generalAccountCode }}</span>
                     <span class="text-muted"> {{ line.generalAccountName }}</span>
                   } @else {
-                    <span class="text-muted">—</span>
+                    <span class="text-muted">–</span>
                   }
                 </td>
-                <td>{{ line.name || '—' }}</td>
-                <td style="text-align:right;color:#2e7d32;font-weight:500">
+                <td>{{ line.name || '–' }}</td>
+                <td class="r mono debit-val">
                   {{ getAmountDebit(line) > 0 ? (getAmountDebit(line) | number:'1.2-2') : '' }}
                 </td>
-                <td style="text-align:right;color:#c62828;font-weight:500">
+                <td class="r mono credit-val">
                   {{ getAmountCredit(line) > 0 ? (getAmountCredit(line) | number:'1.2-2') : '' }}
                 </td>
               </tr>
             }
           </tbody>
-          <tfoot>
-            <tr class="totals-row">
-              <td colspan="4" style="font-weight:700">TOTAUX</td>
-              <td style="text-align:right;font-weight:700;color:#2e7d32">{{ totalDebit | number:'1.2-2' }}</td>
-              <td style="text-align:right;font-weight:700;color:#c62828">{{ totalCredit | number:'1.2-2' }}</td>
-            </tr>
-            <tr class="totals-row">
-              <td colspan="4" style="font-weight:700">SOLDE</td>
-              <td colspan="2" style="text-align:right;font-weight:700"
-                [style.color]="totalSolde >= 0 ? '#2e7d32' : '#c62828'">
-                {{ totalSolde | number:'1.2-2' }}
-              </td>
-            </tr>
-          </tfoot>
         </table>
-      }
+      </div>
+
+      <!-- Grand total ────────────────────────────────────────────────── -->
+      <div class="grand-total">
+        <span class="gt-label">TOTAL — {{ lines.length }} ligne(s)</span>
+        <div class="gt-values">
+          <div class="gt-item"><span>Débit</span><strong class="debit-val">{{ totalDebit | number:'1.2-2' }}</strong></div>
+          <div class="gt-item"><span>Crédit</span><strong class="credit-val">{{ totalCredit | number:'1.2-2' }}</strong></div>
+          <div class="gt-item">
+            <span>Solde</span>
+            <strong [class.bal-pos]="totalSolde >= 0" [class.bal-neg]="totalSolde < 0">{{ totalSolde | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+  }
+
 </div>

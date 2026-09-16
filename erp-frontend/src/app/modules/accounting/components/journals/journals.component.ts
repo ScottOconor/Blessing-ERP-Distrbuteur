@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AccountingService } from '../../services/accounting.service';
+import { AccountingService, JournalPreviewRow } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountJournal, AccountAccount } from '../../../../core/models/account.model';
 import { ImportResult } from '../../../../core/models/import-result.model';
@@ -24,6 +24,10 @@ export class JournalsComponent implements OnInit {
   successMsg = '';
   errorMsg = '';
   importing = false;
+  previewing = false;
+  showPreviewModal = false;
+  previewRows: JournalPreviewRow[] = [];
+  pendingFile: File | null = null;
 
   journalForm!: FormGroup;
 
@@ -164,14 +168,55 @@ export class JournalsComponent implements OnInit {
     return acc ? `${acc.code} - ${acc.name}` : String(id);
   }
 
-  onImport(event: Event): void {
+  downloadTemplate(): void {
+    this.accountingService.downloadJournalsTemplate().subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele_journaux.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => { this.errorMsg = 'Impossible de télécharger le modèle'; }
+    });
+  }
+
+  onFileSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
+    (event.target as HTMLInputElement).value = '';
     if (!file) return;
+    this.pendingFile = file;
+    this.previewing = true;
+    this.errorMsg = '';
+    this.accountingService.previewJournals(file, this.authService.getCompanyId()).subscribe({
+      next: (rows) => {
+        this.previewing = false;
+        this.previewRows = rows;
+        this.showPreviewModal = true;
+      },
+      error: (err: any) => {
+        this.previewing = false;
+        this.pendingFile = null;
+        this.errorMsg = err?.error?.message || 'Erreur lors de la lecture du fichier';
+      }
+    });
+  }
+
+  cancelPreview(): void {
+    this.showPreviewModal = false;
+    this.previewRows = [];
+    this.pendingFile = null;
+  }
+
+  confirmImport(): void {
+    if (!this.pendingFile) return;
     this.importing = true;
-    this.accountingService.importJournals(file, this.authService.getCompanyId()).subscribe({
+    this.showPreviewModal = false;
+    this.accountingService.importJournals(this.pendingFile, this.authService.getCompanyId()).subscribe({
       next: (res: ImportResult) => {
         this.importing = false;
-        (event.target as HTMLInputElement).value = '';
+        this.pendingFile = null;
         const msg = `Import terminé : ${res.created} créés, ${res.updated} mis à jour`;
         this.showSuccess(msg);
         if (res.errors.length > 0) this.errorMsg = res.errors.slice(0, 3).join(' | ');
@@ -179,11 +224,15 @@ export class JournalsComponent implements OnInit {
       },
       error: (err: any) => {
         this.importing = false;
-        (event.target as HTMLInputElement).value = '';
+        this.pendingFile = null;
         this.errorMsg = err?.error?.message || 'Erreur lors de l\'import';
       }
     });
   }
+
+  get previewCreateCount(): number { return this.previewRows.filter(r => r.action === 'create').length; }
+  get previewUpdateCount(): number { return this.previewRows.filter(r => r.action === 'update').length; }
+  get previewWarningCount(): number { return this.previewRows.filter(r => r.warning).length; }
 
   showSuccess(msg: string): void {
     this.successMsg = msg;

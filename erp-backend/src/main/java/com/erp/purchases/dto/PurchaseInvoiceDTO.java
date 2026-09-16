@@ -36,13 +36,24 @@ public class PurchaseInvoiceDTO {
     private Long accountMoveId;
     private String accountMoveName;
 
+    /** none / partial / full — calculé à partir de entriesReversedAt et de l'état des paiements.
+     *  "full" : l'écriture principale (+ écriture de stock pour un avoir) a été extournée via
+     *  "Inverser les écritures" (couvre alors aussi tous les paiements restants).
+     *  "partial" : au moins un paiement a été extourné individuellement, sans extourner le reste. */
+    private String reversalStatus;
+    private java.time.LocalDateTime entriesReversedAt;
+
     /** Bon de réception Dépôt Achat */
     private Long pickingId;
     private String pickingState;
     private Long warehouseId;
     private String warehouseName;
+    /** Nom de l'entrepôt qui recevra physiquement la marchandise (Dépôt Achat résolu) — informatif */
+    private String receptionWarehouseName;
     /** Solde courant du partenaire (débit - crédit sur comptes fournisseurs/clients) */
     private BigDecimal partnerBalance;
+    /** Total des avoirs non encore compensés disponibles pour ce fournisseur */
+    private BigDecimal partnerCreditDisponible;
 
     private BigDecimal totalHT;
     private BigDecimal totalTVA;
@@ -58,11 +69,16 @@ public class PurchaseInvoiceDTO {
     private BigDecimal totalLiquideNu;
     /** Net à payer = TTC - précompte */
     private BigDecimal netAPayer;
+    /** Total rabais HT (prix catalogue − prix préférentiel) sur toutes les lignes */
+    private BigDecimal totalRabaisHT;
 
     private List<LineDTO> lines;
     private List<RemiseDetailDTO> remiseDetails;
     private List<PaymentDTO> payments;
     private LocalDateTime createdAt;
+    private String createdBy;
+    private String updatedBy;
+    private LocalDateTime updatedAt;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class RemiseDetailDTO {
@@ -79,6 +95,7 @@ public class PurchaseInvoiceDTO {
     @AllArgsConstructor
     public static class LineDTO {
         private Long id;
+        private Long productId;
         private String productCode;
         private String description;
         private BigDecimal quantity;
@@ -93,6 +110,8 @@ public class PurchaseInvoiceDTO {
         private BigDecimal prixUnitaireTTC;
         private boolean consigne;
         private String categoryName;
+        private BigDecimal rabaisUnitaire;
+        private BigDecimal totalRabaisLigne;
     }
 
     @Data
@@ -108,5 +127,11 @@ public class PurchaseInvoiceDTO {
         private String state;
         private Long journalId;
         private String journalName;
+        private Long invoiceId;
+        private String invoiceName;
+        private Long partnerId;
+        private String partnerName;
+        /** Si ce paiement est une compensation par avoir fournisseur : id de l'avoir utilisé */
+        private Long creditNoteId;
     }
 }

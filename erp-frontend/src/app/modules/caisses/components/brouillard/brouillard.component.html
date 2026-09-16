@@ -1,0 +1,155 @@
+<div class="brouillard-page">
+  <div class="page-header no-print">
+    <div class="page-title">
+      <span class="material-icons">receipt_long</span>
+      <div>
+        <h1>Brouillard de caisse</h1>
+        <p>Récapitulatif de toutes les opérations d'une journée</p>
+      </div>
+    </div>
+    @if (brouillard) {
+      <button class="btn-print" (click)="print()">
+        <span class="material-icons">print</span>
+        Imprimer
+      </button>
+    }
+  </div>
+
+  <!-- Sélecteurs -->
+  <div class="selectors no-print">
+    <div class="selector-row">
+      <div class="sel-field">
+        <label>Caisse</label>
+        <select [(ngModel)]="selectedCaisseId">
+          <option [value]="0">— Sélectionner —</option>
+          @for (c of caisses; track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="sel-field">
+        <label>Date de session</label>
+        <input type="date" [(ngModel)]="selectedDate" />
+      </div>
+      <button class="btn-load" (click)="load()" [disabled]="!selectedCaisseId || !selectedDate">
+        <span class="material-icons">search</span>
+        Afficher
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-row"><span class="material-icons spin">sync</span> Chargement…</div>
+  }
+
+  @if (error) {
+    <div class="error-row">
+      <span class="material-icons">error_outline</span>
+      {{ error }}
+    </div>
+  }
+
+  @if (!loading && brouillard) {
+    <div class="brouillard-doc">
+      <!-- En-tête brouillard -->
+      <div class="brou-header">
+        <div class="brou-title">
+          <h2>BROUILLARD DE CAISSE</h2>
+          <div class="brou-subtitle">{{ brouillard.caisseName }} — {{ brouillard.dateSession | date:'EEEE d MMMM yyyy' }}</div>
+        </div>
+        <div class="brou-meta">
+          <div class="meta-item">
+            <span>Journal :</span>
+            <strong>{{ brouillard.journalCode }} — {{ brouillard.journalName }}</strong>
+          </div>
+          <div class="meta-item">
+            <span>Statut :</span>
+            <span class="status-chip" [class.cloturee]="brouillard.status === 'CLOTUREE'"
+                  [class.ouverte]="brouillard.status !== 'CLOTUREE'">
+              {{ brouillard.status }}
+            </span>
+          </div>
+          @if (brouillard.dateCloture) {
+            <div class="meta-item">
+              <span>Clôturé le :</span>
+              <strong>{{ brouillard.dateCloture | date:'dd/MM/yyyy HH:mm' }}</strong>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-label">Solde de début</div>
+          <div class="kpi-value neutral">{{ formatAmount(brouillard.soldeDebut) }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Total entrées</div>
+          <div class="kpi-value green">{{ formatAmount(brouillard.totalEntrees) }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Total sorties</div>
+          <div class="kpi-value red">{{ formatAmount(brouillard.totalSorties) }}</div>
+        </div>
+        <div class="kpi kpi-final">
+          <div class="kpi-label">Solde final</div>
+          <div class="kpi-value primary">{{ formatAmount(brouillard.soldeFin) }}</div>
+        </div>
+      </div>
+
+      <!-- Tableau des lignes -->
+      @if (brouillard.lines.length === 0) {
+        <div class="empty-lines">
+          <span class="material-icons">receipt</span>
+          Aucune opération enregistrée pour cette journée.
+        </div>
+      } @else {
+        <div class="lines-wrap">
+          <table class="lines-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Référence</th>
+                <th>Libellé</th>
+                <th>Tiers</th>
+                <th>Compte</th>
+                <th class="text-right">Débit</th>
+                <th class="text-right">Crédit</th>
+                <th class="text-right">Solde</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of brouillard.lines; let i = $index; track i) {
+                <tr>
+                  <td class="date-col">{{ line.date | date:'dd/MM' }}</td>
+                  <td class="mono ref-col">{{ line.ref || '—' }}</td>
+                  <td class="libelle-col">{{ line.libelle || '—' }}</td>
+                  <td class="tiers-col">{{ line.tiersName || '—' }}</td>
+                  <td class="mono compte-col">
+                    @if (line.compteCode) {
+                      <span class="compte-badge">{{ line.compteCode }}</span>
+                    }
+                  </td>
+                  <td class="text-right amount green">{{ line.debit > 0 ? formatAmount(line.debit) : '' }}</td>
+                  <td class="text-right amount red">{{ line.credit > 0 ? formatAmount(line.credit) : '' }}</td>
+                  <td class="text-right amount">—</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5" class="total-label">TOTAUX</td>
+                <td class="text-right total green">{{ formatAmount(brouillard.totalEntrees) }}</td>
+                <td class="text-right total red">{{ formatAmount(brouillard.totalSorties) }}</td>
+                <td class="text-right total primary">{{ formatAmount(brouillard.soldeFin) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+
+      <app-audit-trail entityType="CAISSE" [entityId]="selectedCaisseId"></app-audit-trail>
+    </div>
+  }
+</div>

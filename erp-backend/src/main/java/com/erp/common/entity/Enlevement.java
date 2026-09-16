@@ -23,7 +23,7 @@ public class Enlevement {
     @JoinColumn(name = "category_id", nullable = false)
     private ProductCategory category;
 
-    /** Montant facturé TTC par unité vendue */
+    /** Montant facturé HT par unité vendue (la TVA est calculée dessus lors de la facturation) */
     @Column(name = "montant_fixe", precision = 20, scale = 2, nullable = false)
     private BigDecimal montantFixe;
 

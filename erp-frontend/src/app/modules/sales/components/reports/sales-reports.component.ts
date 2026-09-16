@@ -50,11 +50,11 @@ export class SalesReportsComponent implements OnInit {
 
   // Totals
   get totalCA(): number { return this.invoicesByState.reduce((s, r) => s + r.amount, 0); }
-  get totalEncaisse(): number { return this.invoices.filter(i => i.state === 'posted' || i.state === 'paid').reduce((s, i) => s + (i.montantPaye || 0), 0); }
-  get totalDu(): number { return this.invoices.filter(i => i.state === 'posted' || i.state === 'paid').reduce((s, i) => s + (i.montantDu || 0), 0); }
+  get totalEncaisse(): number { return this.invoices.filter(i => i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee').reduce((s, i) => s + (i.montantPaye || 0), 0); }
+  get totalDu(): number { return this.invoices.filter(i => i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee').reduce((s, i) => s + (i.montantDu || 0), 0); }
   get totalAvoirs(): number { return this.avoirs.filter(a => a.state === 'posted').reduce((s, a) => s + (a.totalTTC || 0), 0); }
   get tauxEncaissement(): number {
-    const ca = this.invoices.filter(i => i.state === 'posted' || i.state === 'paid').reduce((s, i) => s + (i.totalTTC || 0), 0);
+    const ca = this.invoices.filter(i => i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee').reduce((s, i) => s + (i.totalTTC || 0), 0);
     if (ca === 0) return 0;
     return Math.round((this.totalEncaisse / ca) * 100);
   }
@@ -99,7 +99,7 @@ export class SalesReportsComponent implements OnInit {
 
   computePeriodStats(): void {
     const postedInvoices = this.invoices.filter(i =>
-      (i.state === 'posted' || i.state === 'paid') &&
+      (i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee') &&
       i.date && new Date(i.date).getFullYear() === this.selectedYear
     );
 
@@ -129,12 +129,12 @@ export class SalesReportsComponent implements OnInit {
       });
     } else {
       const allYears = [...new Set(this.invoices
-        .filter(i => i.state === 'posted' || i.state === 'paid')
+        .filter(i => i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee')
         .map(i => i.date ? new Date(i.date).getFullYear() : 0)
         .filter(y => y > 0))].sort();
       this.periodStats = allYears.map(year => {
         const inv = this.invoices.filter(i =>
-          (i.state === 'posted' || i.state === 'paid') && i.date && new Date(i.date).getFullYear() === year
+          (i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee') && i.date && new Date(i.date).getFullYear() === year
         );
         return {
           label: String(year),
@@ -150,7 +150,7 @@ export class SalesReportsComponent implements OnInit {
   computeClientStats(): void {
     const map = new Map<string, ClientStat>();
     this.invoices
-      .filter(i => i.state === 'posted' || i.state === 'paid')
+      .filter(i => i.state === 'posted' || i.state === 'paid' || i.state === 'partiellement_extournee')
       .forEach(i => {
         const name = i.partnerName || 'Inconnu';
         const existing = map.get(name) || { name, caTTC: 0, nbFactures: 0, encaisse: 0, du: 0 };
@@ -166,11 +166,13 @@ export class SalesReportsComponent implements OnInit {
   computeInvoicesByState(): void {
     const posted = this.invoices.filter(i => i.state === 'posted');
     const paid = this.invoices.filter(i => i.state === 'paid');
+    const partExt = this.invoices.filter(i => i.state === 'partiellement_extournee');
     const draft = this.invoices.filter(i => i.state === 'draft');
     const cancelled = this.invoices.filter(i => i.state === 'cancelled');
     this.invoicesByState = [
       { label: 'Validées', count: posted.length, amount: posted.reduce((s, i) => s + (i.totalTTC || 0), 0), color: '#017E84' },
       { label: 'Payées', count: paid.length, amount: paid.reduce((s, i) => s + (i.totalTTC || 0), 0), color: '#198754' },
+      { label: 'Part. Extournées', count: partExt.length, amount: partExt.reduce((s, i) => s + (i.totalTTC || 0), 0), color: '#f59e0b' },
       { label: 'Brouillon', count: draft.length, amount: draft.reduce((s, i) => s + (i.totalTTC || 0), 0), color: '#6c757d' },
       { label: 'Annulées', count: cancelled.length, amount: cancelled.reduce((s, i) => s + (i.totalTTC || 0), 0), color: '#dc3545' }
     ];

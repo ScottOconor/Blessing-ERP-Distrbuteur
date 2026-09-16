@@ -1,7 +1,6 @@
 package com.erp.auth.entity;
 
 import com.erp.common.entity.Company;
-import com.erp.config.entity.CompanyGroup;
 import com.erp.config.entity.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,19 +23,18 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    /** Prénom Nom affiché */
     private String fullName;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = true)
     private Role role;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
-    private CompanyGroup group;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
+    /** Société à laquelle cet utilisateur est rattaché. Nul uniquement pour le
+     *  compte superadmin bootstrap créé avant qu'aucune société n'existe — les
+     *  rôles privilégiés (SUPER_ADMIN/ADMIN) sont de toute façon exemptés du
+     *  contrôle d'isolation par société (voir TenantGuard). */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "company_id", nullable = true)
     private Company company;
 
     @Builder.Default

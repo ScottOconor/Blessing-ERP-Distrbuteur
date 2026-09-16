@@ -30,11 +30,23 @@ export class ReportService {
     return this.http.post<any>(`${this.apiUrl}/grand-livre`, req);
   }
 
+  getGrandLivreTiers(req: ReportRequest): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/grand-livre-tiers`, req);
+  }
+
   getBilan(req: ReportRequest): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/bilan`, req);
   }
 
   getCompteDeResultat(req: ReportRequest): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/compte-de-resultat`, req);
+  }
+
+  getCashbook(req: ReportRequest): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/cashbook`, req);
+  }
+
+  getSuiviTiers(companyId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/suivi-tiers`, { params: { companyId: companyId.toString() } });
   }
 }

@@ -2,6 +2,9 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { CompanyService } from '../../../core/services/company.service';
+import { AppBrandingService } from '../../../core/services/app-branding.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-sales-layout',
@@ -16,13 +19,16 @@ export class SalesLayoutComponent implements OnInit {
   companyName = 'Mon Entreprise';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  mobileMenuOpen = false;
   navItems: any[] = [];
 
-  get isCentralized() { return this.authService.isCentralized(); }
-  get companies() { return this.authService.getSession()?.companies ?? []; }
-  get activeCompany() { return this.authService.getActiveCompany(); }
+  companies: { id: number; name: string; sigle: string }[] = [];
+  get activeCompany(): { id: number; name: string; sigle: string } | null { return null; }
 
-  constructor(private authService: AuthService, public router: Router) {}
+  get companyLogoUrl(): string { return this.companyService.getLogoUrl(); }
+  get companyDisplayName(): string { return this.companyService.getCached()?.name ?? this.companyName; }
+
+  constructor(private authService: AuthService, private companyService: CompanyService, public branding: AppBrandingService, public router: Router, public themeService: ThemeService) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
@@ -43,8 +49,8 @@ export class SalesLayoutComponent implements OnInit {
     }
 
     const orderChildren: any[] = [];
-    if (this.can('BONS_COMMANDE', 'VIEW'))   orderChildren.push({ label: 'Liste des bons',  icon: 'list',       route: '/sales/orders' });
-    if (this.can('BONS_COMMANDE', 'CREATE')) orderChildren.push({ label: 'Nouveau bon',      icon: 'add_circle', route: '/sales/orders/new' });
+    if (this.can('COMMANDES', 'VIEW'))   orderChildren.push({ label: 'Liste des bons',  icon: 'list',       route: '/sales/orders' });
+    if (this.can('COMMANDES', 'CREATE')) orderChildren.push({ label: 'Nouveau bon',      icon: 'add_circle', route: '/sales/orders/new' });
     if (orderChildren.length)
       items.push({ id: 'orders', label: 'Bons de commande', icon: 'receipt', children: orderChildren });
 
@@ -54,12 +60,20 @@ export class SalesLayoutComponent implements OnInit {
     if (invoiceChildren.length)
       items.push({ id: 'invoices', label: 'Factures & Avoirs', icon: 'description', children: invoiceChildren });
 
-    if (this.can('CLIENTS', 'VIEW'))
-      items.push({ id: 'clients', label: 'Clients', icon: 'people', route: '/sales/clients' });
+    if (this.can('CLIENTS', 'VIEW')) {
+      const clientChildren: any[] = [
+        { label: 'Fiche clients', icon: 'people', route: '/sales/clients' },
+        { label: 'Tarifs par client', icon: 'sell', route: '/sales/clients/prix' }
+      ];
+      items.push({ id: 'clients', label: 'Clients', icon: 'people', children: clientChildren });
+    }
+
+    if (this.can('PAIEMENTS', 'VIEW'))
+      items.push({ id: 'payments', label: 'Paiements', icon: 'payments', route: '/sales/payments' });
 
     const commChildren: any[] = [];
-    if (this.can('RISTOURNES', 'VIEW')) commChildren.push({ label: 'Ristournes', icon: 'redeem', route: '/sales/ristournes' });
-    if (this.can('RISTOURNES', 'VIEW')) commChildren.push({ label: 'Précomptes & Enlèvements', icon: 'percent', route: '/sales/precomptes' });
+    if (this.can('RISTOURNES', 'VIEW'))  commChildren.push({ label: 'Ristournes',              icon: 'redeem',  route: '/sales/ristournes' });
+    if (this.can('PRECOMPTES', 'VIEW'))  commChildren.push({ label: 'Précomptes & Enlèvements', icon: 'percent', route: '/sales/precomptes' });
     if (commChildren.length)
       items.push({ id: 'commercial', label: 'Commercial', icon: 'local_offer', children: commChildren });
 
@@ -76,16 +90,13 @@ export class SalesLayoutComponent implements OnInit {
       });
     }
 
-    if (anyVentes) {
-      items.push({
-        id: 'reports', label: 'Rapports', icon: 'assessment',
-        children: [
-          { label: 'Tableau de bord',     icon: 'bar_chart',   route: '/sales/reports' },
-          { label: 'État Commercial',      icon: 'table_chart', route: '/sales/reports/etat-commercial' },
-          { label: 'Rapport Consolidé',   icon: 'summarize',   route: '/sales/reports/rapport-consolide' }
-        ]
-      });
-    }
+    const reportChildren: any[] = [];
+    if (this.can('COMMANDES', 'VIEW') || this.can('FACTURES', 'VIEW'))
+      reportChildren.push({ label: 'Stats de ventes',    icon: 'trending_up', route: '/sales/reports/stats-ventes' });
+    if (this.can('RISTOURNES', 'VIEW'))
+      reportChildren.push({ label: 'État des Ristournes', icon: 'redeem',     route: '/sales/reports/rapport-ristournes' });
+    if (reportChildren.length)
+      items.push({ id: 'reports', label: 'Rapports', icon: 'assessment', children: reportChildren });
 
     return items;
   }
@@ -103,18 +114,20 @@ export class SalesLayoutComponent implements OnInit {
 
   navigateTo(route: string): void {
     this.activeDropdown = null;
+    this.mobileMenuOpen = false;
     this.router.navigateByUrl(route);
   }
 
   switchCompany(id: number): void {
     this.authService.setActiveCompanyId(id);
     this.showCompanyPicker = false;
+    this.mobileMenuOpen = false;
     const url = this.router.url;
     this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
-  goHome(): void { this.router.navigate(['/welcome']); }
-  logout(): void { this.authService.logout(); this.router.navigate(['/login']); }
+  goHome(): void { this.mobileMenuOpen = false; this.router.navigate(['/welcome']); }
+  logout(): void { this.mobileMenuOpen = false; this.authService.logout(); this.router.navigate(['/login']); }
 
   isRouteActive(route: string): boolean {
     return this.router.url === route || this.router.url.startsWith(route + '/');

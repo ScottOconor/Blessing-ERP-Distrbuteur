@@ -206,7 +206,6 @@ export class ImportComponent {
   confirmImport(): void {
     if (!this.pendingFile) return;
 
-    this.showPreview = false;
     this.importing   = true;
     this.errorMsg    = '';
     this.result      = null;
@@ -216,12 +215,14 @@ export class ImportComponent {
       next: (res: ImportResult) => {
         this.result      = res;
         this.importing   = false;
+        this.showPreview = false;
         this.pendingFile = null;
         this.selectedFileName = '';
       },
       error: (err: any) => {
-        this.errorMsg  = err?.error?.message || 'Erreur lors de l\'import';
-        this.importing = false;
+        this.errorMsg    = err?.error?.message || 'Erreur lors de l\'import';
+        this.importing   = false;
+        this.showPreview = false;
         this.pendingFile = null;
         this.selectedFileName = '';
       }
@@ -229,6 +230,7 @@ export class ImportComponent {
   }
 
   closePreview(): void {
+    if (this.importing) return;
     this.showPreview      = false;
     this.previewRows      = [];
     this.previewCols      = [];

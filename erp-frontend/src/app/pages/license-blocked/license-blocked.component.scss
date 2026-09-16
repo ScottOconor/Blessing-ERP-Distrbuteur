@@ -1,0 +1,56 @@
+.license-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-page);
+  padding: 24px;
+}
+
+.license-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 40px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+
+  .icon {
+    font-size: 48px;
+    color: var(--danger);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin: 0 0 12px;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: .9rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+.contact {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: .9rem;
+  color: var(--text-primary);
+
+  .contact-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+}

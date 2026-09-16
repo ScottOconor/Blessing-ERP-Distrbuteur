@@ -1,11 +1,15 @@
 <div class="page-container">
   <div class="page-header">
     <div class="header-left">
-      <button class="btn-back" (click)="router.navigate(['/stock/transferts'])"><span class="material-icons">arrow_back</span></button>
+      <button class="btn-back" (click)="router.navigate([backRoute])"><span class="material-icons">arrow_back</span></button>
       <div>
         <h1 class="page-title">
-          <span class="material-icons">compare_arrows</span>
-          {{ isNew ? 'Nouveau transfert inter-dépôt' : (picking?.name || 'Transfert') }}
+          <span class="material-icons">{{ isTransferReception ? 'move_to_inbox' : 'compare_arrows' }}</span>
+          @if (isTransferReception) {
+            {{ isNew ? 'Réception de transfert' : ('Réception — ' + (picking?.name || '')) }}
+          } @else {
+            {{ isNew ? 'Nouveau transfert inter-dépôt' : (picking?.name || 'Transfert') }}
+          }
         </h1>
         @if (!isNew && picking) {
           <span class="state-badge" [attr.data-state]="picking.state">{{ stateLabel(picking.state || '') }}</span>
@@ -13,24 +17,58 @@
       </div>
     </div>
     <div class="header-actions">
-      @if (!isDone && !isCancelled) {
+      <!-- Transfer en attente côté source : seul "Annuler" est disponible -->
+      @if (isPendingReception && !isTransferReception) {
+        <button class="btn-cancel-picking" (click)="cancel()" [disabled]="cancelling">
+          <span class="material-icons">cancel</span> Annuler le transfert
+        </button>
+      }
+      <!-- Réception en attente côté destination : confirmer + télécharger -->
+      @if (isPendingReception && isTransferReception) {
+        <button class="btn-secondary" (click)="downloadBordereau()">
+          <span class="material-icons">download</span> Bordereau PDF
+        </button>
+        <button class="btn-validate" (click)="confirmReception()" [disabled]="confirming">
+          <span class="material-icons">done_all</span> {{ confirming ? 'Confirmation...' : 'Confirmer la réception' }}
+        </button>
+      }
+      <!-- Réception déjà confirmée : bordereau disponible en téléchargement -->
+      @if (isDone && isTransferReception) {
+        <button class="btn-secondary" (click)="downloadBordereau()">
+          <span class="material-icons">picture_as_pdf</span> Bordereau PDF
+        </button>
+      }
+      <!-- Brouillon : sauvegarder, valider, annuler -->
+      @if (!isDone && !isCancelled && !isPendingReception) {
         <button class="btn-secondary" (click)="save()" [disabled]="saving">
           <span class="material-icons">save</span> {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
         </button>
-      }
-      @if (!isNew && !isDone && !isCancelled) {
-        <button class="btn-validate" (click)="validate()" [disabled]="validating">
-          <span class="material-icons">compare_arrows</span> {{ validating ? 'Transfert en cours...' : 'Valider le transfert' }}
-        </button>
-        <button class="btn-cancel-picking" (click)="cancel()" [disabled]="cancelling">
-          <span class="material-icons">cancel</span>
-        </button>
+        @if (!isNew) {
+          <button class="btn-validate" (click)="validate()" [disabled]="validating">
+            <span class="material-icons">compare_arrows</span> {{ validating ? 'Transfert en cours...' : 'Valider le transfert' }}
+          </button>
+          <button class="btn-cancel-picking" (click)="cancel()" [disabled]="cancelling">
+            <span class="material-icons">cancel</span>
+          </button>
+        }
       }
     </div>
   </div>
 
   @if (errorMsg) { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div> }
 
+  <!-- Banière transfert validé côté source (en attente côté destination) -->
+  @if (isPendingReception && !isTransferReception) {
+    <div class="info-banner info-warning">
+      <span class="material-icons">hourglass_empty</span>
+      Les articles ont été destockés de la source. En attente de confirmation de réception à destination.
+      @if (picking?.linkedPickingName) {
+        · Réception liée : <strong>{{ picking!.linkedPickingName }}</strong>
+      }
+    </div>
+  }
+
+  <!-- Banière transfert terminé -->
   @if (isDone && picking?.accountMoveName) {
     <div class="info-banner">
       <span class="material-icons">swap_horiz</span>
@@ -41,132 +79,254 @@
 
   @if (loading) { <div class="loading"><span class="material-icons spin">refresh</span></div> }
   @else {
-    <div class="form-layout">
-      <div class="form-main">
-        <div class="card">
-          <div class="card-header">
-            <span>Articles à transférer</span>
-            @if (isDraft) {
-              <button class="btn-add-line" (click)="addLine()"><span class="material-icons">add</span> Ajouter</button>
-            }
-          </div>
-          <div class="lines-container">
-            @if (lines.length === 0) { <div class="empty-lines">Aucune ligne — ajoutez des articles à transférer</div> }
-            <table class="lines-table" [class.has-lines]="lines.length > 0">
-              @if (lines.length > 0) {
+
+    <!-- === FORMULAIRE DE RÉCEPTION (côté destination) === -->
+    @if (isTransferReception && isPendingReception && receivedLines.length > 0) {
+      <div class="form-layout">
+        <div class="form-main">
+          <div class="card">
+            <div class="card-header">
+              <span>Quantités reçues</span>
+              <span class="card-subtitle">Saisir les quantités physiquement reçues — le reliquat retournera à la source</span>
+            </div>
+            <div class="lines-container">
+              <table class="lines-table has-lines">
                 <thead><tr>
-                  <th style="width:36%">Article</th><th>Unité</th>
-                  <th>Qté demand.</th><th>Qté transférée</th>
-                  <th>CMUP</th><th>Valeur</th><th>Dispo source</th>
-                  @if (isDraft) { <th></th> }
+                  <th style="width:40%">Article</th>
+                  <th class="cell-right">Qté commandée</th>
+                  <th class="cell-right">Qté reçue</th>
+                  <th class="cell-right">Reliquat</th>
                 </tr></thead>
+                <tbody>
+                  @for (line of receivedLines; track line.moveId) {
+                    <tr>
+                      <td class="font-bold">{{ line.productName }}</td>
+                      <td class="cell-right">{{ line.qteCommandee }}</td>
+                      <td>
+                        <input type="number" class="line-input" [(ngModel)]="line.qteRecue"
+                               min="0" [max]="line.qteCommandee" />
+                      </td>
+                      <td class="cell-right" [class.text-warning]="line.qteCommandee - line.qteRecue > 0">
+                        {{ line.qteCommandee - line.qteRecue | number:'1.0-2' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-side">
+          <div class="card">
+            <div class="card-header">Informations</div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Entrepôt destination</label>
+                <div class="form-value">{{ bordereau?.warehouseName || locationName(picking?.locationDestId!) }}</div>
+              </div>
+              <div class="form-group">
+                <label>Transfert source</label>
+                <div class="form-value">{{ picking?.linkedPickingName || '—' }}</div>
+              </div>
+              <div class="form-group">
+                <label>Opérateur</label>
+                <div class="form-value">{{ bordereau?.operatorName || picking?.createdBy || '—' }}</div>
+              </div>
+              <div class="form-group">
+                <label>Date</label>
+                <div class="form-value">{{ picking?.createdAt | date:'dd/MM/yyyy' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- === FORMULAIRE STANDARD (transfert brouillon / done / annulé / pending côté source) === -->
+    @if (!isTransferReception || !isPendingReception) {
+      <div class="form-layout">
+        <div class="form-main">
+          <div class="card">
+            <div class="card-header">
+              <span>Articles à transférer</span>
+              @if (isDraft) {
+                <button class="btn-add-line" (click)="addLine()"><span class="material-icons">add</span> Ajouter</button>
               }
-              <tbody>
-                @for (line of lines; track $index; let i = $index) {
-                  <tr>
-                    <td>
-                      @if (isDraft) {
-                        <select class="line-select" [(ngModel)]="line.productId" (ngModelChange)="onProductChange(i)">
-                          <option [ngValue]="null">— Choisir —</option>
-                          @for (p of products; track p.id) {
-                            <option [value]="p.id">{{ p.defaultCode ? '['+p.defaultCode+'] ' : '' }}{{ p.name }}</option>
-                          }
-                        </select>
-                      } @else { <span class="font-bold">{{ productName(line.productId) }}</span> }
-                    </td>
-                    <td>{{ line.uomName }}</td>
-                    <td>
-                      @if (isDraft) { <input type="number" class="line-input" [(ngModel)]="line.qtyDemanded" min="0" (ngModelChange)="line.qtyDone = line.qtyDemanded" /> }
-                      @else { <span class="cell-right">{{ line.qtyDemanded }}</span> }
-                    </td>
-                    <td>
-                      @if (!isDone) { <input type="number" class="line-input" [(ngModel)]="line.qtyDone" min="0" /> }
-                      @else { <span class="cell-right font-bold">{{ line.qtyDone }}</span> }
-                    </td>
-                    <td class="cell-right">{{ line.priceUnit | number:'1.0-0' }}</td>
-                    <td class="cell-right font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
-                    <td>
-                      <span [class]="line.availableQty < line.qtyDemanded ? 'qty-warn' : 'qty-ok'">
-                        {{ line.availableQty | number:'1.0-2' }}
-                      </span>
-                    </td>
-                    @if (isDraft) { <td><button class="btn-remove-line" (click)="removeLine(i)"><span class="material-icons">delete</span></button></td> }
-                  </tr>
+            </div>
+            <div class="lines-container">
+              @if (lines.length === 0) { <div class="empty-lines">Aucune ligne — ajoutez des articles à transférer</div> }
+              <table class="lines-table" [class.has-lines]="lines.length > 0">
+                @if (lines.length > 0) {
+                  <thead><tr>
+                    <th style="width:36%">Article</th>
+                    <th>Unité</th>
+                    @if (isDraft) {
+                      <th class="th-dispo">Dispo source</th>
+                    }
+                    <th class="text-right">{{ isDraft ? 'Quantité' : 'Qté transférée' }}</th>
+                    <th class="text-right">CMUP</th>
+                    <th class="text-right">Valeur</th>
+                    @if (isDraft) { <th></th> }
+                  </tr></thead>
                 }
-              </tbody>
-              @if (lines.length > 0) {
-                <tfoot><tr>
-                  <td colspan="5" class="total-label">VALEUR TOTALE TRANSFÉRÉE</td>
-                  <td class="cell-right total-value">{{ lineTotal | number:'1.0-0' }} FCFA</td>
-                  <td colspan="2"></td>
-                </tr></tfoot>
-              }
-            </table>
+                <tbody>
+                  @for (line of lines; track $index; let i = $index) {
+                    <tr>
+                      <td>
+                        @if (isDraft) {
+                          <div class="ac-wrap">
+                            <div class="ac-field">
+                              <span class="material-icons ac-icon">search</span>
+                              <input type="text" class="line-select"
+                                     #productInput
+                                     [(ngModel)]="lineSearchTexts[i]"
+                                     (input)="openDropdownIndex = i"
+                                     (focus)="openDropdownIndex = i"
+                                     (blur)="onLineBlur(i)"
+                                     (keydown.enter)="onProductEnter(i, $event)"
+                                     placeholder="Chercher un article…"
+                                     autocomplete="off" />
+                            </div>
+                            @if (openDropdownIndex === i && lineFilteredProducts(i).length > 0) {
+                              <div class="ac-dropdown">
+                                @for (p of lineFilteredProducts(i); track p.id) {
+                                  <div class="ac-item" (mousedown)="selectLineProduct(i, p)">
+                                    @if (p.defaultCode) { <span class="ac-code">{{ p.defaultCode }}</span> }
+                                    <span class="ac-name">{{ p.name }}</span>
+                                    <span class="ac-qty" [class.qty-low]="p.availableQty <= 0">{{ p.availableQty | number:'1.0-0' }}</span>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        } @else { <span class="font-bold">{{ productName(line.productId) }}</span> }
+                      </td>
+                      <td>{{ line.uomName }}</td>
+                      @if (isDraft) {
+                        <td class="td-dispo">
+                          @if (srcIsVirtual) {
+                            <span class="qty-ok">Illimité</span>
+                          } @else {
+                            <span [class]="line.availableQty < line.qtyDemanded ? 'qty-warn' : 'qty-ok'">
+                              {{ line.availableQty | number:'1.0-2' }}
+                            </span>
+                          }
+                        </td>
+                      }
+                      <td class="cell-right">
+                        @if (isDraft) {
+                          <input type="number" class="line-input text-right"
+                                 [(ngModel)]="line.qtyDemanded" min="0"
+                                 (ngModelChange)="line.qtyDone = line.qtyDemanded"
+                                 (keydown.enter)="onLineEnter()" />
+                        } @else {
+                          <span class="font-bold">{{ line.qtyDone }}</span>
+                        }
+                      </td>
+                      <td class="cell-right">{{ line.priceUnit | number:'1.0-0' }}</td>
+                      <td class="cell-right font-bold">{{ line.qtyDemanded * line.priceUnit | number:'1.0-0' }}</td>
+                      @if (isDraft) { <td><button class="btn-remove-line" (click)="removeLine(i)"><span class="material-icons">delete</span></button></td> }
+                    </tr>
+                  }
+                </tbody>
+                @if (lines.length > 0) {
+                  <tfoot><tr>
+                    <td [attr.colspan]="isDraft ? 4 : 3" class="total-label">VALEUR TOTALE TRANSFÉRÉE</td>
+                    <td class="cell-right total-value">{{ lineTotal | number:'1.0-0' }} FCFA</td>
+                    @if (isDraft) { <td></td> }
+                  </tr></tfoot>
+                }
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-side">
+          <div class="card">
+            <div class="card-header">Entrepôts</div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Source <span class="req">*</span></label>
+                @if (isDraft) {
+                  <select class="form-control" [(ngModel)]="selectedSrcKey" (ngModelChange)="onSrcKeyChange()">
+                    <option value="">— Choisir —</option>
+                    <optgroup label="Entrepôts">
+                      @for (w of warehouses; track w.id) { <option [value]="'w:' + w.id">{{ w.name }}</option> }
+                    </optgroup>
+                    @if (virtualLocations.length > 0) {
+                      <optgroup label="Emplacements virtuels">
+                        @for (l of virtualLocations; track l.id) {
+                          <option [value]="'l:' + l.id">{{ l.name }} ({{ l.usage === 'customer' ? 'Client' : 'Fournisseur' }})</option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                } @else {
+                  <div class="form-value loc-value"><span class="material-icons">{{ picking?.sourceWarehouseName ? 'warehouse' : 'swap_horiz' }}</span>{{ picking?.sourceWarehouseName || locationName(picking?.locationId!) }}</div>
+                }
+              </div>
+              <div class="transfer-arrow"><span class="material-icons">south</span></div>
+              <div class="form-group">
+                <label>Destination <span class="req">*</span></label>
+                @if (isDraft) {
+                  <select class="form-control" [(ngModel)]="selectedDestKey" (ngModelChange)="onDestKeyChange()">
+                    <option value="">— Choisir —</option>
+                    <optgroup label="Entrepôts">
+                      @for (w of warehouses; track w.id) { <option [value]="'w:' + w.id">{{ w.name }}</option> }
+                    </optgroup>
+                    @if (virtualLocations.length > 0) {
+                      <optgroup label="Emplacements virtuels">
+                        @for (l of virtualLocations; track l.id) {
+                          <option [value]="'l:' + l.id">{{ l.name }} ({{ l.usage === 'customer' ? 'Client' : 'Fournisseur' }})</option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                } @else {
+                  <div class="form-value loc-value"><span class="material-icons">{{ picking?.destWarehouseName ? 'warehouse' : 'swap_horiz' }}</span>{{ picking?.destWarehouseName || locationName(picking?.locationDestId!) }}</div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 12px">
+            <div class="card-header">Détails</div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Date planifiée</label>
+                @if (isDraft) { <input type="date" class="form-control" [(ngModel)]="scheduledDate" /> }
+                @else { <div class="form-value">{{ scheduledDate | date:'dd/MM/yyyy' }}</div> }
+              </div>
+              <div class="form-group">
+                <label>Partenaire</label>
+                @if (isDraft) { <input type="text" class="form-control" [(ngModel)]="partnerName" placeholder="Ex: transporteur, agence…" /> }
+                @else { <div class="form-value">{{ partnerName || '—' }}</div> }
+              </div>
+              <div class="form-group">
+                <label>Origine</label>
+                @if (isDraft) { <input type="text" class="form-control" [(ngModel)]="origin" placeholder="Ex: ordre de transfert" /> }
+                @else { <div class="form-value">{{ origin || '—' }}</div> }
+              </div>
+              <div class="form-group">
+                <label>Notes</label>
+                @if (isDraft) { <textarea class="form-control" [(ngModel)]="notes" rows="2"></textarea> }
+                @else { <div class="form-value">{{ notes || '—' }}</div> }
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    }
 
-      <div class="form-side">
-        <div class="card">
-          <div class="card-header">Emplacements</div>
-          <div class="card-body">
-            <div class="form-group">
-              <label>Entrepôt source</label>
-              <select class="form-control" [(ngModel)]="filterSrcWarehouse">
-                <option value="">— Tous les entrepôts —</option>
-                @for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Emplacement source <span class="req">*</span></label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedSrcId">
-                  <option value="">— Choisir —</option>
-                  @for (l of filteredSrcLocations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value loc-value"><span class="material-icons">place</span>{{ locationName(picking?.locationId!) }}</div> }
-            </div>
-            <div class="transfer-arrow"><span class="material-icons">south</span></div>
-            <div class="form-group">
-              <label>Entrepôt destination</label>
-              <select class="form-control" [(ngModel)]="filterDestWarehouse">
-                <option value="">— Tous les entrepôts —</option>
-                @for (w of warehouses; track w.id) { <option [value]="w.id">{{ w.name }}</option> }
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Emplacement destination <span class="req">*</span></label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedDestId">
-                  <option value="">— Choisir —</option>
-                  @for (l of filteredDestLocations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value loc-value"><span class="material-icons">place</span>{{ locationName(picking?.locationDestId!) }}</div> }
-            </div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top: 12px">
-          <div class="card-header">Détails</div>
-          <div class="card-body">
-            <div class="form-group">
-              <label>Date planifiée</label>
-              @if (isDraft) { <input type="date" class="form-control" [(ngModel)]="scheduledDate" /> }
-              @else { <div class="form-value">{{ scheduledDate | date:'dd/MM/yyyy' }}</div> }
-            </div>
-            <div class="form-group">
-              <label>Origine</label>
-              @if (isDraft) { <input type="text" class="form-control" [(ngModel)]="origin" placeholder="Ex: ordre de transfert" /> }
-              @else { <div class="form-value">{{ origin || '—' }}</div> }
-            </div>
-            <div class="form-group">
-              <label>Notes</label>
-              @if (isDraft) { <textarea class="form-control" [(ngModel)]="notes" rows="2"></textarea> }
-              @else { <div class="form-value">{{ notes || '—' }}</div> }
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    @if (picking) {
+      <app-audit-trail entityType="STOCK_PICKING" [entityId]="picking.id ?? null"></app-audit-trail>
+      <app-audit-footer
+        [createdBy]="picking.createdBy"
+        [createdAt]="picking.createdAt"
+        [updatedBy]="picking.updatedBy"
+        [updatedAt]="picking.updatedAt">
+      </app-audit-footer>
+    }
   }
 </div>

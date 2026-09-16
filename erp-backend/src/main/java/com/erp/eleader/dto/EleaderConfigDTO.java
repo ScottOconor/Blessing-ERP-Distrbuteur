@@ -17,4 +17,6 @@ public class EleaderConfigDTO {
     private String fraisEnlevementCode;
     private boolean autoConfirm;
     private List<EleaderEmballageMappingDTO> emballageMappings;
+    /** Codes ERP supplémentaires traités comme consignes/emballages. */
+    private List<String> extraConsigneCodes;
 }

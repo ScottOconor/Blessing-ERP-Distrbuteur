@@ -23,6 +23,8 @@ export class WarehouseListComponent implements OnInit {
   warehouses: Warehouse[] = [];
   locations: StockLocation[] = [];
   journals: AccountJournal[] = [];
+  saleJournals: AccountJournal[] = [];
+  cashBankJournals: AccountJournal[] = [];
   loading = false;
   saving = false;
   errorMsg = '';
@@ -57,6 +59,8 @@ export class WarehouseListComponent implements OnInit {
     this.load();
     this.accountingService.getJournals(this.companyId).subscribe(j => {
       this.journals = j.filter(jj => jj.type === 'general' || (jj.code || '').toUpperCase() === 'STK');
+      this.saleJournals = j.filter(jj => jj.type === 'sale');
+      this.cashBankJournals = j.filter(jj => jj.type === 'cash' || jj.type === 'bank');
     });
   }
 
@@ -114,6 +118,17 @@ export class WarehouseListComponent implements OnInit {
     this.stockService.deleteWarehouse(w.id!).subscribe({
       next: () => { this.showSuccessMsg('Entrepôt supprimé'); this.load(); },
       error: (e) => this.showSuccessMsg('Erreur : ' + (e.error?.message || 'Impossible de supprimer'))
+    });
+  }
+
+  setDefault(w: Warehouse): void {
+    this.stockService.setDefaultWarehouse(w.id!).subscribe({
+      next: () => {
+        this.warehouses.forEach(wh => wh.isDefault = false);
+        w.isDefault = true;
+        this.showSuccessMsg(`"${w.name}" défini comme magasin par défaut`);
+      },
+      error: (e) => this.showSuccessMsg('Erreur : ' + (e.error?.message || 'Impossible'))
     });
   }
 

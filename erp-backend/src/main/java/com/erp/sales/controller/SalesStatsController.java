@@ -14,14 +14,20 @@ public class SalesStatsController {
 
     private final SalesStatsService statsService;
 
-    /** État Commercial — Qty, CA HT, CA TTC par client/produit */
+    /** Stats de ventes avec filtres optionnels (client, catégorie, produit, vendeur) */
+    @PostMapping("/stats-ventes")
+    public ResponseEntity<SalesStatsResponse> getStatsVentes(
+            @RequestBody SalesStatsRequest req) {
+        return ResponseEntity.ok(statsService.getStats(req));
+    }
+
+    /** Anciens endpoints conservés pour compatibilité */
     @PostMapping("/etat-commercial")
     public ResponseEntity<SalesStatsResponse> getEtatCommercial(
             @RequestBody SalesStatsRequest req) {
         return ResponseEntity.ok(statsService.getStats(req));
     }
 
-    /** Rapport Consolidé — même données + remise et prix moyen */
     @PostMapping("/rapport-consolide")
     public ResponseEntity<SalesStatsResponse> getRapportConsolide(
             @RequestBody SalesStatsRequest req) {

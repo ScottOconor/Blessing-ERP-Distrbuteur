@@ -1,0 +1,52 @@
+<div class="sync-layout">
+  <nav class="sync-navbar">
+    <div class="sync-brand" (click)="goHome()">
+              @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">
+        }
+      <span class="material-icons">chevron_left</span>
+      <div class="brand-icon">
+        <span class="material-icons">hub</span>
+      </div>
+      <span class="brand-label">Hub & Spoke</span>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
+
+    <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+      <nav class="sync-nav nav-links">
+        @for (item of navItems; track item.id) {
+          <a class="nav-link" [class.active]="isRouteActive(item.route)" (click)="go(item.route)">
+            <span class="material-icons">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+
+      <div class="nav-right">
+        <div class="user-pill">
+          <div class="user-avatar-sm">{{ userInitials }}</div>
+          <span class="user-name-sm">{{ userName }}</span>
+        </div>
+        <button class="btn-theme-toggle" (click)="themeService.toggle()"
+                [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+  @if (mobileMenuOpen) {
+    <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
+  }
+
+  <main class="sync-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

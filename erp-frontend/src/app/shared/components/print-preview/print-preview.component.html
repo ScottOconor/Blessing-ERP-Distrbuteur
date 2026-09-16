@@ -45,6 +45,7 @@
           <div class="inv-doc">
             <div class="inv-header">
               <div class="inv-company">
+                @if (companyLogoUrl) { <img [src]="companyLogoUrl" class="inv-co-logo" alt="logo"> }
                 <div class="inv-co-name">{{ companyName }}</div>
                 @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
               </div>
@@ -58,7 +59,7 @@
               <div class="inv-meta-client">
                 <div class="inv-meta-lbl">CLIENT</div>
                 <div class="inv-meta-val">{{ invoice?.partnerName }}</div>
-                @if (invoice?.warehouseName) { <div class="inv-meta-sub">{{ invoice?.warehouseName }}</div> }
+                @if (invoice?.warehouseName) { <div class="inv-meta-sub">Entrepôt : {{ invoice?.warehouseName }}</div> }
               </div>
               <div class="inv-meta-dates">
                 <div class="inv-mrow"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
@@ -68,6 +69,9 @@
                 @if (invoice?.salesOrderName) {
                   <div class="inv-mrow"><span>Commande</span><span>{{ invoice?.salesOrderName }}</span></div>
                 }
+                @if (invoice?.notes) {
+                  <div class="inv-mrow"><span>Notes</span><span>{{ invoice!.notes }}</span></div>
+                }
               </div>
             </div>
 
@@ -76,8 +80,8 @@
                 <tr>
                   <th>Code</th><th class="tdesc">Désignation</th>
                   <th class="tr">Qté</th><th class="tr">P.U.HT</th>
-                  <th class="tr">Remise</th><th class="tr">Mnt HT</th>
-                  <th class="tr">TVA</th><th class="tr">Mnt TTC</th>
+                  <th class="tr">P.U.TTC</th><th class="tr">Rabais HT/u</th>
+                  <th class="tr">Rabais TTC/u</th><th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,53 +91,87 @@
                     <td class="tdesc">{{ l.description }}</td>
                     <td class="tr">{{ fmt(l.quantity) }}</td>
                     <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
-                    <td class="tr">{{ l.tauxRemise ? (l.tauxRemise + '%') : '—' }}</td>
+                    <td class="tr tbold-teal">{{ fmt(l.prixUnitaireTTC ?? 0) }}</td>
+                    <td class="tr trabais">{{ (l.rabaisUnitaire ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaire)) : '—' }}</td>
+                    <td class="tr trabais-ttc">{{ (l.rabaisUnitaireTTC ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaireTTC)) : '—' }}</td>
                     <td class="tr">{{ fmt(l.montantHT) }}</td>
-                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
                     <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
                   </tr>
                 }
                 @if (consigneLines.length) {
-                  <tr class="inv-section-hdr"><td colspan="8">CONSIGNES</td></tr>
+                  <tr class="inv-section-hdr"><td colspan="9">CONSIGNES</td></tr>
                   @for (l of consigneLines; track $index) {
                     <tr class="inv-consigne">
                       <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
                       <td class="tr">{{ fmt(l.quantity) }}</td>
-                      <td colspan="3"></td><td></td>
+                      <td colspan="4"></td><td></td>
+                      <td class="tr">{{ fmt(l.montantTTC) }}</td>
+                    </tr>
+                  }
+                }
+                @if (deconsigneLines.length) {
+                  <tr class="inv-section-hdr inv-decons-hdr"><td colspan="9">DÉCONSIGNES</td></tr>
+                  @for (l of deconsigneLines; track $index) {
+                    <tr class="inv-consigne">
+                      <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
+                      <td class="tr">{{ fmt(l.quantity) }}</td>
+                      <td colspan="4"></td><td></td>
                       <td class="tr">{{ fmt(l.montantTTC) }}</td>
                     </tr>
                   }
                 }
                 @if (invoice?.ristourneDetails?.length) {
-                  <tr class="inv-section-hdr"><td colspan="8">RISTOURNES</td></tr>
+                  <tr class="inv-section-hdr"><td colspan="9">RISTOURNES (à récupérer séparément)</td></tr>
                   @for (r of invoice?.ristourneDetails; track $index) {
                     <tr class="inv-rst">
                       <td colspan="2">{{ r.categoryName }}</td>
                       <td class="tr">{{ fmt(r.quantite) }}</td>
                       <td class="tr">{{ fmt(r.montantUnitaire) }}</td>
-                      <td></td>
+                      <td></td><td></td><td></td>
                       <td class="tr">{{ fmt(r.montantTotal) }}</td>
-                      <td></td>
-                      <td class="tr inv-red">– {{ fmt(r.montantTotal) }}</td>
+                      <td class="tr">{{ fmt(r.montantTotal) }}</td>
                     </tr>
                   }
                 }
               </tbody>
             </table>
 
+            <table class="inv-recap">
+              <thead><tr>
+                <th>Total Colis</th><th>Total PET</th><th>Total Casier</th><th>Liq. Nu</th>
+                <th>Consigne (F)</th><th>Déconsigne (F)</th><th>Qté Csgn</th><th>Qté Dcsgn</th>
+              </tr></thead>
+              <tbody><tr>
+                <td class="tr">{{ fmt(totalColis) }}</td>
+                <td class="tr">{{ fmt(totalPET) }}</td>
+                <td class="tr">{{ fmt(totalCasier) }}</td>
+                <td class="tr">{{ fmt(invoice?.totalLiquideNu ?? 0) }}</td>
+                <td class="tr">{{ fmt(consigneMontant) }}</td>
+                <td class="tr trabais">– {{ fmt(deconsigneMontant) }}</td>
+                <td class="tr">{{ fmt(qteConsigne) }}</td>
+                <td class="tr trabais">– {{ fmt(qteDeconsigne) }}</td>
+              </tr></tbody>
+            </table>
+
             <div class="inv-totals-wrap">
               <div class="inv-totals">
                 <div class="inv-trow"><span>Total HT</span><span>{{ fmt(invoice?.totalHT) }} F</span></div>
                 <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(invoice?.totalTVA) }} F</span></div>
-                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(invoice?.totalTTC) }} F</span></div>
                 @if (invoice?.totalPrecompte) {
-                  <div class="inv-trow inv-deduct"><span>Précompte (−)</span><span>{{ fmt(invoice?.totalPrecompte) }} F</span></div>
+                  <div class="inv-trow"><span>Précompte (PSA)</span><span>{{ fmt(invoice!.totalPrecompte) }} F</span></div>
                 }
-                @if (invoice?.totalRistourne) {
-                  <div class="inv-trow inv-deduct"><span>Ristournes (−)</span><span>{{ fmt(invoice?.totalRistourne) }} F</span></div>
+                @if ((invoice?.fraisEnlevementTTC ?? 0) > 0) {
+                  <div class="inv-trow inv-enlevement"><span>Frais d'enlèvement</span><span>+ {{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
                 }
-                @if (invoice?.fraisEnlevementTTC) {
-                  <div class="inv-trow"><span>Frais d'enlèvement</span><span>{{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
+                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(invoice?.totalTTC) }} F</span></div>
+                @if ((invoice?.totalRistourne ?? 0) > 0) {
+                  <div class="inv-trow inv-ristourne"><span>Ristournes (à récupérer)</span><span>{{ fmt(invoice?.totalRistourne) }} F</span></div>
+                }
+                @if ((invoice?.totalRabais ?? 0) > 0) {
+                  <div class="inv-trow"><span>Rabais HT</span><span>- {{ fmt(invoice?.totalRabais) }} F</span></div>
+                }
+                @if ((invoice?.totalRabaisTTC ?? 0) > 0) {
+                  <div class="inv-trow"><span>Rabais TTC déduit</span><span>- {{ fmt(invoice?.totalRabaisTTC) }} F</span></div>
                 }
                 <div class="inv-trow inv-net"><span>NET À PAYER</span><span>{{ fmt(invoice?.netAPayer ?? invoice?.totalTTC) }} F</span></div>
                 @if (invoice?.montantPaye) {
@@ -158,6 +196,7 @@
         <!-- ═══════════════ TICKET ═══════════════ -->
         @if ((docType === 'invoice' || docType === 'avoir') && format === 'ticket') {
           <div class="tkt">
+            @if (companyLogoUrl) { <div class="tkt-logo"><img [src]="companyLogoUrl" alt="logo"></div> }
             <div class="tkt-co">{{ companyName }}</div>
             @if (companyPhone) { <div class="tkt-phone">{{ companyPhone }}</div> }
             <div class="tkt-sep"></div>
@@ -166,39 +205,95 @@
             <div class="tkt-sep"></div>
             <div class="tkt-row"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
             <div class="tkt-row"><span>Client</span><span>{{ invoice?.partnerName }}</span></div>
+            @if (invoice?.notes) {
+              <div class="tkt-row"><span>Notes</span><span>{{ invoice!.notes }}</span></div>
+            }
             <div class="tkt-sep"></div>
             @for (l of salesLines; track $index) {
-              <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+              <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
               <div class="tkt-prod-row">
-                <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaire) }}</span>
+                <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaireTTC ?? l.prixUnitaire) }}</span>
                 <span class="tbold">{{ fmt(l.montantTTC) }} F</span>
               </div>
             }
             @if (consigneLines.length) {
               <div class="tkt-sep-label">— Consignes —</div>
               @for (l of consigneLines; track $index) {
-                <div class="tkt-prod-name">{{ l.description }}</div>
+                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
                 <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>{{ fmt(l.montantTTC) }} F</span></div>
               }
+            }
+            @if (deconsigneLines.length) {
+              <div class="tkt-sep-label">— Déconsignes —</div>
+              @for (l of deconsigneLines; track $index) {
+                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
+                <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>-{{ fmt(l.montantTTC) }} F</span></div>
+              }
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-row sm"><span>Total Colis</span><span>{{ fmt(totalColis) }}</span></div>
+            @if (totalPET > 0) {
+              <div class="tkt-row sm"><span>Total PET</span><span>{{ fmt(totalPET) }}</span></div>
+            }
+            @if (totalCasier > 0) {
+              <div class="tkt-row sm"><span>Total Casier</span><span>{{ fmt(totalCasier) }}</span></div>
+            }
+            @if ((invoice?.totalLiquideNu ?? 0) > 0) {
+              <div class="tkt-row sm"><span>Liq. Nu</span><span>{{ fmt(invoice?.totalLiquideNu) }} F</span></div>
+            }
+            @if (consigneMontant > 0) {
+              <div class="tkt-row sm"><span>Consigne</span><span>{{ fmt(consigneMontant) }} F</span></div>
+            }
+            @if (deconsigneMontant > 0) {
+              <div class="tkt-row sm"><span>Déconsigne</span><span>– {{ fmt(deconsigneMontant) }} F</span></div>
             }
             <div class="tkt-sep"></div>
             <div class="tkt-row sm"><span>Total HT</span><span>{{ fmt(invoice?.totalHT) }} F</span></div>
             <div class="tkt-row sm"><span>TVA 19,25%</span><span>{{ fmt(invoice?.totalTVA) }} F</span></div>
             @if (invoice?.totalPrecompte) {
-              <div class="tkt-row sm"><span>Précompte</span><span>– {{ fmt(invoice?.totalPrecompte) }} F</span></div>
+              <div class="tkt-row sm"><span>PSA</span><span>{{ fmt(invoice!.totalPrecompte) }} F</span></div>
             }
-            @if (invoice?.fraisEnlevementTTC) {
-              <div class="tkt-row sm"><span>Frais enlèv.</span><span>{{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
+            @if ((invoice?.fraisEnlevementTTC ?? 0) > 0) {
+              <div class="tkt-row sm"><span>Frais enlèv.</span><span>+ {{ fmt(invoice?.fraisEnlevementTTC) }} F</span></div>
+            }
+            <div class="tkt-row tkt-subtotal"><span>Total TTC</span><span>{{ fmt(invoice?.totalTTC) }} F</span></div>
+            @if ((invoice?.totalRistourne ?? 0) > 0) {
+              <div class="tkt-sep-dots"></div>
+              <div class="tkt-ristourne-hdr">RISTOURNES (à récupérer)</div>
+              <div class="tkt-row tkt-ristourne-tot"><span>Total ristournes</span><span>{{ fmt(invoice?.totalRistourne) }} F</span></div>
+              <div class="tkt-sep-dots"></div>
+            }
+            @if ((invoice?.totalRabais ?? 0) > 0) {
+              <div class="tkt-row sm"><span>Rabais HT</span><span>- {{ fmt(invoice?.totalRabais) }} F</span></div>
+            }
+            @if ((invoice?.totalRabaisTTC ?? 0) > 0) {
+              <div class="tkt-row sm"><span>Rabais TTC</span><span>- {{ fmt(invoice?.totalRabaisTTC) }} F</span></div>
             }
             <div class="tkt-sep"></div>
             <div class="tkt-total"><span>NET À PAYER</span><span>{{ fmt(invoice?.netAPayer ?? invoice?.totalTTC) }} F</span></div>
-            @if (invoice?.montantDu) {
+            @if (invoice?.montantPaye) {
+              <div class="tkt-row sm"><span>Déjà payé</span><span>{{ fmt(invoice!.montantPaye) }} F</span></div>
+            }
+            @if ((invoice?.montantDu ?? 0) > 0) {
               <div class="tkt-row sm"><span>Reste dû</span><span>{{ fmt(invoice?.montantDu) }} F</span></div>
             }
             <div class="tkt-sep"></div>
             <div class="tkt-lettres">{{ montantEnLettres(invoice?.netAPayer ?? invoice?.totalTTC) }}</div>
             <div class="tkt-thanks">Merci de votre confiance !</div>
-            <div class="tkt-sig">Signature : ____________________</div>
+            @if (invoice?.createdBy) {
+              <div class="tkt-row sm"><span>Agent</span><span>{{ invoice!.createdBy }}</span></div>
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-sig-box">
+              <div class="tkt-sig-lbl">Signature du livreur</div>
+              <div class="tkt-sig-name">Nom : ___________________________</div>
+              <div class="tkt-sig-area"></div>
+            </div>
+            <div class="tkt-sig-box" style="margin-top:3mm">
+              <div class="tkt-sig-lbl">Cachet &amp; signature client</div>
+              <div class="tkt-sig-name">Nom : ___________________________</div>
+              <div class="tkt-sig-area"></div>
+            </div>
           </div>
         }
 
@@ -207,6 +302,7 @@
           <div class="inv-doc">
             <div class="inv-header">
               <div class="inv-company">
+                @if (companyLogoUrl) { <img [src]="companyLogoUrl" class="inv-co-logo" alt="logo"> }
                 <div class="inv-co-name">{{ companyName }}</div>
                 @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
               </div>
@@ -277,6 +373,7 @@
           <div class="inv-doc">
             <div class="inv-header">
               <div class="inv-company">
+                @if (companyLogoUrl) { <img [src]="companyLogoUrl" class="inv-co-logo" alt="logo"> }
                 <div class="inv-co-name">{{ companyName }}</div>
                 @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
               </div>
@@ -285,6 +382,7 @@
                 <div class="inv-ref">{{ purchaseInvoice?.name }}</div>
               </div>
             </div>
+
             <div class="inv-meta">
               <div class="inv-meta-client">
                 <div class="inv-meta-lbl">FOURNISSEUR</div>
@@ -298,47 +396,104 @@
                 @if (purchaseInvoice?.purchaseOrderName) {
                   <div class="inv-mrow"><span>Commande</span><span>{{ purchaseInvoice?.purchaseOrderName }}</span></div>
                 }
+                @if (purchaseInvoice?.notes) {
+                  <div class="inv-mrow"><span>Réf.</span><span>{{ purchaseInvoice!.notes }}</span></div>
+                }
               </div>
             </div>
+
             <table class="inv-lines">
               <thead>
                 <tr>
                   <th>Code</th><th class="tdesc">Désignation</th>
                   <th class="tr">Qté</th><th class="tr">P.U.HT</th>
-                  <th class="tr">TVA</th><th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
+                  <th class="tr">P.U.TTC</th><th class="tr">Rabais HT/u</th><th class="tr">Rabais TTC/u</th>
+                  <th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
                 </tr>
               </thead>
               <tbody>
-                @for (l of purchaseInvoiceLines; track $index) {
+                @for (l of purchaseNormalLines; track $index) {
                   <tr>
                     <td>{{ l.productCode }}</td>
                     <td class="tdesc">{{ l.description }}</td>
                     <td class="tr">{{ fmt(l.quantity) }}</td>
-                    <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
-                    <td class="tr">{{ l.tauxTVA ? (l.tauxTVA + '%') : '—' }}</td>
+                    <td class="tr">{{ fmt((l.prixUnitaire) + (l.rabaisUnitaire ?? 0)) }}</td>
+                    <td class="tr tbold-teal">{{ fmt(((l.prixUnitaire) + (l.rabaisUnitaire ?? 0)) * (1 + (l.tauxTVA ?? 0) / 100)) }}</td>
+                    <td class="tr trabais">{{ (l.rabaisUnitaire ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaire)) : '—' }}</td>
+                    <td class="tr trabais-ttc">{{ (l.rabaisUnitaire ?? 0) > 0 ? ('–' + fmt((l.rabaisUnitaire ?? 0) * (1 + (l.tauxTVA ?? 0) / 100))) : '—' }}</td>
                     <td class="tr">{{ fmt(l.montantHT) }}</td>
-                    <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
+                    <td class="tr tbold">{{ fmt((l.montantHT ?? 0) + (l.montantTVA ?? 0) + (l.precompte ?? 0)) }}</td>
                   </tr>
+                }
+                @if (purchaseConsigneLines.length) {
+                  <tr class="inv-section-hdr"><td colspan="9">CONSIGNES</td></tr>
+                  @for (l of purchaseConsigneLines; track $index) {
+                    <tr class="inv-consigne">
+                      <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
+                      <td class="tr">{{ fmt(l.quantity) }}</td>
+                      <td colspan="4"></td><td></td>
+                      <td class="tr">{{ fmt(l.montantTTC) }}</td>
+                    </tr>
+                  }
+                }
+                @if (purchaseDeconsigneLines.length) {
+                  <tr class="inv-section-hdr inv-decons-hdr"><td colspan="9">DÉCONSIGNES</td></tr>
+                  @for (l of purchaseDeconsigneLines; track $index) {
+                    <tr class="inv-consigne">
+                      <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
+                      <td class="tr">{{ fmt(l.quantity) }}</td>
+                      <td colspan="4"></td><td></td>
+                      <td class="tr">{{ fmt(l.montantTTC) }}</td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
+
+            <table class="inv-recap">
+              <thead><tr>
+                <th>Total Colis</th><th>Total PET</th><th>Total Casier</th><th>Liq. Nu</th>
+                <th>Consigne (F)</th><th>Déconsigne (F)</th><th>Qté Csgn</th><th>Qté Dcsgn</th>
+              </tr></thead>
+              <tbody><tr>
+                <td class="tr">{{ fmt(purchaseTotalColis) }}</td>
+                <td class="tr">{{ fmt(purchaseTotalPET) }}</td>
+                <td class="tr">0</td>
+                <td class="tr">{{ fmt(purchaseInvoice?.totalLiquideNu ?? 0) }}</td>
+                <td class="tr">{{ fmt(purchaseConsigneMontant) }}</td>
+                <td class="tr trabais">– {{ fmt(purchaseDeconsigneMontant) }}</td>
+                <td class="tr">{{ fmt(purchaseQteConsigne) }}</td>
+                <td class="tr trabais">– {{ fmt(purchaseQteDeconsigne) }}</td>
+              </tr></tbody>
+            </table>
+
             <div class="inv-totals-wrap">
               <div class="inv-totals">
                 <div class="inv-trow"><span>Total HT</span><span>{{ fmt(purchaseInvoice?.totalHT) }} F</span></div>
-                <div class="inv-trow"><span>TVA</span><span>{{ fmt(purchaseInvoice?.totalTVA) }} F</span></div>
-                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(purchaseInvoice?.totalTTC) }} F</span></div>
+                <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(purchaseInvoice?.totalTVA) }} F</span></div>
                 @if (purchaseInvoice?.totalPrecompte) {
-                  <div class="inv-trow"><span>PSA</span><span>{{ fmt(purchaseInvoice?.totalPrecompte) }} F</span></div>
+                  <div class="inv-trow"><span>Précompte (PSA)</span><span>{{ fmt(purchaseInvoice?.totalPrecompte) }} F</span></div>
+                }
+                @if ((purchaseInvoice?.fraisEnlevementTTC ?? 0) > 0) {
+                  <div class="inv-trow inv-enlevement"><span>Frais d'enlèvement</span><span>+ {{ fmt(purchaseInvoice?.fraisEnlevementTTC) }} F</span></div>
+                }
+                <div class="inv-trow inv-grand"><span>Total TTC</span><span>{{ fmt(purchaseInvoice?.totalTTC) }} F</span></div>
+                @if (purchaseTotalRabaisHT > 0) {
+                  <div class="inv-trow inv-ristourne"><span>Rabais HT (601901)</span><span>– {{ fmt(purchaseTotalRabaisHT) }} F</span></div>
+                }
+                @if (purchaseTotalRabaisTTC > 0) {
+                  <div class="inv-trow"><span>Rabais TTC déduit</span><span>– {{ fmt(purchaseTotalRabaisTTC) }} F</span></div>
                 }
                 <div class="inv-trow inv-net"><span>NET À PAYER</span><span>{{ fmt(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }} F</span></div>
                 @if (purchaseInvoice?.montantPaye) {
                   <div class="inv-trow inv-paid"><span>Déjà payé</span><span>{{ fmt(purchaseInvoice?.montantPaye) }} F</span></div>
                 }
-                @if (purchaseInvoice?.montantDu) {
+                @if ((purchaseInvoice?.montantDu ?? 0) > 0.01) {
                   <div class="inv-trow inv-due"><span>Reste dû</span><span>{{ fmt(purchaseInvoice?.montantDu) }} F</span></div>
                 }
               </div>
             </div>
+
             <div class="inv-lettres">
               Arrêté à la somme de : <strong>{{ montantEnLettres(purchaseInvoice?.netAPayer ?? purchaseInvoice?.totalTTC) }}</strong>
             </div>
@@ -352,6 +507,7 @@
         <!-- ═══════════════ FACTURE FOURNISSEUR TICKET ═══════════════ -->
         @if (docType === 'purchase_invoice' && format === 'ticket') {
           <div class="tkt">
+            @if (companyLogoUrl) { <div class="tkt-logo"><img [src]="companyLogoUrl" alt="logo"></div> }
             <div class="tkt-co">{{ companyName }}</div>
             @if (companyPhone) { <div class="tkt-phone">{{ companyPhone }}</div> }
             <div class="tkt-sep"></div>
@@ -383,6 +539,7 @@
           <div class="inv-doc">
             <div class="inv-header">
               <div class="inv-company">
+                @if (companyLogoUrl) { <img [src]="companyLogoUrl" class="inv-co-logo" alt="logo"> }
                 <div class="inv-co-name">{{ companyName }}</div>
                 @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
               </div>
@@ -432,7 +589,7 @@
             <div class="inv-totals-wrap">
               <div class="inv-totals">
                 <div class="inv-trow"><span>Total HT</span><span>{{ fmt(purchaseOrder?.totalHT) }} F</span></div>
-                <div class="inv-trow"><span>TVA (19,25%)</span><span>{{ fmt(purchaseOrder?.totalTVA) }} F</span></div>
+                <div class="inv-trow"><span>Taxes (TVA + PSA)</span><span>{{ fmt((purchaseOrder?.totalTTC ?? 0) - (purchaseOrder?.totalHT ?? 0)) }} F</span></div>
                 <div class="inv-trow inv-net"><span>TOTAL TTC</span><span>{{ fmt(purchaseOrder?.totalTTC) }} F</span></div>
               </div>
             </div>
@@ -460,6 +617,7 @@
           <div class="inv-doc">
             <div class="inv-header">
               <div class="inv-company">
+                @if (companyLogoUrl) { <img [src]="companyLogoUrl" class="inv-co-logo" alt="logo"> }
                 <div class="inv-co-name">{{ companyName }}</div>
                 @if (companyPhone) { <div class="inv-co-sub">Tél : {{ companyPhone }}</div> }
               </div>

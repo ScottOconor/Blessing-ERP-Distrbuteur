@@ -88,6 +88,32 @@ public class ReportController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/grand-livre-tiers")
+    public ResponseEntity<Map<String, Object>> getGrandLivreTiers(
+            @Valid @RequestBody ReportRequest request) {
+        Map<String, Object> result = reportService.getGrandLivreTiers(
+                request.getDateFrom(),
+                request.getDateTo(),
+                request.getCompanyId(),
+                request.getResultSelection()
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    // ===================== CASHBOOK =====================
+
+    @PostMapping("/cashbook")
+    public ResponseEntity<Map<String, Object>> getCashbook(
+            @Valid @RequestBody ReportRequest request) {
+        Map<String, Object> result = reportService.getCashbook(
+                request.getDateFrom(),
+                request.getDateTo(),
+                request.getCompanyId(),
+                request.getJournalIds()
+        );
+        return ResponseEntity.ok(result);
+    }
+
     // ===================== BILAN OHADA =====================
 
     @PostMapping("/bilan")
@@ -96,7 +122,10 @@ public class ReportController {
         Map<String, Object> result = reportService.getBilanOhada(
                 request.getDateFrom(),
                 request.getDateTo(),
-                request.getCompanyId()
+                request.getCompanyId(),
+                request.getPeriodType(),
+                request.getIncludeUnposted(),
+                request.getComparisonEnabled()
         );
         return ResponseEntity.ok(result);
     }
@@ -109,8 +138,16 @@ public class ReportController {
         Map<String, Object> result = reportService.getCompteDeResultat(
                 request.getDateFrom(),
                 request.getDateTo(),
-                request.getCompanyId()
+                request.getCompanyId(),
+                request.getMode()
         );
         return ResponseEntity.ok(result);
+    }
+
+    // ===================== SUIVI DETTES & CRÉANCES =====================
+
+    @GetMapping("/suivi-tiers")
+    public ResponseEntity<Map<String, Object>> getSuiviTiers(@RequestParam Long companyId) {
+        return ResponseEntity.ok(reportService.getSuiviTiers(companyId));
     }
 }

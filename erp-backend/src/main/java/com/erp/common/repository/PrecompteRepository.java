@@ -17,7 +17,14 @@ public interface PrecompteRepository extends JpaRepository<Precompte, Long> {
     List<Precompte> findByPartnerIdIn(
             @org.springframework.data.repository.query.Param("partnerIds") java.util.Collection<Long> partnerIds);
 
+    /** Utilisé uniquement par PrecompteService.save() pour retrouver (et réactiver) une ligne
+     *  existante, active ou non — ne pas utiliser pour résoudre le taux applicable à une vente/
+     *  un achat, un précompte désactivé (soft delete) resterait sinon appliqué indéfiniment. */
     Optional<Precompte> findByPartnerIdAndTypePrecompteAndCompanyId(
+            Long partnerId, String typePrecompte, Long companyId);
+
+    /** Résolution du taux RÉELLEMENT applicable — exclut les précomptes désactivés (soft delete). */
+    Optional<Precompte> findByPartnerIdAndTypePrecompteAndCompanyIdAndActiveTrue(
             Long partnerId, String typePrecompte, Long companyId);
 
     List<Precompte> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);

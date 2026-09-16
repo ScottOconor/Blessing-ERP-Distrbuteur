@@ -1,0 +1,144 @@
+<div class="suivi-page">
+
+  <!-- Header -->
+  <div class="suivi-header">
+    <div class="suivi-title-row">
+      <span class="material-icons suivi-icon">swap_horiz</span>
+      <h1>Dettes &amp; Créances</h1>
+    </div>
+    <div class="suivi-actions">
+      @if (lastRefresh) {
+        <span class="last-refresh">
+          <span class="material-icons">schedule</span>
+          Actualisé à {{ lastRefresh | date:'HH:mm:ss' }}
+        </span>
+      }
+      <button class="btn-refresh" (click)="load()" [disabled]="loading">
+        <span class="material-icons" [class.spin]="loading">refresh</span>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  @if (errorMsg) {
+    <div class="alert-error">
+      <span class="material-icons">error</span> {{ errorMsg }}
+    </div>
+  }
+
+  @if (loading) {
+    <div class="loading-state">
+      <span class="material-icons spin">refresh</span> Chargement en cours…
+    </div>
+  } @else {
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kpi-card kpi-creances">
+        <div class="kpi-label">
+          <span class="material-icons">trending_up</span>
+          Total Créances
+        </div>
+        <div class="kpi-value">{{ totalCreances | number:'1.0-0' }} <span class="kpi-curr">FCFA</span></div>
+        <div class="kpi-sub">{{ creances.length }} client(s) nous doivent de l'argent</div>
+      </div>
+      <div class="kpi-card kpi-dettes">
+        <div class="kpi-label">
+          <span class="material-icons">trending_down</span>
+          Total Dettes
+        </div>
+        <div class="kpi-value">{{ totalDettes | number:'1.0-0' }} <span class="kpi-curr">FCFA</span></div>
+        <div class="kpi-sub">{{ dettes.length }} fournisseur(s) à qui on doit de l'argent</div>
+      </div>
+      <div class="kpi-card" [class.kpi-net-pos]="soldeNet >= 0" [class.kpi-net-neg]="soldeNet < 0">
+        <div class="kpi-label">
+          <span class="material-icons">account_balance</span>
+          Solde Net
+        </div>
+        <div class="kpi-value">{{ soldeNet | number:'1.0-0' }} <span class="kpi-curr">FCFA</span></div>
+        <div class="kpi-sub">{{ soldeNet >= 0 ? 'Position créditrice nette' : 'Position débitrice nette' }}</div>
+      </div>
+    </div>
+
+    <!-- Two column layout -->
+    <div class="tables-row">
+
+      <!-- CRÉANCES -->
+      <div class="table-section">
+        <div class="section-header creances-header">
+          <span class="material-icons">trending_up</span>
+          <h2>Créances clients</h2>
+          <span class="badge badge-creances">Ce qu'on nous doit</span>
+        </div>
+        @if (creances.length === 0) {
+          <div class="empty-state">
+            <span class="material-icons">check_circle</span>
+            <p>Aucune créance en cours</p>
+          </div>
+        } @else {
+          <table class="suivi-table">
+            <thead>
+              <tr>
+                <th>Partenaire</th>
+                <th class="ar solde-col">Montant dû</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of creances; track line.partnerId) {
+                <tr>
+                  <td class="partner-name">{{ line.partnerName }}</td>
+                  <td class="ar solde-creance">{{ line.solde | number:'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>TOTAL CRÉANCES</td>
+                <td class="ar">{{ totalCreances | number:'1.0-0' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        }
+      </div>
+
+      <!-- DETTES -->
+      <div class="table-section">
+        <div class="section-header dettes-header">
+          <span class="material-icons">trending_down</span>
+          <h2>Dettes fournisseurs</h2>
+          <span class="badge badge-dettes">Ce qu'on doit</span>
+        </div>
+        @if (dettes.length === 0) {
+          <div class="empty-state">
+            <span class="material-icons">check_circle</span>
+            <p>Aucune dette en cours</p>
+          </div>
+        } @else {
+          <table class="suivi-table">
+            <thead>
+              <tr>
+                <th>Partenaire</th>
+                <th class="ar solde-col">Montant dû</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of dettes; track line.partnerId) {
+                <tr>
+                  <td class="partner-name">{{ line.partnerName }}</td>
+                  <td class="ar solde-dette">{{ line.solde | number:'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>TOTAL DETTES</td>
+                <td class="ar">{{ totalDettes | number:'1.0-0' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        }
+      </div>
+
+    </div>
+  }
+</div>

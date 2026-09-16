@@ -1,0 +1,93 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><span class="material-icons">dashboard</span> Tableau de bord Helpdesk</h1>
+      <p class="page-sub">Vue d'ensemble des tickets et incidents</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="router.navigate(['/helpdesk/tickets'], { queryParams: { new: '1' } })">
+        <span class="material-icons">add</span> Nouveau ticket
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (stats) {
+
+    <div class="stats-grid">
+      <div class="stat-card stat-open" (click)="router.navigate(['/helpdesk/tickets'], { queryParams: { status: 'OUVERT' } })">
+        <div class="stat-icon"><span class="material-icons">inbox</span></div>
+        <div class="stat-body">
+          <div class="stat-value">{{ stats.totalOuvert }}</div>
+          <div class="stat-label">Ouverts</div>
+        </div>
+      </div>
+      <div class="stat-card stat-inprogress" (click)="router.navigate(['/helpdesk/tickets'], { queryParams: { status: 'EN_COURS' } })">
+        <div class="stat-icon"><span class="material-icons">pending</span></div>
+        <div class="stat-body">
+          <div class="stat-value">{{ stats.totalEnCours }}</div>
+          <div class="stat-label">En cours</div>
+        </div>
+      </div>
+      <div class="stat-card stat-resolved" (click)="router.navigate(['/helpdesk/tickets'], { queryParams: { status: 'RESOLU' } })">
+        <div class="stat-icon"><span class="material-icons">check_circle</span></div>
+        <div class="stat-body">
+          <div class="stat-value">{{ stats.totalResolu }}</div>
+          <div class="stat-label">Résolus</div>
+        </div>
+      </div>
+      <div class="stat-card stat-closed" (click)="router.navigate(['/helpdesk/tickets'], { queryParams: { status: 'FERME' } })">
+        <div class="stat-icon"><span class="material-icons">archive</span></div>
+        <div class="stat-body">
+          <div class="stat-value">{{ stats.totalFerme }}</div>
+          <div class="stat-label">Fermés</div>
+        </div>
+      </div>
+      @if (stats.totalCritique > 0) {
+        <div class="stat-card stat-critical">
+          <div class="stat-icon"><span class="material-icons">priority_high</span></div>
+          <div class="stat-body">
+            <div class="stat-value">{{ stats.totalCritique }}</div>
+            <div class="stat-label">Critiques actifs</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <h2 class="section-title">Tickets récents</h2>
+    @if (recentTickets.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">inbox</span>
+        <p>Aucun ticket pour le moment</p>
+      </div>
+    } @else {
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Titre</th>
+              <th>Statut</th>
+              <th>Priorité</th>
+              <th>Assigné à</th>
+              <th>Créé le</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of recentTickets; track t.id) {
+              <tr class="clickable" (click)="router.navigate(['/helpdesk/tickets', t.id])">
+                <td class="mono">{{ t.ticketNumber }}</td>
+                <td class="col-title">{{ t.title }}</td>
+                <td><span class="badge badge-status-{{ t.status }}">{{ statusLabel(t.status) }}</span></td>
+                <td><span class="badge badge-prio-{{ t.priority }}">{{ priorityLabel(t.priority) }}</span></td>
+                <td class="text-muted">{{ t.assignedToUsername || '—' }}</td>
+                <td class="text-muted">{{ t.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

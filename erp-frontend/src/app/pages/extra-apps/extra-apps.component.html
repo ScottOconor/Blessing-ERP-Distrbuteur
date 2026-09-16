@@ -1,0 +1,116 @@
+<div class="extra-page">
+
+  <header class="extra-header">
+    <div class="header-brand">
+      <div class="brand-icon" [class.has-logo]="branding.hasAppLogo">
+        @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="brand-app-logo" alt="Logo">
+        } @else {
+          <span class="blessing-logo-mark">BE</span>
+        }
+      </div>
+      <div class="brand-name-block">
+        <span class="brand-text">{{ branding.appName }}</span>
+        <span class="brand-tagline">Blessing Enterprise Resource Planning</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-back" (click)="back()">
+        <span class="material-icons">arrow_back</span>
+        Retour
+      </button>
+      <button class="btn-theme" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+        <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="extra-main">
+    <div class="section-header">
+      <h2><span class="material-icons">apps</span> Applications supplémentaires</h2>
+      <p>Modules additionnels de la plateforme K·I·R·A</p>
+    </div>
+
+    <div class="apps-grid">
+      @for (app of apps; track app.id) {
+        <div class="app-card"
+             [class.available]="app.available"
+             [class.disabled]="!app.available"
+             [style.--app-color]="app.color"
+             (click)="navigate(app)"
+             role="button"
+             [tabindex]="app.available ? 0 : -1">
+
+          @if (!app.available) {
+            <div class="soon-badge">Bientôt</div>
+          }
+
+          <div class="app-icon-wrap">
+            <div class="app-icon">
+              <span class="material-icons">{{ app.icon }}</span>
+            </div>
+          </div>
+
+          <div class="app-body">
+            <div class="app-name">{{ app.name }}</div>
+            <div class="app-desc">{{ app.description }}</div>
+            @if (app.available) {
+              <div class="app-arrow-row">
+                <span class="app-open-label">Ouvrir</span>
+                <span class="material-icons">arrow_forward</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="section-header" style="margin-top:36px">
+      <h2><span class="material-icons">widgets</span> Modules métier</h2>
+      <p>Installez ou désinstallez les modules dont vous avez besoin — un module désinstallé disparaît de l'accueil.</p>
+    </div>
+
+    <div class="apps-grid">
+      @for (m of moduleCards; track m.code) {
+        <div class="app-card"
+             [class.available]="m.installed"
+             [class.disabled]="!m.installed"
+             [style.--app-color]="m.color"
+             (click)="openModule(m)"
+             role="button"
+             [tabindex]="m.installed ? 0 : -1">
+
+          @if (!m.installed) {
+            <div class="soon-badge">Désinstallé</div>
+          }
+
+          <div class="app-icon-wrap">
+            <div class="app-icon">
+              <span class="material-icons">{{ m.icon }}</span>
+            </div>
+          </div>
+
+          <div class="app-body">
+            <div class="app-name">{{ m.name }}</div>
+            <div class="app-desc">{{ m.description }}</div>
+            @if (m.installed) {
+              <div class="app-arrow-row">
+                <span class="app-open-label">Ouvrir</span>
+                <span class="material-icons">arrow_forward</span>
+              </div>
+            }
+          </div>
+
+          @if (canManageModules) {
+            <button class="module-toggle-btn" [class.uninstall]="m.installed"
+                    [disabled]="toggling[m.code]" (click)="toggleModule(m, $event)">
+              <span class="material-icons">{{ m.installed ? 'delete_outline' : 'download' }}</span>
+              {{ toggling[m.code] ? '…' : (m.installed ? 'Désinstaller' : 'Installer') }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </main>
+
+</div>

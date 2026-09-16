@@ -1,0 +1,313 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><span class="material-icons">payments</span>Paiements fournisseurs</h1>
+      <span class="record-count">{{ filtered.length }} paiement(s)</span>
+    </div>
+    <div class="header-right">
+      <button class="btn-new" (click)="openNewPayment()">
+        <span class="material-icons">add</span> Nouveau paiement
+      </button>
+      <button class="btn-refresh" (click)="load()" [disabled]="loading">
+        <span class="material-icons" [class.spin]="loading">refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon stat-blue"><span class="material-icons">check_circle</span></div>
+      <div class="stat-body">
+        <div class="stat-label">Paiements validés</div>
+        <div class="stat-value">{{ activeCount }}</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-green"><span class="material-icons">account_balance_wallet</span></div>
+      <div class="stat-body">
+        <div class="stat-label">Total décaissé</div>
+        <div class="stat-value">{{ total | number:'1.0-0' }} <span class="stat-currency">FCFA</span></div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon stat-red"><span class="material-icons">undo</span></div>
+      <div class="stat-body">
+        <div class="stat-label">Paiements annulés</div>
+        <div class="stat-value">{{ reversedCount }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-chips">
+      @for (f of stateFilters; track f.value) {
+        <button class="filter-chip" [class.active]="stateFilter === f.value" (click)="setStateFilter(f.value)">{{ f.label }}</button>
+      }
+    </div>
+    <div class="filter-right">
+      <div class="date-range">
+        <span class="material-icons date-icon">date_range</span>
+        <input type="date" class="form-input" [(ngModel)]="dateFrom" (ngModelChange)="applyFilter()">
+        <span class="date-sep">→</span>
+        <input type="date" class="form-input" [(ngModel)]="dateTo" (ngModelChange)="applyFilter()">
+      </div>
+      <div class="search-box">
+        <span class="material-icons">search</span>
+        <input type="text" placeholder="Fournisseur, facture…" [(ngModel)]="searchPartner" (ngModelChange)="applyFilter()">
+      </div>
+      <button class="btn-clear" (click)="clearFilter()">
+        <span class="material-icons">clear_all</span> Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    @if (loading) {
+      <div class="empty-state"><span class="material-icons spin">refresh</span><p>Chargement…</p></div>
+    } @else if (filtered.length === 0) {
+      <div class="empty-state"><span class="material-icons">payments</span><p>Aucun paiement trouvé.</p></div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Référence</th><th>Date</th><th>Fournisseur</th>
+            <th>Facture liée</th><th>Journal</th><th>Statut</th>
+            <th class="text-right">Montant (FCFA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of filtered; track p.id) {
+            <tr class="clickable-row" [class.row-reversed]="p.state === 'reversed'" (click)="openDetail(p)">
+              <td class="font-mono font-bold">{{ p.name }}</td>
+              <td class="nowrap">{{ p.date | date:'dd/MM/yyyy' }}</td>
+              <td class="font-bold">{{ p.partnerName || '—' }}</td>
+              <td>
+                @if (p.invoiceId) {
+                  <span class="link-invoice" (click)="$event.stopPropagation(); openInvoice(p.invoiceId)">
+                    <span class="material-icons">open_in_new</span>{{ p.invoiceName }}
+                  </span>
+                } @else { <span class="text-muted">—</span> }
+              </td>
+              <td class="small text-muted">{{ p.journalName || '—' }}</td>
+              <td><span class="badge" [class]="stateClass(p.state)">{{ stateLabel(p.state) }}</span></td>
+              <td class="text-right font-mono" [class.text-muted]="p.state === 'reversed'">{{ p.amount | number:'1.0-0' }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" class="foot-label">TOTAL VALIDÉ</td>
+            <td class="foot-value">{{ total | number:'1.0-0' }} FCFA</td>
+          </tr>
+        </tfoot>
+      </table>
+    }
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL DÉTAIL PAIEMENT ══════════════════════════════ -->
+@if (showDetailModal && selectedPayment) {
+  <div class="modal-overlay" (click)="closeDetail()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title"><span class="material-icons">receipt</span> Détail du paiement</div>
+        <button class="modal-close" (click)="closeDetail()"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Référence</span>
+            <span class="detail-value font-mono font-bold">{{ selectedPayment.name }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Date</span>
+            <span class="detail-value">{{ selectedPayment.date | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Fournisseur</span>
+            <span class="detail-value font-bold">{{ selectedPayment.partnerName || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Journal</span>
+            <span class="detail-value">{{ selectedPayment.journalName || '—' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Facture liée</span>
+            <span class="detail-value">
+              @if (selectedPayment.invoiceId) {
+                <a class="link-invoice" (click)="closeDetail(); openInvoice(selectedPayment.invoiceId)">
+                  <span class="material-icons">open_in_new</span>{{ selectedPayment.invoiceName }}
+                </a>
+              } @else { — }
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Mémo</span>
+            <span class="detail-value text-muted">{{ selectedPayment.memo || '—' }}</span>
+          </div>
+          <div class="detail-item detail-item-full">
+            <span class="detail-label">Montant</span>
+            <span class="detail-value amount-big">{{ selectedPayment.amount | number:'1.0-0' }} FCFA</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Statut</span>
+            <span class="badge" [class]="stateClass(selectedPayment.state)">{{ stateLabel(selectedPayment.state) }}</span>
+          </div>
+        </div>
+
+        @if (reverseError) {
+          <div class="alert-error"><span class="material-icons">error_outline</span>{{ reverseError }}</div>
+        }
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-secondary-modal" (click)="closeDetail()">Fermer</button>
+        @if (selectedPayment.state !== 'reversed') {
+          <button class="btn-danger-modal" (click)="reverseFromDetail()" [disabled]="reversing">
+            <span class="material-icons" [class.spin]="reversing">{{ reversing ? 'hourglass_empty' : 'undo' }}</span>
+            {{ reversing ? 'Annulation…' : 'Annuler ce paiement' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════ MODAL NOUVEAU PAIEMENT ════════════════════════════ -->
+@if (showNewModal) {
+  <div class="modal-overlay" (click)="closeNewPayment()">
+    <div class="modal-panel modal-panel-lg" (click)="$event.stopPropagation()">
+
+      <div class="modal-hdr">
+        <div class="modal-title"><span class="material-icons">add_circle</span> Nouveau paiement fournisseur</div>
+        <button class="modal-close" (click)="closeNewPayment()"><span class="material-icons">close</span></button>
+      </div>
+
+      <!-- Étapes -->
+      <div class="steps-bar">
+        <div class="step" [class.step-active]="newPayStep === 1" [class.step-done]="newPayStep > 1">
+          <div class="step-dot">1</div><span>Fournisseur</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" [class.step-active]="newPayStep === 2" [class.step-done]="newPayStep > 2">
+          <div class="step-dot">2</div><span>Facture</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" [class.step-active]="newPayStep === 3">
+          <div class="step-dot">3</div><span>Paiement</span>
+        </div>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Étape 1 : Choisir fournisseur -->
+        @if (newPayStep === 1) {
+          @if (loadingInvoices) {
+            <div class="step-loading"><span class="material-icons spin">refresh</span> Chargement des factures…</div>
+          } @else if (unpaidSuppliers.length === 0) {
+            <div class="step-empty"><span class="material-icons">check_circle</span><p>Aucune facture impayée.</p></div>
+          } @else {
+            <p class="step-hint">Sélectionnez le fournisseur à payer :</p>
+            <div class="supplier-grid">
+              @for (s of unpaidSuppliers; track s.id) {
+                <div class="supplier-card" (click)="selectSupplier(s.id)">
+                  <div class="supplier-avatar">{{ s.name[0] }}</div>
+                  <div class="supplier-info">
+                    <div class="supplier-name">{{ s.name }}</div>
+                    <div class="supplier-count">{{ s.invoiceCount }} facture(s) impayée(s)</div>
+                  </div>
+                  <span class="material-icons supplier-arrow">chevron_right</span>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- Étape 2 : Choisir facture -->
+        @if (newPayStep === 2) {
+          <div class="step-back">
+            <button class="btn-back-step" (click)="backToStep(1)">
+              <span class="material-icons">arrow_back</span> Retour
+            </button>
+            <span class="step-context">{{ supplierName(selectedSupplierId) }}</span>
+          </div>
+          <p class="step-hint">Sélectionnez la facture à régler :</p>
+          <div class="invoice-list-select">
+            @for (inv of invoicesForSupplier; track inv.id) {
+              <div class="invoice-select-card" (click)="selectInvoice(inv)">
+                <div class="inv-ref font-mono font-bold">{{ inv.name }}</div>
+                <div class="inv-date text-muted small">{{ inv.date | date:'dd/MM/yyyy' }}</div>
+                <div class="inv-amounts">
+                  <span class="inv-total">TTC : {{ inv.totalTTC | number:'1.0-0' }}</span>
+                  <span class="inv-due">Reste : <strong>{{ inv.montantDu | number:'1.0-0' }} FCFA</strong></span>
+                </div>
+                <span class="material-icons supplier-arrow">chevron_right</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Étape 3 : Formulaire paiement -->
+        @if (newPayStep === 3 && selectedInvoice) {
+          <div class="step-back">
+            <button class="btn-back-step" (click)="backToStep(2)">
+              <span class="material-icons">arrow_back</span> Retour
+            </button>
+          </div>
+
+          <div class="inv-recap">
+            <div class="inv-recap-row">
+              <span>Fournisseur</span><strong>{{ selectedInvoice.partnerName }}</strong>
+            </div>
+            <div class="inv-recap-row">
+              <span>Facture</span><strong>{{ selectedInvoice.name }}</strong>
+            </div>
+            <div class="inv-recap-row">
+              <span>Reste à payer</span>
+              <strong class="text-danger">{{ selectedInvoice.montantDu | number:'1.0-0' }} FCFA</strong>
+            </div>
+          </div>
+
+          <div class="pay-form-grid">
+            <div class="form-group">
+              <label>Date du paiement <span class="req">*</span></label>
+              <input type="date" class="form-control" [(ngModel)]="payForm.date">
+            </div>
+            <div class="form-group">
+              <label>Montant (FCFA) <span class="req">*</span></label>
+              <input type="number" class="form-control" [(ngModel)]="payForm.amount" min="0.01">
+            </div>
+            <div class="form-group">
+              <label>Journal <span class="req">*</span></label>
+              <select class="form-control" [(ngModel)]="payForm.journalId">
+                <option [ngValue]="0" disabled>-- Choisir --</option>
+                @for (j of journals; track j.id) {
+                  <option [ngValue]="j.id">{{ j.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Mémo</label>
+              <input type="text" class="form-control" [(ngModel)]="payForm.memo" placeholder="Optionnel">
+            </div>
+          </div>
+
+          @if (payError) {
+            <div class="alert-error"><span class="material-icons">error_outline</span>{{ payError }}</div>
+          }
+        }
+
+      </div>
+
+      @if (newPayStep === 3) {
+        <div class="modal-ftr">
+          <button class="btn-secondary-modal" (click)="closeNewPayment()">Annuler</button>
+          <button class="btn-primary-modal" (click)="saveNewPayment()" [disabled]="savingPay">
+            <span class="material-icons" [class.spin]="savingPay">{{ savingPay ? 'hourglass_empty' : 'save' }}</span>
+            {{ savingPay ? 'Enregistrement…' : 'Enregistrer le paiement' }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

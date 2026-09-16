@@ -1,0 +1,297 @@
+<div class="page-container">
+
+  <!-- ═══ EN-TÊTE ══════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">trending_up</span>
+      Statistiques de ventes
+    </h1>
+    @if (generated && data && data.clients.length > 0) {
+      <div class="export-actions">
+        <button class="btn-export btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
+        </button>
+        <button class="btn-export btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ PANNEAU FILTRES / REGROUPEMENT ═══════════════════════════════════ -->
+  <div class="filter-panel">
+
+    <!-- Regroupement -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">account_tree</span> Regroupement
+      </div>
+      <div class="group-chips">
+        @for (opt of [
+          {k:'client',    label:'Par client',    icon:'person'},
+          {k:'category',  label:'Par catégorie', icon:'category'},
+          {k:'product',   label:'Par produit',   icon:'inventory_2'},
+          {k:'vendeur',   label:'Par vendeur',   icon:'badge'},
+          {k:'warehouse', label:'Par entrepôt',  icon:'warehouse'}
+        ]; track opt.k) {
+          <button class="group-chip" [class.active]="groupBy === opt.k" (click)="groupBy = opt.k">
+            <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Période -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">date_range</span> Période
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Du</label>
+          <input type="date" class="form-input" [(ngModel)]="dateFrom">
+        </div>
+        <div class="input-group">
+          <label>Au</label>
+          <input type="date" class="form-input" [(ngModel)]="dateTo">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres optionnels -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">filter_alt</span> Filtres optionnels
+      </div>
+      <div class="filters-grid">
+        <div class="input-group">
+          <label>Client</label>
+          <select class="form-input" [(ngModel)]="selectedPartnerId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (c of clients; track c.id) {
+              <option [ngValue]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Catégorie</label>
+          <select class="form-input" [(ngModel)]="selectedCategoryId">
+            <option [ngValue]="null">— Toutes —</option>
+            @for (cat of categories; track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Produit</label>
+          <select class="form-input" [(ngModel)]="selectedProductId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (p of products; track p.id) {
+              <option [ngValue]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Entrepôt</label>
+          <select class="form-input" [(ngModel)]="selectedWarehouseId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (w of warehouses; track w.id) {
+              <option [ngValue]="w.id">{{ w.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Vendeur</label>
+          <input type="text" class="form-input" [(ngModel)]="vendeurSearch" placeholder="Identifiant…">
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-footer">
+      <button class="btn-reset" (click)="reset()">
+        <span class="material-icons">restart_alt</span> Réinitialiser
+      </button>
+      <button class="btn-generate" (click)="generate()" [disabled]="loading">
+        @if (loading) {
+          <span class="material-icons spin">hourglass_empty</span> Génération…
+        } @else {
+          <span class="material-icons">play_arrow</span> Générer
+        }
+      </button>
+    </div>
+
+    @if (errorMsg) {
+      <div class="alert-error">
+        <span class="material-icons">error_outline</span> {{ errorMsg }}
+      </div>
+    }
+  </div>
+
+  <!-- ═══ OPTIONS COLONNES ═══════════════════════════════════════════════════ -->
+  @if (generated) {
+    <div class="col-toggles">
+      <span class="toggles-label"><span class="material-icons">visibility</span> Colonnes :</span>
+      <label class="toggle-chip" [class.active]="showCA">
+        <input type="checkbox" [(ngModel)]="showCA"> CA HT / CA TTC
+      </label>
+      <label class="toggle-chip" [class.active]="showCout">
+        <input type="checkbox" [(ngModel)]="showCout"> Coût
+      </label>
+      <label class="toggle-chip" [class.active]="showMarge">
+        <input type="checkbox" [(ngModel)]="showMarge"> Marge
+      </label>
+    </div>
+  }
+
+  <!-- ═══ RÉSULTATS ══════════════════════════════════════════════════════════ -->
+  @if (generated) {
+    @if (!data || data.clients.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">search_off</span>
+        <p>Aucune vente sur cette période avec ces filtres.</p>
+      </div>
+    } @else {
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-label">Factures</span>
+          <span class="kpi-val">{{ data.totalInvoices }}</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">{{ groupLabel }}s</span>
+          <span class="kpi-val">{{ data.clients.length }}</span>
+        </div>
+        @if (showCA) {
+          <div class="kpi-card kpi-ca">
+            <span class="kpi-label">CA HT</span>
+            <span class="kpi-val">{{ data.grandTotalHT | number:'1.0-0' }} <small>FCFA</small></span>
+          </div>
+          <div class="kpi-card kpi-ttc">
+            <span class="kpi-label">CA TTC</span>
+            <span class="kpi-val">{{ data.grandTotalTTC | number:'1.0-0' }} <small>FCFA</small></span>
+          </div>
+        }
+        @if (showCout) {
+          <div class="kpi-card kpi-cout">
+            <span class="kpi-label">Coût total</span>
+            <span class="kpi-val">{{ data.grandTotalCout | number:'1.0-0' }} <small>FCFA</small></span>
+          </div>
+        }
+        @if (showMarge) {
+          <div class="kpi-card kpi-marge">
+            <span class="kpi-label">Marge HT</span>
+            <span class="kpi-val" [class.neg]="data.grandTotalMargeHT < 0">
+              {{ data.grandTotalMargeHT | number:'1.0-0' }} <small>FCFA</small>
+            </span>
+          </div>
+        }
+      </div>
+
+      <!-- Tableau par groupe -->
+      @for (group of data.clients; track group.clientName) {
+        <div class="group-block">
+          <div class="group-header">
+            <div class="group-name">
+              <span class="group-type-badge">{{ groupLabel }}</span>
+              {{ group.clientName }}
+              @if (group.clientRef) { <span class="ref-tag">{{ group.clientRef }}</span> }
+            </div>
+            @if (group.vendeur && data.groupBy === 'client') {
+              <span class="vendeur-tag">
+                <span class="material-icons">badge</span> {{ group.vendeur }}
+              </span>
+            }
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="col-prod">Produit</th>
+                  <th class="col-num">Qté</th>
+                  <th class="col-num">Px vente HT</th>
+                  @if (showCA)    { <th class="col-num">CA HT</th> }
+                  @if (showCout)  { <th class="col-num">Coût</th> }
+                  @if (showMarge) { <th class="col-num">Marge HT</th> <th class="col-pct">Taux %</th> }
+                  @if (showCA)    { <th class="col-num">CA TTC</th> }
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of group.lines; track l.productCode) {
+                  <tr>
+                    <td>
+                      @if (l.productCode) { <span class="code-tag">{{ l.productCode }}</span> }
+                      {{ l.productName }}
+                    </td>
+                    <td class="num">{{ l.qty | number:'1.0-2' }}</td>
+                    <td class="num">{{ l.prixVente | number:'1.0-0' }}</td>
+                    @if (showCA)    { <td class="num">{{ l.caHT | number:'1.0-0' }}</td> }
+                    @if (showCout)  { <td class="num muted">{{ l.cout | number:'1.0-0' }}</td> }
+                    @if (showMarge) {
+                      <td class="num" [class.pos]="l.margeHT > 0" [class.neg]="l.margeHT < 0">{{ l.margeHT | number:'1.0-0' }}</td>
+                      <td class="num muted">{{ l.tauxMarge | number:'1.1-1' }} %</td>
+                    }
+                    @if (showCA)    { <td class="num">{{ l.caTTC | number:'1.0-0' }}</td> }
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="sub-row">
+                  <td class="sub-label">Sous-total</td>
+                  <td class="num bold">{{ group.totalQty | number:'1.0-2' }}</td>
+                  <td></td>
+                  @if (showCA)    { <td class="num bold">{{ group.totalHT | number:'1.0-0' }}</td> }
+                  @if (showCout)  { <td class="num bold">{{ group.totalCout | number:'1.0-0' }}</td> }
+                  @if (showMarge) {
+                    <td class="num bold" [class.pos]="group.totalMargeHT > 0" [class.neg]="group.totalMargeHT < 0">{{ group.totalMargeHT | number:'1.0-0' }}</td>
+                    <td></td>
+                  }
+                  @if (showCA)    { <td class="num bold">{{ group.totalTTC | number:'1.0-0' }}</td> }
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Total général -->
+      <div class="grand-total">
+        <span class="gt-label">TOTAL GÉNÉRAL</span>
+        <div class="gt-items">
+          <div class="gt-item">
+            <span>Qté</span>
+            <strong>{{ data.grandTotalQty | number:'1.0-2' }}</strong>
+          </div>
+          @if (showCA) {
+            <div class="gt-item">
+              <span>CA HT</span>
+              <strong>{{ data.grandTotalHT | number:'1.0-0' }} FCFA</strong>
+            </div>
+          }
+          @if (showCout) {
+            <div class="gt-item">
+              <span>Coût</span>
+              <strong>{{ data.grandTotalCout | number:'1.0-0' }} FCFA</strong>
+            </div>
+          }
+          @if (showMarge) {
+            <div class="gt-item">
+              <span>Marge HT</span>
+              <strong [class.neg]="data.grandTotalMargeHT < 0">{{ data.grandTotalMargeHT | number:'1.0-0' }} FCFA</strong>
+            </div>
+          }
+          @if (showCA) {
+            <div class="gt-item">
+              <span>CA TTC</span>
+              <strong>{{ data.grandTotalTTC | number:'1.0-0' }} FCFA</strong>
+            </div>
+          }
+        </div>
+      </div>
+
+    }
+  }
+
+</div>

@@ -20,6 +20,8 @@ import com.erp.sales.repository.SalesOrderRepository;
 import com.erp.sales.service.SalesService;
 import com.erp.stock.entity.Product;
 import com.erp.stock.repository.ProductRepository;
+import com.erp.sync.service.SyncEventPublisher;
+import com.erp.sync.entity.SyncEventType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +53,7 @@ public class EleaderImportService {
     private final ProductRepository           productRepo;
     private final AccountJournalRepository    journalRepo;
     private final CompanyRepository           companyRepo;
+    private final SyncEventPublisher          syncEventPublisher;
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Import principal
@@ -119,17 +122,15 @@ public class EleaderImportService {
             importLog.setStatus("creating");
             EleaderConfig config = configRepo.findByCompanyId(companyId).orElse(null);
 
-            // 7. Journal obligatoire
+            // 7. Journal : utiliser le premier journal de vente actif disponible
             AccountJournal journal = resolveJournal(config, companyId);
-            if (journal == null) {
-                return fail(importLog, "Aucun journal configuré pour le module eLeader. Veuillez configurer un journal dans Ventes > eLeader > Configuration.");
-            }
 
             // 8. Construire les lignes du bon de commande
             Company company = companyRepo.findById(companyId)
                     .orElseThrow(() -> new EntityNotFoundException("Société introuvable"));
 
-            List<SalesOrderLine> lines = buildOrderLines(parsed, config, companyId);
+            List<String> skippedCodes = new ArrayList<>();
+            List<SalesOrderLine> lines = buildOrderLines(parsed, config, companyId, skippedCodes);
             if (lines.isEmpty()) {
                 return fail(importLog, "Aucune ligne produit trouvée dans le PDF.");
             }
@@ -148,12 +149,20 @@ public class EleaderImportService {
                     log.warn("Auto-confirm eLeader order {} failed: {}", order.getName(), e.getMessage());
                 }
             }
+            // Produits/emballages du PDF non reconnus dans l'ERP : la commande a été créée avec ce
+            // qui a pu être résolu, mais silencieusement AMPUTÉE des lignes ignorées si on ne le
+            // signale pas — même risque que le bug de parsing de pourcentage déjà corrigé pour
+            // l'import Excel des précomptes (import partiel réussi sans que personne ne le sache).
+            if (!skippedCodes.isEmpty()) {
+                String skippedMsg = "Code(s) produit non reconnu(s), ligne(s) ignorée(s) : " + String.join(", ", skippedCodes);
+                warning = warning == null ? skippedMsg : warning + " — " + skippedMsg;
+            }
 
             importLog.setStatus("success");
             importLog.setMessage("Bon de commande créé : " + order.getName());
             logRepo.save(importLog);
 
-            return EleaderImportResultDTO.builder()
+            EleaderImportResultDTO result = EleaderImportResultDTO.builder()
                     .success(true)
                     .message("Import réussi. Bon de commande créé : " + order.getName())
                     .eleaderReference(parsed.invoiceNumber)
@@ -163,6 +172,9 @@ public class EleaderImportService {
                     .importLogId(importLog.getId())
                     .warning(warning)
                     .build();
+            syncEventPublisher.publish(SyncEventType.ELEADER_IMPORT_DONE,
+                    String.valueOf(order.getId()), result);
+            return result;
 
         } catch (Exception e) {
             log.error("Erreur import eLeader PDF '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
@@ -209,7 +221,8 @@ public class EleaderImportService {
     //  Construction des lignes
     // ─────────────────────────────────────────────────────────────────────────
 
-    private List<SalesOrderLine> buildOrderLines(ParsedEleaderInvoice parsed, EleaderConfig config, Long companyId) {
+    private List<SalesOrderLine> buildOrderLines(ParsedEleaderInvoice parsed, EleaderConfig config, Long companyId,
+            List<String> skippedCodes) {
         List<SalesOrderLine> lines = new ArrayList<>();
 
         // Produits principaux
@@ -217,6 +230,7 @@ public class EleaderImportService {
             Product product = productRepo.findFirstByDefaultCodeAndCompanyId(pl.productCode, companyId).orElse(null);
             if (product == null) {
                 log.warn("Produit eLeader inconnu: {} — ligne ignorée", pl.productCode);
+                skippedCodes.add(pl.productCode);
                 continue;
             }
             lines.add(buildLine(null, product, pl.quantity, companyId, false));
@@ -230,6 +244,7 @@ public class EleaderImportService {
                     .orElse(null);
             if (product == null) {
                 log.warn("Produit emballage eLeader inconnu: {} → {} — ligne ignorée", pl.productCode, erpCode);
+                skippedCodes.add(pl.productCode);
                 continue;
             }
             lines.add(buildLine(null, product, pl.quantity, companyId, true));
@@ -243,6 +258,7 @@ public class EleaderImportService {
                     .orElse(null);
             if (product == null) {
                 log.warn("Produit déconsigne eLeader inconnu: {} → {} — ligne ignorée", pl.productCode, erpCode);
+                skippedCodes.add(pl.productCode);
                 continue;
             }
             // Quantité négative pour la déconsignation

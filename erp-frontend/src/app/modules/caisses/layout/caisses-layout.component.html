@@ -1,0 +1,81 @@
+<div class="caisses-layout">
+  <!-- TOP NAVBAR -->
+  <nav class="cai-navbar">
+    <!-- Brand -->
+    <div class="cai-brand" (click)="goHome()">
+              @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">
+        }
+      <span class="material-icons">chevron_left</span>
+      <div class="brand-icon">
+        <span class="material-icons">point_of_sale</span>
+      </div>
+      <span class="brand-label">Caisses</span>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
+
+    <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+      <!-- Main Navigation -->
+      <nav class="cai-nav nav-links">
+        @for (item of navItems; track item.id) {
+          @if (!item.children) {
+            <a class="nav-link"
+               [class.active]="isRouteActive(item.route)"
+               (click)="navigateTo(item.route)">
+              <span class="material-icons">{{ item.icon }}</span>
+              {{ item.label }}
+            </a>
+          }
+          @if (item.children) {
+            <div class="nav-item-dropdown"
+                 [class.open]="activeDropdown === item.id"
+                 [class.active]="hasActiveChild(item.children)">
+              <button class="nav-link dropdown-toggle" (click)="toggleDropdown(item.id)">
+                <span class="material-icons">{{ item.icon }}</span>
+                {{ item.label }}
+                <span class="material-icons arrow">expand_more</span>
+              </button>
+              <div class="dropdown-panel">
+                @for (child of item.children; track child.route) {
+                  <button class="dropdown-item"
+                          [class.active]="isRouteActive(child.route)"
+                          (click)="navigateTo(child.route)">
+                    <span class="material-icons">{{ child.icon }}</span>
+                    {{ child.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        }
+      </nav>
+
+      <!-- Right side -->
+      <div class="nav-right">
+        <div class="user-pill">
+          <div class="user-avatar-sm">{{ userInitials }}</div>
+          <span class="user-name-sm">{{ userName }}</span>
+        </div>
+        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+  @if (mobileMenuOpen) {
+    <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
+  }
+
+  <!-- PAGE CONTENT -->
+  <main class="cai-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

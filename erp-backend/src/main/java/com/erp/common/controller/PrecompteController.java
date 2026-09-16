@@ -108,6 +108,7 @@ public class PrecompteController {
         dto.setProcessed(report.getProcessed());
         dto.setUpserted(report.getUpserted());
         dto.setErrors(report.getErrors());
+        dto.setWarnings(report.getWarnings());
 
         return ResponseEntity.ok(dto);
     }

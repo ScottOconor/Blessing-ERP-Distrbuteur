@@ -26,6 +26,23 @@
     <button class="filter-btn" (click)="clearDateFilter()" title="Voir toutes les dates">Toutes dates</button>
   </div>
 
+  <!-- ── Regrouper par ──────────────────────────────────────── -->
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
@@ -51,32 +68,92 @@
           </tr>
         </thead>
         <tbody>
-          @for (inv of filteredInvoices; track inv.id) {
-            <tr class="clickable-row" (click)="openInvoice(inv)">
-              <td class="font-mono font-bold">{{ inv.name }}</td>
-              <td>{{ inv.date | date:'dd/MM/yyyy' }}</td>
-              <td>{{ inv.partnerName }}</td>
-              <td>
-                @if (inv.purchaseOrderName) {
-                  <span class="link-ref">{{ inv.purchaseOrderName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
-              <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
-              <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
-              <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
-                {{ inv.montantDu | number:'1.0-0' }}
-              </td>
-              <td>
-                @if (inv.state === 'posted' || inv.state === 'paid') {
-                  <div class="progress-bar">
-                    <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
-                  </div>
-                  <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="4">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+                <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
+                <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
+                <td class="text-right group-num text-success">{{ fmtN(row.paye) }}</td>
+                <td class="text-right group-num" [class.text-danger]="row.du > 0">{{ fmtN(row.du) }}</td>
+                <td></td><td></td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (inv of getGroupItems(row.key); track inv.id) {
+                  <tr class="detail-row clickable-row" (click)="openInvoice(inv)">
+                    <td class="font-mono font-bold">{{ inv.name }}</td>
+                    <td>{{ inv.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ inv.partnerName }}</td>
+                    <td>
+                      @if (inv.purchaseOrderName) {
+                        <span class="link-ref">{{ inv.purchaseOrderName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
+                    <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
+                    <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
+                      {{ inv.montantDu | number:'1.0-0' }}
+                    </td>
+                    <td>
+                      @if (inv.state === 'posted' || inv.state === 'paid') {
+                        <div class="progress-bar">
+                          <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
+                        </div>
+                        <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+                      }
+                    </td>
+                    <td>
+                  <span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span>
+                  @if (inv.reversalStatus === 'full') {
+                    <span class="badge badge-reversed">Extournée</span>
+                  } @else if (inv.reversalStatus === 'partial') {
+                    <span class="badge badge-reversed-partial">Part. extournée</span>
+                  }
+                </td>
+                  </tr>
                 }
-              </td>
-              <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
-            </tr>
+              }
+            }
+          } @else {
+            @for (inv of filteredInvoices; track inv.id) {
+              <tr class="clickable-row" (click)="openInvoice(inv)">
+                <td class="font-mono font-bold">{{ inv.name }}</td>
+                <td>{{ inv.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ inv.partnerName }}</td>
+                <td>
+                  @if (inv.purchaseOrderName) {
+                    <span class="link-ref">{{ inv.purchaseOrderName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
+                <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
+                <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
+                <td class="text-right" [class.text-danger]="(inv.montantDu || 0) > 0">
+                  {{ inv.montantDu | number:'1.0-0' }}
+                </td>
+                <td>
+                  @if (inv.state === 'posted' || inv.state === 'paid') {
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
+                    </div>
+                    <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+                  }
+                </td>
+                <td>
+                  <span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span>
+                  @if (inv.reversalStatus === 'full') {
+                    <span class="badge badge-reversed">Extournée</span>
+                  } @else if (inv.reversalStatus === 'partial') {
+                    <span class="badge badge-reversed-partial">Part. extournée</span>
+                  }
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>

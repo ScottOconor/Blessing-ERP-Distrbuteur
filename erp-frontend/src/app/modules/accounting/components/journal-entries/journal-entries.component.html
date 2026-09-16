@@ -2,12 +2,16 @@
   <div class="page-header">
     <h1 class="page-title">
       <span class="material-icons">receipt_long</span>
-      Écritures Comptables
+      Pièces Comptables
     </h1>
     <div class="page-actions">
+      <button class="btn btn-outline" (click)="exportToExcel()" [disabled]="filteredMoves.length === 0" title="Exporter en Excel">
+        <span class="material-icons">download</span>
+        Exporter Excel
+      </button>
       <button class="btn btn-primary" (click)="router.navigate(['/accounting/journal-entries/new'])">
         <span class="material-icons">add</span>
-        Nouvelle écriture
+        Nouvelle pièce
       </button>
     </div>
   </div>
@@ -40,9 +44,17 @@
         <option value="cancel">Annulé</option>
       </select>
     </div>
+    <div class="filter-group" style="flex:1;min-width:200px">
+      <label>Rechercher</label>
+      <div class="search-box">
+        <span class="material-icons">search</span>
+        <input type="text" class="form-control" placeholder="N° pièce, référence, partenaire..."
+          [(ngModel)]="search">
+      </div>
+    </div>
     <div class="filter-actions">
       <button class="btn btn-primary" (click)="loadMoves()">
-        <span class="material-icons">search</span>
+        <span class="material-icons">filter_list</span>
         Filtrer
       </button>
       <button class="btn btn-outline" (click)="resetFilters()">
@@ -56,13 +68,17 @@
   <div class="table-container">
     @if (loading) {
       <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
-    } @else if (moves.length === 0) {
+    } @else if (filteredMoves.length === 0) {
       <div class="empty-state">
         <span class="material-icons">receipt_long</span>
-        <h3>Aucune écriture trouvée</h3>
-        <p>Modifiez les filtres ou créez une nouvelle écriture.</p>
+        <h3>Aucune pièce trouvée</h3>
+        <p>Modifiez les filtres ou créez une nouvelle pièce comptable.</p>
       </div>
     } @else {
+      <div style="padding:8px 16px 4px;font-size:13px;color:#6c757d">
+        {{ filteredMoves.length }} pièce(s)
+        @if (search.trim()) { <span>— filtrée(s) sur "{{ search }}"</span> }
+      </div>
       <table class="table-erp">
         <thead>
           <tr>
@@ -78,7 +94,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (move of moves; track move.id) {
+          @for (move of filteredMoves; track move.id) {
             <tr (click)="router.navigate(['/accounting/journal-entries', move.id])" style="cursor:pointer">
               <td><strong>{{ move.name || 'Brouillon' }}</strong></td>
               <td>{{ move.date | date:'dd/MM/yyyy' }}</td>
@@ -108,7 +124,7 @@
                     </button>
                   }
                   @if (move.state === 'posted' && (move.reversalId || move.isReversal)) {
-                    <span title="{{ move.reversalId ? 'Déjà extournée' : 'Écriture d\'extourne' }}"
+                    <span title="{{ move.reversalId ? 'Déjà extournée' : 'Pièce d\'extourne' }}"
                       style="color:#adb5bd;padding:4px 6px;display:inline-flex;align-items:center">
                       <span class="material-icons" style="font-size:16px">block</span>
                     </span>

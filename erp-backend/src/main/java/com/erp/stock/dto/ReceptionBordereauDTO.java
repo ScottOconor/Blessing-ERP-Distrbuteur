@@ -23,7 +23,19 @@ public class ReceptionBordereauDTO {
     private String supplierName;
     private LocalDate invoiceDate;
 
-    private Long companyId;
+    private Long   companyId;
+    private String companyName;
+    private String companySigle;
+    private String companyAdresse;
+    private String companyTelephone;
+    private String companyRccm;
+    private String companyNif;
+
+    /** Nom de l'entrepôt destinataire (affiché sur le bordereau) */
+    private String warehouseName;
+
+    /** Nom du compte/opérateur qui a effectué l'opération */
+    private String operatorName;
 
     /** État du picking : confirmed / done */
     private String state;

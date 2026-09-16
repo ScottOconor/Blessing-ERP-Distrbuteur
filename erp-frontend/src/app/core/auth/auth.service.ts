@@ -11,16 +11,11 @@ export interface AuthSession {
   fullName: string;
   roleCode: string;
   roleLabel: string;
-  centralized: boolean;
-  companyId?: number;
-  companyName?: string;
-  groupId?: number;
-  groupName?: string;
-  companies?: { id: number; name: string; sigle: string }[];
   mustChangePassword: boolean;
-  /** Permissions granulaires pour les rôles custom */
   permissions?: Permission[];
 }
+
+const PRIVILEGED_ROLES = ['SUPER_ADMIN', 'ADMIN'];
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -32,13 +27,7 @@ export class AuthService {
 
   login(username: string, password: string): Observable<AuthSession> {
     return this.http.post<AuthSession>(`${this.apiUrl}/login`, { username, password }).pipe(
-      tap(session => {
-        localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
-        // Pour un utilisateur mono-company, on fixe directement la company active
-        if (!session.centralized && session.companyId) {
-          this.setActiveCompanyId(session.companyId);
-        }
-      })
+      tap(session => localStorage.setItem(this.SESSION_KEY, JSON.stringify(session)))
     );
   }
 
@@ -66,61 +55,53 @@ export class AuthService {
     try { return JSON.parse(raw); } catch { return null; }
   }
 
-  /** companyId actif pour toutes les requêtes API */
+  /** companyId actif pour toutes les requêtes API (spoke mono-agence, défaut = 1) */
   getCompanyId(): number {
     const active = localStorage.getItem(this.ACTIVE_COMPANY_KEY);
-    if (active) return +active;
-    return this.getSession()?.companyId ?? 1;
+    if (active) {
+      const parsed = +active;
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    return 1;
   }
 
   setActiveCompanyId(id: number): void {
     localStorage.setItem(this.ACTIVE_COMPANY_KEY, String(id));
   }
 
+  /** Retourne null — informations d'entreprise à récupérer via ConfigService si besoin */
   getActiveCompany(): { id: number; name: string; sigle: string } | null {
-    const session = this.getSession();
-    const activeId = this.getCompanyId();
-    if (session?.centralized && session.companies) {
-      return session.companies.find(c => c.id === activeId) ?? session.companies[0] ?? null;
-    }
-    return session?.companyId
-      ? { id: session.companyId, name: session.companyName ?? '', sigle: '' }
-      : null;
+    return null;
   }
 
   getRoleCode(): string {
     return this.getSession()?.roleCode ?? '';
   }
 
-  isCentralized(): boolean {
-    return this.getSession()?.centralized ?? false;
+  isPrivileged(): boolean {
+    return PRIVILEGED_ROLES.includes(this.getRoleCode());
   }
 
   isSuperAdmin(): boolean { return this.getRoleCode() === 'SUPER_ADMIN'; }
-  isAdmin(): boolean { return ['SUPER_ADMIN','ADMIN'].includes(this.getRoleCode()); }
-  canDelete(): boolean { return ['SUPER_ADMIN','ADMIN'].includes(this.getRoleCode()); }
-  canImport(): boolean { return ['SUPER_ADMIN','ADMIN','SUPER_AUDITEUR','AUDITEUR'].includes(this.getRoleCode()); }
-  canManageConfig(): boolean { return ['SUPER_ADMIN','ADMIN','SUPER_AUDITEUR'].includes(this.getRoleCode()); }
-  canManageUsers(): boolean { return ['SUPER_ADMIN','ADMIN'].includes(this.getRoleCode()); }
+  isAdmin(): boolean { return this.isPrivileged(); }
+  canDelete(): boolean { return this.isPrivileged(); }
+  canImport(): boolean { return this.isPrivileged(); }
+  canManageConfig(): boolean { return this.isPrivileged(); }
+  canManageUsers(): boolean { return this.isPrivileged(); }
 
-  /**
-   * Vérifie si l'utilisateur a accès à une ressource précise d'un module.
-   * Les rôles système centralisés ont toujours accès.
-   */
   hasPermission(module: string, resource: string, action: string): boolean {
     const session = this.getSession();
     if (!session) return false;
-    if (session.centralized) return true;
+    if (this.isPrivileged()) return true;
     return (session.permissions ?? []).some(
       p => p.module === module && p.resource === resource && p.action === action
     );
   }
 
-  /** Vérifie si l'utilisateur a au moins une permission dans un module donné. */
   hasAnyModulePermission(module: string): boolean {
     const session = this.getSession();
     if (!session) return false;
-    if (session.centralized) return true;
+    if (this.isPrivileged()) return true;
     return (session.permissions ?? []).some(p => p.module === module);
   }
 

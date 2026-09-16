@@ -12,6 +12,7 @@ import com.erp.sales.repository.SalesOrderRepository;
 import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -95,11 +96,18 @@ public class EleaderController {
         return ResponseEntity.ok(orders);
     }
 
+    // Ces deux endpoints appellent directement SalesService en contournant PermissionFilter
+    // (PermissionService.RULES ne couvre pas /api/eleader/**) — @PreAuthorize reproduit ici
+    // explicitement l'exigence de permission de la route équivalente /api/sales/orders/**
+    // (POST → VENTES.COMMANDES.EDIT) pour ne pas dépendre uniquement de règles ajoutées
+    // séparément dans PermissionService.RULES.
+    @PreAuthorize("hasAuthority('PERM_VENTES_COMMANDES_EDIT')")
     @PostMapping("/orders/{id}/confirm")
     public ResponseEntity<SalesOrderDTO> confirmOrder(@PathVariable Long id) {
         return ResponseEntity.ok(salesService.confirmOrder(id));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VENTES_COMMANDES_EDIT')")
     @PostMapping("/orders/{id}/cancel")
     public ResponseEntity<SalesOrderDTO> cancelOrder(@PathVariable Long id) {
         return ResponseEntity.ok(salesService.cancelOrder(id));

@@ -1,0 +1,334 @@
+<div class="sar-page">
+
+  <!-- ── En-tête ── -->
+  <div class="sar-header no-print">
+    <h1><span class="material-icons">assessment</span> Rapport de stock</h1>
+    <div class="header-actions">
+      <button class="btn-print" (click)="printReport()" [disabled]="!generated">
+        <span class="material-icons">print</span> Imprimer
+      </button>
+      <button class="btn-print btn-pdf" (click)="exportPdf()" [disabled]="!generated">
+        <span class="material-icons">picture_as_pdf</span> PDF
+      </button>
+      <button class="btn-print btn-excel" (click)="exportExcel()" [disabled]="!generated">
+        <span class="material-icons">table_view</span> Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtres ── -->
+  <div class="sar-filters no-print">
+
+    <!-- Mode -->
+    <div class="mode-toggle">
+      <button [class.active]="mode === 'analytique'" (click)="mode = 'analytique'">
+        <span class="material-icons">table_chart</span> Analytique
+      </button>
+      <button [class.active]="mode === 'detaille'" (click)="mode = 'detaille'">
+        <span class="material-icons">list_alt</span> Fiche détaillée
+      </button>
+    </div>
+
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Date début <span class="req">*</span></label>
+        <input type="date" [(ngModel)]="dateFrom" class="f-ctrl" />
+      </div>
+      <div class="filter-group">
+        <label>Date fin <span class="req">*</span></label>
+        <input type="date" [(ngModel)]="dateTo" class="f-ctrl" />
+      </div>
+      <div class="filter-group">
+        <label>Catégorie (optionnel)</label>
+        <select [(ngModel)]="categoryId" class="f-ctrl">
+          <option [ngValue]="null">— Toutes —</option>
+          @for (c of categories; track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Article (optionnel)</label>
+        <select [(ngModel)]="productId" class="f-ctrl">
+          <option [ngValue]="null">— Tous —</option>
+          @for (p of products; track p.id) {
+            <option [value]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Sélection entrepôts -->
+    <div class="wh-section">
+      <label>Entrepôts <span class="req">*</span></label>
+      <div class="wh-chips">
+        @for (w of warehouses; track w.id) {
+          <button class="wh-chip" [class.selected]="isWarehouseSelected(w.id!)"
+                  (click)="toggleWarehouse(w.id!)">
+            <span class="material-icons">{{ isWarehouseSelected(w.id!) ? 'check_box' : 'check_box_outline_blank' }}</span>
+            {{ w.name }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (errorMsg) {
+      <div class="alert-err"><span class="material-icons">error</span> {{ errorMsg }}</div>
+    }
+
+    <button class="btn-generate" (click)="generate()" [disabled]="loading">
+      <span class="material-icons">{{ loading ? 'hourglass_empty' : 'play_arrow' }}</span>
+      {{ loading ? 'Génération...' : 'Générer le rapport' }}
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       RAPPORT ANALYTIQUE
+  ══════════════════════════════════════════════════════════════════ -->
+  @if (generated && mode === 'analytique') {
+    <div class="sar-report">
+
+      <!-- En-tête imprimable -->
+      <div class="print-header print-only">
+        <h2>Rapport de stock analytique</h2>
+        <div class="print-period">Période du {{ dateFrom }} au {{ dateTo }}</div>
+      </div>
+
+      @if (analyticalData.length === 0) {
+        <div class="empty-state">
+          <span class="material-icons">inventory_2</span>
+          Aucun mouvement trouvé pour les critères sélectionnés.
+        </div>
+      }
+
+      @for (wh of analyticalData; track wh.warehouseName) {
+        <div class="wh-section-block">
+          <div class="wh-title">
+            <span class="material-icons">warehouse</span>
+            {{ wh.warehouseName }}
+          </div>
+
+          <div class="table-wrap">
+            <table class="rep-table">
+              <thead>
+                <tr>
+                  <th class="col-prod">Article</th>
+                  <th class="col-uom">UDM</th>
+                  <th class="col-num text-right">Stock initial</th>
+                  <th class="col-num text-right">Entrées (+)</th>
+                  <th class="col-num text-right">Sorties (−)</th>
+                  <th class="col-num text-right">Stock final</th>
+                  <th class="col-val text-right">Coût U.</th>
+                  <th class="col-val text-right">Val. initiale</th>
+                  <th class="col-val text-right">Val. entrées</th>
+                  <th class="col-val text-right">Val. sorties</th>
+                  <th class="col-val text-right">Val. finale</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of wh.lines; track line.productId) {
+                  <tr [class.row-highlight]="(line.finalQty || 0) < 0">
+                    <td class="col-prod">
+                      @if (line.productCode) { <span class="prod-code">{{ line.productCode }}</span> }
+                      {{ line.productName }}
+                    </td>
+                    <td class="col-uom tgray">{{ line.uomName || '—' }}</td>
+                    <td class="text-right">{{ fmt(line.initialQty) }}</td>
+                    <td class="text-right qty-in">{{ fmt(line.inQty) }}</td>
+                    <td class="text-right qty-out">{{ fmt(line.outQty) }}</td>
+                    <td class="text-right qty-final" [class.neg]="(line.finalQty || 0) < 0">
+                      {{ fmt(line.finalQty) }}
+                    </td>
+                    <td class="text-right tgray">{{ fmt(line.unitCost) }}</td>
+                    <td class="text-right">{{ fmt(line.initialValue) }}</td>
+                    <td class="text-right val-in">{{ fmt(line.inValue) }}</td>
+                    <td class="text-right val-out">{{ fmt(line.outValue) }}</td>
+                    <td class="text-right val-final" [class.neg]="(line.finalValue || 0) < 0">
+                      {{ fmt(line.finalValue) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="row-total">
+                  <td colspan="2"><strong>TOTAL {{ wh.warehouseName }}</strong></td>
+                  <td class="text-right"><strong>{{ fmt(wh.totalInitialQty) }}</strong></td>
+                  <td class="text-right qty-in"><strong>{{ fmt(wh.totalInQty) }}</strong></td>
+                  <td class="text-right qty-out"><strong>{{ fmt(wh.totalOutQty) }}</strong></td>
+                  <td class="text-right qty-final"><strong>{{ fmt(wh.totalFinalQty) }}</strong></td>
+                  <td></td>
+                  <td class="text-right"><strong>{{ fmt(wh.totalInitialValue) }}</strong></td>
+                  <td class="text-right val-in"><strong>{{ fmt(wh.totalInValue) }}</strong></td>
+                  <td class="text-right val-out"><strong>{{ fmt(wh.totalOutValue) }}</strong></td>
+                  <td class="text-right val-final"><strong>{{ fmt(wh.totalFinalValue) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Grand total multi-entrepôts -->
+      @if (analyticalData.length > 1) {
+        <div class="grand-total-box">
+          <div class="gt-row">
+            <span>GRAND TOTAL</span>
+            <span class="gt-group">
+              <span class="gt-label">Qté initiale</span>
+              <span class="gt-val">{{ fmt(grandTotals.initQty) }}</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Entrées</span>
+              <span class="gt-val qty-in">{{ fmt(grandTotals.inQty) }}</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Sorties</span>
+              <span class="gt-val qty-out">{{ fmt(grandTotals.outQty) }}</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Qté finale</span>
+              <span class="gt-val" [class.neg]="grandTotals.finalQty < 0">{{ fmt(grandTotals.finalQty) }}</span>
+            </span>
+          </div>
+          <div class="gt-row gt-values">
+            <span></span>
+            <span class="gt-group">
+              <span class="gt-label">Val. initiale</span>
+              <span class="gt-val">{{ fmt(grandTotals.initVal) }} FCFA</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Val. entrées</span>
+              <span class="gt-val val-in">{{ fmt(grandTotals.inVal) }} FCFA</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Val. sorties</span>
+              <span class="gt-val val-out">{{ fmt(grandTotals.outVal) }} FCFA</span>
+            </span>
+            <span class="gt-group">
+              <span class="gt-label">Val. finale</span>
+              <span class="gt-val" [class.neg]="grandTotals.finalVal < 0">{{ fmt(grandTotals.finalVal) }} FCFA</span>
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       FICHE DE STOCK DÉTAILLÉE
+  ══════════════════════════════════════════════════════════════════ -->
+  @if (generated && mode === 'detaille') {
+    <div class="sar-report">
+
+      <div class="print-header print-only">
+        <h2>Fiche de stock détaillée</h2>
+        <div class="print-period">Période du {{ dateFrom }} au {{ dateTo }}</div>
+      </div>
+
+      @if (detailedData.length === 0) {
+        <div class="empty-state">
+          <span class="material-icons">inventory_2</span>
+          Aucun mouvement trouvé pour les critères sélectionnés.
+        </div>
+      }
+
+      @if (detailedData.length > 0) {
+        <div class="detail-actions no-print">
+          <button class="btn-sm" (click)="expandAll()">
+            <span class="material-icons">unfold_more</span> Tout développer
+          </button>
+          <button class="btn-sm" (click)="collapseAll()">
+            <span class="material-icons">unfold_less</span> Tout réduire
+          </button>
+        </div>
+      }
+
+      @for (product of detailedData; track $index; let i = $index) {
+        <div class="prod-block">
+          <!-- En-tête produit (accordéon) -->
+          <div class="prod-header" (click)="toggleProduct(i)">
+            <span class="material-icons expand-icon">
+              {{ isProductExpanded(i) ? 'expand_less' : 'expand_more' }}
+            </span>
+            @if (product.productCode) { <span class="prod-code">{{ product.productCode }}</span> }
+            <span class="prod-name">{{ product.productName }}</span>
+            <span class="prod-cost">Coût unitaire : {{ fmt(product.unitCost) }} FCFA</span>
+          </div>
+
+          @if (isProductExpanded(i)) {
+            @for (loc of product.locations; track loc.locationName) {
+              <div class="loc-block">
+                <div class="loc-title">
+                  <span class="material-icons">location_on</span>
+                  {{ loc.locationName }}
+                </div>
+
+                <div class="table-wrap">
+                  <table class="detail-table">
+                    <thead>
+                      <tr>
+                        <th style="width:13%">Date</th>
+                        <th style="width:18%">Référence</th>
+                        <th style="width:20%">Partenaire</th>
+                        <th class="text-right" style="width:10%">Entrée (+)</th>
+                        <th class="text-right" style="width:10%">Sortie (−)</th>
+                        <th class="text-right" style="width:12%">Solde Qté</th>
+                        <th class="text-right" style="width:17%">Solde Valeur</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Solde initial -->
+                      <tr class="row-balance-init">
+                        <td colspan="5"><strong>Solde au {{ dateFrom }}</strong></td>
+                        <td class="text-right"><strong>{{ fmt(loc.initialQty) }}</strong></td>
+                        <td class="text-right"><strong>{{ fmt(loc.initialValue) }} FCFA</strong></td>
+                      </tr>
+
+                      @for (mv of loc.movements; track $index) {
+                        <tr>
+                          <td class="tgray" style="white-space:nowrap">{{ mv.date }}</td>
+                          <td class="move-ref">{{ mv.ref }}</td>
+                          <td class="tgray">{{ mv.partner }}</td>
+                          <td class="text-right qty-in">
+                            @if (mv.qtyIn) { {{ fmt(mv.qtyIn) }} }
+                          </td>
+                          <td class="text-right qty-out">
+                            @if (mv.qtyOut) { {{ fmt(mv.qtyOut) }} }
+                          </td>
+                          <td class="text-right" [class.neg]="(mv.qtyBalance || 0) < 0">
+                            {{ fmt(mv.qtyBalance) }}
+                          </td>
+                          <td class="text-right" [class.neg]="(mv.valueBalance || 0) < 0">
+                            {{ fmt(mv.valueBalance) }} FCFA
+                          </td>
+                        </tr>
+                      }
+
+                      @if (!hasMovements(loc)) {
+                        <tr>
+                          <td colspan="7" class="no-moves">Aucun mouvement sur la période</td>
+                        </tr>
+                      }
+
+                      <!-- Solde final -->
+                      <tr class="row-balance-final">
+                        <td colspan="5"><strong>Solde au {{ dateTo }}</strong></td>
+                        <td class="text-right" [class.neg]="(loc.finalQty || 0) < 0">
+                          <strong>{{ fmt(loc.finalQty) }}</strong>
+                        </td>
+                        <td class="text-right" [class.neg]="(loc.finalValue || 0) < 0">
+                          <strong>{{ fmt(loc.finalValue) }} FCFA</strong>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+
+</div>

@@ -28,7 +28,7 @@
           {{ confirming ? 'Confirmation...' : 'Confirmer' }}
         </button>
       }
-      @if (order.state === 'draft' || order.state === 'confirmed') {
+      @if (order.state === 'draft') {
         <button class="btn-cancel-order" (click)="cancelOrder()">
           <span class="material-icons">cancel</span>
           Annuler
@@ -49,6 +49,15 @@
     </div>
   }
 
+  <!-- Entrepôt de réception (informatif) -->
+  @if (order.receptionWarehouseName) {
+    <div class="picking-banner">
+      <span class="material-icons">warehouse</span>
+      Réception prévue à :
+      <strong>{{ order.receptionWarehouseName }}</strong>
+    </div>
+  }
+
   <!-- Picking info banner (when confirmed) -->
   @if (order.pickingName) {
     <div class="picking-banner">
@@ -64,6 +73,28 @@
     </div>
   }
 
+  @if (order.invoiceId) {
+    <div class="invoice-banner">
+      <span class="material-icons">receipt</span>
+      Facture associée :
+      <strong>{{ order.invoiceName }}</strong>
+      <span class="badge" [class]="invoiceBadgeClass(order.invoiceState)">{{ invoiceStateLabel(order.invoiceState) }}</span>
+      @if (invoiceDetails && (invoiceDetails.montantDu ?? 0) > 0) {
+        <span class="debt-badge">
+          <span class="material-icons" style="font-size:14px">warning</span>
+          Reste dû : {{ invoiceDetails.montantDu | number:'1.0-0' }} FCFA
+        </span>
+      } @else if (invoiceDetails?.state === 'paid') {
+        <span class="paid-badge">
+          <span class="material-icons" style="font-size:14px">check_circle</span> Soldée
+        </span>
+      }
+      <button class="btn-goto-invoice" (click)="router.navigate(['/purchases/invoices', order.invoiceId])">
+        <span class="material-icons">open_in_new</span> Voir la facture
+      </button>
+    </div>
+  }
+
   @if (loading) {
     <div class="loading-state"><span class="spinner"></span> Chargement...</div>
   } @else {
@@ -72,12 +103,30 @@
       <div class="meta-section">
         <div class="form-group">
           <label>Fournisseur <span class="required">*</span></label>
-          <select [(ngModel)]="order.partnerId" [disabled]="isReadOnly" class="form-control">
-            <option [value]="0">— Sélectionner —</option>
-            @for (s of suppliers; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
+          <div class="ac-wrap">
+            <div class="ac-field">
+              <span class="material-icons ac-icon">business</span>
+              <input type="text" class="form-control"
+                     [(ngModel)]="supplierSearch"
+                     (input)="supplierDropdown = true"
+                     (focus)="supplierDropdown = true"
+                     (blur)="onSupplierBlur()"
+                     [disabled]="isReadOnly"
+                     placeholder="Chercher un fournisseur…"
+                     autocomplete="off" />
+            </div>
+            @if (supplierDropdown && filteredSuppliers.length > 0) {
+              <div class="ac-dropdown">
+                @for (s of filteredSuppliers; track s.id) {
+                  <div class="ac-item" (mousedown)="selectSupplier(s)">
+                    <span class="ac-avatar">{{ s.name.charAt(0) }}</span>
+                    <span class="ac-name">{{ s.name }}</span>
+                    @if (s.ref) { <span class="ac-code">{{ s.ref }}</span> }
+                  </div>
+                }
+              </div>
             }
-          </select>
+          </div>
         </div>
         <div class="form-group">
           <label>Date commande</label>
@@ -118,7 +167,11 @@
                   <th class="col-product">Article</th>
                   <th class="col-qty text-right">Qté</th>
                   <th class="col-pu text-right">Prix unitaire</th>
+                  <th class="text-right" style="color:#e65100">Rabais/u</th>
                   <th class="col-tva text-right">TVA %</th>
+                  @if (supplierPrecompteRate > 0) {
+                    <th class="col-pc text-right">PSA %</th>
+                  }
                   <th class="col-ht text-right">Montant HT</th>
                   <th class="col-ttc text-right">Montant TTC</th>
                   @if (!isReadOnly) { <th class="col-del"></th> }
@@ -132,7 +185,9 @@
                     <td class="col-product">
                       <div class="autocomplete-wrap">
                         <div class="ac-input-row">
+                          <span class="material-icons line-search-icon">search</span>
                           <input
+                            #productInput
                             type="text"
                             class="ac-input"
                             [(ngModel)]="lineSearches[i]"
@@ -183,11 +238,17 @@
                         [disabled]="isReadOnly" min="0" step="1"
                         (ngModelChange)="computeLine(i)" (keydown.enter)="onLineEnter($event)" />
                     </td>
+                    <td class="text-right" style="color:#e65100;font-weight:600">
+                      @if ((line.rabaisUnitaire ?? 0) > 0) { – {{ line.rabaisUnitaire | number:'1.0-0' }} } @else { — }
+                    </td>
                     <td class="col-tva">
                       <input type="number" class="form-control text-right" [(ngModel)]="line.tauxTVA"
                         [disabled]="isReadOnly" min="0" max="100" step="0.01"
                         (ngModelChange)="computeLine(i)" (keydown.enter)="onLineEnter($event)" />
                     </td>
+                    @if (supplierPrecompteRate > 0) {
+                      <td class="col-pc text-right text-muted">{{ supplierPrecompteRate }}%</td>
+                    }
                     <td class="col-ht text-right">{{ (line.montantHT ?? 0) | number:'1.0-0' }}</td>
                     <td class="col-ttc text-right">{{ (line.montantTTC ?? 0) | number:'1.0-0' }}</td>
                     @if (!isReadOnly) {
@@ -209,16 +270,32 @@
       <div class="totals-section">
         <div class="totals-box">
           <div class="total-row">
-            <span>Total HT</span>
+            <span>Montant HT</span>
             <span>{{ totalHT | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row">
-            <span>TVA</span>
-            <span>{{ totalTVA | number:'1.0-0' }} FCFA</span>
+            <span>+ Taxes (TVA{{ totalPrecompte > 0 ? ' + PSA' : '' }})</span>
+            <span>{{ totalTaxes | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row total-ttc">
-            <span>Total TTC</span>
+            <span>= Total TTC</span>
             <span>{{ totalTTC | number:'1.0-0' }} FCFA</span>
+          </div>
+          @if (totalFraisEnlevement > 0) {
+            <div class="total-row total-frais">
+              <span>+ Frais d'enlèvement</span>
+              <span>{{ totalFraisEnlevement | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          @if (totalRabais > 0) {
+            <div class="total-row" style="color:#e65100">
+              <span>− Rabais obtenus (601901)</span>
+              <span>– {{ totalRabais | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          <div class="total-row net-a-payer">
+            <span>= Net à payer</span>
+            <span>{{ netAPayer | number:'1.0-0' }} FCFA</span>
           </div>
         </div>
       </div>
@@ -226,11 +303,19 @@
   }
 </div>
 
+@if (orderId) {
+  <app-audit-trail entityType="PURCHASE_ORDER" [entityId]="orderId"></app-audit-trail>
+}
+
 @if (showPrintModal && orderId) {
   <app-print-preview
     [purchaseOrder]="order"
     docType="purchase_order"
     [companyName]="printCompanyName"
+    [companyPhone]="printCompanyPhone"
+    [companyLogoUrl]="printCompanyLogoUrl"
+    [companyLogoDataUrl]="printCompanyLogoDataUrl"
+    [companyInfo]="printCompany"
     (closed)="closePrint()">
   </app-print-preview>
 }

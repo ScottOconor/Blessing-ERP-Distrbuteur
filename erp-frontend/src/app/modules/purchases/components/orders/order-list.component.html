@@ -40,6 +40,23 @@
     <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
+  <!-- ── Regrouper par ──────────────────────────────────────── -->
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <!-- Table -->
   @if (loading) {
     <div class="loading-state"><span class="spinner"></span> Chargement...</div>
@@ -65,17 +82,46 @@
           </tr>
         </thead>
         <tbody>
-          @for (order of filteredOrders; track order.id) {
-            <tr class="row-link" (click)="editOrder(order.id!)">
-              <td><strong class="ref-link">{{ order.name }}</strong></td>
-              <td>{{ order.partnerName }}</td>
-              <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
-              <td>{{ order.dateExpected ? (order.dateExpected | date:'dd/MM/yyyy') : '—' }}</td>
-              <td class="text-right">{{ (order.totalHT ?? 0) | number:'1.0-0' }}</td>
-              <td class="text-right"><strong>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong></td>
-              <td><span [class]="stateBadge(order.state)">{{ stateLabel(order.state) }}</span></td>
-              <td><span class="material-icons chevron">chevron_right</span></td>
-            </tr>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="4">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+                <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
+                <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
+                <td></td><td></td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (order of getGroupItems(row.key); track order.id) {
+                  <tr class="detail-row row-link" (click)="editOrder(order.id!)">
+                    <td><strong class="ref-link">{{ order.name }}</strong></td>
+                    <td>{{ order.partnerName }}</td>
+                    <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ order.dateExpected ? (order.dateExpected | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td class="text-right">{{ (order.totalHT ?? 0) | number:'1.0-0' }}</td>
+                    <td class="text-right"><strong>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong></td>
+                    <td><span [class]="stateBadge(order.state)">{{ stateLabel(order.state) }}</span></td>
+                    <td><span class="material-icons chevron">chevron_right</span></td>
+                  </tr>
+                }
+              }
+            }
+          } @else {
+            @for (order of filteredOrders; track order.id) {
+              <tr class="row-link" (click)="editOrder(order.id!)">
+                <td><strong class="ref-link">{{ order.name }}</strong></td>
+                <td>{{ order.partnerName }}</td>
+                <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ order.dateExpected ? (order.dateExpected | date:'dd/MM/yyyy') : '—' }}</td>
+                <td class="text-right">{{ (order.totalHT ?? 0) | number:'1.0-0' }}</td>
+                <td class="text-right"><strong>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</strong></td>
+                <td><span [class]="stateBadge(order.state)">{{ stateLabel(order.state) }}</span></td>
+                <td><span class="material-icons chevron">chevron_right</span></td>
+              </tr>
+            }
           }
         </tbody>
       </table>

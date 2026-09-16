@@ -2,63 +2,173 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title"><span class="material-icons">compare_arrows</span> Transferts inter-dépôts</h1>
-      <span class="badge-count">{{ pickings.length }}</span>
     </div>
-    <button class="btn-primary" (click)="router.navigate(['/stock/transferts/new'])">
-      <span class="material-icons">add</span> Nouveau transfert
+    @if (activeTab === 'transferts') {
+      <button class="btn-primary" (click)="router.navigate(['/stock/transferts/new'])">
+        <span class="material-icons">add</span> Nouveau transfert
+      </button>
+    }
+    @if (activeTab === 'receptions') {
+      <button class="btn-secondary" (click)="toggleAllReceptions()">
+        <span class="material-icons">{{ showAllReceptions ? 'visibility_off' : 'history' }}</span>
+        {{ showAllReceptions ? 'Masquer l\'historique' : 'Voir l\'historique' }}
+      </button>
+    }
+  </div>
+
+  <!-- Onglets -->
+  <div class="tab-bar">
+    <button class="tab-btn" [class.active]="activeTab === 'transferts'" (click)="activeTab = 'transferts'">
+      <span class="material-icons">compare_arrows</span>
+      Transferts
+      <span class="tab-count">{{ transferts.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'receptions'" (click)="activeTab = 'receptions'">
+      <span class="material-icons">move_to_inbox</span>
+      Réceptions
+      @if (pendingReceptionCount > 0) {
+        <span class="tab-badge">{{ pendingReceptionCount }}</span>
+      } @else {
+        <span class="tab-count">{{ receptions.length }}</span>
+      }
     </button>
   </div>
 
-  <div class="filter-bar">
-    <div class="filter-date-group">
-      <label>Du</label>
-      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom" (ngModelChange)="applyFilter()">
-    </div>
-    <div class="filter-date-group">
-      <label>Au</label>
-      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo" (ngModelChange)="applyFilter()">
-    </div>
-    <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
-  </div>
+  @if (loading) {
+    <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+  }
 
-  <div class="info-tip">
-    <span class="material-icons">info</span>
-    Les transferts inter-dépôts permettent de déplacer du stock entre emplacements ou entrepôts. La valorisation (CMUP) est conservée et une écriture comptable Dr/Cr est générée automatiquement à la validation.
-  </div>
-
-  <div class="card">
-    @if (loading) {
-      <div class="empty"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>
-    } @else if (pickings.length === 0) {
-      <div class="empty">
-        <span class="material-icons">compare_arrows</span>
-        <p>Aucun transfert. Créez un transfert pour déplacer des articles entre dépôts.</p>
+  <!-- ═══════════════ ONGLET TRANSFERTS ═══════════════ -->
+  @if (!loading && activeTab === 'transferts') {
+    <div class="filter-bar">
+      <div class="filter-date-group">
+        <label>Du</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFrom" (ngModelChange)="applyTransfertFilter()">
       </div>
-    } @else {
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Référence</th><th>De</th><th>Vers</th><th>Origine</th>
-            <th>Date planifiée</th><th>Date faite</th><th>Statut</th>
-            <th class="text-right">Valeur</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (p of pickings; track p.id) {
-            <tr (click)="router.navigate(['/stock/transferts', p.id])" class="clickable">
-              <td class="font-mono font-bold text-purple">{{ p.name }}</td>
-              <td class="text-muted small">{{ p.locationName }}</td>
-              <td class="text-muted small">{{ p.locationDestName }}</td>
-              <td class="text-muted">{{ p.origin || '—' }}</td>
-              <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
-              <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
-              <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
-              <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
-              <td><span class="material-icons chevron">chevron_right</span></td>
+      <div class="filter-date-group">
+        <label>Au</label>
+        <input type="date" class="form-control form-control-sm" [(ngModel)]="dateTo" (ngModelChange)="applyTransfertFilter()">
+      </div>
+      <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
+    </div>
+
+    <div class="groupby-bar">
+      <span class="groupby-label">Regrouper par :</span>
+      <div class="groupby-btns">
+        @for (opt of groupByOptions; track opt.key) {
+          <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+            <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+          </button>
+        }
+      </div>
+      @if (groupBy) {
+        <button class="groupby-reset" (click)="setGroupBy('')">
+          <span class="material-icons">close</span> Annuler
+        </button>
+      }
+    </div>
+
+    <div class="card">
+      @if (transferts.length === 0) {
+        <div class="empty">
+          <span class="material-icons">compare_arrows</span>
+          <p>Aucun transfert sur cette période. Créez un transfert pour déplacer des articles entre dépôts.</p>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Référence</th><th>De</th><th>Vers</th><th>Origine</th>
+              <th>Date planifiée</th><th>Date faite</th><th>Statut</th>
+              <th class="text-right">Valeur</th><th></th>
             </tr>
-          }
-        </tbody>
-      </table>
-    }
-  </div>
+          </thead>
+          <tbody>
+            @if (groupBy) {
+              @for (row of groupedRows; track row.key) {
+                <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                  <td class="group-header-cell" colspan="9">
+                    <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                    <span class="group-label">{{ row.label }}</span>
+                    <span class="badge">{{ row.count }}</span>
+                  </td>
+                </tr>
+                @if (isExpanded(row.key)) {
+                  @for (p of getGroupItems(row.key); track p.id) {
+                    <tr class="detail-row clickable" (click)="router.navigate(['/stock/transferts', p.id])">
+                      <td class="font-mono font-bold text-purple">{{ p.name }}</td>
+                      <td class="text-muted small">{{ p.sourceWarehouseName || p.locationName }}</td>
+                      <td class="text-muted small">{{ p.destWarehouseName || p.locationDestName }}</td>
+                      <td class="text-muted">{{ p.origin || '—' }}</td>
+                      <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                      <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
+                      <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                      <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                      <td><span class="material-icons chevron">chevron_right</span></td>
+                    </tr>
+                  }
+                }
+              }
+            } @else {
+              @for (p of transferts; track p.id) {
+                <tr (click)="router.navigate(['/stock/transferts', p.id])" class="clickable">
+                  <td class="font-mono font-bold text-purple">{{ p.name }}</td>
+                  <td class="text-muted small">{{ p.sourceWarehouseName || p.locationName }}</td>
+                  <td class="text-muted small">{{ p.destWarehouseName || p.locationDestName }}</td>
+                  <td class="text-muted">{{ p.origin || '—' }}</td>
+                  <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                  <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
+                  <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                  <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                  <td><span class="material-icons chevron">chevron_right</span></td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
+
+  <!-- ═══════════════ ONGLET RÉCEPTIONS ═══════════════ -->
+  @if (!loading && activeTab === 'receptions') {
+    <div class="card">
+      @if (receptions.length === 0) {
+        <div class="empty">
+          <span class="material-icons">move_to_inbox</span>
+          <p>{{ showAllReceptions ? 'Aucune réception de transfert.' : 'Aucune réception en attente.' }}</p>
+        </div>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Transfert source</th>
+              <th>Emplacement destination</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of receptions; track p.id) {
+              <tr (click)="router.navigate(['/stock/transferts', p.id])" class="clickable">
+                <td>
+                  <div class="ref-with-icon">
+                    <span class="material-icons" style="color:#6f42c1;font-size:16px">move_to_inbox</span>
+                    <span class="font-mono font-bold text-purple">{{ p.name }}</span>
+                  </div>
+                </td>
+                <td class="text-muted">{{ p.linkedPickingName || '—' }}</td>
+                <td class="text-muted small">{{ p.destWarehouseName || p.locationDestName || '—' }}</td>
+                <td class="text-muted">{{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                <td><span class="material-icons chevron">chevron_right</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  }
 </div>

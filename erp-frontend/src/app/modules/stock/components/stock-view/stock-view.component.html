@@ -56,7 +56,11 @@
                   <td class="font-mono text-muted">{{ g.code || '—' }}</td>
                   <td class="font-bold text-blue" colspan="2">{{ g.product }}</td>
                   <td class="text-right font-bold">{{ g.total | number:'1.0-2' }}</td>
-                  <td></td><td></td><td></td>
+                  <td class="text-right text-muted">{{ g.totalReserved | number:'1.0-2' }}</td>
+                  <td class="text-right">
+                    <span [class]="g.totalAvailable <= 0 ? 'qty-zero' : 'qty-ok'">{{ g.totalAvailable | number:'1.0-2' }}</span>
+                  </td>
+                  <td></td>
                   <td class="text-right font-bold text-blue">{{ g.value | number:'1.0-0' }}</td>
                 </tr>
               }
@@ -106,7 +110,9 @@
               <thead>
                 <tr>
                   <th>Référence</th><th>Article</th>
-                  <th class="text-right">Qté</th><th class="text-right">Disponible</th>
+                  <th class="text-right">En stock</th>
+                  <th class="text-right">Réservé</th>
+                  <th class="text-right">Disponible</th>
                   <th class="text-right">CMUP</th><th class="text-right">Valeur</th>
                 </tr>
               </thead>
@@ -115,7 +121,12 @@
                   <tr>
                     <td class="font-mono text-muted">{{ q.productCode || '—' }}</td>
                     <td class="font-bold">{{ q.productName }}</td>
-                    <td class="text-right">{{ q.quantity | number:'1.0-2' }} {{ q.uomName }}</td>
+                    <td class="text-right font-mono">{{ q.quantity | number:'1.0-2' }} {{ q.uomName }}</td>
+                    <td class="text-right text-muted">
+                      @if ((q.reservedQuantity || 0) > 0) {
+                        <span class="qty-reserved">{{ q.reservedQuantity | number:'1.0-2' }}</span>
+                      } @else { — }
+                    </td>
                     <td class="text-right">
                       <span [class]="q.availableQuantity <= 0 ? 'qty-zero' : 'qty-ok'">{{ q.availableQuantity | number:'1.0-2' }}</span>
                     </td>

@@ -16,7 +16,12 @@ import java.util.List;
  * Règlement d'une ristourne : regroupe les lignes de ristourne à payer à un client.
  */
 @Entity
-@Table(name = "ristourne_paiements")
+@Table(name = "ristourne_paiements", indexes = {
+    // sumByPeriod/sumByStatesAndPeriod (dashboard + snapshot horaire) filtrent par
+    // (company_id, state, date) en continu — aucun index sur cette table jusqu'ici.
+    @Index(name = "idx_ristourne_paiements_company_state_date", columnList = "company_id, state, date"),
+    @Index(name = "idx_ristourne_paiements_partner",            columnList = "partner_id, company_id")
+})
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class RistournePaiement {
 
@@ -31,6 +36,10 @@ public class RistournePaiement {
     private Partner partner;
 
     private LocalDate date;
+
+    /** Date effective du passage à l'état "done" (facture de ristourne générée) */
+    @Column(name = "date_paiement")
+    private LocalDate datePaiement;
 
     /** draft / confirmed / done / cancelled */
     @Builder.Default

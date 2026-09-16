@@ -1,123 +1,205 @@
-<div class="page-container">
+<div class="page-wrap">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
   <div class="page-header">
-    <h1 class="page-title">
-      <span class="material-icons">account_tree</span>
-      Plan Comptable
-    </h1>
-    <div class="page-actions">
-      <button class="btn btn-outline" (click)="downloadTemplate()" [disabled]="downloadingTemplate" title="Télécharger le modèle Excel à remplir">
+    <div class="header-left">
+      <span class="material-icons page-icon">account_tree</span>
+      <div>
+        <h1 class="page-title">Plan Comptable</h1>
+        <p class="page-sub">{{ totalFiltered }} compte(s) — OHADA</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-outline" (click)="downloadTemplate()" [disabled]="downloadingTemplate">
         <span class="material-icons">download</span>
-        {{ downloadingTemplate ? 'Téléchargement...' : 'Modèle Excel' }}
+        {{ downloadingTemplate ? 'Téléchargement…' : 'Modèle Excel' }}
       </button>
-      <label class="btn btn-outline" [class.loading]="importing || previewLoading" title="Importer depuis Excel">
+      <label class="btn-import" [class.busy]="previewLoading">
         <span class="material-icons">upload_file</span>
-        {{ importing ? 'Import...' : previewLoading ? 'Lecture...' : 'Importer' }}
+        {{ previewLoading ? 'Lecture…' : 'Importer Excel' }}
         <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing || previewLoading">
       </label>
-      <button class="btn btn-primary" (click)="openCreate()">
-        <span class="material-icons">add</span>
-        Nouveau compte
+      <button class="btn-primary" (click)="openCreate()">
+        <span class="material-icons">add</span> Nouveau compte
       </button>
     </div>
   </div>
 
+  <!-- ══ ALERTES ══════════════════════════════════════════════════════════ -->
   @if (successMsg) {
-    <div class="alert-success mb-3">
-      <span class="material-icons">check_circle</span>
-      {{ successMsg }}
+    <div class="alert alert-ok">
+      <span class="material-icons">check_circle</span> {{ successMsg }}
     </div>
   }
   @if (errorMsg && !showModal) {
-    <div class="alert-error mb-3">
-      <span class="material-icons">error_outline</span>
-      {{ errorMsg }}
+    <div class="alert alert-err">
+      <span class="material-icons">error_outline</span> {{ errorMsg }}
     </div>
   }
 
-  <!-- FILTERS -->
-  <div class="filters-bar">
-    <div class="filter-group" style="flex:1">
-      <label>Rechercher</label>
-      <div class="search-box">
-        <span class="material-icons">search</span>
-        <input
-          type="text"
-          class="form-control"
-          placeholder="Code ou intitulé..."
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="applyFilters()"
-        >
-      </div>
+  <!-- ══ FILTRES & VUES ════════════════════════════════════════════════════ -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input type="text" class="search-input" placeholder="Code ou intitulé…"
+             [(ngModel)]="searchTerm">
     </div>
-    <div class="filter-group">
-      <label>Classe</label>
-      <select class="form-control" [(ngModel)]="selectedClass" (ngModelChange)="applyFilters()">
-        <option value="">Toutes</option>
-        @for (cls of classes; track cls) {
-          <option [value]="cls">Classe {{ cls }}</option>
-        }
-      </select>
+    <select class="filter-ctl" [(ngModel)]="selectedClass">
+      <option value="">Toutes les classes</option>
+      @for (cls of ['1','2','3','4','5','6','7','8','9']; track cls) {
+        <option [value]="cls">Classe {{ cls }}</option>
+      }
+    </select>
+    <div class="view-toggle">
+      <button class="view-btn" [class.active]="viewMode === 'grouped'" (click)="viewMode = 'grouped'"
+              title="Vue groupée">
+        <span class="material-icons">view_agenda</span>
+      </button>
+      <button class="view-btn" [class.active]="viewMode === 'flat'" (click)="viewMode = 'flat'"
+              title="Vue liste">
+        <span class="material-icons">list</span>
+      </button>
     </div>
-    <div class="filter-actions">
-      <span style="font-size:13px;color:#6c757d;">{{ filteredAccounts.length }} compte(s)</span>
-    </div>
+    @if (viewMode === 'grouped') {
+      <button class="btn-acc-ctrl" (click)="expandAll()">
+        <span class="material-icons">unfold_more</span>
+      </button>
+      <button class="btn-acc-ctrl" (click)="collapseAll()">
+        <span class="material-icons">unfold_less</span>
+      </button>
+    }
   </div>
 
-  <!-- TABLE -->
-  <div class="table-container">
-    @if (loading) {
-      <div style="text-align:center;padding:60px">
-        <div class="spinner"></div>
-      </div>
-    } @else if (filteredAccounts.length === 0) {
-      <div class="empty-state">
-        <span class="material-icons">account_tree</span>
-        <h3>Aucun compte trouvé</h3>
-        <p>Modifiez vos critères de recherche ou créez un nouveau compte.</p>
-      </div>
-    } @else {
-      <table class="table-erp">
+  <!-- ══ CONTENU ══════════════════════════════════════════════════════════ -->
+  @if (loading) {
+    <div class="skeleton-list">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="skeleton-row"></div>
+      }
+    </div>
+
+  } @else if (totalFiltered === 0) {
+    <div class="empty-state">
+      <span class="material-icons">manage_search</span>
+      <p>Aucun compte trouvé</p>
+    </div>
+
+  } @else if (viewMode === 'grouped') {
+
+    <!-- VUE GROUPÉE PAR CLASSE -->
+    <div class="accordion">
+      @for (group of classGroups; track group.cls) {
+        <div class="cls-block">
+          <div class="cls-header" (click)="toggleClass(group.cls)">
+            <div class="cls-header-left">
+              <div class="cls-badge" [style.background]="group.color">{{ group.cls }}</div>
+              <div class="cls-info">
+                <span class="cls-title">Classe {{ group.cls }}</span>
+                <span class="cls-label">{{ group.label }}</span>
+              </div>
+            </div>
+            <div class="cls-header-right">
+              <span class="cls-count">{{ group.accounts.length }} compte(s)</span>
+              <span class="material-icons cls-chevron">
+                {{ expandedClasses.has(group.cls) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
+          </div>
+
+          @if (expandedClasses.has(group.cls)) {
+            <div class="cls-body">
+              <table class="acc-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Intitulé</th>
+                    <th>Type</th>
+                    <th class="c">Lettrage</th>
+                    <th class="c">Statut</th>
+                    <th class="c">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (acc of group.accounts; track acc.id) {
+                    <tr [class.row-deprecated]="acc.deprecated">
+                      <td>
+                        <span class="code-badge" [style.color]="group.color">{{ acc.code }}</span>
+                      </td>
+                      <td class="acc-name">{{ acc.name }}</td>
+                      <td class="acc-type muted">{{ getAccountTypeLabel(acc.accountType) }}</td>
+                      <td class="c">
+                        @if (acc.reconcile) {
+                          <span class="material-icons icon-on">check_circle</span>
+                        } @else {
+                          <span class="material-icons icon-off">radio_button_unchecked</span>
+                        }
+                      </td>
+                      <td class="c">
+                        <span class="status-pill" [class.active]="!acc.deprecated" [class.inactive]="acc.deprecated">
+                          {{ acc.deprecated ? 'Désactivé' : 'Actif' }}
+                        </span>
+                      </td>
+                      <td class="c">
+                        <div class="action-btns">
+                          <button class="btn-action" (click)="openEdit(acc)" title="Modifier">
+                            <span class="material-icons">edit</span>
+                          </button>
+                          <button class="btn-action" (click)="toggleDeprecated(acc)"
+                            [title]="acc.deprecated ? 'Activer' : 'Désactiver'">
+                            <span class="material-icons">{{ acc.deprecated ? 'toggle_off' : 'toggle_on' }}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  } @else {
+
+    <!-- VUE LISTE PLATE -->
+    <div class="table-card">
+      <table class="acc-table">
         <thead>
           <tr>
             <th>Code</th>
-            <th>Intitulé du compte</th>
+            <th>Intitulé</th>
             <th>Type de compte</th>
             <th>Type interne</th>
-            <th class="text-center">Rapprochement</th>
-            <th>Statut</th>
-            <th class="text-center">Actions</th>
+            <th class="c">Lettrage</th>
+            <th class="c">Statut</th>
+            <th class="c">Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (account of filteredAccounts; track account.id) {
-            <tr [class]="'account-class-' + getAccountClass(account.code)"
-                [class.deprecated-row]="account.deprecated">
-              <td><strong class="account-code">{{ account.code }}</strong></td>
-              <td>{{ account.name }}</td>
-              <td class="text-muted fs-sm">{{ getAccountTypeLabel(account.accountType) }}</td>
-              <td class="text-muted fs-sm">{{ account.internalType }}</td>
-              <td class="text-center">
-                @if (account.reconcile) {
-                  <span class="material-icons" style="color:#28a745;font-size:18px;">check_circle</span>
-                } @else {
-                  <span class="material-icons" style="color:#dee2e6;font-size:18px;">radio_button_unchecked</span>
-                }
+          @for (acc of filteredAccounts; track acc.id) {
+            <tr [class.row-deprecated]="acc.deprecated">
+              <td><span class="code-badge">{{ acc.code }}</span></td>
+              <td class="acc-name">{{ acc.name }}</td>
+              <td class="muted acc-type">{{ getAccountTypeLabel(acc.accountType) }}</td>
+              <td class="muted acc-type">{{ acc.internalType }}</td>
+              <td class="c">
+                @if (acc.reconcile) { <span class="material-icons icon-on">check_circle</span> }
+                @else               { <span class="material-icons icon-off">radio_button_unchecked</span> }
               </td>
-              <td>
-                @if (account.deprecated) {
-                  <span class="badge badge-secondary">Désactivé</span>
-                } @else {
-                  <span class="badge badge-success">Actif</span>
-                }
+              <td class="c">
+                <span class="status-pill" [class.active]="!acc.deprecated" [class.inactive]="acc.deprecated">
+                  {{ acc.deprecated ? 'Désactivé' : 'Actif' }}
+                </span>
               </td>
-              <td class="text-center">
+              <td class="c">
                 <div class="action-btns">
-                  <button class="btn btn-ghost btn-sm" (click)="openEdit(account)" title="Modifier">
+                  <button class="btn-action" (click)="openEdit(acc)" title="Modifier">
                     <span class="material-icons">edit</span>
                   </button>
-                  <button class="btn btn-ghost btn-sm" (click)="toggleDeprecated(account)"
-                    [title]="account.deprecated ? 'Activer' : 'Désactiver'">
-                    <span class="material-icons">{{ account.deprecated ? 'toggle_off' : 'toggle_on' }}</span>
+                  <button class="btn-action" (click)="toggleDeprecated(acc)"
+                    [title]="acc.deprecated ? 'Activer' : 'Désactiver'">
+                    <span class="material-icons">{{ acc.deprecated ? 'toggle_off' : 'toggle_on' }}</span>
                   </button>
                 </div>
               </td>
@@ -125,150 +207,174 @@
           }
         </tbody>
       </table>
-    }
-  </div>
+    </div>
+
+  }
 </div>
 
-<!-- MODALE PRÉVISUALISATION IMPORT -->
-@if (showPreview) {
-  <div class="modal-overlay" (click)="closePreview()">
-    <div class="modal" style="max-width:900px;width:95%" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <span class="material-icons">account_tree</span>
-        <div>
-          <h3>Aperçu — Plan Comptable</h3>
-          <p style="margin:0;font-size:13px;color:#6c757d">
-            {{ previewRows.length }} ligne(s)
-            @if (previewRows.length === PREVIEW_MAX) { <span style="color:#ff9800">(limité à {{ PREVIEW_MAX }})</span> }
-          </p>
-        </div>
-        <button class="modal-close" (click)="closePreview()">
-          <span class="material-icons">close</span>
-        </button>
-      </div>
-
-      <div class="modal-body" style="padding:0 16px 8px">
-        <!-- Colonnes détectées -->
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center">
-          <span style="font-size:12px;color:#6c757d;font-weight:600">Colonnes détectées :</span>
-          @for (h of previewHeaders; track h) {
-            <span style="padding:2px 8px;border-radius:12px;font-size:11px;"
-                  [style.background]="isActiveCol(h) ? '#d4edda' : '#f1f3f5'"
-                  [style.color]="isActiveCol(h) ? '#155724' : '#6c757d'">{{ h }}</span>
-          }
-        </div>
-
-        <!-- Tableau -->
-        <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
-          <table class="table-erp" style="font-size:13px">
-            <thead>
-              <tr>
-                <th style="width:40px">#</th>
-                @for (col of previewCols; track col.key) {
-                  <th>{{ col.label }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of previewRows; track $index; let i = $index) {
-                <tr>
-                  <td style="color:#6c757d">{{ i + 1 }}</td>
-                  @for (col of previewCols; track col.key) {
-                    <td>{{ getCellValue(row, col) || '—' }}</td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-outline" (click)="closePreview()">Annuler</button>
-        <button class="btn btn-primary" (click)="confirmImport()">
-          <span class="material-icons">check_circle</span>
-          Confirmer l'import ({{ previewRows.length }} ligne{{ previewRows.length > 1 ? 's' : '' }})
-        </button>
-      </div>
+<!-- ══ OVERLAY IMPORT EN COURS ══════════════════════════════════════════════ -->
+@if (importing) {
+  <div class="import-overlay">
+    <div class="import-spinner-card">
+      <div class="import-spinner"></div>
+      <p class="import-spin-title">Import en cours…</p>
+      <p class="import-spin-sub">{{ previewRows.length }} lignes · veuillez patienter</p>
     </div>
   </div>
 }
 
-<!-- MODAL -->
+<!-- ══ MODAL PRÉVISUALISATION IMPORT ══════════════════════════════════════ -->
+@if (showPreview) {
+  <div class="modal-overlay" (click)="closePreview()">
+    <div class="modal modal-xl" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="modal-hd">
+        <div class="modal-hd-left">
+          <span class="material-icons modal-icon">preview</span>
+          <div>
+            <h3 class="modal-title">Prévisualisation de l'import</h3>
+            <p class="modal-sub">{{ pendingFileName }} · {{ pendingFileSize }}</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" (click)="closePreview()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Colonnes détectées -->
+      <div class="modal-section">
+        <div class="section-label">Colonnes détectées dans le fichier</div>
+        <div class="col-chips">
+          @for (h of previewHeaders; track h) {
+            <span class="col-chip" [class.chip-match]="isActiveCol(h)" [class.chip-extra]="!isActiveCol(h)">
+              @if (isActiveCol(h)) { <span class="material-icons chip-icon">check</span> }
+              {{ h }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="modal-section preview-stats">
+        <div class="stat-pill stat-blue">
+          <span class="material-icons">table_rows</span>
+          {{ previewRows.length }} ligne{{ previewRows.length > 1 ? 's' : '' }} détectée{{ previewRows.length > 1 ? 's' : '' }}
+          @if (previewRows.length === PREVIEW_MAX) { <span class="limit-hint">(aperçu limité à {{ PREVIEW_MAX }})</span> }
+        </div>
+      </div>
+
+      <!-- Tableau prévisualisation -->
+      <div class="modal-body-scroll">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th class="row-num">#</th>
+              @for (col of previewCols; track col.key) {
+                <th>{{ col.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of previewRows; track $index; let i = $index) {
+              <tr [class.row-even]="i % 2 === 0">
+                <td class="row-num muted">{{ i + 1 }}</td>
+                @for (col of previewCols; track col.key) {
+                  <td [class.cell-empty]="!getCellValue(row, col)">
+                    {{ getCellValue(row, col) || '—' }}
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-ft">
+        <button class="btn-outline" (click)="closePreview()">Annuler</button>
+        <button class="btn-primary" (click)="confirmImport()">
+          <span class="material-icons">cloud_upload</span>
+          Lancer l'import ({{ previewRows.length }} ligne{{ previewRows.length > 1 ? 's' : '' }})
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ══ MODAL CRÉATION / ÉDITION ════════════════════════════════════════════ -->
 @if (showModal) {
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>{{ editingAccount ? 'Modifier le compte' : 'Nouveau compte' }}</h3>
-        <button class="modal-close" (click)="closeModal()">
+      <div class="modal-hd">
+        <div class="modal-hd-left">
+          <span class="material-icons modal-icon">{{ editingAccount ? 'edit' : 'add_circle' }}</span>
+          <h3 class="modal-title">{{ editingAccount ? 'Modifier le compte' : 'Nouveau compte' }}</h3>
+        </div>
+        <button class="modal-close-btn" (click)="closeModal()">
           <span class="material-icons">close</span>
         </button>
       </div>
       <form [formGroup]="accountForm" (ngSubmit)="saveAccount()">
-        <div class="modal-body">
+        <div class="modal-body-pad">
           @if (errorMsg) {
-            <div class="alert-error mb-3">
-              <span class="material-icons">error_outline</span>
-              {{ errorMsg }}
-            </div>
+            <div class="alert alert-err mb"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
           }
-          <div class="form-row cols-2">
+          <div class="form-grid">
             <div class="form-group">
-              <label>Code *</label>
-              <input formControlName="code" class="form-control"
-                [class.is-invalid]="accountForm.get('code')?.invalid && accountForm.get('code')?.touched"
-                placeholder="Ex: 411000">
+              <label>Code <span class="req">*</span></label>
+              <input formControlName="code" class="form-ctl"
+                [class.invalid]="accountForm.get('code')?.invalid && accountForm.get('code')?.touched"
+                placeholder="Ex : 411000">
               @if (accountForm.get('code')?.hasError('required') && accountForm.get('code')?.touched) {
-                <span class="invalid-feedback">Le code est requis</span>
+                <span class="err-msg">Le code est requis</span>
               }
               @if (accountForm.get('code')?.hasError('pattern') && accountForm.get('code')?.touched) {
-                <span class="invalid-feedback">Uniquement des chiffres</span>
+                <span class="err-msg">Uniquement des chiffres</span>
               }
             </div>
             <div class="form-group">
-              <label>Intitulé *</label>
-              <input formControlName="name" class="form-control"
-                [class.is-invalid]="accountForm.get('name')?.invalid && accountForm.get('name')?.touched"
-                placeholder="Ex: Clients">
+              <label>Intitulé <span class="req">*</span></label>
+              <input formControlName="name" class="form-ctl"
+                [class.invalid]="accountForm.get('name')?.invalid && accountForm.get('name')?.touched"
+                placeholder="Ex : Clients">
               @if (accountForm.get('name')?.hasError('required') && accountForm.get('name')?.touched) {
-                <span class="invalid-feedback">L'intitulé est requis</span>
+                <span class="err-msg">L'intitulé est requis</span>
               }
             </div>
-          </div>
-          <div class="form-row cols-2">
             <div class="form-group">
-              <label>Type de compte *</label>
-              <select formControlName="accountType" class="form-control">
-                @for (type of accountTypes; track type.value) {
-                  <option [value]="type.value">{{ type.label }}</option>
+              <label>Type de compte <span class="req">*</span></label>
+              <select formControlName="accountType" class="form-ctl">
+                @for (t of accountTypes; track t.value) {
+                  <option [value]="t.value">{{ t.label }}</option>
                 }
               </select>
             </div>
             <div class="form-group">
-              <label>Type interne *</label>
-              <select formControlName="internalType" class="form-control">
-                @for (type of internalTypes; track type.value) {
-                  <option [value]="type.value">{{ type.label }}</option>
+              <label>Type interne <span class="req">*</span></label>
+              <select formControlName="internalType" class="form-ctl">
+                @for (t of internalTypes; track t.value) {
+                  <option [value]="t.value">{{ t.label }}</option>
                 }
               </select>
             </div>
           </div>
-          <div style="display:flex;gap:24px">
-            <label class="checkbox-label">
+          <div class="check-row">
+            <label class="chk-lbl">
               <input type="checkbox" formControlName="reconcile">
-              <span>Permettre le rapprochement</span>
+              <span>Permettre le lettrage</span>
             </label>
-            <label class="checkbox-label">
+            <label class="chk-lbl">
               <input type="checkbox" formControlName="deprecated">
               <span>Compte désactivé</span>
             </label>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" (click)="closeModal()">Annuler</button>
-          <button type="submit" class="btn btn-primary" [disabled]="saving">
-            @if (saving) { <span class="spinner-sm-btn"></span> }
+        <div class="modal-ft">
+          <button type="button" class="btn-outline" (click)="closeModal()">Annuler</button>
+          <button type="submit" class="btn-primary" [disabled]="saving">
+            @if (saving) { <span class="btn-spinner"></span> }
             {{ editingAccount ? 'Enregistrer' : 'Créer' }}
           </button>
         </div>

@@ -33,7 +33,16 @@ public class RemisePaiementLine {
     @Column(name = "montant_unitaire", precision = 20, scale = 2)
     private BigDecimal montantUnitaire;
 
-    /** Montant total = quantite * montantUnitaire */
+    /** Montant total TTC (avec précompte et TVA selon type_remise) — historiquement le seul champ
+     *  de montant de cette ligne, contrairement à RistournePaiementLine qui sépare montantTotal
+     *  (HT) et montantTTC. Conservé tel quel pour ne rien changer au comportement existant
+     *  (generateFacture et le reste du module lisent ce champ en s'attendant au TTC). */
     @Column(name = "montant_total", precision = 20, scale = 2)
     private BigDecimal montantTotal;
+
+    /** Même valeur que montantTotal ci-dessus — ajouté uniquement pour donner à cette entité le
+     *  même nom de champ que RistournePaiementLine.montantTTC, pour tout code générique qui
+     *  s'attendrait à trouver un "montantTTC" sur une ligne de règlement des deux modules. */
+    @Column(name = "montant_ttc", precision = 20, scale = 2)
+    private BigDecimal montantTTC;
 }

@@ -1,72 +1,93 @@
-<div class="page-container report-container">
+<div class="page-container">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
   <div class="page-header no-print">
-    <h1 class="page-title">
-      <span class="material-icons">people</span>
-      Balance des Tiers — 4 Colonnes
-    </h1>
+    <div class="header-left">
+      <span class="material-icons page-icon">people</span>
+      <div>
+        <h1 class="page-title">Balance des Tiers — 4 Colonnes</h1>
+        <p class="page-sub">Mouvements de la période + soldes finaux par tiers</p>
+      </div>
+    </div>
     @if (generated) {
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" (click)="exportPdf()"><span class="material-icons">picture_as_pdf</span> Exporter PDF</button>
-        <button class="btn btn-outline" (click)="exportExcel()"><span class="material-icons">table_view</span> Exporter Excel</button>
+      <div class="header-actions">
+        <button class="btn-outline" (click)="print()">
+          <span class="material-icons">print</span> Imprimer
+        </button>
+        <button class="btn-outline btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+        <button class="btn-outline btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
+        </button>
       </div>
     }
   </div>
 
-  <div class="report-header no-print">
-    <div class="filters-bar" style="margin-bottom:0">
+  <!-- ══ FILTRES ══════════════════════════════════════════════════════════ -->
+  <div class="filters-card no-print">
+    <div class="filter-grid">
       <div class="filter-group">
-        <label>Du *</label>
-        <input type="date" class="form-control" [(ngModel)]="dateFrom">
+        <label>Période du</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateFrom">
       </div>
       <div class="filter-group">
-        <label>Au *</label>
-        <input type="date" class="form-control" [(ngModel)]="dateTo">
+        <label>au</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateTo">
       </div>
       <div class="filter-group">
         <label>Type de tiers</label>
-        <select class="form-control" [(ngModel)]="resultSelection">
-          <option value="customer">Clients seulement</option>
-          <option value="supplier">Fournisseurs seulement</option>
-          <option value="customer_supplier">Clients et Fournisseurs</option>
-        </select>
+        <div class="type-chips">
+          <button class="type-chip" [class.active]="resultSelection === 'customer_supplier'" (click)="resultSelection = 'customer_supplier'">Tous</button>
+          <button class="type-chip" [class.active]="resultSelection === 'customer'" (click)="resultSelection = 'customer'">
+            <span class="material-icons">person</span> Clients
+          </button>
+          <button class="type-chip" [class.active]="resultSelection === 'supplier'" (click)="resultSelection = 'supplier'">
+            <span class="material-icons">store</span> Fournisseurs
+          </button>
+        </div>
       </div>
       <div class="filter-group">
         <label>Afficher</label>
-        <select class="form-control" [(ngModel)]="displayAccount">
+        <select class="form-ctl" [(ngModel)]="displayAccount">
           <option value="all">Tous</option>
           <option value="movement">Avec mouvements</option>
         </select>
       </div>
-      <div class="filter-actions">
-        <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
-          @if (loading) { <span class="spinner-sm"></span> }
-          <span class="material-icons">play_arrow</span>Générer
+      <div class="filter-group filter-btn-col">
+        <label>&nbsp;</label>
+        <button class="btn-generate" (click)="generate()" [disabled]="loading">
+          @if (loading) { <span class="btn-spinner"></span> Génération… }
+          @else { <span class="material-icons">play_arrow</span> Générer }
         </button>
       </div>
     </div>
+    @if (errorMsg) {
+      <div class="alert-err"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
+    }
   </div>
 
-  @if (errorMsg) {
-    <div class="alert-error mb-3"><span class="material-icons">error_outline</span>{{ errorMsg }}</div>
-  }
-
   @if (loading) {
-    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <p>Génération en cours…</p>
+    </div>
+
   } @else if (generated) {
     @if (lines.length === 0) {
       <div class="empty-state">
-        <span class="material-icons">people</span>
-        <h3>Aucune donnée</h3>
+        <span class="material-icons">people_outline</span>
+        <p>Aucun tiers avec des mouvements sur cette période.</p>
       </div>
     } @else {
-      <div class="table-container">
-        <div class="report-title-bar">
-          <h3>Balance des Tiers 4 Colonnes — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</h3>
-          <span class="report-period">{{ lines.length }} tiers</span>
+      <div class="rpt-table-wrap">
+        <div class="rpt-title-bar">
+          <span>Balance des Tiers 4 Colonnes — {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</span>
+          <span class="badge-count">{{ lines.length }} tiers</span>
         </div>
-        <table class="table-erp">
+        <table class="rpt-table">
           <thead>
-            <tr>
+            <tr class="rpt-thead-group">
               <th>Réf.</th>
               <th>N° Compte</th>
               <th>Nom du Tiers</th>
@@ -80,46 +101,50 @@
           <tbody>
             @if (customers.length > 0) {
               <tr class="section-header">
-                <td colspan="8">CLIENTS</td>
+                <td colspan="8">
+                  <span class="material-icons">person</span> CLIENTS ({{ customers.length }})
+                </td>
               </tr>
               @for (line of customers; track line.partnerRef) {
                 <tr>
-                  <td class="text-muted fs-sm">{{ line.partnerRef }}</td>
+                  <td class="ref-col">{{ line.partnerRef }}</td>
                   <td><span class="mono">{{ line.accountNumber }}</span></td>
                   <td><strong>{{ line.partnerName }}</strong></td>
-                  <td><span class="badge badge-sale">Client</span></td>
-                  <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                  <td><span class="badge badge-client">Client</span></td>
+                  <td class="text-right mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
                 </tr>
               }
             }
             @if (suppliers.length > 0) {
               <tr class="section-header">
-                <td colspan="8">FOURNISSEURS</td>
+                <td colspan="8">
+                  <span class="material-icons">store</span> FOURNISSEURS ({{ suppliers.length }})
+                </td>
               </tr>
               @for (line of suppliers; track line.partnerRef) {
                 <tr>
-                  <td class="text-muted fs-sm">{{ line.partnerRef }}</td>
+                  <td class="ref-col">{{ line.partnerRef }}</td>
                   <td><span class="mono">{{ line.accountNumber }}</span></td>
                   <td><strong>{{ line.partnerName }}</strong></td>
-                  <td><span class="badge badge-purchase">Fournisseur</span></td>
-                  <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
+                  <td><span class="badge badge-fournisseur">Fournisseur</span></td>
+                  <td class="text-right mono">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono amount-debit">{{ line.finalDebit > 0 ? (line.finalDebit | number:'1.2-2') : '' }}</td>
+                  <td class="text-right mono amount-credit">{{ line.finalCredit > 0 ? (line.finalCredit | number:'1.2-2') : '' }}</td>
                 </tr>
               }
             }
           </tbody>
           <tfoot>
-            <tr>
+            <tr class="rpt-tfoot-total">
               <td colspan="4">TOTAL GÉNÉRAL</td>
-              <td>{{ totals.debit | number:'1.2-2' }}</td>
-              <td>{{ totals.credit | number:'1.2-2' }}</td>
-              <td>{{ totals.finD | number:'1.2-2' }}</td>
-              <td>{{ totals.finC | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.debit | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.credit | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.finD | number:'1.2-2' }}</td>
+              <td class="text-right mono">{{ totals.finC | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
         </table>

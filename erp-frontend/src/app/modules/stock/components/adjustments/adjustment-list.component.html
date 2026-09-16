@@ -4,18 +4,10 @@
       <h1 class="page-title">Ajustements de stock</h1>
       <p class="page-subtitle">Inventaire physique — corrigez les quantités en stock</p>
     </div>
-    <div class="header-actions">
-      <button class="btn-outline-primary" (click)="printCountingSheet()" [disabled]="printingSheet || loadingInventory">
-        <span class="material-icons">print</span>
-        {{ printingSheet ? 'Génération...' : 'Imprimer feuille de comptage' }}
-      </button>
-      @if (showPrintReportBtn) {
-        <button class="btn-outline-success" (click)="printInventoryReport()" [disabled]="printingReport">
-          <span class="material-icons">summarize</span>
-          {{ printingReport ? 'Génération...' : 'Imprimer fiche d\'inventaire' }}
-        </button>
-      }
-    </div>
+    <button class="btn-secondary" (click)="printCountingSheet()" [disabled]="printingSheet || loadingInventory">
+      <span class="material-icons">print</span>
+      {{ printingSheet ? 'Génération...' : 'Feuille de comptage' }}
+    </button>
   </div>
 
   @if (successMsg) {
@@ -41,32 +33,76 @@
   <!-- ===== ONGLET INVENTAIRE ===== -->
   @if (activeTab === 'inventory') {
     <div class="inventory-toolbar">
-      <div class="toolbar-filters">
-        <div class="search-box">
-          <span class="material-icons">search</span>
-          <input type="text" placeholder="Rechercher un article..." [(ngModel)]="filterSearch" (ngModelChange)="applyInventoryFilter()">
-        </div>
-        <select [(ngModel)]="filterLocationId" (ngModelChange)="applyInventoryFilter()" class="form-control location-filter">
-          <option [ngValue]="null">Tous les emplacements</option>
-          @for (loc of locations; track loc.id) {
-            <option [ngValue]="loc.id">{{ loc.completeName || loc.name }}</option>
-          }
-        </select>
+
+      <!-- Chips type produit -->
+      <div class="cat-chips">
+        @for (tab of [
+          { k: 'autres',     label: 'Tous',        icon: 'apps'        },
+          { k: 'articles',   label: 'Articles',     icon: 'local_bar'   },
+          { k: 'emballages', label: 'Emballages',   icon: 'inventory_2' },
+          { k: 'bouteilles', label: 'Bouteilles',   icon: 'liquor'      }
+        ]; track tab.k) {
+          <button class="cat-chip" [class.active]="filterCat === tab.k"
+                  (click)="filterCat = tab.k; applyInventoryFilter()">
+            <span class="material-icons">{{ tab.icon }}</span>
+            {{ tab.label }}
+            <span class="cat-count">{{ catCounts[tab.k] }}</span>
+          </button>
+        }
       </div>
-      <div class="toolbar-actions">
-        <div class="notes-field">
-          <input type="text" [(ngModel)]="notes" placeholder="Motif (ex: Inventaire annuel...)" class="form-control">
+
+      <div class="toolbar-top">
+        <div class="toolbar-filters">
+          <select class="form-control warehouse-filter" [(ngModel)]="filterWarehouseId" (ngModelChange)="onWarehouseChange()">
+            <option [ngValue]="null">Tous les entrepôts</option>
+            @for (w of warehouses; track w.id) {
+              <option [ngValue]="w.id">{{ w.name }}</option>
+            }
+          </select>
+          <select class="form-control location-filter" [(ngModel)]="filterLocationId" (ngModelChange)="applyInventoryFilter()">
+            <option [ngValue]="null">Tous les emplacements</option>
+            @for (loc of filteredLocations; track loc.id) {
+              <option [ngValue]="loc.id">{{ loc.completeName || loc.name }}</option>
+            }
+          </select>
+          <div class="search-box">
+            <span class="material-icons">search</span>
+            <input type="text" placeholder="Rechercher un article..." [(ngModel)]="filterSearch" (ngModelChange)="applyInventoryFilter()">
+          </div>
+          <button class="cat-chip" [class.active]="filterWithStock"
+                  (click)="filterWithStock = !filterWithStock; applyInventoryFilter()"
+                  title="Afficher uniquement les produits avec du stock">
+            <span class="material-icons">filter_list</span>
+            En stock seulement
+          </button>
+          <input type="date" [(ngModel)]="adjDate" class="form-control" title="Date de l'inventaire">
+          <input type="text" [(ngModel)]="notes" placeholder="Motif (ex: Inventaire annuel...)" class="form-control notes-input">
         </div>
-        <button class="btn-secondary" (click)="resetCounted()" [disabled]="applying">
-          <span class="material-icons">refresh</span> Réinitialiser
-        </button>
-        <button class="btn-primary" (click)="applyAdjustments()"
-                [disabled]="applying || linesWithDiff.length === 0">
-          <span class="material-icons">check</span>
-          {{ applying ? 'Application...' : 'Appliquer (' + linesWithDiff.length + ' écart(s))' }}
-        </button>
+        <div class="toolbar-actions">
+          <button class="btn-reset" (click)="resetCounted()" [disabled]="applying" title="Réinitialiser les comptages">
+            <span class="material-icons">refresh</span> Réinitialiser
+          </button>
+          <button class="btn-validate-counts" (click)="validateCounts()" [disabled]="applying || loadingInventory">
+            <span class="material-icons">fact_check</span>
+            {{ countsValidated ? 'Re-valider' : 'Valider les comptages' }}
+          </button>
+          <button class="btn-apply" (click)="applyAdjustments()" [disabled]="applying || linesWithDiff.length === 0">
+            <span class="material-icons">check_circle</span>
+            {{ applying ? 'Application...' : 'Appliquer (' + linesWithDiff.length + ' écart(s))' }}
+          </button>
+        </div>
       </div>
     </div>
+
+    @if (countsValidated) {
+      <div class="validated-banner">
+        <span class="material-icons">fact_check</span>
+        <span>Comptages validés — <strong>{{ validatedLines.length }}</strong> article(s) enregistrés.</span>
+        <button class="btn-print-pv" (click)="printInventoryReport()" [disabled]="printingReport">
+          <span class="material-icons">summarize</span> {{ printingReport ? 'Génération...' : 'Imprimer PV d\'inventaire' }}
+        </button>
+      </div>
+    }
 
     @if (loadingInventory) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement du stock...</div>
@@ -75,9 +111,9 @@
         <table class="inv-table">
           <thead>
             <tr>
-              <th>Emplacement</th>
+              <th>Entrepôt / Emplacement</th>
               <th>Article</th>
-              <th class="text-right">Qté disponible</th>
+              <th class="text-right">Qté système</th>
               <th class="text-right">UdM</th>
               <th class="text-right col-counted">Qté comptée</th>
               <th class="text-right">Différence</th>
@@ -98,6 +134,7 @@
                 <td class="text-right col-counted">
                   <input type="number"
                          [(ngModel)]="line.countedQty"
+                         (ngModelChange)="clampCounted(line)"
                          class="counted-input"
                          [class.has-diff]="getDiff(line) !== 0"
                          min="0" step="0.001" />
@@ -114,7 +151,7 @@
               </tr>
             }
             @if (filteredLines.length === 0) {
-              <tr><td colspan="6" class="empty-state">Aucun article en stock</td></tr>
+              <tr><td colspan="6" class="empty-state">Aucun article en stock pour cet entrepôt</td></tr>
             }
           </tbody>
         </table>

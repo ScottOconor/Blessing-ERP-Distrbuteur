@@ -39,7 +39,7 @@ export class StockViewComponent implements OnInit {
       products: this.stockService.getProducts(this.companyId)
     }).subscribe({
       next: ({ quants, locations, warehouses, products }) => {
-        this.quants = quants.filter(q => q.quantity > 0);
+        this.quants = quants.filter(q => q.quantity > 0 || q.reservedQuantity > 0);
         this.locations = locations.filter(l => l.usage === 'internal');
         this.warehouses = warehouses;
         this.products = products;
@@ -73,12 +73,14 @@ export class StockViewComponent implements OnInit {
     return this.filtered.reduce((s, q) => s + (q.totalValue || 0), 0);
   }
 
-  get groupedByProduct(): { product: string; code: string; total: number; value: number; lines: StockQuant[] }[] {
-    const map = new Map<string, { product: string; code: string; total: number; value: number; lines: StockQuant[] }>();
+  get groupedByProduct(): { product: string; code: string; total: number; totalReserved: number; totalAvailable: number; value: number; lines: StockQuant[] }[] {
+    const map = new Map<string, { product: string; code: string; total: number; totalReserved: number; totalAvailable: number; value: number; lines: StockQuant[] }>();
     this.filtered.forEach(q => {
       const key = q.productName || String(q.productId);
-      const g = map.get(key) || { product: q.productName || '', code: q.productCode || '', total: 0, value: 0, lines: [] };
+      const g = map.get(key) || { product: q.productName || '', code: q.productCode || '', total: 0, totalReserved: 0, totalAvailable: 0, value: 0, lines: [] };
       g.total += q.quantity;
+      g.totalReserved += q.reservedQuantity || 0;
+      g.totalAvailable += q.availableQuantity || 0;
       g.value += q.totalValue || 0;
       g.lines.push(q);
       map.set(key, g);

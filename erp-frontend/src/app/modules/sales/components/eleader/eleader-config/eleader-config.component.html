@@ -16,25 +16,14 @@
       <span class="material-icons">error</span> {{ errorMsg }}
     </div>
 
-    <!-- Section Journal -->
+    <!-- Section Paramètres -->
     <div class="card">
       <div class="card-header">
-        <span class="material-icons">book</span>
-        <h3>Journal comptable</h3>
-        <span class="required-badge">Obligatoire</span>
+        <span class="material-icons">settings</span>
+        <h3>Paramètres d'import</h3>
       </div>
       <div class="card-body">
-        <div class="field-group">
-          <label class="field-label">Journal des ventes eLeader *</label>
-          <select [(ngModel)]="config.journalId" class="field-select"
-                  [class.error]="!config.journalId">
-            <option [ngValue]="undefined">— Sélectionner un journal —</option>
-            <option *ngFor="let j of journals" [value]="j.id">
-              {{ j.name }} ({{ j.code }})
-            </option>
-          </select>
-          <p class="field-hint">Ce journal sera utilisé pour toutes les factures générées depuis les imports eLeader.</p>
-        </div>
+        <p class="field-hint" style="margin-bottom:12px">Le journal comptable est sélectionné directement dans chaque bon de commande.</p>
         <div class="field-row">
           <div class="field-group half">
             <label class="field-label">Code produit PSA (précompte)</label>
@@ -56,7 +45,47 @@
       </div>
     </div>
 
-    <!-- Section Codes d'emballage -->
+    <!-- Section Codes consignes/emballages supplémentaires -->
+    <div class="card mt-16">
+      <div class="card-header">
+        <span class="material-icons">inventory</span>
+        <h3>Codes consignes / emballages supplémentaires</h3>
+      </div>
+      <div class="card-body">
+        <p class="section-desc">
+          Codes produits ERP à traiter comme des consignes/emballages : <strong>exempt de TVA</strong>, comptabilisés en compte emballages.
+          Les codes de base (CB12, CB24, CBG12, CV12, PP, PB…) sont <em>toujours inclus</em> sans les déclarer ici.
+          Ajoutez ici uniquement les codes spécifiques à votre dépôt (piqués, consignes locales…).
+        </p>
+
+        <!-- Tags -->
+        <div class="consigne-tags" *ngIf="config.extraConsigneCodes.length > 0">
+          <span *ngFor="let c of config.extraConsigneCodes; let i = index" class="consigne-tag">
+            {{ c }}
+            <button class="tag-remove" (click)="removeConsigneCode(i)" title="Supprimer">×</button>
+          </span>
+        </div>
+        <p *ngIf="config.extraConsigneCodes.length === 0" class="empty-hint">
+          Aucun code supplémentaire — les codes de base standards suffisent.
+        </p>
+
+        <!-- Ajout -->
+        <div class="code-add-row">
+          <input [(ngModel)]="newConsigneCode" class="field-input code-input"
+                 placeholder="ex: CONS002, PALT-N, PP2…"
+                 (keyup.enter)="addConsigneCode()" />
+          <button class="btn-add" (click)="addConsigneCode()" [disabled]="!newConsigneCode.trim()">
+            <span class="material-icons">add</span> Ajouter
+          </button>
+        </div>
+        <p *ngIf="consigneCodeError" class="field-error">
+          <span class="material-icons" style="font-size:14px;vertical-align:middle">warning</span>
+          {{ consigneCodeError }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Section Codes d'emballage eLeader -->
     <div class="card mt-16">
       <div class="card-header">
         <span class="material-icons">inventory_2</span>
@@ -72,8 +101,9 @@
       </div>
       <div class="card-body">
         <p class="section-desc">
-          Définissez la correspondance entre les codes eLeader du PDF (ex&nbsp;: VCBB65, VRACC12, 354111)
+          Correspondance entre les codes eLeader du PDF (ex&nbsp;: VCBB65, VRACC12, 354111)
           et les codes produits ERP (ex&nbsp;: CB12, CB24, CBG12).
+          Chaque code ERP mappé sera automatiquement reconnu comme consigne.
         </p>
 
         <!-- Tableau des mappings -->

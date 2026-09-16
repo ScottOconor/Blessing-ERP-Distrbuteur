@@ -1,142 +1,147 @@
 <div class="page-container">
 
-  <!-- HEADER -->
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">
-        <span class="material-icons">analytics</span>
-        Comptes Analytiques
-      </h1>
-      <p class="page-subtitle">Gérez votre plan analytique (centres de coût, projets, axes d'analyse)</p>
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="page-header no-print">
+    <div class="header-left">
+      <span class="material-icons page-icon">analytics</span>
+      <div>
+        <h1 class="page-title">Comptes Analytiques</h1>
+        <p class="page-sub">Plan analytique — centres de coût, projets, axes d'analyse</p>
+      </div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénère les lignes analytiques depuis les écritures validées">
-        <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
-        {{ recalculating ? 'Recalcul...' : 'Recalculer' }}
+    <div class="header-actions">
+      <button class="btn-outline" (click)="downloadTemplate()" [disabled]="downloadingTemplate" title="Télécharger le modèle Excel">
+        <span class="material-icons">{{ downloadingTemplate ? 'hourglass_empty' : 'download' }}</span>
+        {{ downloadingTemplate ? 'Téléchargement…' : 'Modèle Excel' }}
       </button>
-      <button class="btn btn-primary" (click)="openNew()">
-        <span class="material-icons">add</span>
-        Nouveau compte
+      <label class="btn-outline" [class.disabled]="importing" title="Importer depuis Excel" style="cursor:pointer;margin:0">
+        <span class="material-icons">{{ importing ? 'hourglass_empty' : 'upload_file' }}</span>
+        {{ importing ? 'Import…' : 'Importer Excel' }}
+        <input #fileInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImport($event)" [disabled]="importing">
+      </label>
+      <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénère les lignes analytiques depuis les écritures validées">
+        <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
+        {{ recalculating ? 'Recalcul…' : 'Recalculer' }}
+      </button>
+      <button class="btn-generate" (click)="openNew()">
+        <span class="material-icons">add</span> Nouveau compte
       </button>
     </div>
   </div>
 
+  <!-- ══ ALERTES ══════════════════════════════════════════════════════════ -->
   @if (successMsg) {
-    <div class="alert-success mb-3">
-      <span class="material-icons">check_circle</span>{{ successMsg }}
-    </div>
+    <div class="alert-ok"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
   }
   @if (errorMsg && !showForm) {
-    <div class="alert-error mb-3">
-      <span class="material-icons">error_outline</span>{{ errorMsg }}
-    </div>
+    <div class="alert-err"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
   }
 
-  <!-- FORMULAIRE -->
+  <!-- ══ FORMULAIRE ══════════════════════════════════════════════════════ -->
   @if (showForm) {
-    <div class="card mb-3">
-      <div class="card-header">
-        <h3 style="font-size:14px">
-          <span class="material-icons" style="font-size:18px;color:#714B67">
-            {{ editMode ? 'edit' : 'add_circle' }}
-          </span>
+    <div class="form-panel">
+      <div class="form-panel-header">
+        <div class="form-panel-title">
+          <span class="material-icons">{{ editMode ? 'edit' : 'add_circle' }}</span>
           {{ editMode ? 'Modifier le compte analytique' : 'Nouveau compte analytique' }}
-        </h3>
-        <button class="btn-icon" (click)="closeForm()">
+        </div>
+        <button class="btn-icon-close" (click)="closeForm()">
           <span class="material-icons">close</span>
         </button>
       </div>
-      <div class="card-body">
+      <div class="form-panel-body">
         @if (errorMsg) {
-          <div class="alert-error mb-3">
-            <span class="material-icons">error_outline</span>{{ errorMsg }}
-          </div>
+          <div class="alert-err mb"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
         }
-        <div class="form-row cols-3">
+        <div class="form-row">
           <div class="form-group">
             <label>Code *</label>
-            <input type="text" class="form-control" [(ngModel)]="form.code"
-              placeholder="ex: ADM, ADM-DIR..." maxlength="20">
+            <input type="text" class="form-ctl" [(ngModel)]="form.code" placeholder="ADM, ADM-DIR…" maxlength="20">
           </div>
           <div class="form-group">
             <label>Nom *</label>
-            <input type="text" class="form-control" [(ngModel)]="form.name"
-              placeholder="ex: Administration, Directrice...">
+            <input type="text" class="form-ctl wide" [(ngModel)]="form.name" placeholder="Administration, Direction…">
           </div>
           <div class="form-group">
             <label>Compte parent</label>
-            <select class="form-control" [(ngModel)]="form.parentId">
-              <option [ngValue]="null">— Aucun (compte racine) —</option>
+            <select class="form-ctl" [(ngModel)]="form.parentId">
+              <option [ngValue]="null">– Aucun (racine) –</option>
               @for (a of flatAccounts; track a.id) {
                 @if (a.id !== form.id) {
-                  <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                  <option [ngValue]="a.id">{{ a.code }} – {{ a.name }}</option>
                 }
               }
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <input type="text" class="form-control" [(ngModel)]="form.description"
-            placeholder="Description optionnelle...">
+          <div class="form-group wide2">
+            <label>Description</label>
+            <input type="text" class="form-ctl" [(ngModel)]="form.description" placeholder="Description optionnelle…">
+          </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" (click)="save()">
-            <span class="material-icons">save</span>
-            Sauvegarder
+          <button class="btn-generate" (click)="save()">
+            <span class="material-icons">save</span> Sauvegarder
           </button>
-          <button class="btn btn-outline" (click)="closeForm()">Annuler</button>
+          <button class="btn-outline" (click)="closeForm()">Annuler</button>
         </div>
       </div>
     </div>
   }
 
-  <!-- LISTE DES COMPTES -->
-  <div class="card">
-    <div class="card-header">
-      <h3 style="font-size:14px">
-        <span class="material-icons" style="font-size:18px;color:#714B67">account_tree</span>
-        Plan analytique
-      </h3>
+  <!-- ══ TABLEAU ══════════════════════════════════════════════════════════ -->
+  <div class="content-card">
+    <div class="content-card-header">
+      <div class="card-title-left">
+        <span class="material-icons" style="color:#2563eb;font-size:20px">account_tree</span>
+        <span>Plan analytique</span>
+        <span class="badge-count">{{ flatAccounts.length }} compte(s)</span>
+      </div>
     </div>
-    <div class="card-body" style="padding:0">
-      @if (loading) {
-        <div style="text-align:center;padding:40px"><div class="spinner"></div></div>
-      } @else if (flatAccounts.length === 0) {
-        <div class="empty-state">
-          <span class="material-icons">analytics</span>
-          <p>Aucun compte analytique. Créez votre premier compte pour commencer.</p>
-        </div>
-      } @else {
-        <table class="data-table">
+
+    @if (loading) {
+      <div class="loading-state">
+        <div class="spinner-lg"></div>
+        <p>Chargement…</p>
+      </div>
+    } @else if (flatAccounts.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">analytics</span>
+        <p>Aucun compte analytique. Créez votre premier compte pour commencer.</p>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table class="gl-table">
           <thead>
             <tr>
               <th>Code</th>
               <th>Nom</th>
               <th>Parent</th>
               <th>Description</th>
-              <th style="width:120px;text-align:center">Actions</th>
+              <th class="c">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (account of getSortedAccounts(); track account.id) {
               <tr>
                 <td>
-                  <span [style.paddingLeft.px]="getDepth(account) * 24">
+                  <div class="code-cell" [style.paddingLeft.px]="getDepth(account) * 22">
                     @if (getDepth(account) > 0) {
-                      <span class="material-icons" style="font-size:13px;color:#aaa;vertical-align:middle;margin-right:4px">subdirectory_arrow_right</span>
+                      <span class="material-icons sub-arrow">subdirectory_arrow_right</span>
                     }
-                    <strong [style.color]="getDepth(account) === 0 ? '#714B67' : '#333'">{{ account.code }}</strong>
-                  </span>
+                    <span class="acc-avatar" [class.root-avatar]="getDepth(account) === 0">
+                      {{ account.code.charAt(0) }}
+                    </span>
+                    <strong [class.root-code]="getDepth(account) === 0">{{ account.code }}</strong>
+                  </div>
                 </td>
-                <td [style.fontWeight]="getDepth(account) === 0 ? '600' : '400'">{{ account.name }}</td>
+                <td [class.root-name]="getDepth(account) === 0">{{ account.name }}</td>
                 <td><span class="text-muted">{{ getParentLabel(account.parentId) }}</span></td>
-                <td><span class="text-muted" style="font-size:12px">{{ account.description || '—' }}</span></td>
-                <td style="text-align:center">
-                  <button class="btn-icon" title="Modifier" (click)="openEdit(account)">
+                <td><span class="text-muted small">{{ account.description || '–' }}</span></td>
+                <td class="c">
+                  <button class="action-btn" title="Modifier" (click)="openEdit(account)">
                     <span class="material-icons">edit</span>
                   </button>
-                  <button class="btn-icon btn-icon-danger" title="Archiver" (click)="delete(account)">
+                  <button class="action-btn danger" title="Archiver" (click)="delete(account)">
                     <span class="material-icons">archive</span>
                   </button>
                 </td>
@@ -144,7 +149,8 @@
             }
           </tbody>
         </table>
-      }
-    </div>
+      </div>
+    }
   </div>
+
 </div>

@@ -1,6 +1,7 @@
 package com.erp.accounting.controller;
 
 import com.erp.accounting.dto.ImportResult;
+import com.erp.accounting.dto.JournalPreviewDTO;
 import com.erp.accounting.service.ImportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -119,6 +120,50 @@ public class ImportController {
         }
     }
 
+    @GetMapping("/analytic-accounts/template")
+    public ResponseEntity<byte[]> downloadAnalyticAccountsTemplate() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = wb.createSheet("Comptes Analytiques");
+
+            CellStyle headerStyle = wb.createCellStyle();
+            Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            Row header = sheet.createRow(0);
+            String[] cols = {"code", "name", "parent_id", "description"};
+            for (int i = 0; i < cols.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(cols[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 7000);
+            }
+
+            Object[][] examples = {
+                {"ADM",     "Administration",  "",    "Frais administratifs"},
+                {"ADM-DIR", "Direction",       "ADM", "Direction générale"},
+                {"COM",     "Commercial",      "",    "Frais commerciaux"},
+                {"COM-VTE", "Ventes",          "COM", "Force de vente"},
+                {"OPS",     "Opérations",      "",    "Coûts opérationnels"},
+            };
+            int rowIdx = 1;
+            for (Object[] ex : examples) {
+                Row row = sheet.createRow(rowIdx++);
+                for (int c = 0; c < ex.length; c++) row.createCell(c).setCellValue(ex[c].toString());
+            }
+
+            wb.write(out);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_comptes_analytiques.xlsx\"")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(out.toByteArray());
+        }
+    }
+
     /**
      * Import analytic accounts from Odoo account.analytic.account Excel export.
      */
@@ -207,6 +252,19 @@ public class ImportController {
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .contentLength(bytes.length)
                     .body(bytes);
+        }
+    }
+
+    @PostMapping("/journals/preview")
+    public ResponseEntity<List<JournalPreviewDTO>> previewJournals(
+            @RequestParam MultipartFile file,
+            @RequestParam Long companyId) {
+        if (file.isEmpty()) return ResponseEntity.badRequest().build();
+        try {
+            return ResponseEntity.ok(importService.previewJournals(file, companyId));
+        } catch (IOException e) {
+            log.error("Erreur prévisualisation journaux", e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 

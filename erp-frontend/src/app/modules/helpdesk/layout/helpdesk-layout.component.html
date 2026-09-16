@@ -1,0 +1,49 @@
+<div class="hd-layout">
+  <nav class="hd-navbar">
+    <div class="hd-brand" (click)="goHome()">
+              @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">
+        }
+      <span class="material-icons">chevron_left</span>
+      <div class="brand-icon"><span class="material-icons">support_agent</span></div>
+      <span class="brand-label">Helpdesk</span>
+    </div>
+
+    <div class="nav-divider"></div>
+
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
+
+    <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+      <div class="hd-nav nav-links">
+        @for (item of navItems; track item.route) {
+          <a class="nav-link" [class.active]="isActive(item.route)" (click)="navigateTo(item.route)">
+            <span class="material-icons">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        }
+      </div>
+
+      <div class="hd-user nav-right">
+        <div class="user-badge">
+          <span class="user-initials">{{ authService.getUserInitials() }}</span>
+        </div>
+        <span class="user-name">{{ authService.getUserDisplayName() }}</span>
+        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <button class="btn-logout" (click)="logout()" title="Déconnexion">
+          <span class="material-icons">logout</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+  @if (mobileMenuOpen) {
+    <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
+  }
+
+  <main class="hd-content">
+    <router-outlet />
+  </main>
+</div>

@@ -6,15 +6,16 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ExcelExportService } from '../../../../../core/services/excel-export.service';
 import { PdfExportService } from '../../../../../core/services/pdf-export.service';
 
-export interface BilanFlatRow {
+export interface BilanPoste {
   ref: string;
   label: string;
-  brut: number;
-  amort: number;
-  net: number;
-  netPrev: number;
-  isHeader: boolean;
+  compte: string;
+  brutN: number;
+  amortN: number;
+  netN: number;
+  netN1: number;
   isTotal: boolean;
+  isGrandTotal: boolean;
   isEmpty: boolean;
 }
 
@@ -33,15 +34,23 @@ export class BalanceSheetComponent implements OnInit {
   loading = false;
   generated = false;
   errorMsg = '';
-  dateTo = '';
   today = new Date();
+
+  // Paramètres
+  periodType = 'yearly'; // monthly | quarterly | yearly | custom
+  dateFrom = '';
+  dateTo = '';
+  includeUnposted = false;
+  comparisonEnabled = true;
 
   totalActif = 0;
   totalPassif = 0;
   isEquilibre = false;
+  dateFromN1 = '';
+  dateToN1 = '';
 
-  actifRows: BilanFlatRow[] = [];
-  passifRows: BilanFlatRow[] = [];
+  actifRows: BilanPoste[] = [];
+  passifRows: BilanPoste[] = [];
 
   constructor(
     private reportService: ReportService,
@@ -51,17 +60,59 @@ export class BalanceSheetComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.dateTo = new Date().toISOString().split('T')[0];
+    this.resetPeriod();
+  }
+
+  /** Applique la période par défaut selon le type choisi */
+  resetPeriod(): void {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+
+    switch (this.periodType) {
+      case 'monthly':
+        // Mois précédent
+        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        this.dateFrom = this.fmt(prev);
+        this.dateTo = this.fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+        break;
+      case 'quarterly': {
+        const q = Math.floor((month - 1) / 3);
+        this.dateFrom = this.fmt(new Date(year, q * 3, 1));
+        this.dateTo = this.fmt(new Date(year, q * 3 + 3, 0));
+        break;
+      }
+      case 'yearly':
+      default:
+        this.dateFrom = `${year}-01-01`;
+        this.dateTo = this.fmt(now);
+        break;
+    }
+  }
+
+  onPeriodTypeChange(): void {
+    if (this.periodType !== 'custom') {
+      this.resetPeriod();
+    }
+  }
+
+  private fmt(d: Date): string {
+    return d.toISOString().split('T')[0];
   }
 
   generate(): void {
-    if (!this.dateTo) { this.errorMsg = 'Sélectionnez la date de clôture'; return; }
+    if (!this.dateFrom || !this.dateTo) { this.errorMsg = 'Sélectionnez l\'intervalle (dates début/fin)'; return; }
+    if (this.dateFrom > this.dateTo) { this.errorMsg = 'La date de début ne peut pas être postérieure à la date de fin.'; return; }
     this.loading = true; this.generated = false; this.errorMsg = '';
 
     this.reportService.getBilan({
-      dateFrom: new Date(new Date(this.dateTo).getFullYear(), 0, 1).toISOString().split('T')[0],
+      dateFrom: this.dateFrom,
       dateTo: this.dateTo,
-      companyId: this.authService.getCompanyId()
+      companyId: this.authService.getCompanyId(),
+      periodType: this.periodType,
+      includeUnposted: this.includeUnposted,
+      comparisonEnabled: this.comparisonEnabled
     }).subscribe({
       next: (res) => {
         this.buildRows(res);
@@ -76,102 +127,59 @@ export class BalanceSheetComponent implements OnInit {
   }
 
   private buildRows(res: any): void {
-    const actif = res.actif || {};
-    const passif = res.passif || {};
+    const postes = res.postes || {};
+    this.dateFromN1 = res.dateFromN1 || '';
+    this.dateToN1 = res.dateToN1 || '';
 
-    // ===== ACTIF =====
-    const ai = actif.actifImmobilise || {};
-    const ac = actif.actifCirculant || {};
-    const ta = actif.tresorerieActif || {};
-    const amort = n(ai.amortissements);
-    const immoTotal = n(ai.total);
+    const actifRefs: string[] = res.actif?.postes || [];
+    const passifRefs: string[] = res.passif?.postes || [];
 
-    this.actifRows = [
-      // ACTIF IMMOBILISÉ
-      this.header('AD', 'ACTIF IMMOBILISÉ'),
-      this.line('', 'Immobilisations incorporelles', n(ai.immoIncorporelles), 0, n(ai.immoIncorporelles)),
-      this.line('', 'Immobilisations corporelles', n(ai.immoCorporelles), 0, n(ai.immoCorporelles)),
-      this.line('', 'Immobilisations financières', n(ai.immoFinancieres), 0, n(ai.immoFinancieres)),
-      this.line('', 'Amortissements & provisions', amort, 0, -amort),
-      this.total('AZ', 'Total Actif Immobilisé', immoTotal + amort, amort, immoTotal),
+    this.actifRows = actifRefs.filter(r => postes[r]).map(r => this.toPoste(r, postes[r]));
+    this.passifRows = passifRefs.filter(r => postes[r]).map(r => this.toPoste(r, postes[r]));
 
-      // ACTIF CIRCULANT
-      this.header('BC', 'ACTIF CIRCULANT'),
-      this.line('', 'Stocks', n(ac.stocks), 0, n(ac.stocks)),
-      this.line('', 'Créances & emplois assimilés', n(ac.creances), 0, n(ac.creances)),
-      this.total('BT', 'Total Actif Circulant', n(ac.total), 0, n(ac.total)),
-
-      // TRÉSORERIE ACTIF
-      this.header('', 'TRÉSORERIE ACTIF'),
-      this.line('', 'Banques & CCP', n(ta.banques), 0, n(ta.banques)),
-      this.line('', 'Caisse', n(ta.caisse), 0, n(ta.caisse)),
-      this.total('BZ', 'Total Trésorerie Actif', n(ta.total), 0, n(ta.total)),
-    ];
-
-    this.totalActif = n(actif.totalActif);
-
-    // ===== PASSIF =====
-    const cp = passif.capitauxPropres || {};
-    const df = passif.dettesFinancieres || {};
-    const pc = passif.passifCirculant || {};
-    const tp = passif.tresoreriePassif || {};
-
-    this.passifRows = [
-      // CAPITAUX PROPRES
-      this.header('CP', 'CAPITAUX PROPRES'),
-      this.line('', 'Capital social', 0, 0, n(cp.capitalSocial)),
-      this.line('', 'Réserves', 0, 0, n(cp.reserves)),
-      this.line('', 'Report à nouveau', 0, 0, n(cp.reportNouveau)),
-      this.line('', "Résultat de l'exercice", 0, 0, n(cp.resultatExercice)),
-      this.line('', 'Autres capitaux propres', 0, 0, n(cp.autresCapitaux)),
-      this.total('CP', 'Total Capitaux Propres', 0, 0, n(cp.total)),
-
-      // DETTES FINANCIÈRES
-      this.header('DD', 'DETTES FINANCIÈRES'),
-      this.line('', 'Emprunts & dettes à LT', 0, 0, n(df.emprunts)),
-      this.total('DF', 'Total Dettes Financières', 0, 0, n(df.total)),
-
-      // PASSIF CIRCULANT
-      this.header('DG', 'PASSIF CIRCULANT'),
-      this.line('', 'Fournisseurs', 0, 0, n(pc.fournisseurs)),
-      this.line('', 'Personnel', 0, 0, n(pc.dettesPersonnel)),
-      this.line('', 'Dettes fiscales', 0, 0, n(pc.dettesFiscales)),
-      this.total('DP', 'Total Passif Circulant', 0, 0, n(pc.total)),
-
-      // TRÉSORERIE PASSIF
-      this.header('', 'TRÉSORERIE PASSIF'),
-      this.total('DT', 'Total Trésorerie Passif', 0, 0, n(tp.total)),
-    ];
-
-    this.totalPassif = n(passif.totalPassif);
-    this.isEquilibre = res.equilibre === true
-      || Math.abs(this.totalActif - this.totalPassif) <= 0.01;
+    this.totalActif = n(res.totalActif);
+    this.totalPassif = n(res.totalPassif);
+    this.isEquilibre = res.equilibre === true || Math.abs(this.totalActif - this.totalPassif) <= 1;
   }
 
-  private header(ref: string, label: string): BilanFlatRow {
-    return { ref, label, brut: 0, amort: 0, net: 0, netPrev: 0, isHeader: true, isTotal: false, isEmpty: false };
+  private toPoste(ref: string, p: any): BilanPoste {
+    const type = p.type || '';
+    return {
+      ref,
+      label: p.label || '',
+      compte: p.compte || '',
+      brutN: n(p.brut?.n),
+      amortN: n(p.amort?.n),
+      netN: n(p.net?.n),
+      netN1: this.comparisonEnabled ? n(p.net?.n_1) : 0,
+      isTotal: type === 'total',
+      isGrandTotal: type === 'grand_total',
+      isEmpty: false
+    };
   }
 
-  private line(ref: string, label: string, brut: number, amort: number, net: number): BilanFlatRow {
-    return { ref, label, brut, amort, net, netPrev: 0, isHeader: false, isTotal: false, isEmpty: false };
-  }
+  emptyRow: BilanPoste = { ref: '', label: '', compte: '', brutN: 0, amortN: 0, netN: 0, netN1: 0, isTotal: false, isGrandTotal: false, isEmpty: true };
 
-  private total(ref: string, label: string, brut: number, amort: number, net: number): BilanFlatRow {
-    return { ref, label, brut, amort, net, netPrev: 0, isHeader: false, isTotal: true, isEmpty: false };
-  }
+  // L'actif compte un poste de plus que le passif (29 vs 28 réfs OHADA) : un
+  // appariement ligne à ligne par index décale donc BZ_ACTIF et BZ_PASSIF d'une
+  // ligne l'un par rapport à l'autre. On sort ces deux postes du reste pour les
+  // recombiner explicitement sur une seule et même ligne finale (voir template).
+  get actifBody(): BilanPoste[] { return this.actifRows.filter(r => r.ref !== 'BZ_ACTIF'); }
+  get passifBody(): BilanPoste[] { return this.passifRows.filter(r => r.ref !== 'BZ_PASSIF'); }
+  get actifFinal(): BilanPoste { return this.actifRows.find(r => r.ref === 'BZ_ACTIF') ?? this.emptyRow; }
+  get passifFinal(): BilanPoste { return this.passifRows.find(r => r.ref === 'BZ_PASSIF') ?? this.emptyRow; }
 
   get rowIndices(): number[] {
-    const max = Math.max(this.actifRows.length, this.passifRows.length);
+    const max = Math.max(this.actifBody.length, this.passifBody.length);
     return Array.from({ length: max }, (_, i) => i);
   }
-
-  emptyRow: BilanFlatRow = { ref: '', label: '', brut: 0, amort: 0, net: 0, netPrev: 0, isHeader: false, isTotal: false, isEmpty: true };
 
   print(): void { window.print(); }
 
   exportPdf(): void {
     this.pdfExport.exportBilan(
-      this.actifRows, this.passifRows,
+      this.actifRows.map(r => ({ ref: r.ref, label: r.label, compte: r.compte, brut: r.brutN, amort: r.amortN, net: r.netN, netPrev: r.netN1, isHeader: false, isTotal: r.isTotal || r.isGrandTotal, isEmpty: r.isEmpty })),
+      this.passifRows.map(r => ({ ref: r.ref, label: r.label, compte: r.compte, brut: r.brutN, amort: r.amortN, net: r.netN, netPrev: r.netN1, isHeader: false, isTotal: r.isTotal || r.isGrandTotal, isEmpty: r.isEmpty })),
       this.totalActif, this.totalPassif, this.dateTo,
       this.authService.getActiveCompany()?.name
     );
@@ -179,7 +187,8 @@ export class BalanceSheetComponent implements OnInit {
 
   exportExcel(): void {
     this.excelExport.exportBilan(
-      this.actifRows, this.passifRows,
+      this.actifRows.map(r => ({ ref: r.ref, label: r.label, compte: r.compte, brut: r.brutN, amort: r.amortN, net: r.netN, netPrev: r.netN1, isHeader: false, isTotal: r.isTotal || r.isGrandTotal, isEmpty: r.isEmpty })),
+      this.passifRows.map(r => ({ ref: r.ref, label: r.label, compte: r.compte, brut: r.brutN, amort: r.amortN, net: r.netN, netPrev: r.netN1, isHeader: false, isTotal: r.isTotal || r.isGrandTotal, isEmpty: r.isEmpty })),
       this.totalActif, this.totalPassif, this.dateTo
     );
   }

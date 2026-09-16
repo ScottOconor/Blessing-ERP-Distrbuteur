@@ -6,6 +6,8 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,7 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sales_orders")
+@Table(name = "sales_orders", indexes = {
+    @Index(name = "idx_sales_orders_company_date", columnList = "company_id, date")
+})
+@EntityListeners(AuditingEntityListener.class)
 @Data
 @Builder
 @NoArgsConstructor
@@ -33,6 +38,11 @@ public class SalesOrder {
 
     /** draft / confirmed / invoiced / cancelled */
     private String state;
+
+    /** Verrou optimiste — empêche une double confirmation/facturation concurrente
+     *  (deux requêtes passant toutes les deux le contrôle state=="draft" avant l'écriture). */
+    @Version
+    private Long version;
 
     private String notes;
 
@@ -73,4 +83,8 @@ public class SalesOrder {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    private String createdBy;
 }

@@ -36,20 +36,24 @@ export const salesRoutes: Routes = [
         loadComponent: () => import('./components/invoices/avoir-list.component').then(m => m.AvoirListComponent)
       },
       {
+        path: 'payments',
+        loadComponent: () => import('./components/payments/sales-payment-list.component').then(m => m.SalesPaymentListComponent)
+      },
+      {
         path: 'clients',
         loadComponent: () => import('./components/clients/client-list.component').then(m => m.ClientListComponent)
       },
       {
-        path: 'reports',
-        loadComponent: () => import('./components/reports/sales-reports.component').then(m => m.SalesReportsComponent)
+        path: 'clients/prix',
+        loadComponent: () => import('./components/clients/client-price.component').then(m => m.ClientPriceComponent)
       },
       {
-        path: 'reports/etat-commercial',
-        loadComponent: () => import('./components/reports/etat-commercial/etat-commercial.component').then(m => m.EtatCommercialComponent)
+        path: 'reports/stats-ventes',
+        loadComponent: () => import('./components/reports/stats-ventes/stats-ventes.component').then(m => m.StatsVentesComponent)
       },
       {
-        path: 'reports/rapport-consolide',
-        loadComponent: () => import('./components/reports/rapport-consolide/rapport-consolide.component').then(m => m.RapportConsolideComponent)
+        path: 'reports/rapport-ristournes',
+        loadComponent: () => import('./components/reports/rapport-ristourne/rapport-ristourne.component').then(m => m.RapportRistourneComponent)
       },
       {
         path: 'ristournes',

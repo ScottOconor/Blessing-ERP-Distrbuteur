@@ -21,12 +21,12 @@
         </button>
       }
       @if (order.state === 'draft' && orderId) {
-        <button class="btn-confirm" (click)="confirm()" [disabled]="confirming">
+        <button class="btn-confirm" (click)="confirm()" [disabled]="confirming || saving">
           <span class="material-icons">check_circle</span>
-          {{ confirming ? 'Confirmation...' : 'Confirmer' }}
+          {{ confirming ? 'Confirmation...' : saving ? 'Sauvegarde...' : 'Confirmer' }}
         </button>
       }
-      @if (order.state === 'draft' || order.state === 'confirmed') {
+      @if (order.state === 'draft') {
         <button class="btn-cancel-order" (click)="cancelOrder()">
           <span class="material-icons">cancel</span> Annuler
         </button>
@@ -62,13 +62,30 @@
 
           <div class="form-group">
             <label>Client <span class="required">*</span></label>
-            <select [(ngModel)]="order.partnerId" [disabled]="isReadOnly" class="form-control"
-              (ngModelChange)="onClientChange($event)">
-              <option [value]="0" disabled>— Sélectionner un client —</option>
-              @for (c of clients; track c.id) {
-                <option [value]="c.id">{{ c.name }}{{ c.ref ? ' (' + c.ref + ')' : '' }}</option>
+            <div class="ac-wrap">
+              <div class="ac-field">
+                <span class="material-icons ac-icon">person_search</span>
+                <input type="text" class="form-control"
+                       [(ngModel)]="clientSearch"
+                       (input)="clientDropdown = true"
+                       (focus)="clientDropdown = true"
+                       (blur)="onClientBlur()"
+                       [disabled]="isReadOnly"
+                       placeholder="Chercher un client…"
+                       autocomplete="off" />
+              </div>
+              @if (clientDropdown && filteredClients.length > 0) {
+                <div class="ac-dropdown">
+                  @for (c of filteredClients; track c.id) {
+                    <div class="ac-item" (mousedown)="selectClient(c)">
+                      <span class="ac-avatar">{{ c.name.charAt(0) }}</span>
+                      <span class="ac-name">{{ c.name }}</span>
+                      @if (c.ref) { <span class="ac-code">{{ c.ref }}</span> }
+                    </div>
+                  }
+                </div>
               }
-            </select>
+            </div>
             @if (loadingBalance) {
               <span class="balance-note">Chargement solde…</span>
             } @else if (partnerBalance !== null) {
@@ -100,7 +117,7 @@
           <div class="form-group">
             <label>Entrepôt <span class="required">*</span></label>
             @if (!isReadOnly) {
-              <select [(ngModel)]="order.warehouseId" class="form-control">
+              <select [(ngModel)]="order.warehouseId" class="form-control" (ngModelChange)="onWarehouseChange($event)">
                 <option [ngValue]="undefined">— Sélectionner —</option>
                 @for (w of warehouses; track w.id) {
                   <option [value]="w.id">{{ w.name }}</option>
@@ -146,8 +163,8 @@
                 <th class="col-num">#</th>
                 <th class="col-product">Article</th>
                 <th class="col-num text-right">Qté</th>
-                <th class="col-price text-right">Prix U.</th>
-                <th class="col-pct text-right">Rem. %</th>
+                <th class="col-price text-right">Prix TTC</th>
+                <th class="col-price text-right" style="color:#e65100">Rabais/u</th>
                 <th class="col-pct text-right">TVA %</th>
                 <th class="col-account">Compte</th>
                 <th class="col-amount text-right">Mnt HT</th>
@@ -157,14 +174,30 @@
             </thead>
             <tbody>
               @for (line of order.lines; track $index; let i = $index) {
-                <tr>
+                <tr [class.row-consigne-auto]="isAutoConsigneLine(line)"
+                    [class.row-deconsigne]="isDeconsigneLine(line)">
                   <td class="col-num text-center tgray">{{ i + 1 }}</td>
 
                   <td class="col-product">
-                    @if (!isReadOnly) {
+                    @if (isAutoConsigneLine(line)) {
+                      <!-- Ligne consigne automatique — lecture seule -->
+                      <div class="product-ro consigne-ro">
+                        <span class="badge-consigne-auto">CONSIGNE AUTO</span>
+                        @if (line.productCode) { <span class="sug-code">{{ line.productCode }}</span> }
+                        <span>{{ line.description }}</span>
+                      </div>
+                    } @else if (isDeconsigneLine(line)) {
+                      <!-- Ligne déconsigne — lecture seule -->
+                      <div class="product-ro consigne-ro">
+                        <span class="badge-deconsigne">DÉCONSIGNE</span>
+                        @if (line.productCode) { <span class="sug-code">{{ line.productCode }}</span> }
+                        <span>{{ line.description }}</span>
+                      </div>
+                    } @else if (!isReadOnly) {
                       <div class="autocomplete-wrap">
                         <div class="ac-row">
-                          <input type="text" class="input-cell product-search"
+                          <span class="material-icons line-search-icon">search</span>
+                          <input #productInput type="text" class="input-cell product-search"
                             [placeholder]="allProducts.length === 0 ? 'Aucun article' : 'Rechercher...'"
                             [(ngModel)]="lineSearches[i]"
                             (focus)="openSuggestions(i, $event)"
@@ -193,7 +226,7 @@
                                   <span class="sug-stock" [class.low]="(p.qtyOnHand || 0) <= 0">
                                     {{ p.qtyOnHand | number:'1.0-0' }} {{ p.uomName }}
                                   </span>
-                                  <span class="sug-price">{{ p.salePrice | number:'1.0-0' }} FCFA</span>
+                                  <span class="sug-price">{{ computePrixTTC(p.salePrice || 0, p.exemptTva ? 0 : TVA_DEFAULT) | number:'1.0-0' }} FCFA TTC</span>
                                 </div>
                               </div>
                             }
@@ -215,56 +248,62 @@
                   </td>
 
                   <td class="text-right">
-                    @if (!isReadOnly) {
+                    @if (!isReadOnly && !isAutoConsigneLine(line)) {
                       <div class="qty-wrap">
                         <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)"
                                class="input-cell text-right" [class.qty-warn]="hasStockWarning(i)" min="0"
                                (keydown.enter)="onLineEnter($event)" />
-                        @if (line.productId) {
+                        @if (line.productId && !line.consigne) {
                           <span class="stock-tag" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
                             {{ lineStockQty[i] }} dispo
                           </span>
                         }
                       </div>
-                    } @else { {{ line.quantity }} }
+                    } @else {
+                      <span [class.qty-neg]="(line.quantity || 0) < 0">{{ line.quantity }}</span>
+                    }
                   </td>
 
+                  <!-- Prix TTC (saisie) / HT calculé affiché en dessous -->
                   <td class="text-right">
-                    @if (!isReadOnly) {
-                      <input type="number" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)"
+                    @if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
+                      <input type="number" [(ngModel)]="linePrixTTC[$index]" (ngModelChange)="onPrixTTCChange($index)"
                              class="input-cell text-right" min="0" (keydown.enter)="onLineEnter($event)" />
-                    } @else { {{ line.prixUnitaire | number:'1.0-0' }} }
+                      <small class="prix-ht-hint">HT: {{ line.prixUnitaire | number:'1.2-2' }}</small>
+                    } @else { {{ linePrixTTC[$index] | number:'1.0-0' }} }
+                  </td>
+
+                  <!-- Rabais unitaire accordé à ce client -->
+                  <td class="text-right" style="color:#e65100;font-weight:500">
+                    @if ((line.rabaisUnitaire ?? 0) > 0) {
+                      – {{ line.rabaisUnitaire | number:'1.0-0' }}
+                    } @else { — }
                   </td>
 
                   <td class="text-right">
-                    @if (!isReadOnly) {
-                      <input type="number" [(ngModel)]="line.tauxRemise" (ngModelChange)="onLineChange(line)"
-                             class="input-cell text-right" min="0" max="100" (keydown.enter)="onLineEnter($event)" />
-                    } @else { {{ line.tauxRemise || 0 }}% }
-                  </td>
-
-                  <td class="text-right">
-                    @if (!isReadOnly) {
-                      <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)"
+                    @if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
+                      <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onTauxTVAChange($index)"
                              class="input-cell text-right" min="0" (keydown.enter)="onLineEnter($event)" />
                     } @else { {{ line.tauxTVA || 0 }}% }
                   </td>
 
                   <td>
-                    @if (!isReadOnly) {
+                    @if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
                       <input type="text" [(ngModel)]="line.accountCode" class="input-cell" placeholder="701100"
                              (keydown.enter)="onLineEnter($event)" />
                     } @else { {{ line.accountCode || '—' }} }
                   </td>
 
-                  <td class="text-right col-ht">{{ line.montantHT | number:'1.0-0' }}</td>
+                  <td class="text-right col-ht">{{ line.montantHT | number:'1.2-2' }}</td>
                   <td class="text-right col-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
 
                   @if (!isReadOnly) {
                     <td class="col-del">
-                      <button class="btn-remove-line" (click)="removeLine($index)">
-                        <span class="material-icons">delete_outline</span>
-                      </button>
+                      @if (!isAutoConsigneLine(line)) {
+                        <button class="btn-remove-line" (click)="removeLine($index)">
+                          <span class="material-icons">delete_outline</span>
+                        </button>
+                      }
                     </td>
                   }
                 </tr>
@@ -287,24 +326,139 @@
       </div>
 
       <!-- ── Totaux ── -->
-      <div class="so-totals">
-        <div class="totals-box">
-          <div class="tot-row"><span>Total remise</span><span class="muted">{{ order.totalRemise | number:'1.0-0' }} FCFA</span></div>
-          <div class="tot-row"><span>Total HT</span><span>{{ order.totalHT | number:'1.0-0' }} FCFA</span></div>
-          <div class="tot-row"><span>TVA</span><span>{{ order.totalTVA | number:'1.0-0' }} FCFA</span></div>
-          <div class="tot-row tot-ttc"><span>Total TTC</span><span>{{ order.totalTTC | number:'1.0-0' }} FCFA</span></div>
+      <div class="so-footer-grid">
+
+        <!-- Résumé consignes (affiché seulement si des consignes sont présentes) -->
+        @if (qteConsigne > 0 || qteDeconsigne > 0) {
+          <div class="consigne-summary-box">
+            <div class="cs-title">
+              <span class="material-icons">inventory_2</span>
+              Emballages consignés
+            </div>
+            <div class="cs-rows">
+              @if (qteConsigne > 0) {
+                <div class="cs-row cs-plus">
+                  <span>Consigne (sortie)</span>
+                  <span>+ {{ qteConsigne }} caisse{{ qteConsigne > 1 ? 's' : '' }}</span>
+                </div>
+              }
+              @if (qteDeconsigne > 0) {
+                <div class="cs-row cs-minus">
+                  <span>Déconsigne (récupération)</span>
+                  <span>– {{ qteDeconsigne }} caisse{{ qteDeconsigne > 1 ? 's' : '' }}</span>
+                </div>
+              }
+              @if (qteConsigne > 0 && qteDeconsigne > 0) {
+                <div class="cs-row cs-net">
+                  <span>Net emballages</span>
+                  <span>{{ qteConsigne - qteDeconsigne }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="so-totals">
+          <div class="totals-box">
+            <div class="tot-row"><span>Total HT</span><span>{{ order.totalHT | number:'1.2-2' }} FCFA</span></div>
+            <div class="tot-row tot-taxes">
+              <span>Taxes (TVA + Précompte)</span>
+              <span>{{ ((order.totalTVA ?? 0) + (order.totalPrecompte ?? 0)) | number:'1.0-0' }} FCFA</span>
+            </div>
+            <div class="tot-row tot-ttc">
+              <span>Total TTC</span>
+              <span>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</span>
+            </div>
+            @if (totalRabais > 0) {
+              <div class="tot-row" style="color:#e65100">
+                <span>Rabais accordés (701901)</span>
+                <span>– {{ totalRabais | number:'1.0-0' }} FCFA</span>
+              </div>
+            }
+            @if ((order.fraisEnlevementTTC ?? 0) > 0) {
+              <div class="tot-row"><span>Frais d'enlèvement</span><span>{{ order.fraisEnlevementTTC | number:'1.0-0' }} FCFA</span></div>
+            }
+            <div class="tot-row tot-net">
+              <span>NET À PAYER</span>
+              <span>{{ netAPayer | number:'1.0-0' }} FCFA</span>
+            </div>
+          </div>
         </div>
+
       </div>
 
     </div>
   }
 </div>
 
+<!-- ── Modal Déconsigne ── -->
+@if (showDeconsigneModal) {
+  <div class="modal-backdrop" (click)="cancelDeconsigne()">
+    <div class="modal-deconsigne" (click)="$event.stopPropagation()">
+
+      <div class="modal-d-header">
+        <span class="material-icons">inventory_2</span>
+        <div>
+          <div class="modal-d-title">Saisie des déconsignes</div>
+          <div class="modal-d-sub">Indiquez les quantités récupérées — laisser vide = 0</div>
+        </div>
+      </div>
+
+      <div class="modal-d-body">
+        <div class="deconsigne-grid">
+          @for (group of deconsigneGroups; track group.label) {
+            <div class="dg-section">
+              <div class="dg-section-header">{{ group.label }}</div>
+              @for (d of group.items; track d.code) {
+                <div class="dg-row">
+                  <span class="di-code">{{ d.code }}</span>
+                  <span class="di-nom">{{ d.nom }}</span>
+                  <input type="number"
+                         [(ngModel)]="d.qty"
+                         class="di-input"
+                         min="0"
+                         placeholder="0"
+                         [class.di-filled]="d.qty !== null && d.qty! > 0" />
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (errorMsg) {
+        <div class="modal-d-error">
+          <span class="material-icons">error_outline</span> {{ errorMsg }}
+        </div>
+      }
+
+      <div class="modal-d-actions">
+        <button class="btn-modal-cancel" (click)="cancelDeconsigne()">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="btn-modal-confirm" (click)="validateDeconsigne()" [disabled]="saving">
+          <span class="material-icons">{{ saving ? 'hourglass_empty' : 'check_circle' }}</span>
+          {{ saving ? 'Sauvegarde...' : 'Valider et confirmer le bon' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+@if (orderId) {
+  <app-audit-trail entityType="SALE_ORDER" [entityId]="orderId"></app-audit-trail>
+}
+
 @if (showPrintModal && orderId) {
   <app-print-preview
     [salesOrder]="order"
     docType="sales_order"
     [companyName]="printCompanyName"
+    [companyPhone]="printCompanyPhone"
+    [companyLogoUrl]="printCompanyLogoUrl"
+    [companyLogoDataUrl]="printCompanyLogoDataUrl"
+    [companyInfo]="printCompany"
     (closed)="closePrint()">
   </app-print-preview>
 }

@@ -4,7 +4,15 @@
       <h1 class="page-title">Mouvements de produits</h1>
       <p class="page-subtitle">Historique de tous les mouvements de stock validés</p>
     </div>
-    <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+      <button class="btn-secondary btn-pdf" (click)="exportPdf()" [disabled]="filtered.length === 0">
+        <span class="material-icons">picture_as_pdf</span> PDF
+      </button>
+      <button class="btn-secondary btn-excel" (click)="exportExcel()" [disabled]="filtered.length === 0">
+        <span class="material-icons">table_view</span> Excel
+      </button>
+    </div>
   </div>
 
   <!-- Filtres -->
@@ -41,6 +49,7 @@
             <th>Article</th>
             <th>De</th>
             <th>Vers</th>
+            <th>Partenaire / Entrepôt</th>
             <th class="text-right">Quantité</th>
             <th class="text-right">Prix unit.</th>
             <th class="text-right">Valeur</th>
@@ -60,6 +69,7 @@
               </td>
               <td class="text-muted small">{{ m.locationName }}</td>
               <td class="text-muted small">{{ m.locationDestName }}</td>
+              <td class="text-muted small">{{ m.partnerName || '—' }}</td>
               <td class="text-right mono">{{ m.qtyDone | number:'1.0-2' }} {{ m.uomName }}</td>
               <td class="text-right mono text-muted">{{ m.priceUnit | number:'1.0-0' }}</td>
               <td class="text-right mono fw-bold">{{ m.subtotalValue | number:'1.0-0' }} FCFA</td>

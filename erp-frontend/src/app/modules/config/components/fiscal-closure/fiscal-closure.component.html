@@ -1,0 +1,149 @@
+<div class="page-container">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="header-left">
+      <span class="material-icons page-icon">lock_clock</span>
+      <div>
+        <h1 class="page-title">Clôture d'exercice</h1>
+        <p class="page-sub">Verrouille une période et génère l'écriture de clôture des comptes de gestion</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FILTRES ══════════════════════════════════════════════════════════ -->
+  <div class="filters-card">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Période du</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateFrom" [disabled]="done">
+      </div>
+      <div class="filter-group">
+        <label>au</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateTo" [disabled]="done">
+      </div>
+      <div class="filter-group filter-btn-col">
+        <label>&nbsp;</label>
+        <button class="btn-generate" (click)="generatePreview()" [disabled]="loading || done">
+          @if (loading) { <span class="btn-spinner"></span> Analyse… }
+          @else { <span class="material-icons">visibility</span> Prévisualiser }
+        </button>
+      </div>
+    </div>
+    @if (errorMsg) {
+      <div class="alert-err"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+    </div>
+  }
+
+  <!-- ══ RÉSULTAT DE LA CLÔTURE (succès) ══════════════════════════════════ -->
+  @if (done && result) {
+    <div class="closure-success">
+      <span class="material-icons">check_circle</span>
+      <div>
+        <strong>Période clôturée jusqu'au {{ result.lockDate }}</strong>
+        <p>
+          Écriture de clôture <strong>{{ result.moveName }}</strong> créée en <strong>brouillon</strong>
+          (résultat net : {{ result.netResult | number:'1.0-0' }} FCFA) — validez-la vous-même quand vous êtes prêt.
+        </p>
+        <button class="btn-outline" (click)="goToMove()">
+          <span class="material-icons">receipt_long</span> Ouvrir l'écriture
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ══ PRÉVISUALISATION ══════════════════════════════════════════════════ -->
+  @if (previewed && preview && !done) {
+
+    @if (preview.blocked) {
+      <div class="closure-blocked">
+        <span class="material-icons">block</span>
+        <div>
+          <strong>Clôture impossible : {{ preview.blockers.length }} écriture(s) non validée(s) sur la période</strong>
+          <p>Validez ou annulez ces écritures avant de pouvoir clôturer :</p>
+          <ul>
+            @for (b of preview.blockers; track b.id) {
+              <li>{{ b.date }} — {{ b.name }} ({{ b.journalName }})</li>
+            }
+          </ul>
+          <button class="btn-outline" (click)="goToJournalEntries()">
+            <span class="material-icons">receipt_long</span> Voir les pièces comptables
+          </button>
+        </div>
+      </div>
+    } @else {
+
+      <div class="closure-summary">
+        <div class="summary-card" [class.positive]="preview.netResult >= 0" [class.negative]="preview.netResult < 0">
+          <span class="material-icons">{{ preview.netResult >= 0 ? 'trending_up' : 'trending_down' }}</span>
+          <div>
+            <label>Résultat net réel de la période</label>
+            <strong>{{ preview.netResult | number:'1.0-0' }} FCFA</strong>
+            <p class="hint">Somme des comptes de classe 6/7/8 réellement mouvementés — peut différer légèrement du
+              Compte de Résultat (qui affiche par rubriques), c'est normal.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="closure-table-wrap">
+        <table class="closure-table">
+          <thead>
+            <tr>
+              <th>Compte</th>
+              <th>Libellé</th>
+              <th class="text-right">Solde à solder</th>
+              <th class="text-center">Sens</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of preview.accountBalances; track l.accountCode) {
+              <tr>
+                <td class="mono">{{ l.accountCode }}</td>
+                <td>{{ l.accountName }}</td>
+                <td class="text-right mono">{{ (l.balance < 0 ? -l.balance : l.balance) | number:'1.0-0' }}</td>
+                <td class="text-center">{{ l.balance > 0 ? 'Crédité' : 'Débité' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══ CONFIRMATION ══════════════════════════════════════════════════ -->
+      <div class="filters-card">
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>Compte résultat — bénéfice</label>
+            <select class="form-ctl" [(ngModel)]="resultAccountBeneficeId">
+              <option [ngValue]="null">— Sélectionner —</option>
+              @for (a of accounts; track a.id) {
+                <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Compte résultat — perte</label>
+            <select class="form-ctl" [(ngModel)]="resultAccountPerteId">
+              <option [ngValue]="null">— Sélectionner —</option>
+              @for (a of accounts; track a.id) {
+                <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group filter-btn-col">
+            <label>&nbsp;</label>
+            <button class="btn-generate btn-confirm" (click)="confirmClosure()" [disabled]="!canConfirm || executing">
+              @if (executing) { <span class="btn-spinner"></span> Clôture en cours… }
+              @else { <span class="material-icons">lock</span> Confirmer la clôture }
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

@@ -2,20 +2,20 @@
   <!-- HEADER -->
   <header class="welcome-header">
     <div class="header-brand">
-      <div class="brand-icon">
-        <span class="material-icons">business</span>
+      <div class="brand-icon" [class.has-logo]="branding.hasAppLogo">
+        @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="brand-app-logo" alt="Logo">
+        } @else {
+          <span class="blessing-logo-mark">BE</span>
+        }
       </div>
-      <span class="brand-text">K.I.T</span>
-      <p>Saisir le moment, créer l'avenir !</p>
+      <div class="brand-name-block">
+        <span class="brand-text">{{ branding.appName }}</span>
+        <span class="brand-tagline">Blessing Enterprise Resource Planning</span>
+      </div>
     </div>
 
     <div class="header-right">
-      @if (authService.isCentralized()) {
-        <button class="btn-group-home" (click)="goToGroupHome()" title="Retour à l'espace groupe">
-          <span class="material-icons">corporate_fare</span>
-          Espace groupe
-        </button>
-      }
       <div class="user-info">
         <div class="user-avatar">{{ userInitials }}</div>
         <div class="user-details">
@@ -23,71 +23,98 @@
           <span class="user-role">{{ userRole }}</span>
         </div>
       </div>
+      <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+        <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
       <button class="btn-logout" (click)="logout()" title="Se déconnecter">
         <span class="material-icons">logout</span>
-        Déconnexion
+        <span>Déconnexion</span>
       </button>
     </div>
   </header>
 
   <!-- HERO -->
   <div class="welcome-hero">
-    <div class="hero-content">
-      <h1>{{ getGreeting() }}, <strong>{{ userName }}</strong>&nbsp;!</h1>
-      <p>Que souhaitez-vous faire aujourd'hui ?</p>
-      <div class="hero-date">
-        <span class="material-icons">calendar_today</span>
-        {{ currentDate | date:'EEEE d MMMM yyyy' }}
+    <div class="hero-inner">
+      <div class="hero-text">
+        <h1>{{ getGreeting() }}, <strong>{{ userName }}</strong>&nbsp;👋</h1>
+        <p>Que souhaitez-vous faire aujourd'hui ?</p>
+        <div class="hero-meta">
+          <div class="hero-date">
+            <span class="material-icons">calendar_today</span>
+            {{ currentDate | date:'EEEE d MMMM yyyy' }}
+          </div>
+          <div class="hero-badge">
+            <span class="material-icons">rocket_launch</span>
+            K·I·R·A ERP v1.0
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="hero-illustration">
-      <span class="material-icons">dashboard</span>
+      <!-- Icône de navigation vers les apps supplémentaires -->
+      <button class="hero-graphic-btn"
+              (click)="goToExtraApps()"
+              title="Applications supplémentaires">
+        <div class="hero-graphic">
+          <div class="h-dot d1"><span class="material-icons">calculate</span></div>
+          <div class="h-dot d2"><span class="material-icons">point_of_sale</span></div>
+          <div class="h-dot d3"><span class="material-icons">local_shipping</span></div>
+          <div class="h-dot d4"><span class="material-icons">inventory_2</span></div>
+        </div>
+      </button>
     </div>
   </div>
 
   <!-- MODULES GRID -->
   <main class="welcome-main">
     <section class="modules-section">
-      <div class="section-title">
-        <h2>📱 Applications disponibles</h2>
+      <div class="section-header">
+        <h2>
+          <span class="material-icons">apps</span>
+          Applications disponibles
+        </h2>
         <p>Sélectionnez un module pour commencer</p>
       </div>
 
       <div class="modules-grid">
-        <div *ngFor="let module of modules" 
-             class="module-card"
-             [class.available]="module.available"
-             [class.disabled]="!module.available"
-             (click)="navigateTo(module)"
-             [style.--module-color]="module.color"
-             role="button"
-             [tabindex]="module.available ? 0 : -1">
-          
-          <div *ngIf="!module.available" class="soon-badge">Bientôt disponible</div>
+        @for (module of modules; track module.code) {
+          <div class="module-card"
+               [class.available]="module.available"
+               [class.disabled]="!module.available"
+               (click)="navigateTo(module)"
+               [style.--module-color]="module.color"
+               role="button"
+               [tabindex]="module.available ? 0 : -1">
 
-          <div class="module-icon-wrapper">
-            <div class="module-icon" [style.background-color]="module.color">
-              <span class="material-icons">{{ module.icon }}</span>
+            @if (!module.available) {
+              <div class="soon-badge">Bientôt</div>
+            }
+
+            <div class="module-icon-wrap">
+              <div class="module-icon">
+                <span class="material-icons">{{ module.icon }}</span>
+              </div>
+            </div>
+
+            <div class="module-body">
+              <div class="module-name">{{ module.name }}</div>
+              <div class="module-desc">{{ module.description }}</div>
+
+              @if (module.available) {
+                <div class="module-arrow-row">
+                  <span class="module-open-label">Ouvrir</span>
+                  <span class="material-icons">arrow_forward</span>
+                </div>
+              }
             </div>
           </div>
-
-          <div class="module-info">
-            <h3>{{ module.name }}</h3>
-            <p>{{ module.description }}</p>
-          </div>
-
-          <div *ngIf="module.available" class="module-arrow">
-            <span class="material-icons">arrow_forward</span>
-          </div>
-        </div>
+        }
       </div>
     </section>
   </main>
 
   <!-- FOOTER -->
   <footer class="welcome-footer">
-    <h1>Kairos Innovation Technologies</h1>
-    <span>Saisir le Moment, Créer l'avenir !</span>
-    <p>ERP v1.0 &mdash; &copy; K.I.T &mdash; Tous droits réservés</p>
+    <span class="footer-logo">K·I·R·A</span>
+    <p>Kairos Integrated Resource Application v1.0 &mdash; &copy; Kairos Innovation Technologies &mdash; Tous droits réservés</p>
   </footer>
 </div>

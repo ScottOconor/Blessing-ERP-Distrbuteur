@@ -32,9 +32,6 @@
           <tr>
             <th>Code</th>
             <th>Nom</th>
-            <th>Cpte stock</th>
-            <th>Cpte variation</th>
-            <th>Cpte COGS</th>
             <th></th>
           </tr>
         </thead>
@@ -43,9 +40,6 @@
             <tr>
               <td><span class="code-badge">{{ c.code || '—' }}</span></td>
               <td class="fw-500">{{ c.name }}</td>
-              <td class="mono text-muted">{{ c.stockAccountCode }}</td>
-              <td class="mono text-muted">{{ c.stockInAccountCode }}</td>
-              <td class="mono text-muted">{{ c.cogsAccountCode }}</td>
               <td style="display:flex;gap:4px">
                 @if (canEdit) {
                   <button class="btn-icon" (click)="openEdit(c)"><span class="material-icons">edit</span></button>
@@ -57,7 +51,7 @@
             </tr>
           }
           @if (categories.length === 0) {
-            <tr><td colspan="6" class="empty-state">Aucune catégorie — créez la première</td></tr>
+            <tr><td colspan="3" class="empty-state">Aucune catégorie — créez la première</td></tr>
           }
         </tbody>
       </table>
@@ -82,16 +76,13 @@
     </div>
     <div style="overflow-x:auto;max-height:400px">
       <table class="cfg-table">
-        <thead><tr><th>#</th><th>Nom</th><th>Code</th><th>Cpte Stock</th><th>Cpte Entrée</th><th>Cpte CMV</th></tr></thead>
+        <thead><tr><th>#</th><th>Nom</th><th>Code</th></tr></thead>
         <tbody>
           @for (row of importRows; track $index; let i = $index) {
             <tr>
               <td class="text-muted">{{ i+1 }}</td>
               <td style="font-weight:600">{{ row['Nom*'] || row['Nom'] }}</td>
               <td>{{ row['Code'] || '—' }}</td>
-              <td class="mono">{{ row['Compte Stock (311xxx)'] || '311000' }}</td>
-              <td class="mono">{{ row['Compte Entrée Stock (603x)'] || '6031' }}</td>
-              <td class="mono">{{ row['Compte CMV (605xx)'] || '60500' }}</td>
             </tr>
           }
         </tbody>
@@ -123,18 +114,6 @@
         <div class="form-group">
           <label>Code</label>
           <input type="text" [(ngModel)]="form.code" class="form-control" placeholder="PF" />
-        </div>
-        <div class="form-group">
-          <label>Compte stock OHADA</label>
-          <input type="text" [(ngModel)]="form.stockAccountCode" class="form-control" placeholder="311000" />
-        </div>
-        <div class="form-group">
-          <label>Compte variation stocks (achat)</label>
-          <input type="text" [(ngModel)]="form.stockInAccountCode" class="form-control" placeholder="6031" />
-        </div>
-        <div class="form-group">
-          <label>Compte coût des ventes</label>
-          <input type="text" [(ngModel)]="form.cogsAccountCode" class="form-control" placeholder="60500" />
         </div>
       </div>
     </div>

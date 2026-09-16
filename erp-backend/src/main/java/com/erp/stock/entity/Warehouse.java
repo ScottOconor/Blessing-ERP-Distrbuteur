@@ -26,6 +26,14 @@ public class Warehouse {
     @Column(name = "stock_journal_id")
     private Long stockJournalId;
 
+    /** Journal de vente pré-chargé sur les bons de commande issus de cet entrepôt */
+    @Column(name = "sales_journal_id")
+    private Long salesJournalId;
+
+    /** Journal de caisse/banque pré-chargé sur les paiements des factures de cet entrepôt */
+    @Column(name = "cash_journal_id")
+    private Long cashJournalId;
+
     /**
      * ID de l'entrepôt "Dépôt Achat" — entrepôt séparé représentant la zone de transit
      * pour les marchandises en attente de réception physique.
@@ -44,6 +52,14 @@ public class Warehouse {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
+    /** Nom du responsable de l'entrepôt */
+    @Column(name = "responsable_name")
+    private String responsableName;
+
     @Builder.Default
     private boolean active = true;
+
+    /** Magasin par défaut de la société — utilisé pour les sorties d'avoirs fournisseurs */
+    @Column(name = "is_default")
+    private Boolean isDefault;
 }

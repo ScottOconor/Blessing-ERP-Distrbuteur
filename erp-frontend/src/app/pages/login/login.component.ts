@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { AppBrandingService } from '../../core/services/app-branding.service';
 
 @Component({
   selector: 'app-login',
@@ -18,14 +19,14 @@ export class LoginComponent {
   errorMessage = '';
   showPassword = false;
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(private authService: AuthService, private router: Router, public branding: AppBrandingService) {
     if (this.authService.isLoggedIn()) {
       this.redirectAfterLogin();
     }
   }
 
   private redirectAfterLogin(): void {
-    this.router.navigate([this.authService.isCentralized() ? '/group-home' : '/welcome']);
+    this.router.navigate(['/welcome']);
   }
 
   onSubmit(): void {
@@ -39,6 +40,7 @@ export class LoginComponent {
     this.authService.login(this.username, this.password).subscribe({
       next: (session) => {
         this.loading = false;
+        this.branding.apply();
         if (session.mustChangePassword) {
           this.router.navigate(['/config/change-password']);
         } else {

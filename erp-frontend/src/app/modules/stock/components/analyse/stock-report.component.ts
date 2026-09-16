@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StockService, StockQuant } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { PdfExportService } from '../../../../core/services/pdf-export.service';
+import { ExcelExportService } from '../../../../core/services/excel-export.service';
 
-export type GroupByMode = 'product' | 'category' | 'warehouse' | 'location';
+export type GroupByMode = 'product' | 'category' | 'warehouse';
 
 @Component({
   selector: 'app-stock-report',
@@ -25,7 +25,7 @@ export class StockReportComponent implements OnInit {
   constructor(
     private stockService: StockService,
     private authService: AuthService,
-    private pdfExport: PdfExportService
+    private excelExport: ExcelExportService
   ) {}
 
   ngOnInit(): void { this.load(); }
@@ -85,10 +85,7 @@ export class StockReportComponent implements OnInit {
           key   = (q.locationCompleteName || q.locationName || '').split('/')[0].trim() || 'Entrepôt';
           label = key;
           break;
-        case 'location':
-          key   = String(q.locationId);
-          label = q.locationCompleteName || q.locationName || '?';
-          break;
+        // location groupBy removed
         default: // 'product'
           key   = String(q.productId);
           label = (q.productCode ? `[${q.productCode}] ` : '') + (q.productName || '?');
@@ -114,7 +111,7 @@ export class StockReportComponent implements OnInit {
         return (q.productCode ? `[${q.productCode}] ` : '') + (q.productName || '?');
       case 'product':
         return q.locationCompleteName || q.locationName || '?';
-      case 'location':
+      default:
         return (q.productCode ? `[${q.productCode}] ` : '') + (q.productName || '?');
     }
   }
@@ -124,29 +121,31 @@ export class StockReportComponent implements OnInit {
   }
 
   exportPdf(): void {
+    const cid = this.authService.getCompanyId();
+    this.stockService.downloadStockReportPdf(cid).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `rapport_stock_${new Date().toISOString().slice(0,10)}.pdf`;
+        a.click(); URL.revokeObjectURL(url);
+      }
+    });
+  }
+
+  exportExcel(): void {
     const session = this.authService.getSession();
-    // Build warehouse-grouped data for PDF
     const whMap = new Map<string, any>();
     for (const q of this.filtered) {
       const wh = (q.locationCompleteName || q.locationName || '').split('/')[0].trim() || 'Entrepôt';
       if (!whMap.has(wh)) whMap.set(wh, { warehouseName: wh, rows: [], subtotalQty: 0, subtotalValue: 0 });
       const entry = whMap.get(wh)!;
       const existing = entry.rows.find((r: any) => r.productId === q.productId);
-      if (existing) {
-        existing.qty   += q.quantity || 0;
-        existing.value += (q.totalValue as any) || 0;
-      } else {
-        entry.rows.push({ productId: q.productId, code: q.productCode || '', name: q.productName || '',
-          uom: q.uomName || '', price: q.standardPrice || 0, qty: q.quantity || 0,
-          value: (q.totalValue as any) || 0 });
-      }
-      entry.subtotalQty   += q.quantity || 0;
-      entry.subtotalValue += (q.totalValue as any) || 0;
+      if (existing) { existing.qty += q.quantity || 0; existing.value += (q.totalValue as any) || 0; }
+      else entry.rows.push({ productId: q.productId, code: q.productCode || '', name: q.productName || '', uom: q.uomName || '', price: q.standardPrice || 0, qty: q.quantity || 0, value: (q.totalValue as any) || 0 });
+      entry.subtotalQty += q.quantity || 0; entry.subtotalValue += (q.totalValue as any) || 0;
     }
-    this.pdfExport.exportStockReport(Array.from(whMap.values()), session?.companyName ?? undefined);
+    this.excelExport.exportStockReport(Array.from(whMap.values()));
   }
-
-  printReport(): void { window.print(); }
 }
 
 interface GroupEntry {

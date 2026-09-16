@@ -1,0 +1,93 @@
+.license-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-page);
+  padding: 24px;
+}
+
+.license-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 40px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+
+  .icon {
+    font-size: 48px;
+    color: var(--warning);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin: 0 0 12px;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: .9rem;
+    line-height: 1.5;
+    margin: 0 0 8px;
+  }
+
+  .contact-recap {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+  text-align: left;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  input {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: .9rem;
+
+    &:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+  }
+
+  .error {
+    color: var(--danger);
+    font-size: .85rem;
+    font-weight: 600;
+  }
+
+  button {
+    margin-top: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: var(--text-inverse);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--ease);
+
+    &:hover:not(:disabled) { background: var(--primary-dark); }
+    &:disabled { opacity: .6; cursor: not-allowed; }
+  }
+}

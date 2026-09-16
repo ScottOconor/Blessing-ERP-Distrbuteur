@@ -2,6 +2,9 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { CompanyService } from '../../../core/services/company.service';
+import { AppBrandingService } from '../../../core/services/app-branding.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-stock-layout',
@@ -15,13 +18,16 @@ export class StockLayoutComponent implements OnInit {
   userInitials = '';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  mobileMenuOpen = false;
   navItems: any[] = [];
 
-  get isCentralized() { return this.authService.isCentralized(); }
-  get companies() { return this.authService.getSession()?.companies ?? []; }
-  get activeCompany() { return this.authService.getActiveCompany(); }
+  companies: { id: number; name: string; sigle: string }[] = [];
+  get activeCompany(): { id: number; name: string; sigle: string } | null { return null; }
 
-  constructor(private authService: AuthService, public router: Router) {}
+  get companyLogoUrl(): string { return this.companyService.getLogoUrl(); }
+  get companyDisplayName(): string { return this.companyService.getCached()?.name ?? ''; }
+
+  constructor(private authService: AuthService, private companyService: CompanyService, public branding: AppBrandingService, public router: Router, public themeService: ThemeService) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
@@ -45,25 +51,24 @@ export class StockLayoutComponent implements OnInit {
       items.push({
         id: 'operations', label: 'Opérations', icon: 'swap_horiz',
         children: [
-          { label: 'Réceptions fournisseurs', icon: 'move_to_inbox', route: '/stock/receptions' },
-          { label: 'Ajustements de stock',    icon: 'tune',          route: '/stock/adjustments' },
-          { label: 'Transferts inter-dépôts', icon: 'compare_arrows',route: '/stock/transferts' }
+          { label: 'Réceptions fournisseurs',   icon: 'move_to_inbox',  route: '/stock/receptions' },
+          { label: 'Ajustements de stock',      icon: 'tune',           route: '/stock/adjustments' },
+          { label: 'Transferts inter-dépôts',   icon: 'compare_arrows', route: '/stock/transferts' }
         ]
       });
-      items.push({
-        id: 'expeditions', label: 'Expéditions', icon: 'local_shipping',
-        children: [
-          { label: 'Expéditions inter-agences', icon: 'send',     route: '/stock/expeditions' },
-          { label: 'Agences distantes',          icon: 'business', route: '/stock/agences' }
-        ]
-      });
+      items.push({ id: 'expeditions', label: 'Expéditions inter-agences', icon: 'local_shipping', route: '/stock/expeditions' });
+    }
+
+    if (this.can('CASSES')) {
+      items.push({ id: 'casses', label: 'Trous & Casses', icon: 'broken_image', route: '/stock/casses' });
     }
 
     if (this.can('MOUVEMENTS') || this.can('INVENTAIRE')) {
       items.push({
         id: 'analyse', label: 'Analyse', icon: 'analytics',
         children: [
-          { label: 'Rapport de stock',       icon: 'inventory',  route: '/stock/analyse/rapport' },
+          { label: 'Rapport de stock',              icon: 'inventory',  route: '/stock/analyse/rapport' },
+          { label: 'Fiche de stock / Mouvements',  icon: 'assessment', route: '/stock/analyse/rapport-stock' },
           { label: 'Analyse des mouvements', icon: 'bar_chart',  route: '/stock/analyse/mouvements-analyse' },
           { label: 'Mouvements de produits', icon: 'sync_alt',   route: '/stock/analyse/mouvements' },
           { label: 'Valorisation de stock',  icon: 'price_check',route: '/stock/analyse/valorisation' }
@@ -75,6 +80,7 @@ export class StockLayoutComponent implements OnInit {
     if (this.can('PRODUITS')) {
       configChildren.push({ label: 'Articles',           icon: 'category',   route: '/stock/products' });
       configChildren.push({ label: "Catégories d'articles", icon: 'folder', route: '/stock/categories' });
+      configChildren.push({ label: 'Unités de mesure',   icon: 'straighten', route: '/stock/units-of-measure' });
     }
     if (this.can('INVENTAIRE')) {
       configChildren.push({ label: 'Entrepôts',          icon: 'warehouse',  route: '/stock/warehouses' });
@@ -100,18 +106,20 @@ export class StockLayoutComponent implements OnInit {
 
   navigateTo(route: string): void {
     this.activeDropdown = null;
+    this.mobileMenuOpen = false;
     this.router.navigateByUrl(route);
   }
 
   switchCompany(id: number): void {
     this.authService.setActiveCompanyId(id);
     this.showCompanyPicker = false;
+    this.mobileMenuOpen = false;
     const url = this.router.url;
     this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
-  goHome(): void { this.router.navigate(['/welcome']); }
-  logout(): void { this.authService.logout(); this.router.navigate(['/login']); }
+  goHome(): void { this.mobileMenuOpen = false; this.router.navigate(['/welcome']); }
+  logout(): void { this.mobileMenuOpen = false; this.authService.logout(); this.router.navigate(['/login']); }
 
   isActive(route: string): boolean {
     return this.router.url === route || this.router.url.startsWith(route + '/');

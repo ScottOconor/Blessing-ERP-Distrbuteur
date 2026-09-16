@@ -14,7 +14,6 @@ public class StockLocationDTO {
     private Long warehouseId;
     private String warehouseName;
     private Long companyId;
-    private String accountCode;
     private boolean active;
     private List<StockLocationDTO> children;
 }

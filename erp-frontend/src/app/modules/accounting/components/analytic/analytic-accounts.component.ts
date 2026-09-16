@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AnalyticService, AnalyticAccount } from '../../services/analytic.service';
+import { AccountingService } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
@@ -12,6 +13,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
   styleUrl: './analytic-accounts.component.scss'
 })
 export class AnalyticAccountsComponent implements OnInit {
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
   accounts: AnalyticAccount[] = [];
   flatAccounts: AnalyticAccount[] = [];
   loading = false;
@@ -20,12 +23,15 @@ export class AnalyticAccountsComponent implements OnInit {
   editMode = false;
   errorMsg = '';
   successMsg = '';
+  downloadingTemplate = false;
+  importing = false;
 
   form: AnalyticAccount = this.emptyForm();
   companyId = 1;
 
   constructor(
     private analyticService: AnalyticService,
+    private accountingService: AccountingService,
     private authService: AuthService
   ) {}
 
@@ -129,6 +135,42 @@ export class AnalyticAccountsComponent implements OnInit {
     });
   }
 
+  downloadTemplate(): void {
+    this.downloadingTemplate = true;
+    this.accountingService.downloadAnalyticAccountsTemplate().subscribe({
+      next: (blob) => {
+        this.downloadingTemplate = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = 'modele_comptes_analytiques.xlsx'; a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => { this.downloadingTemplate = false; this.errorMsg = 'Erreur téléchargement modèle'; }
+    });
+  }
+
+  onImport(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    input.value = '';
+    this.importing = true;
+    this.errorMsg = '';
+    this.accountingService.importAnalyticAccounts(file, this.companyId).subscribe({
+      next: (res) => {
+        this.importing = false;
+        this.successMsg = `Import terminé — ${res.created} créés, ${res.updated} mis à jour`;
+        if (res.errors?.length > 0) this.errorMsg = res.errors.slice(0, 3).join(' | ');
+        setTimeout(() => this.successMsg = '', 4000);
+        this.load();
+      },
+      error: (err) => {
+        this.importing = false;
+        this.errorMsg = err?.error?.message || 'Erreur lors de l\'import';
+      }
+    });
+  }
+
   emptyForm(): AnalyticAccount {
     return { code: '', name: '', description: '', parentId: null, companyId: 1, active: true };
   }
@@ -140,11 +182,13 @@ export class AnalyticAccountsComponent implements OnInit {
 
   getDepth(account: AnalyticAccount): number {
     let depth = 0;
-    let current = account;
-    while (current.parentId) {
+    let currentId: number | null | undefined = account.parentId;
+    const visited = new Set<number>();
+    while (currentId) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
       depth++;
-      current = this.flatAccounts.find(a => a.id === current.parentId) || current;
-      if (depth > 10) break; // sécurité anti-boucle
+      currentId = this.flatAccounts.find(a => a.id === currentId)?.parentId;
     }
     return depth;
   }

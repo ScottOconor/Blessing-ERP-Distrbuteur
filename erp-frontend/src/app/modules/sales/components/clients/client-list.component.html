@@ -64,7 +64,7 @@
             <th class="text-right">Précompte %</th>
             <th class="text-right">Limite crédit</th>
             <th>Compte</th>
-            <th class="text-center">Taxe Guiness</th>
+            <th class="text-center">Ristourne Guinness</th>
             <th class="text-center">Actions</th>
           </tr>
         </thead>
@@ -247,12 +247,12 @@
             <label class="toggle-label" [class.toggle-on]="form.exemptTaxeGuinness" (click)="form.exemptTaxeGuinness = !form.exemptTaxeGuinness">
               <span class="toggle-slider" [class.active]="form.exemptTaxeGuinness"></span>
               <span class="toggle-text">
-                Exempté de la Taxe Guiness
+                Exempté de la Ristourne Guinness
                 <span class="toggle-hint">
                   @if (form.exemptTaxeGuinness) {
-                    — Aucune taxe Guiness ne sera appliquée aux factures de ce client
+                    — Aucune ristourne Guinness ne sera appliquée aux factures de ce client
                   } @else {
-                    — La taxe Guiness (300 FCFA/article) sera appliquée aux produits Guiness
+                    — La ristourne Guinness (300 FCFA/article) sera appliquée aux produits Guinness
                   }
                 </span>
               </span>

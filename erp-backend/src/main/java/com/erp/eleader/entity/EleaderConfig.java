@@ -44,6 +44,13 @@ public class EleaderConfig {
     @Column(name = "auto_confirm")
     private boolean autoConfirm = false;
 
+    /**
+     * Codes produits ERP supplémentaires à traiter comme consignes/emballages (séparés par virgule).
+     * Les codes de base (CB12, CBG12, PP…) sont toujours actifs sans les déclarer ici.
+     */
+    @Column(name = "extra_consigne_codes", columnDefinition = "TEXT")
+    private String extraConsigneCodes;
+
     @OneToMany(mappedBy = "config", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<EleaderEmballageMapping> emballageMappings = new ArrayList<>();

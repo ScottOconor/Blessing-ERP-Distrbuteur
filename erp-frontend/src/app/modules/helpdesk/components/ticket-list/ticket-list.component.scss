@@ -1,0 +1,6 @@
+@use '../shared-hd' as *;
+
+.filter-bar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  .filter-sel { width: auto; min-width: 160px; }
+}

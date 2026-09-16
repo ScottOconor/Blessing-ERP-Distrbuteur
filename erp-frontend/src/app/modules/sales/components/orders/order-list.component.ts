@@ -154,4 +154,74 @@ export class OrderListComponent implements OnInit {
     this.successMsg = msg;
     setTimeout(() => this.successMsg = '', 4000);
   }
+
+  // ── Group By ─────────────────────────────────────────────────────────────────
+  groupBy = '';
+  expandedGroups = new Set<string>();
+
+  groupByOptions = [
+    { key: 'mois',     label: 'Mois',      icon: 'calendar_month' },
+    { key: 'client',   label: 'Client',    icon: 'person' },
+    { key: 'statut',   label: 'Statut',    icon: 'label' },
+    { key: 'entrepot', label: 'Entrepôt',  icon: 'warehouse' }
+  ];
+
+  get groupedRows(): { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesOrder[] }[] {
+    if (!this.groupBy) return [];
+    const map = new Map<string, { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesOrder[] }>();
+    for (const item of this.filteredOrders) {
+      let key: string, label: string;
+      switch (this.groupBy) {
+        case 'mois':
+          key = (item.date || '').substring(0, 7);
+          label = key ? this.fmtMonth(key) : '(Sans date)';
+          break;
+        case 'client':
+          key = label = item.partnerName || '(Sans client)';
+          break;
+        case 'statut':
+          key = item.state || '?';
+          label = this.getStateLabel(item.state || '');
+          break;
+        case 'entrepot':
+          key = label = (item as any).warehouseName || '(Sans entrepôt)';
+          break;
+        default: key = label = '?';
+      }
+      if (!map.has(key)) map.set(key, { key, label, count: 0, totalHT: 0, totalTTC: 0, items: [] });
+      const g = map.get(key)!;
+      g.count++;
+      g.totalHT  += item.totalHT  || 0;
+      g.totalTTC += item.totalTTC || 0;
+      g.items.push(item);
+    }
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => a.label.localeCompare(b.label));
+    return arr;
+  }
+
+  setGroupBy(key: string): void {
+    this.groupBy = this.groupBy === key ? '' : key;
+    this.expandedGroups.clear();
+  }
+
+  toggleGroup(key: string): void {
+    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
+    else this.expandedGroups.add(key);
+  }
+
+  isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
+
+  getGroupItems(key: string): SalesOrder[] {
+    return this.groupedRows.find(g => g.key === key)?.items ?? [];
+  }
+
+  fmtMonth(ym: string): string {
+    const [y, m] = ym.split('-');
+    return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+  }
+
+  fmtN(v: number): string {
+    return new Intl.NumberFormat('fr-FR').format(v || 0);
+  }
 }

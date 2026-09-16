@@ -6,7 +6,7 @@
     <!-- ENTRY HEADER -->
     <div class="entry-header card mb-3">
       <div class="entry-header-left">
-        <div class="entry-number">{{ move.name || 'Nouvelle écriture' }}</div>
+        <div class="entry-number">{{ move.name || 'Nouvelle pièce' }}</div>
         <span [class]="getStateBadgeClass(move.state)">{{ getStateLabel(move.state) }}</span>
       </div>
       <div class="entry-actions">
@@ -24,6 +24,10 @@
           <button class="btn btn-reverse" (click)="reverse()">
             <span class="material-icons">swap_horiz</span> Extourner
           </button>
+          <button class="btn btn-reset-draft" (click)="resetToDraft()" [disabled]="resettingToDraft">
+            @if (resettingToDraft) { <span class="spinner-sm-white"></span> }
+            <span class="material-icons">edit_note</span> Remettre en brouillon
+          </button>
         }
         @if (move.state === 'posted' && move.reversalId) {
           <span class="badge-reversed">
@@ -34,7 +38,7 @@
         @if (move.state === 'posted' && move.isReversal) {
           <span class="badge-reversed">
             <span class="material-icons" style="font-size:14px">swap_horiz</span>
-            Écriture d'extourne
+            Pièce d'extourne
           </span>
         }
         <button class="btn btn-outline" (click)="router.navigate(['/accounting/journal-entries'])">
@@ -90,10 +94,10 @@
       </div>
     </div>
 
-    <!-- SOLDE INITIAL — caisse/banque uniquement -->
+    <!-- SOLDE INITIAL – caisse/banque uniquement -->
     @if (isBalanceJournal && journalOpeningBalance !== null) {
       <div class="balance-bar mb-3">
-        <span class="material-icons" style="font-size:20px;color:#714B67">account_balance_wallet</span>
+        <span class="material-icons" style="font-size:20px;color:#2563EB">account_balance_wallet</span>
         <div class="balance-item">
           <span class="balance-label">Solde initial</span>
           <span class="balance-value mono" [class.positive]="journalOpeningBalance >= 0" [class.negative]="journalOpeningBalance < 0">
@@ -103,12 +107,12 @@
       </div>
     }
 
-    <!-- LIGNES D'ÉCRITURE -->
+    <!-- LIGNES DE LA PIÈCE -->
     <div class="card">
       <div class="card-header">
         <h3 style="font-size:14px">
-          <span class="material-icons" style="font-size:18px;color:#714B67">table_rows</span>
-          Lignes d'écriture
+          <span class="material-icons" style="font-size:18px;color:#2563EB">table_rows</span>
+          Lignes de la pièce
         </h3>
         @if (!isReadonly && !isBalanceJournal) {
           <button class="btn btn-outline-primary btn-sm" (click)="autoBalance()">
@@ -118,7 +122,7 @@
         @if (isBalanceJournal) {
           <span class="caisse-info-badge">
             <span class="material-icons">info_outline</span>
-            Pièce de caisse — équilibre non requis
+            Pièce de caisse – équilibre non requis
           </span>
         }
       </div>
@@ -194,24 +198,24 @@
                       </button>
                     } @else {
                       <span class="analytic-readonly">
-                        {{ getDistributionSummary(line) || getAnalyticLabel(line.analyticAccountId) || '—' }}
+                        {{ getDistributionSummary(line) || getAnalyticLabel(line.analyticAccountId) || '–' }}
                       </span>
                     }
                   } @else {
-                    <span class="analytic-na">—</span>
+                    <span class="analytic-na">–</span>
                   }
                 </td>
                 <!-- DÉBIT -->
                 <td>
-                  <input type="number" class="line-input text-right" [(ngModel)]="line.debit"
+                  <input type="text" appAmountInput inputmode="decimal" class="line-input text-right" [(ngModel)]="line.debit"
                     (ngModelChange)="onDebitChange(line)"
-                    min="0" step="0.01" [disabled]="isReadonly">
+                    [disabled]="isReadonly">
                 </td>
                 <!-- CRÉDIT -->
                 <td>
-                  <input type="number" class="line-input text-right" [(ngModel)]="line.credit"
+                  <input type="text" appAmountInput inputmode="decimal" class="line-input text-right" [(ngModel)]="line.credit"
                     (ngModelChange)="onCreditChange(line)"
-                    min="0" step="0.01" [disabled]="isReadonly">
+                    [disabled]="isReadonly">
                 </td>
                 @if (!isReadonly) {
                   <td style="text-align:center">
@@ -259,7 +263,7 @@
           }
         </div>
 
-        <!-- SOLDE FINAL — caisse/banque uniquement -->
+        <!-- SOLDE FINAL – caisse/banque uniquement -->
         @if (isBalanceJournal && journalOpeningBalance !== null) {
           <div class="final-balance-bar">
             <div class="final-balance-left">
@@ -290,6 +294,31 @@
         }
       </div>
     </div>
+
+    @if (move.id && move.resetToDraftBy && move.state === 'draft') {
+      <div class="reset-draft-watermark">
+        <div class="rdw-icon"><span class="material-icons">lock_open</span></div>
+        <div class="rdw-body">
+          <div class="rdw-title">Écriture modifiée — brouillon en cours</div>
+          <div class="rdw-detail">
+            Remise en brouillon par <strong>{{ move.resetToDraftBy }}</strong>
+            le {{ move.resetToDraftAt | date:'dd/MM/yyyy à HH:mm' }}.
+            L'historique complet des modifications est visible dans <em>Actions réalisées</em> ci-dessous.
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (move.id) {
+      <app-audit-footer
+        [createdBy]="move.createdBy"
+        [createdAt]="move.createdAt"
+        [updatedBy]="move.updatedBy"
+        [updatedAt]="move.updatedAt">
+      </app-audit-footer>
+
+      <app-audit-trail entityType="ACCOUNT_MOVE" [entityId]="move.id"></app-audit-trail>
+    }
   }
 </div>
 
@@ -316,7 +345,7 @@
         <span class="material-icons" style="font-size:14px;vertical-align:middle">receipt</span>
         {{ lines[analyticModalIndex].accountSearch || 'Ligne sans compte' }}
         @if (lines[analyticModalIndex].name) {
-          — {{ lines[analyticModalIndex].name }}
+          – {{ lines[analyticModalIndex].name }}
         }
       </span>
       <span class="analytic-line-amount">
@@ -360,13 +389,13 @@
               <label>Compte parent</label>
               <select class="form-control" [(ngModel)]="dist.parentAnalyticId"
                 (ngModelChange)="onParentAnalyticChange(dist)">
-                <option [ngValue]="null">— Sélectionner le parent —</option>
+                <option [ngValue]="null">– Sélectionner le parent –</option>
                 @for (a of parentAnalyticAccounts; track a.id) {
-                  <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                  <option [ngValue]="a.id">{{ a.code }} – {{ a.name }}</option>
                 }
               </select>
             </div>
-            <span class="dist-arrow">›</span>
+            <span class="dist-arrow">”º</span>
             <div class="dist-select-group">
               <label>Sous-compte</label>
               @if (!dist.parentAnalyticId) {
@@ -377,9 +406,9 @@
                 </div>
               } @else {
                 <select class="form-control" [(ngModel)]="dist.analyticAccountId">
-                  <option [ngValue]="null">— Sélectionner —</option>
+                  <option [ngValue]="null">– Sélectionner –</option>
                   @for (a of getChildAnalyticAccounts(dist.parentAnalyticId); track a.id) {
-                    <option [ngValue]="a.id">{{ a.code }} — {{ a.name }}</option>
+                    <option [ngValue]="a.id">{{ a.code }} – {{ a.name }}</option>
                   }
                 </select>
               }
@@ -463,3 +492,4 @@
     }
   </div>
 }
+

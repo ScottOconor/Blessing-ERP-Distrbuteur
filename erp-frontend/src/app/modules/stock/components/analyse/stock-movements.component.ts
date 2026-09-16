@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StockService, StockMove, Product } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ExcelExportService } from '../../../../core/services/excel-export.service';
 
 @Component({
   selector: 'app-stock-movements',
@@ -20,7 +21,13 @@ export class StockMovementsComponent implements OnInit {
   filterProductId: number | null = null;
   limit = 100;
 
-  constructor(private stockService: StockService, private authService: AuthService) {}
+  exporting = false;
+
+  constructor(
+    private stockService: StockService,
+    private authService: AuthService,
+    private excelExport: ExcelExportService
+  ) {}
 
   ngOnInit(): void {
     const cid = this.authService.getCompanyId();
@@ -72,5 +79,24 @@ export class StockMovementsComponent implements OnInit {
 
   get totalMoved(): number {
     return this.filtered.reduce((s, m) => s + (m.qtyDone as any || 0), 0);
+  }
+
+  exportPdf(): void {
+    const cid = this.authService.getCompanyId();
+    this.stockService.downloadMovementsPdf(cid, {
+      productId: this.filterProductId ?? undefined,
+      limit: this.limit
+    }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `mouvements_stock_${new Date().toISOString().slice(0,10)}.pdf`;
+        a.click(); URL.revokeObjectURL(url);
+      }
+    });
+  }
+
+  exportExcel(): void {
+    this.excelExport.exportStockMovements(this.filtered, this.authService.getActiveCompany()?.name);
   }
 }

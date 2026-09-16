@@ -1,79 +1,257 @@
-<div class="pur-dashboard">
-  <div class="page-header">
+<div class="dash">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="dash-header">
     <div>
-      <h1>Tableau de bord Achats</h1>
-      <p class="subtitle">Vue d'ensemble de vos commandes fournisseurs</p>
+      <h1 class="dash-title">Tableau de bord achats</h1>
+      <p class="dash-sub">{{ companyName }} — {{ currentMonthLabel }}</p>
     </div>
-    <button class="btn-primary" (click)="newOrder()">
-      <span class="material-icons">add</span>
-      Nouvelle commande
-    </button>
+    <div class="header-actions">
+      <button class="btn-outline" (click)="router.navigate(['/purchases/invoices'])">
+        <span class="material-icons">receipt_long</span> Factures
+      </button>
+      <button class="btn-primary" (click)="router.navigate(['/purchases/orders/new'])">
+        <span class="material-icons">add</span> Nouvelle commande
+      </button>
+    </div>
   </div>
 
+  @if (loading) {
+    <div class="skeleton-row">
+      @for (i of [1,2,3,4,5]; track i) { <div class="skeleton-card"></div> }
+    </div>
+  } @else {
+
+  <!-- ══ KPI ROW ═══════════════════════════════════════════════════════════ -->
   <div class="kpi-row">
-    <div class="kpi-card">
-      <span class="material-icons kpi-icon blue">shopping_cart</span>
+
+    <!-- Dettes fournisseurs -->
+    <div class="kpi clickable" [class.hero-red]="montantDuTotal > 0" [class.hero-gray]="montantDuTotal === 0"
+         (click)="router.navigate(['/purchases/invoices'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">warning_amber</span></div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ totalOrders }}</div>
-        <div class="kpi-label">Total commandes</div>
+        <span class="kpi-val">{{ fmtM(montantDuTotal) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Dettes fournisseurs</span>
+        <span class="kpi-hint">{{ facturesNonPayees.length }} facture(s) impayée(s)</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <!-- Achats total -->
+    <div class="kpi hero-teal">
+      <div class="kpi-icon-wrap"><span class="material-icons">shopping_bag</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ fmtM(totalAchatsPostedPaid) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Total achats</span>
+        <span class="kpi-hint">Factures validées + payées</span>
       </div>
     </div>
-    <div class="kpi-card">
-      <span class="material-icons kpi-icon orange">pending</span>
+
+    <!-- Paiements ce mois -->
+    <div class="kpi hero-green clickable" (click)="router.navigate(['/purchases/payments'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">payments</span></div>
       <div class="kpi-body">
-        <div class="kpi-value">{{ draftOrders }}</div>
-        <div class="kpi-label">Brouillons</div>
+        <span class="kpi-val">{{ fmtM(paiementsMoisTotal) }}</span>
+        <span class="kpi-cur">FCFA</span>
+        <span class="kpi-lbl">Paiements ce mois</span>
+        <span class="kpi-hint">Décaissés ce mois</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <!-- Commandes confirmées -->
+    <div class="kpi hero-blue clickable" (click)="router.navigate(['/purchases/orders'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">shopping_cart</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ commandesConfirmees }}</span>
+        <span class="kpi-lbl">Commandes confirmées</span>
+        <span class="kpi-hint">{{ commandesBrouillon }} en brouillon · {{ commandesRecues }} reçues</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <!-- Taux de règlement -->
+    <div class="kpi hero-purple">
+      <div class="kpi-icon-wrap"><span class="material-icons">donut_large</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ tauxPaiement }}<span class="kpi-pct">%</span></span>
+        <span class="kpi-lbl">Taux de règlement</span>
+        <div class="mini-progress">
+          <div class="mini-bar" [style.width.%]="tauxPaiement"></div>
+        </div>
       </div>
     </div>
-    <div class="kpi-card">
-      <span class="material-icons kpi-icon teal">check_circle</span>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ confirmedOrders }}</div>
-        <div class="kpi-label">Confirmées</div>
+
+  </div>
+
+  <!-- ══ LIGNE SECONDAIRE ═══════════════════════════════════════════════════ -->
+  <div class="secondary-row">
+    <div class="sec-card clickable" (click)="router.navigate(['/purchases/suppliers'])">
+      <span class="material-icons sec-icon">store</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ fournisseursActifs }}</span>
+        <span class="sec-lbl">Fournisseurs actifs</span>
       </div>
     </div>
-    <div class="kpi-card">
-      <span class="material-icons kpi-icon green">inventory</span>
-      <div class="kpi-body">
-        <div class="kpi-value">{{ receivedOrders }}</div>
-        <div class="kpi-label">Réceptionnées</div>
+    <div class="sec-card">
+      <span class="material-icons sec-icon">receipt</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ invoices.length }}</span>
+        <span class="sec-lbl">Total factures</span>
+      </div>
+    </div>
+    <div class="sec-card clickable" (click)="router.navigate(['/purchases/orders'])">
+      <span class="material-icons sec-icon">inventory</span>
+      <div class="sec-body">
+        <span class="sec-val">{{ commandesRecues }}</span>
+        <span class="sec-lbl">Commandes réceptionnées</span>
       </div>
     </div>
   </div>
 
-  <div class="section-card">
-    <div class="section-header">
-      <h2>Commandes récentes</h2>
-      <button class="btn-link" (click)="viewOrders()">Voir tout</button>
-    </div>
-    @if (recentOrders.length === 0) {
-      <div class="empty-state">
-        <span class="material-icons">shopping_cart</span>
-        <p>Aucune commande. <a (click)="newOrder()">Créer la première</a></p>
+  <!-- ══ CONTENU PRINCIPAL ══════════════════════════════════════════════════ -->
+  <div class="main-grid">
+
+    <!-- Dettes fournisseurs -->
+    <div class="card dettes-card">
+      <div class="card-hd">
+        <span class="card-title">
+          <span class="material-icons">account_balance_wallet</span> Dettes fournisseurs
+        </span>
+        @if (totalDettes > 0) {
+          <span class="dettes-total">{{ fmtFull(totalDettes) }}</span>
+        }
       </div>
-    } @else {
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Référence</th>
-            <th>Fournisseur</th>
-            <th>Date</th>
-            <th>Total TTC</th>
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (o of recentOrders; track o.id) {
-            <tr class="row-link" [routerLink]="['/purchases/orders', o.id]">
-              <td><strong>{{ o.name }}</strong></td>
-              <td>{{ o.partnerName }}</td>
-              <td>{{ o.date | date:'dd/MM/yyyy' }}</td>
-              <td class="text-right">{{ (o.totalTTC ?? 0) | number:'1.0-0' }} FCFA</td>
-              <td><span class="badge" [class]="'badge-' + o.state">{{ stateLabel(o.state) }}</span></td>
-            </tr>
+
+      @if (dettes.length === 0) {
+        <div class="list-empty">
+          <span class="material-icons">check_circle</span>
+          <span>Aucune dette en cours</span>
+        </div>
+      } @else {
+        <div class="dettes-list">
+          @for (d of dettes; track d.name) {
+            <div class="dette-item" [class.critical]="d.aging === 'critical'" [class.late]="d.aging === 'late'"
+                 (click)="router.navigate(['/purchases/invoices'])">
+              <div class="dette-left">
+                <div class="dette-avatar">{{ d.name.charAt(0).toUpperCase() }}</div>
+                <div class="dette-info">
+                  <span class="dette-name">{{ d.name }}</span>
+                  <span class="dette-meta">{{ d.nbFactures }} facture{{ d.nbFactures > 1 ? 's' : '' }}</span>
+                </div>
+              </div>
+              <div class="dette-right">
+                <span class="dette-amount">{{ fmtM(d.totalDu) }} FCFA</span>
+                <span class="aging-badge aging-{{ d.aging }}">
+                  @if (d.aging === 'current') { ≤ 30 j }
+                  @else if (d.aging === 'late') { {{ d.oldestDays }} j }
+                  @else { {{ d.oldestDays }} j ⚠ }
+                </span>
+              </div>
+            </div>
           }
-        </tbody>
-      </table>
-    }
+        </div>
+      }
+    </div>
+
+    <!-- Colonne droite : factures impayées + commandes -->
+    <div class="side-col">
+
+      <!-- Factures impayées récentes -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">
+            <span class="material-icons">receipt_long</span> Factures impayées
+          </span>
+          <button class="btn-link" (click)="router.navigate(['/purchases/invoices'])">
+            Voir tout <span class="material-icons">arrow_forward</span>
+          </button>
+        </div>
+        @if (recentUnpaid.length === 0) {
+          <div class="list-empty">
+            <span class="material-icons">check_circle</span>
+            <span>Aucune facture en attente</span>
+          </div>
+        } @else {
+          <table class="act-table">
+            <thead>
+              <tr><th>Référence</th><th>Fournisseur</th><th>Date</th><th class="r">Reste dû</th></tr>
+            </thead>
+            <tbody>
+              @for (inv of recentUnpaid; track inv.id) {
+                <tr (click)="router.navigate(['/purchases/invoices', inv.id])">
+                  <td class="mono">{{ inv.name }}</td>
+                  <td class="client-cell">{{ inv.partnerName }}</td>
+                  <td class="muted">{{ inv.date | date:'dd/MM/yy' }}</td>
+                  <td class="r bold du-pill">{{ (inv.montantDu ?? 0) | number:'1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- Commandes récentes -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">
+            <span class="material-icons">shopping_cart</span> Commandes récentes
+          </span>
+          <button class="btn-link" (click)="router.navigate(['/purchases/orders'])">
+            Voir tout <span class="material-icons">arrow_forward</span>
+          </button>
+        </div>
+        @if (recentOrders.length === 0) {
+          <div class="list-empty">
+            <span class="material-icons">inbox</span><span>Aucune commande</span>
+          </div>
+        } @else {
+          <div class="order-list">
+            @for (o of recentOrders; track o.id) {
+              <div class="order-item" (click)="router.navigate(['/purchases/orders', o.id])">
+                <div class="order-left">
+                  <span class="order-ref">{{ o.name }}</span>
+                  <span class="order-partner">{{ o.partnerName }}</span>
+                </div>
+                <div class="order-right">
+                  <span class="order-amount">{{ fmtM(o.totalTTC ?? 0) }} FCFA</span>
+                  <span class="badge badge-{{ o.state }}">{{ orderStateLabel(o.state) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    </div>
   </div>
+
+  <!-- ══ ACCÈS RAPIDES ═════════════════════════════════════════════════════ -->
+  <div class="quick-block">
+    <div class="quick-title"><span class="material-icons">bolt</span> Accès rapides</div>
+    <div class="quick-row">
+      <button class="quick-btn" (click)="router.navigate(['/purchases/orders/new'])">
+        <span class="material-icons">add_shopping_cart</span> Nouvelle commande
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/purchases/invoices'])">
+        <span class="material-icons">receipt_long</span> Factures fournisseurs
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/purchases/payments'])">
+        <span class="material-icons">payments</span> Paiements
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/purchases/remises'])">
+        <span class="material-icons">discount</span> Remises fournisseurs
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/purchases/enlevements'])">
+        <span class="material-icons">local_shipping</span> Enlèvements
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/purchases/rapports'])">
+        <span class="material-icons">bar_chart</span> Rapports
+      </button>
+    </div>
+  </div>
+
+  }
 </div>

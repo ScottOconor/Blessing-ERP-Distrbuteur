@@ -1,0 +1,99 @@
+@use '../shared-hd' as *;
+
+// ── En-tête détail ──
+.detail-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.title-wrap {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+  h1 { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+.ticket-num {
+  background: var(--info-bg); color: var(--info);
+  padding: 2px 8px; border-radius: var(--radius-sm); white-space: nowrap; flex-shrink: 0;
+}
+.action-bar { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+
+// ── Boutons workflow ──
+.btn-action {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px;
+  border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'Inter', 'Roboto', sans-serif; transition: var(--ease);
+  .material-icons { font-size: 16px; }
+  &.btn-take    { background: var(--info);    color: white; &:hover { opacity: 0.88; } }
+  &.btn-resolve { background: var(--success); color: white; &:hover { opacity: 0.88; } }
+  &.btn-close   { background: var(--text-muted); color: white; &:hover { opacity: 0.88; } }
+  &.btn-reopen  { background: var(--warning); color: white; &:hover { opacity: 0.88; } }
+}
+
+// ── Corps ──
+.ticket-body { display: flex; flex-direction: column; gap: 22px; }
+
+.ticket-card { padding: 22px; }
+
+.meta-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px; margin-bottom: 16px;
+}
+.meta-item { display: flex; flex-direction: column; gap: 4px; }
+.meta-label {
+  font-size: 10.5px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.desc-section { margin-top: 12px;
+  .meta-label { display: block; margin-bottom: 6px; }
+  .desc-text { font-size: 14px; color: var(--text-primary); white-space: pre-wrap; line-height: 1.65; }
+}
+
+.edit-actions {
+  display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;
+  padding-top: 16px; border-top: 1px solid var(--border-light);
+}
+
+// ── Commentaires ──
+.comments-card { padding: 22px; }
+
+.comments-title {
+  display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700;
+  color: var(--text-primary); margin: 0 0 16px;
+  .material-icons { font-size: 18px; color: #0891b2; }
+}
+.no-comments { font-size: 13px; color: var(--text-muted); margin: 0 0 16px; }
+.comments-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+
+.comment {
+  background: var(--bg-elevated); border-radius: var(--radius-sm); padding: 12px 14px;
+  border-left: 3px solid var(--border);
+  &.comment-internal { border-left-color: var(--warning); background: var(--warning-bg); }
+  &.comment-from-hub { border-left-color: var(--info); background: var(--info-bg); }
+}
+.comment-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  .comment-author { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600;
+    color: var(--text-primary); .material-icons { font-size: 14px; color: var(--text-muted); } }
+  .comment-date { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+}
+.badge-internal {
+  background: var(--warning-bg); color: var(--warning);
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; text-transform: uppercase;
+}
+.badge-hub {
+  background: var(--info-bg); color: var(--info);
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; text-transform: uppercase;
+}
+.comment-body { font-size: 13px; color: var(--text-primary); white-space: pre-wrap; line-height: 1.5; }
+
+.comment-waiting {
+  display: flex; align-items: flex-start; gap: 8px; padding: 14px; border-radius: 8px;
+  background: var(--warning-bg); color: var(--warning); font-size: 13px; line-height: 1.5;
+  margin-top: 4px;
+  .material-icons { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+}
+.comment-closed {
+  color: var(--text-muted); font-size: 13px; margin-top: 12px; font-style: italic;
+}
+.comment-form {
+  .comment-form-footer { display: flex; align-items: center; gap: 12px; margin-top: 8px; justify-content: flex-end; }
+}

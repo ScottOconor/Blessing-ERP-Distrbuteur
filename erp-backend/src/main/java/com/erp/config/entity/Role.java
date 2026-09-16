@@ -12,7 +12,7 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Code technique immuable : SUPER_ADMIN, ADMIN, SUPER_AUDITEUR, AUDITEUR, CONTROLEUR, ou null pour rôles custom */
+    /** Code technique : SUPER_ADMIN, ADMIN, AUDITEUR, CONTROLEUR, ou null pour rôles custom */
     @Column(unique = true)
     private String code;
 
@@ -22,11 +22,6 @@ public class Role {
     /** true = rôle système seedé, non modifiable, non supprimable */
     @Builder.Default
     private boolean isSystem = false;
-
-    /** Groupe propriétaire (null pour les rôles système qui sont globaux) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
-    private CompanyGroup group;
 
     @Builder.Default
     private boolean active = true;

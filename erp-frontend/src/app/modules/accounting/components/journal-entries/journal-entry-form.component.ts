@@ -8,6 +8,9 @@ import { AnalyticService, AnalyticAccount } from '../../services/analytic.servic
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountMove, AccountMoveLine } from '../../../../core/models/move.model';
 import { AccountAccount, AccountJournal, Partner } from '../../../../core/models/account.model';
+import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
+import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
+import { AmountInputDirective } from '../../../../shared/directives/amount-input.directive';
 
 interface AnalyticDistributionForm {
   analyticAccountId: number | null;
@@ -35,7 +38,7 @@ interface LineForm {
 @Component({
   selector: 'app-journal-entry-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AuditFooterComponent, AuditTrailComponent, AmountInputDirective],
   templateUrl: './journal-entry-form.component.html',
   styleUrl: './journal-entry-form.component.scss'
 })
@@ -57,6 +60,7 @@ export class JournalEntryFormComponent implements OnInit {
   loading = false;
   saving = false;
   posting = false;
+  resettingToDraft = false;
   isNew = true;
   errorMsg = '';
   successMsg = '';
@@ -115,10 +119,13 @@ export class JournalEntryFormComponent implements OnInit {
         },
         error: () => {
           this.loading = false;
-          this.errorMsg = 'Écriture introuvable';
+          this.errorMsg = 'Pièce introuvable';
         }
       });
     } else {
+      // Lire le journalId depuis les query params (navigation depuis la fiche journal)
+      const qJournalId = this.route.snapshot.queryParamMap.get('journalId');
+      if (qJournalId) this.move.journalId = +qJournalId;
       this.loadReferenceData();
       this.addLine();
       this.addLine();
@@ -131,6 +138,7 @@ export class JournalEntryFormComponent implements OnInit {
     this.accountingService.getJournals(companyId).subscribe({
       next: (j) => {
         this.journals = j.filter(x => x.active);
+        // Pré-sélectionner uniquement si aucun journal déjà défini (ex. depuis query param)
         if (!this.move.journalId && this.journals.length > 0) {
           this.move.journalId = this.journals[0].id!;
         }
@@ -164,7 +172,7 @@ export class JournalEntryFormComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.errorMsg = 'Écriture introuvable';
+        this.errorMsg = 'Pièce introuvable';
       }
     });
   }
@@ -313,8 +321,6 @@ export class JournalEntryFormComponent implements OnInit {
   }
 
   get isBalanced(): boolean {
-    // Caisse/banque : pas d'obligation d'équilibre (contrepartie implicite du compte lié)
-    if (this.isBalanceJournal) return true;
     return Math.abs(this.totalDebit - this.totalCredit) < 0.001;
   }
 
@@ -468,9 +474,9 @@ export class JournalEntryFormComponent implements OnInit {
     return `${line.analyticDistributions.length} comptes`;
   }
 
-  /** Seuls les comptes de charges (classe 6) peuvent avoir une ventilation analytique */
+  /** Tout compte avec un code peut avoir une ventilation analytique */
   isChargeAccount(line: LineForm): boolean {
-    return line.accountCode?.startsWith('6') ?? false;
+    return !!line.accountCode;
   }
 
   getAnalyticLabel(id: number | null): string {
@@ -508,11 +514,8 @@ export class JournalEntryFormComponent implements OnInit {
     if (!this.move.journalId) { this.errorMsg = 'Sélectionnez un journal'; return; }
     if (!this.move.date) { this.errorMsg = 'Sélectionnez une date'; return; }
     const lines = this.formToLines();
-    const minLines = this.isBalanceJournal ? 1 : 2;
-    if (lines.length < minLines) {
-      this.errorMsg = this.isBalanceJournal
-        ? "L'écriture doit avoir au moins 1 ligne"
-        : "L'écriture doit avoir au moins 2 lignes";
+    if (lines.length < 2) {
+      this.errorMsg = "La pièce doit avoir au moins 2 lignes (partie double)";
       return;
     }
 
@@ -528,7 +531,7 @@ export class JournalEntryFormComponent implements OnInit {
         this.saving = false;
         this.move = saved;
         this.lines = saved.lines.map(l => this.lineToForm(l));
-        this.successMsg = 'Écriture sauvegardée avec succès';
+        this.successMsg = 'Pièce sauvegardée avec succès';
         setTimeout(() => this.successMsg = '', 3000);
         if (this.isNew) {
           this.isNew = false;
@@ -543,12 +546,12 @@ export class JournalEntryFormComponent implements OnInit {
   }
 
   post(): void {
-    if (!this.isBalanceJournal && !this.isBalanced) {
-      this.errorMsg = "L'écriture doit être équilibrée (débit = crédit)";
+    if (!this.isBalanced) {
+      this.errorMsg = `La pièce n'est pas équilibrée — débit : ${this.totalDebit.toFixed(2)}, crédit : ${this.totalCredit.toFixed(2)}`;
       return;
     }
     if (!this.move.id) { this.save(); return; }
-    if (!confirm('Valider cette écriture ? Cette action est irréversible.')) return;
+    if (!confirm('Valider cette pièce ? Cette action est irréversible.')) return;
 
     this.posting = true;
     this.accountingService.postMove(this.move.id!).subscribe({
@@ -556,7 +559,7 @@ export class JournalEntryFormComponent implements OnInit {
         this.posting = false;
         this.move = posted;
         this.lines = posted.lines.map(l => this.lineToForm(l));
-        this.successMsg = 'Écriture validée avec succès !';
+        this.successMsg = 'Pièce validée avec succès !';
         setTimeout(() => this.successMsg = '', 3000);
       },
       error: (err) => {
@@ -568,13 +571,32 @@ export class JournalEntryFormComponent implements OnInit {
 
   reverse(): void {
     if (!this.move.id) return;
-    if (!confirm('Extourner cette écriture ? Une écriture inverse validée sera créée.')) return;
+    if (!confirm('Extourner cette pièce ? Une pièce inverse validée sera créée.')) return;
     this.accountingService.reverseMove(this.move.id!).subscribe({
       next: (reversed) => {
         this.successMsg = `Extourne ${reversed.name} créée`;
         setTimeout(() => this.router.navigate(['/accounting/journal-entries', reversed.id]), 800);
       },
       error: (err) => { this.errorMsg = err.error?.message || 'Erreur lors de l\'extourne'; }
+    });
+  }
+
+  resetToDraft(): void {
+    if (!this.move.id) return;
+    if (!confirm('Remettre cette pièce en brouillon ? Elle pourra être modifiée puis revalidée.')) return;
+    this.resettingToDraft = true;
+    this.accountingService.resetMoveToDraft(this.move.id!).subscribe({
+      next: (updated) => {
+        this.resettingToDraft = false;
+        this.move = updated;
+        this.lines = updated.lines.map(l => this.lineToForm(l));
+        this.successMsg = 'Pièce remise en brouillon.';
+        setTimeout(() => this.successMsg = '', 3000);
+      },
+      error: (err) => {
+        this.resettingToDraft = false;
+        this.errorMsg = err.error?.message || 'Erreur lors de la remise en brouillon';
+      }
     });
   }
 

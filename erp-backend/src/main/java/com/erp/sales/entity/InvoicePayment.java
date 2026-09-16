@@ -12,7 +12,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "invoice_payments")
+@Table(name = "invoice_payments", indexes = {
+    // findByInvoiceIdOrderByDateDesc/sumPostedPaymentsByInvoice tournent à chaque ouverture du
+    // détail d'une facture de vente — aucun index jusqu'ici sur invoice_id ni company_id.
+    @Index(name = "idx_invoice_payments_invoice", columnList = "invoice_id"),
+    @Index(name = "idx_invoice_payments_company", columnList = "company_id")
+})
 @Data
 @Builder
 @NoArgsConstructor

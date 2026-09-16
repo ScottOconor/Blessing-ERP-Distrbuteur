@@ -3,6 +3,7 @@ package com.erp.sales.controller;
 import com.erp.sales.dto.RistourneDTO;
 import com.erp.sales.dto.RistournePaiementDTO;
 import com.erp.sales.service.RistourneService;
+import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class RistourneController {
 
     private final RistourneService service;
+    private final SalesService salesService;
 
     // ===== Configuration ristournes =====
 
@@ -107,6 +109,17 @@ public class RistourneController {
         LocalDate dateEnd   = LocalDate.parse(req.get("dateEnd").toString());
         Long companyId      = Long.valueOf(req.get("companyId").toString());
         return ResponseEntity.ok(service.generateByPeriod(dateStart, dateEnd, companyId));
+    }
+
+    // ===== Rapport période (depuis les factures) =====
+
+    @GetMapping("/rapport")
+    public ResponseEntity<List<RistournePaiementDTO>> getRapport(
+            @RequestParam Long companyId,
+            @RequestParam String dateFrom,
+            @RequestParam String dateTo) {
+        return ResponseEntity.ok(salesService.getRapportRistournesFromInvoices(
+                LocalDate.parse(dateFrom), LocalDate.parse(dateTo), companyId));
     }
 
     // ===== Import Excel =====

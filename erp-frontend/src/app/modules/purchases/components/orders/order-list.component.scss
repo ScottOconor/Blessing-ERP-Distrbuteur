@@ -4,8 +4,8 @@ $accent: #00A09D;
 
 .page-header {
   display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;
-  h1 { font-size: 22px; font-weight: 700; color: #212529; margin: 0 0 4px; }
-  .subtitle { color: #6c757d; font-size: 14px; margin: 0; }
+  h1 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin: 0; }
 }
 
 .btn-primary {
@@ -13,7 +13,7 @@ $accent: #00A09D;
   background: $accent; color: white; border: none; border-radius: 8px;
   padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;
   .material-icons { font-size: 18px; }
-  &:hover { background: #007674; }
+  &:hover { background: var(--accent); }
 }
 
 .alert {
@@ -21,52 +21,52 @@ $accent: #00A09D;
   padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;
   .material-icons { font-size: 18px; }
   button { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; }
-  &-success { background: #d1e7dd; color: #155724; }
-  &-error { background: #f8d7da; color: #842029; }
+  &-success { background: var(--success-bg); color: var(--success); }
+  &-error { background: var(--danger-bg); color: var(--danger); }
 }
 
 .filter-bar {
   display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
   .filter-btn {
-    padding: 6px 14px; border-radius: 20px; border: 1px solid #dee2e6;
-    background: white; color: #495057; font-size: 13px; cursor: pointer; transition: all 0.15s;
+    padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--bg-surface); color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: all 0.15s;
     &:hover { border-color: $accent; color: $accent; }
     &.active { background: $accent; color: white; border-color: $accent; }
   }
 }
 
-.loading-state { text-align: center; padding: 48px; color: #6c757d; }
-.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #dee2e6; border-top-color: $accent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
+.loading-state { text-align: center; padding: 48px; color: var(--text-muted); }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: $accent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
 
 .empty-state {
-  text-align: center; padding: 60px 20px; background: white; border-radius: 12px;
-  .material-icons { font-size: 56px; color: #dee2e6; display: block; margin-bottom: 12px; }
-  p { color: #6c757d; margin-bottom: 16px; }
+  text-align: center; padding: 60px 20px; background: var(--bg-surface); border-radius: 12px;
+  .material-icons { font-size: 56px; color: var(--border); display: block; margin-bottom: 12px; }
+  p { color: var(--text-muted); margin-bottom: 16px; }
 }
 
-.table-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+.table-card { background: var(--bg-surface); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
 
 .data-table {
   width: 100%; border-collapse: collapse; font-size: 14px;
-  th { padding: 12px 14px; background: #f8f9fa; font-weight: 600; font-size: 12px; color: #6c757d; text-transform: uppercase; border-bottom: 2px solid #e9ecef; text-align: left; }
-  td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; color: #212529; vertical-align: middle; }
+  th { padding: 12px 14px; background: var(--bg-hover); font-weight: 600; font-size: 12px; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border); text-align: left; }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); vertical-align: middle; }
   .text-right { text-align: right; }
-  .row-link { cursor: pointer; &:hover td { background: #f8f9fa; } }
+  .row-link { cursor: pointer; &:hover td { background: var(--bg-hover); } }
 }
 
 .ref-link { color: $accent; font-weight: 600; }
-.text-muted { color: #adb5bd; }
-.picking-ref { font-size: 12px; color: #495057; display: flex; flex-direction: column; gap: 2px; }
+.text-muted { color: var(--text-muted); }
+.picking-ref { font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 2px; }
 
 .badge {
   display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
-  &-draft { background: #fff3cd; color: #856404; }
-  &-confirmed { background: #cff4fc; color: #0c5460; }
-  &-received { background: #d1e7dd; color: #155724; }
-  &-cancelled { background: #f8d7da; color: #842029; }
-  &-picking-draft { background: #fff3cd; color: #856404; }
-  &-picking-done { background: #d1e7dd; color: #155724; }
-  &-picking-cancelled { background: #f8d7da; color: #842029; }
+  &-draft { background: var(--warning-bg); color: var(--warning); }
+  &-confirmed { background: var(--info-bg); color: var(--info); }
+  &-received { background: var(--success-bg); color: var(--success); }
+  &-cancelled { background: var(--danger-bg); color: var(--danger); }
+  &-picking-draft { background: var(--warning-bg); color: var(--warning); }
+  &-picking-done { background: var(--success-bg); color: var(--success); }
+  &-picking-cancelled { background: var(--danger-bg); color: var(--danger); }
 }
 
 .actions-cell { display: flex; gap: 6px; align-items: center; }
@@ -76,9 +76,9 @@ $accent: #00A09D;
   width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s;
   .material-icons { font-size: 16px; }
   &:disabled { opacity: 0.5; cursor: default; }
-  &-confirm { background: #d1e7dd; color: #155724; &:hover:not(:disabled) { background: #155724; color: white; } }
-  &-receive { background: #cff4fc; color: #0c5460; &:hover:not(:disabled) { background: $accent; color: white; } }
-  &-cancel { background: #f8d7da; color: #842029; &:hover:not(:disabled) { background: #842029; color: white; } }
+  &-confirm { background: var(--success-bg); color: var(--success); &:hover:not(:disabled) { background: var(--success); color: white; } }
+  &-receive { background: var(--info-bg); color: var(--info); &:hover:not(:disabled) { background: $accent; color: white; } }
+  &-cancel { background: var(--danger-bg); color: var(--danger); &:hover:not(:disabled) { background: var(--danger); color: white; } }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }

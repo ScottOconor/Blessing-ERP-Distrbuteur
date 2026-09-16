@@ -6,6 +6,16 @@ import { ImportResult } from '../../../core/models/import-result.model';
 import { AccountMove } from '../../../core/models/move.model';
 import { environment } from '../../../../environments/environment';
 
+export interface JournalPreviewRow {
+  code: string;
+  name: string;
+  type: string;
+  defaultAccountCode: string;
+  accountFound: boolean;
+  action: 'create' | 'update';
+  warning?: string;
+}
+
 export interface JournalDailyBalanceDTO {
   id?: number;
   journalId: number;
@@ -136,10 +146,10 @@ export class AccountingService {
     return this.http.get<JournalDailyBalanceDTO[]>(`${this.apiUrl}/journals/${journalId}/daily-balances`);
   }
 
-  getDailyBalance(journalId: number, date: string): Observable<JournalDailyBalanceDTO> {
-    return this.http.get<JournalDailyBalanceDTO>(`${this.apiUrl}/journals/${journalId}/daily-balance`, {
-      params: new HttpParams().set('date', date)
-    });
+  getDailyBalance(journalId: number, date: string, companyId?: number): Observable<JournalDailyBalanceDTO> {
+    let params = new HttpParams().set('date', date);
+    if (companyId) params = params.set('companyId', companyId);
+    return this.http.get<JournalDailyBalanceDTO>(`${this.apiUrl}/journals/${journalId}/daily-balance`, { params });
   }
 
   closeDayBalance(journalId: number, date: string): Observable<JournalDailyBalanceDTO> {
@@ -148,6 +158,10 @@ export class AccountingService {
 
   reverseMove(id: number): Observable<AccountMove> {
     return this.http.post<AccountMove>(`${this.apiUrl}/moves/${id}/reverse`, {});
+  }
+
+  resetMoveToDraft(id: number): Observable<AccountMove> {
+    return this.http.post<AccountMove>(`${this.apiUrl}/moves/${id}/reset-to-draft`, {});
   }
 
   // ===== IMPORT EXCEL =====
@@ -173,6 +187,10 @@ export class AccountingService {
     return this.http.post<ImportResult>(`${this.importUrl}/accounts`, fd);
   }
 
+  downloadAnalyticAccountsTemplate(): Observable<Blob> {
+    return this.http.get(`${this.importUrl}/analytic-accounts/template`, { responseType: 'blob' });
+  }
+
   importAnalyticAccounts(file: File, companyId: number): Observable<ImportResult> {
     const fd = new FormData();
     fd.append('file', file);
@@ -185,6 +203,13 @@ export class AccountingService {
     fd.append('file', file);
     fd.append('companyId', String(companyId));
     return this.http.post<ImportResult>(`${this.importUrl}/partners`, fd);
+  }
+
+  previewJournals(file: File, companyId: number): Observable<JournalPreviewRow[]> {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('companyId', String(companyId));
+    return this.http.post<JournalPreviewRow[]>(`${this.importUrl}/journals/preview`, fd);
   }
 
   importJournals(file: File, companyId: number): Observable<ImportResult> {

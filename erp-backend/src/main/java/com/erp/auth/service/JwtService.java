@@ -2,26 +2,77 @@ package com.erp.auth.service;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.Key;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * Signe/valide les JWT de session. Le secret HS256 n'est jamais commité en dur : soit fourni
+ * explicitement (jwt.secret / JWT_SECRET), soit généré automatiquement une seule fois au premier
+ * démarrage et persisté à secretPath — jamais régénéré ensuite (sinon toutes les sessions actives
+ * seraient invalidées à chaque redémarrage).
+ */
 @Service
 @Slf4j
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    @Value("${jwt.secret:}")
+    private String configuredSecret;
+
+    @Value("${jwt.secret-path:${user.home}/.kira/license/jwt-secret.key}")
+    private String secretPath;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
+
+    private String secretKey;
+
+    @PostConstruct
+    public void resolveSecret() {
+        if (configuredSecret != null && !configuredSecret.isBlank()) {
+            secretKey = configuredSecret;
+            log.info("Secret JWT : valeur explicite (jwt.secret)");
+            return;
+        }
+        try {
+            Path path = Path.of(secretPath);
+            if (Files.exists(path)) {
+                secretKey = Files.readString(path).trim();
+            } else {
+                secretKey = generateSecret();
+                Files.createDirectories(path.getParent());
+                Files.writeString(path, secretKey);
+                try {
+                    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
+                } catch (UnsupportedOperationException ignored) {
+                    // Système de fichiers non-POSIX — permissions par défaut de l'OS.
+                }
+                log.info("Secret JWT généré et persisté ({})", secretPath);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Impossible de charger/générer le secret JWT (" + secretPath + ")", e);
+        }
+    }
+
+    private String generateSecret() {
+        byte[] bytes = new byte[64]; // 512 bits — largement au-dessus du minimum HS256 (256 bits)
+        new SecureRandom().nextBytes(bytes);
+        return Base64.getEncoder().encodeToString(bytes);
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -29,10 +80,6 @@ public class JwtService {
 
     public Long extractCompanyId(String token) {
         return extractClaim(token, c -> c.get("companyId", Long.class));
-    }
-
-    public Long extractGroupId(String token) {
-        return extractClaim(token, c -> c.get("groupId", Long.class));
     }
 
     public String extractRoleCode(String token) {

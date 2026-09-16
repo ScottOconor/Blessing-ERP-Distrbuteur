@@ -10,6 +10,8 @@ public interface RemiseRepository extends JpaRepository<Remise, Long> {
 
     List<Remise> findByPartnerIdAndCompanyIdAndActiveTrue(Long partnerId, Long companyId);
 
+    List<Remise> findByPartnerIdAndCompanyIdAndActiveTrueAndTypeRemise(Long partnerId, Long companyId, String typeRemise);
+
     List<Remise> findByCompanyIdAndActiveTrue(Long companyId);
 
     Optional<Remise> findByPartnerIdAndCategoryIdAndCompanyId(

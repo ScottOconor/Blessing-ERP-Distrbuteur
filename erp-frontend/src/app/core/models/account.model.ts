@@ -33,4 +33,5 @@ export interface Partner {
   email?: string;
   address?: string;
   companyId: number;
+  receivableAccountCode?: string;
 }

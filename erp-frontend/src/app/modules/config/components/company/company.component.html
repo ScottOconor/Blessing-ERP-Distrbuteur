@@ -1,0 +1,187 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-icons">business</span>
+        Mon entreprise
+      </h1>
+      <p class="page-sub">Informations légales et logo affichés sur tous les documents</p>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading">
+      <span class="material-icons spin">sync</span> Chargement…
+    </div>
+  } @else {
+    @if (errorMsg) {
+      <div class="alert alert-danger">
+        <span class="material-icons">error_outline</span>
+        {{ errorMsg }}
+        <button (click)="errorMsg=''">×</button>
+      </div>
+    }
+    @if (successMsg) {
+      <div class="alert alert-success">
+        <span class="material-icons">check_circle</span>
+        {{ successMsg }}
+      </div>
+    }
+
+    <div class="co-grid">
+
+      <!-- ── Logo entreprise ── -->
+      <div class="card logo-card">
+        <div class="card-title">
+          <span class="material-icons">image</span> Logo entreprise
+        </div>
+        <p class="card-desc">Affiché sur les factures et documents imprimés</p>
+
+        <div class="logo-area">
+          @if (logoPreviewUrl) {
+            <img [src]="logoPreviewUrl" class="logo-preview" alt="Aperçu logo">
+          } @else {
+            <img [src]="currentLogoUrl" class="logo-preview" alt="Logo entreprise"
+                 (error)="logoPreviewUrl = null" #logoImg>
+          }
+        </div>
+
+        <label class="btn-upload" [class.loading]="uploadingLogo">
+          <input type="file" accept="image/*" (change)="onLogoSelected($event)" [disabled]="uploadingLogo" hidden>
+          <span class="material-icons">{{ uploadingLogo ? 'hourglass_empty' : 'upload' }}</span>
+          {{ uploadingLogo ? 'Import en cours…' : 'Importer un logo' }}
+        </label>
+        <p class="logo-hint">PNG, JPG ou SVG — max 2 Mo</p>
+      </div>
+
+      <!-- ── Infos légales ── -->
+      <div class="card info-card">
+        <div class="card-title">
+          <span class="material-icons">info</span> Informations légales
+        </div>
+
+        <form (ngSubmit)="save()" #f="ngForm">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label>Raison sociale <span class="req">*</span></label>
+              <input class="form-control" [(ngModel)]="company.name" name="name" required placeholder="Ex : BLESSING DISTRIBUTION SARL">
+            </div>
+
+            <div class="form-group">
+              <label>Sigle / Abréviation</label>
+              <input class="form-control" [(ngModel)]="company.sigle" name="sigle" placeholder="Ex : KD">
+            </div>
+
+            <div class="form-group">
+              <label>N° RCCM</label>
+              <input class="form-control" [(ngModel)]="company.rccm" name="rccm" placeholder="Ex : RC/DLA/2024/B/1234">
+            </div>
+
+            <div class="form-group">
+              <label>NIF / NIU</label>
+              <input class="form-control" [(ngModel)]="company.nif" name="nif" placeholder="Ex : M123456789">
+            </div>
+
+            <div class="form-group">
+              <label>Téléphone</label>
+              <input class="form-control" [(ngModel)]="company.telephone" name="telephone" placeholder="Ex : +237 6XX XXX XXX">
+            </div>
+
+            <div class="form-group">
+              <label>Email</label>
+              <input class="form-control" type="email" [(ngModel)]="company.email" name="email" placeholder="contact@monentreprise.cm">
+            </div>
+
+            <div class="form-group form-full">
+              <label>Adresse</label>
+              <input class="form-control" [(ngModel)]="company.adresse" name="adresse" placeholder="Ex : Rue X, Quartier Y, Douala">
+            </div>
+
+            <div class="form-group">
+              <label>Début d'exercice fiscal</label>
+              <select class="form-control" [(ngModel)]="company.fiscalYearStartMonth" name="fiscalYearStartMonth">
+                @for (m of fiscalMonths; track m.value) {
+                  <option [ngValue]="m.value">{{ m.label }}</option>
+                }
+              </select>
+              <small class="field-hint">Utilisé pour calculer le résultat net de l'exercice dans le bilan OHADA.</small>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="saving || f.invalid">
+              <span class="material-icons">{{ saving ? 'hourglass_empty' : 'save' }}</span>
+              {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- ── Apparence de l'application (superadmin) ── -->
+    <div class="section-sep">
+      <span class="material-icons">palette</span>
+      Apparence de l'application
+    </div>
+
+    <div class="co-grid">
+
+      <!-- App logo (favicon) -->
+      <div class="card logo-card">
+        <div class="card-title">
+          <span class="material-icons">tab</span> Icône de l'application
+        </div>
+        <p class="card-desc">Affiché dans l'onglet du navigateur (favicon) et dans la barre latérale</p>
+
+        <div class="logo-area">
+          @if (appLogoPreviewUrl) {
+            <img [src]="appLogoPreviewUrl" class="logo-preview app-logo-preview" alt="Aperçu icône app">
+          } @else if (company.hasAppLogo) {
+            <img [src]="currentAppLogoUrl" class="logo-preview app-logo-preview" alt="Icône application"
+                 (error)="appLogoPreviewUrl = null">
+          } @else {
+            <div class="logo-placeholder">
+              <span class="material-icons">insert_photo</span>
+              <span>Aucune icône définie</span>
+            </div>
+          }
+        </div>
+
+        <label class="btn-upload" [class.loading]="uploadingAppLogo">
+          <input type="file" accept="image/*" (change)="onAppLogoSelected($event)" [disabled]="uploadingAppLogo" hidden>
+          <span class="material-icons">{{ uploadingAppLogo ? 'hourglass_empty' : 'upload' }}</span>
+          {{ uploadingAppLogo ? 'Import en cours…' : 'Importer une icône' }}
+        </label>
+        <p class="logo-hint">PNG recommandé 512×512 — max 2 Mo</p>
+      </div>
+
+      <!-- App name -->
+      <div class="card info-card">
+        <div class="card-title">
+          <span class="material-icons">title</span> Nom de l'application
+        </div>
+        <p class="card-desc">Apparaît dans l'onglet du navigateur et dans la barre latérale de l'app</p>
+
+        <form (ngSubmit)="saveAppName()" #af="ngForm">
+          <div class="form-grid">
+            <div class="form-group form-full">
+              <label>Nom affiché <span class="req">*</span></label>
+              <input class="form-control form-control-lg" [(ngModel)]="company.appName" name="appName"
+                     required placeholder="Ex : Blessing ERP Distributeurs">
+              <span class="field-hint">Ce nom remplace le titre par défaut dans le navigateur.</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="savingAppName || af.invalid">
+              <span class="material-icons">{{ savingAppName ? 'hourglass_empty' : 'save' }}</span>
+              {{ savingAppName ? 'Enregistrement…' : 'Appliquer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  }
+</div>

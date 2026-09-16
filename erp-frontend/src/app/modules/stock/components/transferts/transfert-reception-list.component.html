@@ -1,0 +1,59 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="material-icons">move_to_inbox</span>
+        Réceptions de transferts inter-dépôts
+      </h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn-toggle" (click)="toggleAll()" [class.active]="showAll">
+        <span class="material-icons">{{ showAll ? 'visibility_off' : 'history' }}</span>
+        {{ showAll ? 'Masquer l\'historique' : 'Voir l\'historique' }}
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (pickings.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">inbox</span>
+      <p>{{ showAll ? 'Aucune réception de transfert' : 'Aucune réception en attente' }}</p>
+    </div>
+  } @else {
+    <div class="card">
+      <table class="data-table">
+        <thead><tr>
+          <th>Référence</th>
+          <th>Source (transfert lié)</th>
+          <th>Emplacement destination</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          @for (p of pickings; track p.id) {
+            <tr (click)="router.navigate(['/stock/transferts', p.id])" class="row-clickable">
+              <td class="ref-cell">
+                <span class="material-icons">move_to_inbox</span>
+                {{ p.name }}
+              </td>
+              <td>{{ p.linkedPickingName || '—' }}</td>
+              <td>{{ p.locationDestName || '—' }}</td>
+              <td>{{ p.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span>
+              </td>
+              <td class="action-cell">
+                <button class="btn-open" (click)="$event.stopPropagation(); router.navigate(['/stock/transferts', p.id])">
+                  <span class="material-icons">open_in_new</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

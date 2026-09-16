@@ -46,6 +46,23 @@
     <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
+  <!-- ── Regrouper par ──────────────────────────────────────── -->
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <!-- Table -->
   <div class="card">
     @if (loading) {
@@ -77,55 +94,122 @@
           </tr>
         </thead>
         <tbody>
-          @for (order of filteredOrders; track order.id) {
-            <tr (click)="editOrder(order)" class="clickable-row">
-              <td class="font-mono font-bold">{{ order.name }}</td>
-              <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
-              <td>{{ order.partnerName }}</td>
-              <td>{{ order.journalName }}</td>
-              <td class="text-right">{{ order.totalHT | number:'1.0-0' }}</td>
-              <td class="text-right font-bold">{{ order.totalTTC | number:'1.0-0' }}</td>
-              <td><span [class]="getStateBadge(order.state || '')">{{ getStateLabel(order.state || '') }}</span></td>
-              <td>
-                @if (order.invoiceName) {
-                  <a class="link-invoice" (click)="viewInvoice(order); $event.stopPropagation()">
-                    {{ order.invoiceName }}
-                  </a>
-                } @else {
-                  <span class="text-muted">—</span>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="4">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+                <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
+                <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
+                <td></td><td></td><td></td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (order of getGroupItems(row.key); track order.id) {
+                  <tr (click)="editOrder(order)" class="detail-row clickable-row">
+                    <td class="font-mono font-bold">{{ order.name }}</td>
+                    <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ order.partnerName }}</td>
+                    <td>{{ order.journalName }}</td>
+                    <td class="text-right">{{ order.totalHT | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ order.totalTTC | number:'1.0-0' }}</td>
+                    <td><span [class]="getStateBadge(order.state || '')">{{ getStateLabel(order.state || '') }}</span></td>
+                    <td>
+                      @if (order.invoiceName) {
+                        <a class="link-invoice" (click)="viewInvoice(order); $event.stopPropagation()">
+                          {{ order.invoiceName }}
+                        </a>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
+                    <td class="text-center actions-cell" (click)="$event.stopPropagation()">
+                      @if (order.state === 'draft') {
+                        @if (canEdit) {
+                          <button class="btn-icon btn-edit" title="Modifier" (click)="editOrder(order)">
+                            <span class="material-icons">edit</span>
+                          </button>
+                        }
+                        <button
+                          class="btn-icon btn-confirm"
+                          title="Confirmer (crée la facture)"
+                          [disabled]="confirming === order.id"
+                          (click)="confirmOrder(order, $event)"
+                        >
+                          <span class="material-icons">{{ confirming === order.id ? 'hourglass_empty' : 'check_circle' }}</span>
+                        </button>
+                        <button
+                          class="btn-icon btn-cancel"
+                          title="Annuler"
+                          [disabled]="cancelling === order.id"
+                          (click)="cancelOrder(order, $event)"
+                        >
+                          <span class="material-icons">cancel</span>
+                        </button>
+                      }
+                      @if (order.state === 'invoiced') {
+                        <button class="btn-icon btn-view" title="Voir la facture" (click)="viewInvoice(order)">
+                          <span class="material-icons">description</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
                 }
-              </td>
-              <td class="text-center actions-cell" (click)="$event.stopPropagation()">
-                @if (order.state === 'draft') {
-                  @if (canEdit) {
-                    <button class="btn-icon btn-edit" title="Modifier" (click)="editOrder(order)">
-                      <span class="material-icons">edit</span>
+              }
+            }
+          } @else {
+            @for (order of filteredOrders; track order.id) {
+              <tr (click)="editOrder(order)" class="clickable-row">
+                <td class="font-mono font-bold">{{ order.name }}</td>
+                <td>{{ order.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ order.partnerName }}</td>
+                <td>{{ order.journalName }}</td>
+                <td class="text-right">{{ order.totalHT | number:'1.0-0' }}</td>
+                <td class="text-right font-bold">{{ order.totalTTC | number:'1.0-0' }}</td>
+                <td><span [class]="getStateBadge(order.state || '')">{{ getStateLabel(order.state || '') }}</span></td>
+                <td>
+                  @if (order.invoiceName) {
+                    <a class="link-invoice" (click)="viewInvoice(order); $event.stopPropagation()">
+                      {{ order.invoiceName }}
+                    </a>
+                  } @else {
+                    <span class="text-muted">—</span>
+                  }
+                </td>
+                <td class="text-center actions-cell" (click)="$event.stopPropagation()">
+                  @if (order.state === 'draft') {
+                    @if (canEdit) {
+                      <button class="btn-icon btn-edit" title="Modifier" (click)="editOrder(order)">
+                        <span class="material-icons">edit</span>
+                      </button>
+                    }
+                    <button
+                      class="btn-icon btn-confirm"
+                      title="Confirmer (crée la facture)"
+                      [disabled]="confirming === order.id"
+                      (click)="confirmOrder(order, $event)"
+                    >
+                      <span class="material-icons">{{ confirming === order.id ? 'hourglass_empty' : 'check_circle' }}</span>
+                    </button>
+                    <button
+                      class="btn-icon btn-cancel"
+                      title="Annuler"
+                      [disabled]="cancelling === order.id"
+                      (click)="cancelOrder(order, $event)"
+                    >
+                      <span class="material-icons">cancel</span>
                     </button>
                   }
-                  <button
-                    class="btn-icon btn-confirm"
-                    title="Confirmer (crée la facture)"
-                    [disabled]="confirming === order.id"
-                    (click)="confirmOrder(order, $event)"
-                  >
-                    <span class="material-icons">{{ confirming === order.id ? 'hourglass_empty' : 'check_circle' }}</span>
-                  </button>
-                  <button
-                    class="btn-icon btn-cancel"
-                    title="Annuler"
-                    [disabled]="cancelling === order.id"
-                    (click)="cancelOrder(order, $event)"
-                  >
-                    <span class="material-icons">cancel</span>
-                  </button>
-                }
-                @if (order.state === 'invoiced') {
-                  <button class="btn-icon btn-view" title="Voir la facture" (click)="viewInvoice(order)">
-                    <span class="material-icons">description</span>
-                  </button>
-                }
-              </td>
-            </tr>
+                  @if (order.state === 'invoiced') {
+                    <button class="btn-icon btn-view" title="Voir la facture" (click)="viewInvoice(order)">
+                      <span class="material-icons">description</span>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>

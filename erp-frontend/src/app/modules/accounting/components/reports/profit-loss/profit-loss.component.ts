@@ -21,7 +21,10 @@ export class ProfitLossComponent implements OnInit {
   dateFrom = '';
   dateTo = '';
   today = new Date();
+dateFromN1 = '';
+  dateToN1   = '';
   lines: CompteResultatLine[] = [];
+  mode = 'annuel'; // 'mensuel' | 'annuel'
 
   constructor(
     private reportService: ReportService,
@@ -36,21 +39,38 @@ export class ProfitLossComponent implements OnInit {
     this.dateFrom = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
   }
 
+  onModeChange(): void {
+    const now = new Date();
+    if (this.mode === 'mensuel') {
+      // Mois précédent
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      this.dateFrom = prev.toISOString().split('T')[0];
+      this.dateTo = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+    } else {
+      this.dateFrom = `${now.getFullYear()}-01-01`;
+      this.dateTo = now.toISOString().split('T')[0];
+    }
+  }
+
   generate(): void {
     if (!this.dateFrom || !this.dateTo) { this.errorMsg = 'Sélectionnez la période'; return; }
     this.loading = true; this.generated = false; this.errorMsg = '';
     this.reportService.getCompteDeResultat({
       dateFrom: this.dateFrom, dateTo: this.dateTo,
-      companyId: this.authService.getCompanyId()
+      companyId: this.authService.getCompanyId(),
+      mode: this.mode
     }).subscribe({
       next: (res) => {
-        // Backend returns { rubriques: { TA: {code, label, amount}, ... }, totals: {...} }
         const rubriques = res.rubriques || {};
+        this.dateFromN1 = res.dateFromN1 || '';
+        this.dateToN1   = res.dateToN1   || '';
         this.lines = Object.values(rubriques).map((r: any) => ({
-          code: r.code || '',
-          label: r.label || '',
-          current: Number(r.amount) || 0,
-          isTotal: !!(r.code && r.code.startsWith('X'))
+          code:     r.code  || '',
+          label:    r.label || '',
+          sign:     r.sign  || '',
+          current:  Number(r.amount)    || 0,
+          previous: Number(r.amount_n1) || 0,
+          isTotal:  !!(r.code && r.code.startsWith('X'))
         }));
         this.loading = false;
         this.generated = true;

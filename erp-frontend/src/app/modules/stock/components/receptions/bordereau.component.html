@@ -40,8 +40,14 @@
     <div class="info-grid mb-16">
       @if (bordereau.supplierName) {
         <div class="info-card">
-          <div class="info-label">Fournisseur</div>
+          <div class="info-label">Fournisseur / Source</div>
           <div class="info-value font-bold">{{ bordereau.supplierName }}</div>
+        </div>
+      }
+      @if (bordereau.warehouseName) {
+        <div class="info-card">
+          <div class="info-label">Entrepôt destinataire</div>
+          <div class="info-value font-bold">{{ bordereau.warehouseName }}</div>
         </div>
       }
       @if (bordereau.invoiceRef) {
@@ -79,7 +85,6 @@
           <tr>
             <th>Code</th>
             <th>Libellé</th>
-            <th class="text-right">Prix unitaire</th>
             <th class="text-right">Qté commandée</th>
             <th class="text-right">Qté reçue</th>
             @if (!isReadOnly) {
@@ -93,7 +98,6 @@
             <tr [class.done-row]="ligne.reste === 0">
               <td class="font-mono text-muted">{{ ligne.productCode || '—' }}</td>
               <td>{{ ligne.productName }}</td>
-              <td class="text-right">{{ ligne.prixUnitaire | number:'1.0-0' }}</td>
               <td class="text-right">{{ ligne.qteCommandee | number:'1.0-2' }}</td>
               <td class="text-right text-success">{{ ligne.qteRecue | number:'1.0-2' }}</td>
               @if (!isReadOnly) {
@@ -120,7 +124,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3"><strong>Totaux</strong></td>
+            <td colspan="2"><strong>Totaux</strong></td>
             <td class="text-right font-mono"><strong>{{ totalQteCommandee | number:'1.0-2' }}</strong></td>
             <td class="text-right font-mono text-success"><strong>{{ totalQteSaisie | number:'1.0-2' }}</strong></td>
             @if (!isReadOnly) {

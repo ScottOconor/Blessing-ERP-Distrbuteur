@@ -1,0 +1,222 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">price_change</span>
+      Tarifs par fournisseur
+    </h1>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" placeholder="Rechercher un fournisseur…" [(ngModel)]="search" />
+    <div class="toolbar-actions">
+      <button class="btn-text" (click)="expandAll()">
+        <span class="material-icons">unfold_more</span> Tout développer
+      </button>
+      <button class="btn-text" (click)="collapseAll()">
+        <span class="material-icons">unfold_less</span> Tout réduire
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="empty"><span class="material-icons spin">refresh</span> Chargement…</div>
+  } @else {
+    <div class="accordion">
+      @for (g of filteredGroups; track g.supplier.id) {
+        <div class="acc-item" [class.open]="expandedIds.has(g.supplier.id ?? 0)">
+
+          <div class="acc-header" (click)="toggle(g)">
+            <div class="acc-left">
+              <span class="material-icons acc-chevron">
+                {{ expandedIds.has(g.supplier.id ?? 0) ? 'expand_less' : 'expand_more' }}
+              </span>
+              <span class="client-name">{{ g.supplier.name }}</span>
+              @if (g.supplier.ref) {
+                <span class="client-ref">{{ g.supplier.ref }}</span>
+              }
+            </div>
+            <div class="acc-right">
+              @if (g.prices !== null) {
+                @if (g.prices.length > 0) {
+                  <span class="badge-count">{{ g.prices.length }} tarif{{ g.prices.length > 1 ? 's' : '' }}</span>
+                } @else {
+                  <span class="badge-none">Aucun tarif</span>
+                }
+              }
+            </div>
+          </div>
+
+          @if (expandedIds.has(g.supplier.id ?? 0)) {
+            <div class="acc-body">
+              @if (g.loading) {
+                <div class="inner-loading">
+                  <span class="material-icons spin" style="font-size:18px">refresh</span> Chargement…
+                </div>
+              } @else {
+
+                @if (g.prices && g.prices.length > 0) {
+                  <table class="prices-table">
+                    <thead>
+                      <tr>
+                        <th>Article</th>
+                        <th class="text-right">Prix catalogue</th>
+                        <th class="text-right">Prix fournisseur</th>
+                        <th class="text-right">Écart</th>
+                        <th class="actions-col"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of g.prices; track p.productId) {
+                        <tr [class.editing]="editingPriceId === p.id">
+                          <td>
+                            @if (p.productCode) {
+                              <span class="prod-code">[{{ p.productCode }}]</span>
+                            }
+                            {{ p.productName }}
+                          </td>
+                          <td class="text-right muted">{{ (p.standardPrice ?? 0) | number:'1.0-0' }} FCFA</td>
+                          <td class="text-right bold">
+                            @if (editingPriceId === p.id) {
+                              <input type="number" class="edit-input" [(ngModel)]="editForm.prixFournisseur" min="0" />
+                            } @else {
+                              {{ p.prixFournisseur | number:'1.0-0' }} FCFA
+                            }
+                          </td>
+                          <td class="text-right" [class.rabais-col]="(p.ecartUnitaire ?? 0) < 0" [class.surplus-col]="(p.ecartUnitaire ?? 0) > 0">
+                            @if ((p.ecartUnitaire ?? 0) < 0) {
+                              – {{ -(p.ecartUnitaire ?? 0) | number:'1.0-0' }} FCFA
+                            } @else if ((p.ecartUnitaire ?? 0) > 0) {
+                              + {{ (p.ecartUnitaire ?? 0) | number:'1.0-0' }} FCFA
+                            } @else {
+                              <span class="muted">–</span>
+                            }
+                          </td>
+                          <td class="actions-col">
+                            @if (editingPriceId === p.id) {
+                              <button class="btn-save" (click)="saveEdit(g, p)" [disabled]="saving" title="Enregistrer">
+                                <span class="material-icons">check</span>
+                              </button>
+                              <button class="btn-cancel" (click)="cancelEdit()" title="Annuler">
+                                <span class="material-icons">close</span>
+                              </button>
+                            } @else {
+                              <button class="btn-edit" (click)="startEdit(p)" title="Modifier">
+                                <span class="material-icons">edit</span>
+                              </button>
+                              <button class="btn-delete" (click)="deletePrice(g, p)" title="Supprimer">
+                                <span class="material-icons">delete_outline</span>
+                              </button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                } @else if (!addingGroupId || addingGroupId !== g.supplier.id) {
+                  <div class="inner-empty">Aucun tarif configuré pour ce fournisseur.</div>
+                }
+
+                @if (addingGroupId === g.supplier.id) {
+                  <div class="add-form-row">
+                    <div class="add-form-title">
+                      <span class="material-icons">add_circle_outline</span>
+                      Nouveau tarif pour <strong>{{ g.supplier.name }}</strong>
+                    </div>
+                    <div class="add-fields">
+
+                      <div class="add-field add-field-product">
+                        <label>Article *</label>
+                        <div class="autocomplete-wrap">
+                          <input
+                            type="text"
+                            class="add-input"
+                            placeholder="Code ou nom de l'article…"
+                            [(ngModel)]="addForm.productSearch"
+                            (ngModelChange)="onProductSearch()"
+                            (blur)="hideProductSuggestions()"
+                            autocomplete="off" />
+                          @if (addForm.showSuggestions) {
+                            <div class="suggest-list">
+                              @for (prod of addForm.suggestions; track prod.id) {
+                                <button type="button" class="suggest-item" (mousedown)="selectProduct(prod)">
+                                  @if (prod.defaultCode) {
+                                    <span class="suggest-code">[{{ prod.defaultCode }}]</span>
+                                  }
+                                  <span class="suggest-name">{{ prod.name }}</span>
+                                  <span class="suggest-price">{{ (prod.standardPrice ?? 0) | number:'1.0-0' }} FCFA</span>
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      @if (addForm.productId) {
+                        <div class="add-field add-field-sm">
+                          <label>Prix catalogue</label>
+                          <div class="std-price-badge">{{ addForm.standardPrice | number:'1.0-0' }} FCFA</div>
+                        </div>
+                      }
+
+                      <div class="add-field add-field-sm">
+                        <label>Prix fournisseur *</label>
+                        <input type="number" class="add-input text-right"
+                               [(ngModel)]="addForm.prixFournisseur" min="0"
+                               placeholder="0" />
+                      </div>
+
+                      @if (addForm.productId) {
+                        <div class="add-field add-field-sm">
+                          <label>{{ addEcart < 0 ? 'Réduction' : addEcart > 0 ? 'Surcoût' : 'Écart' }}</label>
+                          <div class="rabais-badge"
+                               [class.positive]="addEcart < 0"
+                               [class.surplus]="addEcart > 0">
+                            @if (addEcart < 0) { – {{ -addEcart | number:'1.0-0' }} FCFA }
+                            @else if (addEcart > 0) { + {{ addEcart | number:'1.0-0' }} FCFA }
+                            @else { Aucun écart }
+                          </div>
+                        </div>
+                      }
+
+                    </div>
+
+                    <div class="add-actions">
+                      <button class="btn-add-cancel" (click)="cancelAdd()">
+                        <span class="material-icons">close</span> Annuler
+                      </button>
+                      <button class="btn-add-save"
+                              (click)="saveAdd(g)"
+                              [disabled]="!addForm.productId || addForm.prixFournisseur < 0 || addSaving">
+                        @if (addSaving) { <span class="material-icons spin" style="font-size:16px">refresh</span> }
+                        @else { <span class="material-icons">check</span> }
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                @if (addingGroupId !== g.supplier.id) {
+                  <div class="add-btn-bar">
+                    <button class="btn-add-tarif" (click)="startAdd(g)">
+                      <span class="material-icons">add</span>
+                      Ajouter un tarif
+                    </button>
+                  </div>
+                }
+
+              }
+            </div>
+          }
+
+        </div>
+      }
+
+      @if (filteredGroups.length === 0 && !loading) {
+        <div class="empty">
+          <span class="material-icons">store</span>
+          <p>Aucun fournisseur trouvé</p>
+        </div>
+      }
+    </div>
+  }
+</div>

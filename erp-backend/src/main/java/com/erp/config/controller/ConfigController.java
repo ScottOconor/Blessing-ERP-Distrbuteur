@@ -5,7 +5,9 @@ import com.erp.config.service.ConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -15,38 +17,16 @@ public class ConfigController {
 
     private final ConfigService configService;
 
-    // ======= GROUPES =======
-
-    @GetMapping("/groups")
-    public ResponseEntity<List<CompanyGroupDTO>> getGroups() {
-        return ResponseEntity.ok(configService.getAllGroups());
-    }
-
-    @GetMapping("/groups/{id}")
-    public ResponseEntity<CompanyGroupDTO> getGroup(@PathVariable Long id) {
-        return ResponseEntity.ok(configService.getGroup(id));
-    }
-
-    @PostMapping("/groups")
-    public ResponseEntity<CompanyGroupDTO> createGroup(@RequestBody CompanyGroupDTO dto) {
-        return ResponseEntity.ok(configService.createGroup(dto));
-    }
-
-    @PutMapping("/groups/{id}")
-    public ResponseEntity<CompanyGroupDTO> updateGroup(@PathVariable Long id, @RequestBody CompanyGroupDTO dto) {
-        return ResponseEntity.ok(configService.updateGroup(id, dto));
-    }
-
-    // ======= COMPANIES =======
+    // ======= ENTREPRISES =======
 
     @GetMapping("/companies")
     public ResponseEntity<List<CompanyDTO>> getAllCompanies() {
         return ResponseEntity.ok(configService.getAllCompanies());
     }
 
-    @GetMapping("/groups/{groupId}/companies")
-    public ResponseEntity<List<CompanyDTO>> getCompaniesByGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(configService.getCompaniesByGroup(groupId));
+    @GetMapping("/companies/{id}")
+    public ResponseEntity<CompanyDTO> getCompany(@PathVariable Long id) {
+        return ResponseEntity.ok(configService.getCompany(id));
     }
 
     @PostMapping("/companies")
@@ -59,54 +39,68 @@ public class ConfigController {
         return ResponseEntity.ok(configService.updateCompany(id, dto));
     }
 
-    @GetMapping("/groups/{groupId}/dashboard")
-    public ResponseEntity<GroupDashboardDTO> getGroupDashboard(@PathVariable Long groupId) {
-        return ResponseEntity.ok(configService.getGroupDashboard(groupId));
+    @PostMapping("/companies/{id}/logo")
+    public ResponseEntity<Void> uploadLogo(@PathVariable Long id,
+                                           @RequestParam("file") MultipartFile file) throws IOException {
+        configService.uploadLogo(id, file.getBytes(), file.getContentType());
+        return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/companies/{companyId}/dashboard")
-    public ResponseEntity<GroupDashboardDTO> getCompanyDashboard(@PathVariable Long companyId) {
-        return ResponseEntity.ok(configService.getCompanyDashboard(companyId));
+    @GetMapping("/companies/{id}/logo")
+    public ResponseEntity<byte[]> getLogo(@PathVariable Long id) {
+        return configService.getLogoResponse(id);
+    }
+
+    @PostMapping("/companies/{id}/app-logo")
+    public ResponseEntity<Void> uploadAppLogo(@PathVariable Long id,
+                                              @RequestParam("file") MultipartFile file) throws IOException {
+        configService.uploadAppLogo(id, file.getBytes(), file.getContentType());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/companies/{id}/app-logo")
+    public ResponseEntity<byte[]> getAppLogo(@PathVariable Long id) {
+        return configService.getAppLogoResponse(id);
     }
 
     // ======= ROLES =======
+
+    @GetMapping("/roles")
+    public ResponseEntity<List<RoleDTO>> getAllRoles() {
+        return ResponseEntity.ok(configService.getAllRoles());
+    }
 
     @GetMapping("/roles/system")
     public ResponseEntity<List<RoleDTO>> getSystemRoles() {
         return ResponseEntity.ok(configService.getSystemRoles());
     }
 
-    @GetMapping("/groups/{groupId}/roles")
-    public ResponseEntity<List<RoleDTO>> getRolesForGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(configService.getRolesForGroup(groupId));
-    }
-
-    @PostMapping("/groups/{groupId}/roles")
-    public ResponseEntity<RoleDTO> createCustomRole(@PathVariable Long groupId, @RequestBody RoleDTO dto) {
-        return ResponseEntity.ok(configService.createCustomRole(groupId, dto));
+    @PostMapping("/roles")
+    public ResponseEntity<RoleDTO> createRole(@RequestBody RoleDTO dto) {
+        return ResponseEntity.ok(configService.createRole(dto));
     }
 
     @PutMapping("/roles/{roleId}")
-    public ResponseEntity<RoleDTO> updateCustomRole(@PathVariable Long roleId, @RequestBody RoleDTO dto) {
-        return ResponseEntity.ok(configService.updateCustomRole(roleId, dto));
+    public ResponseEntity<RoleDTO> updateRole(@PathVariable Long roleId, @RequestBody RoleDTO dto) {
+        return ResponseEntity.ok(configService.updateRole(roleId, dto));
     }
 
     @DeleteMapping("/roles/{roleId}")
-    public ResponseEntity<Void> deleteCustomRole(@PathVariable Long roleId) {
-        configService.deleteCustomRole(roleId);
+    public ResponseEntity<Void> deleteRole(@PathVariable Long roleId) {
+        configService.deleteRole(roleId);
         return ResponseEntity.noContent().build();
     }
 
     // ======= UTILISATEURS =======
 
-    @GetMapping("/groups/{groupId}/users")
-    public ResponseEntity<List<UserDTO>> getUsersByGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(configService.getUsersByGroup(groupId));
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        return ResponseEntity.ok(configService.getAllUsers());
     }
 
-    @GetMapping("/companies/{companyId}/users")
-    public ResponseEntity<List<UserDTO>> getUsersByCompany(@PathVariable Long companyId) {
-        return ResponseEntity.ok(configService.getUsersByCompany(companyId));
+    @GetMapping("/users/{id}")
+    public ResponseEntity<UserDTO> getUser(@PathVariable Long id) {
+        return ResponseEntity.ok(configService.getUser(id));
     }
 
     @PostMapping("/users")

@@ -2,6 +2,7 @@ package com.erp.common.service;
 
 import com.erp.accounting.entity.Partner;
 import com.erp.accounting.repository.PartnerRepository;
+import com.erp.auth.SecurityUtils;
 import com.erp.common.dto.PrecompteDTO;
 import com.erp.common.entity.Precompte;
 import com.erp.common.repository.PrecompteRepository;
@@ -21,6 +22,7 @@ public class PrecompteService {
 
     private final PrecompteRepository precompteRepo;
     private final PartnerRepository partnerRepo;
+    private final com.erp.common.service.TenantGuard tenantGuard;
 
     @Transactional(readOnly = true)
     public List<PrecompteDTO> getAll(Long companyId) {
@@ -37,13 +39,16 @@ public class PrecompteService {
     public PrecompteDTO save(PrecompteDTO dto) {
         Partner partner = partnerRepo.findById(dto.getPartnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Partenaire introuvable"));
+        // companyId vient du corps de la requête (client) — ne jamais lui faire confiance pour
+        // choisir SOUS QUELLE société le précompte est créé/modifié.
+        Long companyId = SecurityUtils.currentCompanyId();
         Precompte entity = precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(
-                dto.getPartnerId(), dto.getTypePrecompte(), dto.getCompanyId())
+                dto.getPartnerId(), dto.getTypePrecompte(), companyId)
                 .orElse(Precompte.builder().build());
         entity.setPartner(partner);
         entity.setTypePrecompte(dto.getTypePrecompte());
         entity.setTauxPrecompte(dto.getTauxPrecompte());
-        entity.setCompanyId(dto.getCompanyId());
+        entity.setCompanyId(companyId);
         entity.setActive(true);
         return toDTO(precompteRepo.save(entity));
     }
@@ -51,6 +56,7 @@ public class PrecompteService {
     public void delete(Long id) {
         Precompte p = precompteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Précompte introuvable"));
+        tenantGuard.check(p.getCompanyId());
         p.setActive(false);
         precompteRepo.save(p);
     }

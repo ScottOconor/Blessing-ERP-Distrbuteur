@@ -1,0 +1,1477 @@
+{
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/angular.json": {
+    "mtime": 1780499208.0,
+    "ast_hash": "92024c8f5ec359504bef27f2f4c08391",
+    "semantic_hash": "92024c8f5ec359504bef27f2f4c08391"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/package.json": {
+    "mtime": 1781947720.0,
+    "ast_hash": "cfb9a39ec8d43010f18a663868dfa7d5",
+    "semantic_hash": "cfb9a39ec8d43010f18a663868dfa7d5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/proxy.conf.json": {
+    "mtime": 1778484942.0,
+    "ast_hash": "810fe9f6f36d08d3aae5b9b677bd031b",
+    "semantic_hash": "810fe9f6f36d08d3aae5b9b677bd031b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/app.component.ts": {
+    "mtime": 1785322007.2677765,
+    "ast_hash": "542062ed042ef2f49e175753e50604d9",
+    "semantic_hash": "542062ed042ef2f49e175753e50604d9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/app.config.ts": {
+    "mtime": 1785322089.8266206,
+    "ast_hash": "5c4801263028c393f9ef87b11a08f975",
+    "semantic_hash": "5c4801263028c393f9ef87b11a08f975"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/app.routes.ts": {
+    "mtime": 1785322112.0783265,
+    "ast_hash": "9d2c2953b56fc872d35b1cf867267c08",
+    "semantic_hash": "9d2c2953b56fc872d35b1cf867267c08"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/auth/auth.guard.ts": {
+    "mtime": 1774866174.0,
+    "ast_hash": "d20398b3a1b3d8b1bd64526f8243f444",
+    "semantic_hash": "d20398b3a1b3d8b1bd64526f8243f444"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/auth/auth.service.ts": {
+    "mtime": 1781278318.0,
+    "ast_hash": "bc3d4024dccfaf36fb22af1b202e9245",
+    "semantic_hash": "bc3d4024dccfaf36fb22af1b202e9245"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/auth/module-installed.guard.ts": {
+    "mtime": 1783100110.3244293,
+    "ast_hash": "90e45d31586eccbeb36d3cf6154f184d",
+    "semantic_hash": "90e45d31586eccbeb36d3cf6154f184d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/auth/permission.guard.ts": {
+    "mtime": 1780336565.0,
+    "ast_hash": "7f9c8f32767b570b8ab539512dcf0d5a",
+    "semantic_hash": "7f9c8f32767b570b8ab539512dcf0d5a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/interceptors/jwt.interceptor.ts": {
+    "mtime": 1774866182.0,
+    "ast_hash": "5ea890b16031b143a91922a567ea5600",
+    "semantic_hash": "5ea890b16031b143a91922a567ea5600"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/license/license.guard.ts": {
+    "mtime": 1785321930.096959,
+    "ast_hash": "862f24c7c6435472c7f43247b42be77a",
+    "semantic_hash": "862f24c7c6435472c7f43247b42be77a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/license/license.interceptor.ts": {
+    "mtime": 1786988072.8083978,
+    "ast_hash": "55400cc93ab5951c09f96f1e1f39b1b9",
+    "semantic_hash": "55400cc93ab5951c09f96f1e1f39b1b9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/license/license.service.ts": {
+    "mtime": 1786988066.888408,
+    "ast_hash": "f6df8b7dbf58d3c5583e32c3fa355483",
+    "semantic_hash": "f6df8b7dbf58d3c5583e32c3fa355483"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/models/account.model.ts": {
+    "mtime": 1780651772.0,
+    "ast_hash": "745d926c73bd98d360e0bb9557b5da2c",
+    "semantic_hash": "745d926c73bd98d360e0bb9557b5da2c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/models/import-result.model.ts": {
+    "mtime": 1775317902.0,
+    "ast_hash": "ec6fea3d96feee7a98cc16a9868ff9dc",
+    "semantic_hash": "ec6fea3d96feee7a98cc16a9868ff9dc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/models/move.model.ts": {
+    "mtime": 1782204261.0,
+    "ast_hash": "56961186d8828ef997e7b6bb8cdfa856",
+    "semantic_hash": "56961186d8828ef997e7b6bb8cdfa856"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/models/report.model.ts": {
+    "mtime": 1786124497.498397,
+    "ast_hash": "7b64c09c2235c170603ba933059a9be8",
+    "semantic_hash": "7b64c09c2235c170603ba933059a9be8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/app-branding.service.ts": {
+    "mtime": 1781869062.0,
+    "ast_hash": "be79d5e6fad0ba046cbc09ea10efdbc4",
+    "semantic_hash": "be79d5e6fad0ba046cbc09ea10efdbc4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/company.service.ts": {
+    "mtime": 1781858862.0,
+    "ast_hash": "a1aaf5bfac211ebd53053f43d4549985",
+    "semantic_hash": "a1aaf5bfac211ebd53053f43d4549985"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/excel-export.service.ts": {
+    "mtime": 1785142914.5930936,
+    "ast_hash": "2e2545744538a7b82e3611d435ea5839",
+    "semantic_hash": "2e2545744538a7b82e3611d435ea5839"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/module.service.ts": {
+    "mtime": 1785832147.1374776,
+    "ast_hash": "1077be68475db922dc1f92a13d3ae61f",
+    "semantic_hash": "1077be68475db922dc1f92a13d3ae61f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/pdf-export.service.ts": {
+    "mtime": 1786441832.08106,
+    "ast_hash": "31c203cebd489f2f70c4ce30e2b601d6",
+    "semantic_hash": "31c203cebd489f2f70c4ce30e2b601d6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/services/theme.service.ts": {
+    "mtime": 1780135212.0,
+    "ast_hash": "9b6d6f4edbbfb4f7c4d8858fd80a4dfe",
+    "semantic_hash": "9b6d6f4edbbfb4f7c4d8858fd80a4dfe"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/core/utils/excel-import.util.ts": {
+    "mtime": 1775300792.0,
+    "ast_hash": "1b9583e95bc0a48f97e51e8db6fb25c3",
+    "semantic_hash": "1b9583e95bc0a48f97e51e8db6fb25c3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/main.ts": {
+    "mtime": 1775033120.0,
+    "ast_hash": "5fae3e3a4a43bd4cc5d0b26b9dab7ec3",
+    "semantic_hash": "5fae3e3a4a43bd4cc5d0b26b9dab7ec3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/accounting.routes.ts": {
+    "mtime": 1787052006.012246,
+    "ast_hash": "8e688fc97a47d0ef34e77cac6ef8448f",
+    "semantic_hash": "8e688fc97a47d0ef34e77cac6ef8448f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-accounts.component.ts": {
+    "mtime": 1781779790.0,
+    "ast_hash": "00959c163ff465c7138c59cd7d1f3f5c",
+    "semantic_hash": "00959c163ff465c7138c59cd7d1f3f5c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-lines.component.ts": {
+    "mtime": 1775127408.0,
+    "ast_hash": "8b94e5b200321872a4d02ac67ed0116e",
+    "semantic_hash": "8b94e5b200321872a4d02ac67ed0116e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-report.component.ts": {
+    "mtime": 1775127434.0,
+    "ast_hash": "7fea18d28b3d4eff495104aef760e8ef",
+    "semantic_hash": "7fea18d28b3d4eff495104aef760e8ef"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/cashbook/cashbook.component.ts": {
+    "mtime": 1780590351.0,
+    "ast_hash": "5718d9b54cbf2d3126cc200133e2e438",
+    "semantic_hash": "5718d9b54cbf2d3126cc200133e2e438"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/chart-of-accounts/chart-of-accounts.component.ts": {
+    "mtime": 1784798835.8555748,
+    "ast_hash": "2e4b4579b4fd120f43d6597b4384b732",
+    "semantic_hash": "2e4b4579b4fd120f43d6597b4384b732"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/dashboard/dashboard.component.ts": {
+    "mtime": 1780114804.0,
+    "ast_hash": "648cc478565203070120e5abe3117933",
+    "semantic_hash": "648cc478565203070120e5abe3117933"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/grand-livre-tiers/grand-livre-tiers.component.ts": {
+    "mtime": 1780590039.0,
+    "ast_hash": "09eb7b269b429d2049ac3c5ab0c92691",
+    "semantic_hash": "09eb7b269b429d2049ac3c5ab0c92691"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/grand-livre/grand-livre.component.ts": {
+    "mtime": 1780589929.0,
+    "ast_hash": "55540e29007a09be043304d516a6316c",
+    "semantic_hash": "55540e29007a09be043304d516a6316c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/import/import.component.ts": {
+    "mtime": 1779041502.0,
+    "ast_hash": "87119247f7cab56dd6f7f4f8ffaa9553",
+    "semantic_hash": "87119247f7cab56dd6f7f4f8ffaa9553"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journal-entries/journal-entries.component.ts": {
+    "mtime": 1778835578.0,
+    "ast_hash": "185e6a15715b91f3f07b805b10b99eb3",
+    "semantic_hash": "185e6a15715b91f3f07b805b10b99eb3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journal-entries/journal-entry-form.component.ts": {
+    "mtime": 1782205025.0,
+    "ast_hash": "ee33d8983d2e10515f4aebbd85fa4bd0",
+    "semantic_hash": "ee33d8983d2e10515f4aebbd85fa4bd0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journals/journal-detail/journal-detail.component.ts": {
+    "mtime": 1780589524.0,
+    "ast_hash": "3834c08ab35fdcfb1cd40f28c79999a8",
+    "semantic_hash": "3834c08ab35fdcfb1cd40f28c79999a8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journals/journals.component.ts": {
+    "mtime": 1781086904.0,
+    "ast_hash": "d081c862b359098edbf3caa0aba1b3c2",
+    "semantic_hash": "d081c862b359098edbf3caa0aba1b3c2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/balance-sheet/balance-sheet.component.ts": {
+    "mtime": 1786385728.0428553,
+    "ast_hash": "ab50af2b25307ffe73b249ee2fd49749",
+    "semantic_hash": "ab50af2b25307ffe73b249ee2fd49749"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/general-balance/general-balance4.component.ts": {
+    "mtime": 1778238100.0,
+    "ast_hash": "9c9b68cd3451c4e5d694a02472f7d6e8",
+    "semantic_hash": "9c9b68cd3451c4e5d694a02472f7d6e8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/general-balance/general-balance6.component.ts": {
+    "mtime": 1778238108.0,
+    "ast_hash": "32708ba359b477d0f6a4a65c48524149",
+    "semantic_hash": "32708ba359b477d0f6a4a65c48524149"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/partner-balance/partner-balance4.component.ts": {
+    "mtime": 1778238156.0,
+    "ast_hash": "8fd45fc347f07d7685f88050a3d857db",
+    "semantic_hash": "8fd45fc347f07d7685f88050a3d857db"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/partner-balance/partner-balance6.component.ts": {
+    "mtime": 1778238162.0,
+    "ast_hash": "29cbc0deb7763ca398fa61a35af5c2e6",
+    "semantic_hash": "29cbc0deb7763ca398fa61a35af5c2e6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/profit-loss/profit-loss.component.ts": {
+    "mtime": 1786124609.2869503,
+    "ast_hash": "495d91fcddb2a7b52e6f15898acfd76a",
+    "semantic_hash": "495d91fcddb2a7b52e6f15898acfd76a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/suivi-tiers/suivi-tiers.component.ts": {
+    "mtime": 1780757297.0,
+    "ast_hash": "ab97a002783f3b4a057ed0a7ad8ee53c",
+    "semantic_hash": "ab97a002783f3b4a057ed0a7ad8ee53c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/layout/accounting-layout.component.ts": {
+    "mtime": 1787052157.5680213,
+    "ast_hash": "8867ace9d9f919a8722727c1970bb615",
+    "semantic_hash": "8867ace9d9f919a8722727c1970bb615"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/services/accounting.service.ts": {
+    "mtime": 1782205004.0,
+    "ast_hash": "74f332b1843de189acbc86e9af124e2e",
+    "semantic_hash": "74f332b1843de189acbc86e9af124e2e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/services/analytic.service.ts": {
+    "mtime": 1778086424.0,
+    "ast_hash": "f557b63530b4c706795b368317a4e57f",
+    "semantic_hash": "f557b63530b4c706795b368317a4e57f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/services/fiscal-closure.service.ts": {
+    "mtime": 1786984872.768583,
+    "ast_hash": "8317d093f2cd4c12c437c07e4bc70cf2",
+    "semantic_hash": "8317d093f2cd4c12c437c07e4bc70cf2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/services/report.service.ts": {
+    "mtime": 1780757272.0,
+    "ast_hash": "8b71f1b6c4512f96c85488ff9489d444",
+    "semantic_hash": "8b71f1b6c4512f96c85488ff9489d444"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/caisses.routes.ts": {
+    "mtime": 1780758344.0,
+    "ast_hash": "0de3e3e25708686b257038419afff804",
+    "semantic_hash": "0de3e3e25708686b257038419afff804"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/brouillard/brouillard.component.ts": {
+    "mtime": 1780913263.0,
+    "ast_hash": "2c0567a396bc38cd160c443e466246f2",
+    "semantic_hash": "2c0567a396bc38cd160c443e466246f2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/caisse-list/caisse-list.component.ts": {
+    "mtime": 1780651917.0,
+    "ast_hash": "5b20ae3ad2313307d386122abf631a46",
+    "semantic_hash": "5b20ae3ad2313307d386122abf631a46"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/dashboard/caisse-dashboard.component.ts": {
+    "mtime": 1780651934.0,
+    "ast_hash": "22b069bea1ca5266ac53b6da409ecac1",
+    "semantic_hash": "22b069bea1ca5266ac53b6da409ecac1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/operation-form/operation-form.component.ts": {
+    "mtime": 1780908806.0,
+    "ast_hash": "9639e09dba60e3e31e6556007522b316",
+    "semantic_hash": "9639e09dba60e3e31e6556007522b316"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/operation-list/operation-list.component.ts": {
+    "mtime": 1780651941.0,
+    "ast_hash": "2d9db299b24024df21275fde2d382622",
+    "semantic_hash": "2d9db299b24024df21275fde2d382622"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/suivi-tiers/suivi-tiers.component.ts": {
+    "mtime": 1780758294.0,
+    "ast_hash": "05128639636b9e1e904ad7ad72f82392",
+    "semantic_hash": "05128639636b9e1e904ad7ad72f82392"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/layout/caisses-layout.component.ts": {
+    "mtime": 1783336476.3719842,
+    "ast_hash": "d2b70e1d794b12b314e302efade98661",
+    "semantic_hash": "d2b70e1d794b12b314e302efade98661"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/services/caisse.service.ts": {
+    "mtime": 1780653128.0,
+    "ast_hash": "cd12e58fb7a5fb375ae2c584c6d6f954",
+    "semantic_hash": "cd12e58fb7a5fb375ae2c584c6d6f954"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/backup/backup.component.ts": {
+    "mtime": 1786988226.6640892,
+    "ast_hash": "efaa65b922b23e6f506e77fb6a116e76",
+    "semantic_hash": "efaa65b922b23e6f506e77fb6a116e76"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/company/company.component.ts": {
+    "mtime": 1786381972.871248,
+    "ast_hash": "eaa06dacb60d83a98f4b3a2c52803a14",
+    "semantic_hash": "eaa06dacb60d83a98f4b3a2c52803a14"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/fiscal-closure/fiscal-closure.component.ts": {
+    "mtime": 1787052105.3263376,
+    "ast_hash": "4cc2c307a22823e3ee34a0826c955250",
+    "semantic_hash": "4cc2c307a22823e3ee34a0826c955250"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/groups/groups.component.ts": {
+    "mtime": 1785325240.0859485,
+    "ast_hash": "7856fb9a30709bb974c8da0a04e0d467",
+    "semantic_hash": "7856fb9a30709bb974c8da0a04e0d467"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/roles/roles.component.ts": {
+    "mtime": 1783054026.1774786,
+    "ast_hash": "87e347e2fdbc9b4ffa09b67b906b7f70",
+    "semantic_hash": "87e347e2fdbc9b4ffa09b67b906b7f70"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/supervision/supervision.component.ts": {
+    "mtime": 1780923374.0,
+    "ast_hash": "c543919457671b9122c2eeb5131df46c",
+    "semantic_hash": "c543919457671b9122c2eeb5131df46c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/users/users.component.ts": {
+    "mtime": 1781278436.0,
+    "ast_hash": "9721b278bd8de4d8c9600ba0d0b5122a",
+    "semantic_hash": "9721b278bd8de4d8c9600ba0d0b5122a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/config.routes.ts": {
+    "mtime": 1787052121.0298595,
+    "ast_hash": "b63e90ac785df943af9ec3f5781acd14",
+    "semantic_hash": "b63e90ac785df943af9ec3f5781acd14"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/layout/config-layout.component.ts": {
+    "mtime": 1787052194.5877535,
+    "ast_hash": "3d0b7b17b420f88da6872eb4dbbe8fdb",
+    "semantic_hash": "3d0b7b17b420f88da6872eb4dbbe8fdb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/services/config.service.ts": {
+    "mtime": 1786381910.328579,
+    "ast_hash": "e1e6dc9cb5fdd41ad2ce0a828d62d04d",
+    "semantic_hash": "e1e6dc9cb5fdd41ad2ce0a828d62d04d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/dashboard/helpdesk-dashboard.component.ts": {
+    "mtime": 1781255131.0,
+    "ast_hash": "26d9bcde8b7e77d19b094ed232935e51",
+    "semantic_hash": "26d9bcde8b7e77d19b094ed232935e51"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/ticket-detail/ticket-detail.component.ts": {
+    "mtime": 1786983732.9693222,
+    "ast_hash": "d14c861cc9afe296344876f9cb4bf7e5",
+    "semantic_hash": "d14c861cc9afe296344876f9cb4bf7e5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/ticket-list/ticket-list.component.ts": {
+    "mtime": 1781258567.0,
+    "ast_hash": "57ca88a2630be7f7184522d7609c31fc",
+    "semantic_hash": "57ca88a2630be7f7184522d7609c31fc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/helpdesk.routes.ts": {
+    "mtime": 1781255131.0,
+    "ast_hash": "f2bed39fa7faeb5743d4330454db94c0",
+    "semantic_hash": "f2bed39fa7faeb5743d4330454db94c0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/layout/helpdesk-layout.component.ts": {
+    "mtime": 1783336642.1319833,
+    "ast_hash": "1f62df859931aaea441946f6e340d914",
+    "semantic_hash": "1f62df859931aaea441946f6e340d914"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/services/helpdesk.service.ts": {
+    "mtime": 1786983732.9693222,
+    "ast_hash": "3474f6bd7abd9fe804e724965fbc80a1",
+    "semantic_hash": "3474f6bd7abd9fe804e724965fbc80a1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/config/payroll-config.component.ts": {
+    "mtime": 1783537297.7620623,
+    "ast_hash": "0b53c3f8a09bac6d7f70b33b897bab30",
+    "semantic_hash": "0b53c3f8a09bac6d7f70b33b897bab30"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/contract-detail/contract-detail.component.ts": {
+    "mtime": 1783487965.8305678,
+    "ast_hash": "35ed2bf217e453c94308d020d5572b19",
+    "semantic_hash": "35ed2bf217e453c94308d020d5572b19"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/contracts/contracts.component.ts": {
+    "mtime": 1783487853.9639444,
+    "ast_hash": "7c88308f4d3914f96b0b315cbc028bd1",
+    "semantic_hash": "7c88308f4d3914f96b0b315cbc028bd1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/employees/employees.component.ts": {
+    "mtime": 1783327546.7479827,
+    "ast_hash": "2475737347fa15f7e6c5aabcb9a82411",
+    "semantic_hash": "2475737347fa15f7e6c5aabcb9a82411"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/leaves/leaves.component.ts": {
+    "mtime": 1783592859.5700638,
+    "ast_hash": "d320255222a7f9a399ec817e2f132c05",
+    "semantic_hash": "d320255222a7f9a399ec817e2f132c05"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/organisation/organisation.component.ts": {
+    "mtime": 1783587078.1573012,
+    "ast_hash": "5147999cb1752e3482f84b7603316c77",
+    "semantic_hash": "5147999cb1752e3482f84b7603316c77"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/payroll-register/payroll-register.component.ts": {
+    "mtime": 1783079226.6417212,
+    "ast_hash": "336f1a8a1e0bbac87fa3417b2fa8f33c",
+    "semantic_hash": "336f1a8a1e0bbac87fa3417b2fa8f33c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/payslip-detail/payslip-detail.component.ts": {
+    "mtime": 1783537482.6460612,
+    "ast_hash": "e53230a250443977ffb916c83e4b293a",
+    "semantic_hash": "e53230a250443977ffb916c83e4b293a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/payslips/payslips.component.ts": {
+    "mtime": 1783088442.3974526,
+    "ast_hash": "20d2d9d48ca7419952f5793801b5af96",
+    "semantic_hash": "20d2d9d48ca7419952f5793801b5af96"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/runs/runs.component.ts": {
+    "mtime": 1783068926.5188541,
+    "ast_hash": "5f9a18477778e232633efce1b0cf1b55",
+    "semantic_hash": "5f9a18477778e232633efce1b0cf1b55"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/components/shared/account-picker.component.ts": {
+    "mtime": 1783082422.5820415,
+    "ast_hash": "1899d494b36e79ca6172353ec0cdf18c",
+    "semantic_hash": "1899d494b36e79ca6172353ec0cdf18c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/hr.routes.ts": {
+    "mtime": 1783537374.6460617,
+    "ast_hash": "7e79fd8b060d7b4c34356ed74dd9d95e",
+    "semantic_hash": "7e79fd8b060d7b4c34356ed74dd9d95e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/layout/hr-layout.component.ts": {
+    "mtime": 1787042862.924333,
+    "ast_hash": "2bc9594fa079bccdc5f9fcb1c27a2f95",
+    "semantic_hash": "2bc9594fa079bccdc5f9fcb1c27a2f95"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/services/hr.service.ts": {
+    "mtime": 1783537193.9660628,
+    "ast_hash": "fd81f62909ca9152c7c7e468b148267e",
+    "semantic_hash": "fd81f62909ca9152c7c7e468b148267e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/hr/utils/french-words.ts": {
+    "mtime": 1783079097.0347908,
+    "ast_hash": "af82880e671ce68c767d86e3a91eba62",
+    "semantic_hash": "af82880e671ce68c767d86e3a91eba62"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/dashboard/purchase-dashboard.component.ts": {
+    "mtime": 1780076753.0,
+    "ast_hash": "66ddaf22046e4e8f54be7a406c021d57",
+    "semantic_hash": "66ddaf22046e4e8f54be7a406c021d57"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/enlevements/enlevement-config.component.ts": {
+    "mtime": 1779859522.0,
+    "ast_hash": "cdb225cb06475192a23a87b77ef8ebb4",
+    "semantic_hash": "cdb225cb06475192a23a87b77ef8ebb4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/enlevements/enlevement-list.component.ts": {
+    "mtime": 1784911539.9478738,
+    "ast_hash": "752a351fb52a1c751b0ec50ee82aa1a1",
+    "semantic_hash": "752a351fb52a1c751b0ec50ee82aa1a1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/avoir-list.component.ts": {
+    "mtime": 1786962345.7592907,
+    "ast_hash": "8ab4a6c996edeaaa72818c312c4f2a9b",
+    "semantic_hash": "8ab4a6c996edeaaa72818c312c4f2a9b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/invoice-detail.component.ts": {
+    "mtime": 1784711206.3114223,
+    "ast_hash": "639c8c73559dbf32e3e7af3a6afc453e",
+    "semantic_hash": "639c8c73559dbf32e3e7af3a6afc453e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/invoice-list.component.ts": {
+    "mtime": 1784371447.524378,
+    "ast_hash": "6afbe8b35903f0caa30639363c5e0336",
+    "semantic_hash": "6afbe8b35903f0caa30639363c5e0336"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/orders/order-form.component.ts": {
+    "mtime": 1786962336.385209,
+    "ast_hash": "8fc5b75101cdbcc63b0446b7f0665c28",
+    "semantic_hash": "8fc5b75101cdbcc63b0446b7f0665c28"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/orders/order-list.component.ts": {
+    "mtime": 1782495529.0,
+    "ast_hash": "c48ae19cbf2f68e86a620b0dc16ced11",
+    "semantic_hash": "c48ae19cbf2f68e86a620b0dc16ced11"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/payments/payment-list.component.ts": {
+    "mtime": 1779857858.0,
+    "ast_hash": "157d8b721e14d133f45185a20d3c95e0",
+    "semantic_hash": "157d8b721e14d133f45185a20d3c95e0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/rapport-enlevement.component.ts": {
+    "mtime": 1780667751.0,
+    "ast_hash": "0ca272a6b5571081df49e2a4cbf9928d",
+    "semantic_hash": "0ca272a6b5571081df49e2a4cbf9928d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/rapport-remise.component.ts": {
+    "mtime": 1780667678.0,
+    "ast_hash": "f24ff7f0b20234ed542868f773c5c61c",
+    "semantic_hash": "f24ff7f0b20234ed542868f773c5c61c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/stats-achats/stats-achats.component.ts": {
+    "mtime": 1786377635.9746404,
+    "ast_hash": "85449d37939a741aa1cfb1afd1535e7e",
+    "semantic_hash": "85449d37939a741aa1cfb1afd1535e7e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/remises/remise-list.component.ts": {
+    "mtime": 1779855726.0,
+    "ast_hash": "4bd8421aca57df3800e107a092eb07ac",
+    "semantic_hash": "4bd8421aca57df3800e107a092eb07ac"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/suppliers/fournisseur-price.component.ts": {
+    "mtime": 1782738393.0509644,
+    "ast_hash": "bc188a81d743c447f59a9595af58d15d",
+    "semantic_hash": "bc188a81d743c447f59a9595af58d15d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/suppliers/supplier-list.component.ts": {
+    "mtime": 1778238614.0,
+    "ast_hash": "82216505483230f0bd6861fea06ee3b4",
+    "semantic_hash": "82216505483230f0bd6861fea06ee3b4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/layout/purchase-layout.component.ts": {
+    "mtime": 1786377716.6997728,
+    "ast_hash": "65819e133f90f05a3526a66f90f4ddd4",
+    "semantic_hash": "65819e133f90f05a3526a66f90f4ddd4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/purchases.routes.ts": {
+    "mtime": 1786377708.7417028,
+    "ast_hash": "3d8a0ddbaf63721140329d008e4c61f3",
+    "semantic_hash": "3d8a0ddbaf63721140329d008e4c61f3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/services/enlevement.service.ts": {
+    "mtime": 1780595718.0,
+    "ast_hash": "5847c89b2e2adf08501c91db690de3e1",
+    "semantic_hash": "5847c89b2e2adf08501c91db690de3e1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/services/purchase.service.ts": {
+    "mtime": 1786377577.4603453,
+    "ast_hash": "9045b87991dc712e90d979c90c56b26a",
+    "semantic_hash": "9045b87991dc712e90d979c90c56b26a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/services/remise.service.ts": {
+    "mtime": 1780595733.0,
+    "ast_hash": "1348804e8fec0185c8a8699b538a7888",
+    "semantic_hash": "1348804e8fec0185c8a8699b538a7888"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/clients/client-list.component.ts": {
+    "mtime": 1778238616.0,
+    "ast_hash": "a944b0fbd1c63599f46ae4041348e39c",
+    "semantic_hash": "a944b0fbd1c63599f46ae4041348e39c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/clients/client-price.component.ts": {
+    "mtime": 1782211437.0,
+    "ast_hash": "68822edec9f6bbf61e59fbebf025b8f6",
+    "semantic_hash": "68822edec9f6bbf61e59fbebf025b8f6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/dashboard/sales-dashboard.component.ts": {
+    "mtime": 1780076519.0,
+    "ast_hash": "7a5f538fed81d94a76f86dd8effa7d0f",
+    "semantic_hash": "7a5f538fed81d94a76f86dd8effa7d0f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-config/eleader-config.component.ts": {
+    "mtime": 1781962507.0,
+    "ast_hash": "dcac5252cdc1117a0f9525ce9b3d04d7",
+    "semantic_hash": "dcac5252cdc1117a0f9525ce9b3d04d7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-import/eleader-import.component.ts": {
+    "mtime": 1778253350.0,
+    "ast_hash": "7546f7cfeeaabda60728e98d8531dd49",
+    "semantic_hash": "7546f7cfeeaabda60728e98d8531dd49"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-journal/eleader-journal.component.ts": {
+    "mtime": 1778253382.0,
+    "ast_hash": "4a27d7bc18a2d13aa729771a17e4cebc",
+    "semantic_hash": "4a27d7bc18a2d13aa729771a17e4cebc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-orders/eleader-orders.component.ts": {
+    "mtime": 1778251826.0,
+    "ast_hash": "ee38f21c0b689d1a8b65c242d03ca153",
+    "semantic_hash": "ee38f21c0b689d1a8b65c242d03ca153"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/avoir-list.component.ts": {
+    "mtime": 1783002904.9430883,
+    "ast_hash": "1fdc506f8619e5e1b8be8405f3c5de22",
+    "semantic_hash": "1fdc506f8619e5e1b8be8405f3c5de22"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/invoice-detail.component.ts": {
+    "mtime": 1785172844.666777,
+    "ast_hash": "fe8242826a4ad40f1813da577fccb899",
+    "semantic_hash": "fe8242826a4ad40f1813da577fccb899"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/invoice-list.component.ts": {
+    "mtime": 1782495436.0,
+    "ast_hash": "3a39298cfa3d2599643636525e894219",
+    "semantic_hash": "3a39298cfa3d2599643636525e894219"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/orders/order-form.component.ts": {
+    "mtime": 1782298863.0,
+    "ast_hash": "f4c51e6cb86fef6f0c95a516af0092b1",
+    "semantic_hash": "f4c51e6cb86fef6f0c95a516af0092b1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/orders/order-list.component.ts": {
+    "mtime": 1782495447.0,
+    "ast_hash": "03e88324fceac24e63297f0267f0ea77",
+    "semantic_hash": "03e88324fceac24e63297f0267f0ea77"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/payments/sales-payment-list.component.ts": {
+    "mtime": 1780057152.0,
+    "ast_hash": "d409ed8c343ce02b93799cbd5cc0a622",
+    "semantic_hash": "d409ed8c343ce02b93799cbd5cc0a622"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/precomptes/precompte-config.component.ts": {
+    "mtime": 1784911604.1331377,
+    "ast_hash": "e24a67996b71362b47f562b3c4065007",
+    "semantic_hash": "e24a67996b71362b47f562b3c4065007"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/etat-commercial/etat-commercial.component.ts": {
+    "mtime": 1775386388.0,
+    "ast_hash": "732b207f4571ab544a90abcdb3499713",
+    "semantic_hash": "732b207f4571ab544a90abcdb3499713"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/rapport-consolide/rapport-consolide.component.ts": {
+    "mtime": 1775386396.0,
+    "ast_hash": "e18ffc53a4fc9ae695bd4deff96d1317",
+    "semantic_hash": "e18ffc53a4fc9ae695bd4deff96d1317"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/rapport-ristourne/rapport-ristourne.component.ts": {
+    "mtime": 1780654011.0,
+    "ast_hash": "a95fc1429528195ae7b1a74c54eaeba5",
+    "semantic_hash": "a95fc1429528195ae7b1a74c54eaeba5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/sales-reports.component.ts": {
+    "mtime": 1782321838.0,
+    "ast_hash": "ddf9a083f28ef4b6a0efae9c9e39084d",
+    "semantic_hash": "ddf9a083f28ef4b6a0efae9c9e39084d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/stats-ventes/stats-ventes.component.ts": {
+    "mtime": 1780591675.0,
+    "ast_hash": "042ad268ed48736765ba5cfd1a4042cf",
+    "semantic_hash": "042ad268ed48736765ba5cfd1a4042cf"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/ristournes/ristourne-list.component.ts": {
+    "mtime": 1784711677.7303193,
+    "ast_hash": "e404b8dd0acac2c4b6bb8af719fe4e5a",
+    "semantic_hash": "e404b8dd0acac2c4b6bb8af719fe4e5a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/layout/sales-layout.component.ts": {
+    "mtime": 1784736271.9462817,
+    "ast_hash": "a6672f478551a56979839f8b7b1022f5",
+    "semantic_hash": "a6672f478551a56979839f8b7b1022f5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/sales.routes.ts": {
+    "mtime": 1780403788.0,
+    "ast_hash": "f595d30bb1e3bfeb61725cf3f51aefee",
+    "semantic_hash": "f595d30bb1e3bfeb61725cf3f51aefee"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/services/eleader.service.ts": {
+    "mtime": 1781962467.0,
+    "ast_hash": "b87acf36a36d0a35ce922fa5496f8636",
+    "semantic_hash": "b87acf36a36d0a35ce922fa5496f8636"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/services/ristourne.service.ts": {
+    "mtime": 1780593343.0,
+    "ast_hash": "eff328d0e4fca6345b7a70ddbe1c5bba",
+    "semantic_hash": "eff328d0e4fca6345b7a70ddbe1c5bba"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/services/sales.service.ts": {
+    "mtime": 1785172710.7782936,
+    "ast_hash": "368e175874163fb4515b10a99f650f37",
+    "semantic_hash": "368e175874163fb4515b10a99f650f37"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/adjustments/adjustment-list.component.ts": {
+    "mtime": 1783939552.387009,
+    "ast_hash": "f5f5f5aae63a3e0b156922a08acfb80f",
+    "semantic_hash": "f5f5f5aae63a3e0b156922a08acfb80f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/agences/agency-list.component.ts": {
+    "mtime": 1775191916.0,
+    "ast_hash": "b59a112c3f527a48e4e62f964062b1ee",
+    "semantic_hash": "b59a112c3f527a48e4e62f964062b1ee"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/movement-analysis.component.ts": {
+    "mtime": 1783940752.775713,
+    "ast_hash": "c3f304dc02ec14eda71bab64d8d8904d",
+    "semantic_hash": "c3f304dc02ec14eda71bab64d8d8904d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-analysis-report.component.ts": {
+    "mtime": 1780631276.0,
+    "ast_hash": "ddf2da4148002f884bf946cb4e85e2aa",
+    "semantic_hash": "ddf2da4148002f884bf946cb4e85e2aa"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-movements.component.ts": {
+    "mtime": 1780630847.0,
+    "ast_hash": "6f1d2a6c2613b74e6af1af9bf80f0d8e",
+    "semantic_hash": "6f1d2a6c2613b74e6af1af9bf80f0d8e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-report.component.ts": {
+    "mtime": 1780630785.0,
+    "ast_hash": "c6ec281964a25c8a5ffe5555c789d076",
+    "semantic_hash": "c6ec281964a25c8a5ffe5555c789d076"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-valuation.component.ts": {
+    "mtime": 1775218008.0,
+    "ast_hash": "48ce0f47c3067dd943168b013a2f4f14",
+    "semantic_hash": "48ce0f47c3067dd943168b013a2f4f14"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/casses/casse-list.component.ts": {
+    "mtime": 1785146265.470967,
+    "ast_hash": "d3d03924885d9aae5d6515b96ebe0ea3",
+    "semantic_hash": "d3d03924885d9aae5d6515b96ebe0ea3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/categories/category-list.component.ts": {
+    "mtime": 1779812914.0,
+    "ast_hash": "540eab5632e981500ac12124c2e37682",
+    "semantic_hash": "540eab5632e981500ac12124c2e37682"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/dashboard/stock-dashboard.component.ts": {
+    "mtime": 1779788604.0,
+    "ast_hash": "1a9a3470f245ae8677bc449ca73d4ab0",
+    "semantic_hash": "1a9a3470f245ae8677bc449ca73d4ab0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/livraisons/livraison-detail.component.ts": {
+    "mtime": 1785343060.486203,
+    "ast_hash": "46595cce720726e981ecae773ab176b3",
+    "semantic_hash": "46595cce720726e981ecae773ab176b3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/livraisons/livraison-list.component.ts": {
+    "mtime": 1782495619.0,
+    "ast_hash": "4c9e483bdf2543a6c5f503e3312e57fb",
+    "semantic_hash": "4c9e483bdf2543a6c5f503e3312e57fb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/locations/location-list.component.ts": {
+    "mtime": 1778238600.0,
+    "ast_hash": "6bde4233a222f8f1c648aff8d6089998",
+    "semantic_hash": "6bde4233a222f8f1c648aff8d6089998"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/picking-types/picking-type-list.component.ts": {
+    "mtime": 1775218164.0,
+    "ast_hash": "2012d1d311f4bf11f1d173769e4bcf90",
+    "semantic_hash": "2012d1d311f4bf11f1d173769e4bcf90"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/products/product-list.component.ts": {
+    "mtime": 1786962324.990132,
+    "ast_hash": "351306b44af1daacf73c0e886ed59a6b",
+    "semantic_hash": "351306b44af1daacf73c0e886ed59a6b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/bordereau.component.ts": {
+    "mtime": 1776843952.0,
+    "ast_hash": "0c6cece0f7ac6a069fc9f22fa1c029fc",
+    "semantic_hash": "0c6cece0f7ac6a069fc9f22fa1c029fc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/reception-detail.component.ts": {
+    "mtime": 1786991856.0398,
+    "ast_hash": "897908a37ba66e430ae43d43f2856afb",
+    "semantic_hash": "897908a37ba66e430ae43d43f2856afb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/reception-list.component.ts": {
+    "mtime": 1783101498.9906716,
+    "ast_hash": "63fb693337b982fdefb26f6021f56679",
+    "semantic_hash": "63fb693337b982fdefb26f6021f56679"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/stock-view/stock-view.component.ts": {
+    "mtime": 1782232305.0,
+    "ast_hash": "957adeaf6b32360496f759599783c705",
+    "semantic_hash": "957adeaf6b32360496f759599783c705"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-detail.component.ts": {
+    "mtime": 1783681048.3272831,
+    "ast_hash": "21875bbead3aee5acb33de5bc0dff889",
+    "semantic_hash": "21875bbead3aee5acb33de5bc0dff889"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-list.component.ts": {
+    "mtime": 1782495665.0,
+    "ast_hash": "5c3f73e7e5d5c353f37ada23c68e2aa0",
+    "semantic_hash": "5c3f73e7e5d5c353f37ada23c68e2aa0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-reception-list.component.ts": {
+    "mtime": 1779787744.0,
+    "ast_hash": "d940bcf244f4cf07d57712be6dafcbc8",
+    "semantic_hash": "d940bcf244f4cf07d57712be6dafcbc8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/warehouses/warehouse-list.component.ts": {
+    "mtime": 1782739315.8252864,
+    "ast_hash": "3d315f7fc54172712c1ed6c3da4585c6",
+    "semantic_hash": "3d315f7fc54172712c1ed6c3da4585c6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/layout/stock-layout.component.ts": {
+    "mtime": 1785141852.988136,
+    "ast_hash": "a0715e79e01d0926796cf37d767bb7e2",
+    "semantic_hash": "a0715e79e01d0926796cf37d767bb7e2"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/services/stock.service.ts": {
+    "mtime": 1786991818.351379,
+    "ast_hash": "b00a91c600ee267662e719903b4d4c15",
+    "semantic_hash": "b00a91c600ee267662e719903b4d4c15"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/stock.routes.ts": {
+    "mtime": 1785141825.0797243,
+    "ast_hash": "ee0424d6a0828d2efeeb6c2d700af54f",
+    "semantic_hash": "ee0424d6a0828d2efeeb6c2d700af54f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/components/dashboard/sync-dashboard.component.ts": {
+    "mtime": 1787144710.2888935,
+    "ast_hash": "d725d10afe45ba2bb705c98ec6fdcb69",
+    "semantic_hash": "d725d10afe45ba2bb705c98ec6fdcb69"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/layout/sync-layout.component.ts": {
+    "mtime": 1783336597.0919836,
+    "ast_hash": "56238398309caf3cd77c38e2a950eb4c",
+    "semantic_hash": "56238398309caf3cd77c38e2a950eb4c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/services/sync.service.ts": {
+    "mtime": 1787144654.7986307,
+    "ast_hash": "ed84b3467475d28c232fa50b75a94e00",
+    "semantic_hash": "ed84b3467475d28c232fa50b75a94e00"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/sync.routes.ts": {
+    "mtime": 1780305141.0,
+    "ast_hash": "779b05d74fb83fc3d12ff36dbe357e12",
+    "semantic_hash": "779b05d74fb83fc3d12ff36dbe357e12"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/extra-apps/extra-apps.component.ts": {
+    "mtime": 1783099794.244386,
+    "ast_hash": "ee1d223b815757f1ebf0935a5f86300c",
+    "semantic_hash": "ee1d223b815757f1ebf0935a5f86300c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/license-blocked/license-blocked.component.ts": {
+    "mtime": 1785322061.4550061,
+    "ast_hash": "9725d4b237892ed9a87e8f3a73cdcb0a",
+    "semantic_hash": "9725d4b237892ed9a87e8f3a73cdcb0a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/license-pending/license-pending.component.ts": {
+    "mtime": 1785338960.94267,
+    "ast_hash": "2c61ca788561cb7487b274017c96d7f5",
+    "semantic_hash": "2c61ca788561cb7487b274017c96d7f5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/login/login.component.ts": {
+    "mtime": 1781951962.0,
+    "ast_hash": "286096471bb96aa980bbb9f9feee3b89",
+    "semantic_hash": "286096471bb96aa980bbb9f9feee3b89"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/welcome/welcome.component.ts": {
+    "mtime": 1784736112.477594,
+    "ast_hash": "f168f3925bcc5a03969b980a399a2998",
+    "semantic_hash": "f168f3925bcc5a03969b980a399a2998"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/audit-footer/audit-footer.component.ts": {
+    "mtime": 1779175700.0,
+    "ast_hash": "6216527a21adf7e5a044ec29b4066d91",
+    "semantic_hash": "6216527a21adf7e5a044ec29b4066d91"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/audit-trail/audit-trail.component.ts": {
+    "mtime": 1782298853.0,
+    "ast_hash": "a5a5c2a876c74d6c908a803cba357d66",
+    "semantic_hash": "a5a5c2a876c74d6c908a803cba357d66"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/license-readonly-banner/license-readonly-banner.component.ts": {
+    "mtime": 1786992226.0817776,
+    "ast_hash": "cd2094370c328dabbbe4aff838aecbd9",
+    "semantic_hash": "cd2094370c328dabbbe4aff838aecbd9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/print-preview/print-preview.component.ts": {
+    "mtime": 1782825087.8917305,
+    "ast_hash": "8fd19b8335e713e1b96a9433f5b0533d",
+    "semantic_hash": "8fd19b8335e713e1b96a9433f5b0533d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/directives/amount-input.directive.ts": {
+    "mtime": 1780653485.0,
+    "ast_hash": "43251ea72c71ffb52c7a84f82e34992f",
+    "semantic_hash": "43251ea72c71ffb52c7a84f82e34992f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/services/audit.service.ts": {
+    "mtime": 1780912438.0,
+    "ast_hash": "9845b0b1b440b22bee859cb2b2c129e9",
+    "semantic_hash": "9845b0b1b440b22bee859cb2b2c129e9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/services/precompte.service.ts": {
+    "mtime": 1778272654.0,
+    "ast_hash": "b4bfaffde368b1e48b71fa83e1b7274e",
+    "semantic_hash": "b4bfaffde368b1e48b71fa83e1b7274e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/environments/environment.prod.ts": {
+    "mtime": 1781798098.0,
+    "ast_hash": "fb4d5ca3d9e567f0759bc7e3a9c604c1",
+    "semantic_hash": "fb4d5ca3d9e567f0759bc7e3a9c604c1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/environments/environment.ts": {
+    "mtime": 1778484914.0,
+    "ast_hash": "cae379561ad2cfa0fc85ca63c8d1bce0",
+    "semantic_hash": "cae379561ad2cfa0fc85ca63c8d1bce0"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/main.ts": {
+    "mtime": 1775033152.0,
+    "ast_hash": "7e5b8556bc0585ccb2ebd5631da53fdd",
+    "semantic_hash": "7e5b8556bc0585ccb2ebd5631da53fdd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/tsconfig.app.json": {
+    "mtime": 1775386752.0,
+    "ast_hash": "e35200b6f2c3ed9a09866e706cfad362",
+    "semantic_hash": "e35200b6f2c3ed9a09866e706cfad362"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/tsconfig.json": {
+    "mtime": 1783101516.542884,
+    "ast_hash": "3813c8b93ab293cea5763943e2b06ed7",
+    "semantic_hash": "3813c8b93ab293cea5763943e2b06ed7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-accounts.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "2b6ccbad9c01f1f926c3eec959cc50d9",
+    "semantic_hash": "2b6ccbad9c01f1f926c3eec959cc50d9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-lines.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "a0a782193494d2502dda8454b636b3ad",
+    "semantic_hash": "a0a782193494d2502dda8454b636b3ad"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/analytic/analytic-report.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "1ac2e10b7014901b18b39e6b1139b266",
+    "semantic_hash": "1ac2e10b7014901b18b39e6b1139b266"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/cashbook/cashbook.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "bef6334e39dd1ea2119e042140a8d8fb",
+    "semantic_hash": "bef6334e39dd1ea2119e042140a8d8fb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/chart-of-accounts/chart-of-accounts.component.html": {
+    "mtime": 1784798843.339857,
+    "ast_hash": "607f87f5592ac35fe96e624646a60723",
+    "semantic_hash": "607f87f5592ac35fe96e624646a60723"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/dashboard/dashboard.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "3f785d79117b0afb14b1bfa392313b43",
+    "semantic_hash": "3f785d79117b0afb14b1bfa392313b43"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/grand-livre-tiers/grand-livre-tiers.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "8e06ff99ecdea0419b09d2f6df9ca3dd",
+    "semantic_hash": "8e06ff99ecdea0419b09d2f6df9ca3dd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/grand-livre/grand-livre.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "71ae93b7104ea6e83716a946bd11106c",
+    "semantic_hash": "71ae93b7104ea6e83716a946bd11106c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/import/import.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "4bb43c0796b40591deaecd1eecea33bb",
+    "semantic_hash": "4bb43c0796b40591deaecd1eecea33bb"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journal-entries/journal-entries.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "e0039d29eb9df28352168dc2a486b818",
+    "semantic_hash": "e0039d29eb9df28352168dc2a486b818"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journal-entries/journal-entry-form.component.html": {
+    "mtime": 1782292656.0,
+    "ast_hash": "f5a691112e95b0c52dc16312088f6eff",
+    "semantic_hash": "f5a691112e95b0c52dc16312088f6eff"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journals/journal-detail/journal-detail.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "150ed3a72c9dbfd58e86e6bc162f4cba",
+    "semantic_hash": "150ed3a72c9dbfd58e86e6bc162f4cba"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/journals/journals.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "ec69cac6f95e65dc2edba61e417f86cc",
+    "semantic_hash": "ec69cac6f95e65dc2edba61e417f86cc"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/balance-sheet/balance-sheet.component.html": {
+    "mtime": 1786385814.4548252,
+    "ast_hash": "b708e505acb60095c44f0f1e858ca6a9",
+    "semantic_hash": "b708e505acb60095c44f0f1e858ca6a9"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/general-balance/general-balance4.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "7d893a8bc69049a2dada3ae25f1eef6c",
+    "semantic_hash": "7d893a8bc69049a2dada3ae25f1eef6c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/general-balance/general-balance6.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "a05bfcebba9b534e3a3068231bb2ea71",
+    "semantic_hash": "a05bfcebba9b534e3a3068231bb2ea71"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/partner-balance/partner-balance4.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "990c48bd6224dc1876162488a37d6a21",
+    "semantic_hash": "990c48bd6224dc1876162488a37d6a21"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/partner-balance/partner-balance6.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "810ae0a85849306bd7d9cfc892d72d25",
+    "semantic_hash": "810ae0a85849306bd7d9cfc892d72d25"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/reports/profit-loss/profit-loss.component.html": {
+    "mtime": 1786124630.5292351,
+    "ast_hash": "4eb7f92d2b3e759ffc33d3d7ab918285",
+    "semantic_hash": "4eb7f92d2b3e759ffc33d3d7ab918285"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/components/suivi-tiers/suivi-tiers.component.html": {
+    "mtime": 1781807367.0,
+    "ast_hash": "bd6dfa288a9f565ed9354f3b291e47ff",
+    "semantic_hash": "bd6dfa288a9f565ed9354f3b291e47ff"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/accounting/layout/accounting-layout.component.html": {
+    "mtime": 1784736426.067057,
+    "ast_hash": "5e6390b66d2fce3b47c0a897edb81e02",
+    "semantic_hash": "5e6390b66d2fce3b47c0a897edb81e02"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/brouillard/brouillard.component.html": {
+    "mtime": 1780913272.0,
+    "ast_hash": "e66146c5d57fabba7cb062f55e11efec",
+    "semantic_hash": "e66146c5d57fabba7cb062f55e11efec"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/caisse-list/caisse-list.component.html": {
+    "mtime": 1780651925.0,
+    "ast_hash": "358b8cf41ea19578ad0dd6204605646c",
+    "semantic_hash": "358b8cf41ea19578ad0dd6204605646c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/dashboard/caisse-dashboard.component.html": {
+    "mtime": 1780639294.0,
+    "ast_hash": "e7442b61977b5cfda5c0625fbfe5e2e5",
+    "semantic_hash": "e7442b61977b5cfda5c0625fbfe5e2e5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/operation-form/operation-form.component.html": {
+    "mtime": 1780908826.0,
+    "ast_hash": "2f59d6c80cfd6a6f47ead656d6fa5f2f",
+    "semantic_hash": "2f59d6c80cfd6a6f47ead656d6fa5f2f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/operation-list/operation-list.component.html": {
+    "mtime": 1780639501.0,
+    "ast_hash": "17f03cc7b90182049eb2305ca54da2c5",
+    "semantic_hash": "17f03cc7b90182049eb2305ca54da2c5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/components/suivi-tiers/suivi-tiers.component.html": {
+    "mtime": 1780758493.0,
+    "ast_hash": "58920b98f1880dc6b3f8dd3f01077cb1",
+    "semantic_hash": "58920b98f1880dc6b3f8dd3f01077cb1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/caisses/layout/caisses-layout.component.html": {
+    "mtime": 1783336190.155986,
+    "ast_hash": "58fbb1cbf9453dba7f1cae35037be270",
+    "semantic_hash": "58fbb1cbf9453dba7f1cae35037be270"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/backup/backup.component.html": {
+    "mtime": 1783158998.7278404,
+    "ast_hash": "fc05585b4d424c23d94db404ca197827",
+    "semantic_hash": "fc05585b4d424c23d94db404ca197827"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/company/company.component.html": {
+    "mtime": 1786381937.0000134,
+    "ast_hash": "111cc46adfaed923cabee2183784e2bf",
+    "semantic_hash": "111cc46adfaed923cabee2183784e2bf"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/fiscal-closure/fiscal-closure.component.html": {
+    "mtime": 1786984927.0926971,
+    "ast_hash": "69b30db3026567c840fda7992e3907db",
+    "semantic_hash": "69b30db3026567c840fda7992e3907db"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/groups/groups.component.html": {
+    "mtime": 1785333411.600869,
+    "ast_hash": "c7cbf93e9d6586bbc23dacf7c64f609e",
+    "semantic_hash": "c7cbf93e9d6586bbc23dacf7c64f609e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/roles/roles.component.html": {
+    "mtime": 1783050895.9579608,
+    "ast_hash": "d8893a7000e400d33426f41664677a4b",
+    "semantic_hash": "d8893a7000e400d33426f41664677a4b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/supervision/supervision.component.html": {
+    "mtime": 1780913533.0,
+    "ast_hash": "53a9c303a011b4424e7dd7c826ca7837",
+    "semantic_hash": "53a9c303a011b4424e7dd7c826ca7837"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/components/users/users.component.html": {
+    "mtime": 1780337006.0,
+    "ast_hash": "7887733dfe487d086fb2d1cea142b6ea",
+    "semantic_hash": "7887733dfe487d086fb2d1cea142b6ea"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/config/layout/config-layout.component.html": {
+    "mtime": 1783336674.315983,
+    "ast_hash": "e87f501c882f574b7ece106ac4158637",
+    "semantic_hash": "e87f501c882f574b7ece106ac4158637"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/dashboard/helpdesk-dashboard.component.html": {
+    "mtime": 1781256550.0,
+    "ast_hash": "75848edda040730b8d76adc46a5d9e67",
+    "semantic_hash": "75848edda040730b8d76adc46a5d9e67"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/ticket-detail/ticket-detail.component.html": {
+    "mtime": 1786983732.9693222,
+    "ast_hash": "8d6dbf4b57836d8a31994d261653dac6",
+    "semantic_hash": "8d6dbf4b57836d8a31994d261653dac6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/components/ticket-list/ticket-list.component.html": {
+    "mtime": 1781257751.0,
+    "ast_hash": "b161c1f80f94b53e06724f019f060681",
+    "semantic_hash": "b161c1f80f94b53e06724f019f060681"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/helpdesk/layout/helpdesk-layout.component.html": {
+    "mtime": 1783336625.5039833,
+    "ast_hash": "1b3e664aafd4ac7df057de2075d6df10",
+    "semantic_hash": "1b3e664aafd4ac7df057de2075d6df10"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/dashboard/purchase-dashboard.component.html": {
+    "mtime": 1780076794.0,
+    "ast_hash": "5f3341432cca686b8edfad260c53903a",
+    "semantic_hash": "5f3341432cca686b8edfad260c53903a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/enlevements/enlevement-config.component.html": {
+    "mtime": 1784911083.350728,
+    "ast_hash": "8f723ab1c03772c17bb5adb230bb0127",
+    "semantic_hash": "8f723ab1c03772c17bb5adb230bb0127"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/enlevements/enlevement-list.component.html": {
+    "mtime": 1784911570.5125074,
+    "ast_hash": "df0dda0ce8b5ce34387925e4d863c881",
+    "semantic_hash": "df0dda0ce8b5ce34387925e4d863c881"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/avoir-list.component.html": {
+    "mtime": 1783002566.1730719,
+    "ast_hash": "5c19d0a170e9e81d202d02b11968a3b1",
+    "semantic_hash": "5c19d0a170e9e81d202d02b11968a3b1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/invoice-detail.component.html": {
+    "mtime": 1784711184.6276572,
+    "ast_hash": "d9f5a4763ea4a37445ecd44a318b162a",
+    "semantic_hash": "d9f5a4763ea4a37445ecd44a318b162a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/invoices/invoice-list.component.html": {
+    "mtime": 1783969048.6307008,
+    "ast_hash": "630b15342b3ef2ade0f3d3552e2816e6",
+    "semantic_hash": "630b15342b3ef2ade0f3d3552e2816e6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/orders/order-form.component.html": {
+    "mtime": 1783708897.7940595,
+    "ast_hash": "aa3b56af2fbde48ce23f04a658e4ea07",
+    "semantic_hash": "aa3b56af2fbde48ce23f04a658e4ea07"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/orders/order-list.component.html": {
+    "mtime": 1782495556.0,
+    "ast_hash": "c5321d150d2a4191888f1d1176e75e35",
+    "semantic_hash": "c5321d150d2a4191888f1d1176e75e35"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/payments/payment-list.component.html": {
+    "mtime": 1779857852.0,
+    "ast_hash": "add127087560f441156af3e79acc0b37",
+    "semantic_hash": "add127087560f441156af3e79acc0b37"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/rapport-enlevement.component.html": {
+    "mtime": 1780595787.0,
+    "ast_hash": "3cf217feb25b5ffaa175b6e72890c551",
+    "semantic_hash": "3cf217feb25b5ffaa175b6e72890c551"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/rapport-remise.component.html": {
+    "mtime": 1780595834.0,
+    "ast_hash": "0aed23b5edd53bc653e8454a28c24f9d",
+    "semantic_hash": "0aed23b5edd53bc653e8454a28c24f9d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/rapports/stats-achats/stats-achats.component.html": {
+    "mtime": 1786377661.8575454,
+    "ast_hash": "887b3d956168d7827d6b0626b60dbd62",
+    "semantic_hash": "887b3d956168d7827d6b0626b60dbd62"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/remises/remise-list.component.html": {
+    "mtime": 1779855808.0,
+    "ast_hash": "be37237e751fa83975e637fcdfd47156",
+    "semantic_hash": "be37237e751fa83975e637fcdfd47156"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/suppliers/fournisseur-price.component.html": {
+    "mtime": 1782740126.9145029,
+    "ast_hash": "b265946977768a5fc39b3627bc9a80d7",
+    "semantic_hash": "b265946977768a5fc39b3627bc9a80d7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/components/suppliers/supplier-list.component.html": {
+    "mtime": 1778951798.0,
+    "ast_hash": "1366886a0a55245dcee304a4eaa94907",
+    "semantic_hash": "1366886a0a55245dcee304a4eaa94907"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/purchases/layout/purchase-layout.component.html": {
+    "mtime": 1784736315.7516177,
+    "ast_hash": "9208b774fb8ca1ab6d66264abedc9de3",
+    "semantic_hash": "9208b774fb8ca1ab6d66264abedc9de3"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/clients/client-list.component.html": {
+    "mtime": 1780736693.0,
+    "ast_hash": "149d0080956b685975d124bf02ae539d",
+    "semantic_hash": "149d0080956b685975d124bf02ae539d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/clients/client-price.component.html": {
+    "mtime": 1782211556.0,
+    "ast_hash": "fbe10406ae359a64d0325e7c39352ee4",
+    "semantic_hash": "fbe10406ae359a64d0325e7c39352ee4"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/dashboard/sales-dashboard.component.html": {
+    "mtime": 1780076536.0,
+    "ast_hash": "411adbf4e90e58d5f16f643e27f5a526",
+    "semantic_hash": "411adbf4e90e58d5f16f643e27f5a526"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-config/eleader-config.component.html": {
+    "mtime": 1781962649.0,
+    "ast_hash": "6ea199d7324ab5fee6678dfef682091e",
+    "semantic_hash": "6ea199d7324ab5fee6678dfef682091e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-import/eleader-import.component.html": {
+    "mtime": 1778253338.0,
+    "ast_hash": "4f3dc9320ecfcf31696358180eeffcd1",
+    "semantic_hash": "4f3dc9320ecfcf31696358180eeffcd1"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-journal/eleader-journal.component.html": {
+    "mtime": 1778253390.0,
+    "ast_hash": "eb43037dc57df576b8c5dbb4a151401c",
+    "semantic_hash": "eb43037dc57df576b8c5dbb4a151401c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/eleader/eleader-orders/eleader-orders.component.html": {
+    "mtime": 1778251814.0,
+    "ast_hash": "c4a3bf47fb34bca4e35859d4636bc07b",
+    "semantic_hash": "c4a3bf47fb34bca4e35859d4636bc07b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/avoir-list.component.html": {
+    "mtime": 1783002919.4472594,
+    "ast_hash": "5a4313403178b2957f0a78dca23d2617",
+    "semantic_hash": "5a4313403178b2957f0a78dca23d2617"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/invoice-detail.component.html": {
+    "mtime": 1785172835.3467836,
+    "ast_hash": "167a416dfc4513305e776714b8d53122",
+    "semantic_hash": "167a416dfc4513305e776714b8d53122"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/invoices/invoice-list.component.html": {
+    "mtime": 1782495489.0,
+    "ast_hash": "b850276f0ddaa589af59f5e07a61f224",
+    "semantic_hash": "b850276f0ddaa589af59f5e07a61f224"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/orders/order-form.component.html": {
+    "mtime": 1782830556.5054128,
+    "ast_hash": "bb58c9ccd1c3b98f75e621239bfdfaff",
+    "semantic_hash": "bb58c9ccd1c3b98f75e621239bfdfaff"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/orders/order-list.component.html": {
+    "mtime": 1782495526.0,
+    "ast_hash": "a9a89c17a278b54630da9a3a6c711e23",
+    "semantic_hash": "a9a89c17a278b54630da9a3a6c711e23"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/payments/sales-payment-list.component.html": {
+    "mtime": 1780057204.0,
+    "ast_hash": "add760b87e531a9133a440e7e18ae47c",
+    "semantic_hash": "add760b87e531a9133a440e7e18ae47c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/precomptes/precompte-config.component.html": {
+    "mtime": 1784911639.733459,
+    "ast_hash": "204f2ba884f7519aee31d4c8594c351c",
+    "semantic_hash": "204f2ba884f7519aee31d4c8594c351c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/etat-commercial/etat-commercial.component.html": {
+    "mtime": 1781805869.0,
+    "ast_hash": "ae42512ad499cd3c6c926d8aa1b53586",
+    "semantic_hash": "ae42512ad499cd3c6c926d8aa1b53586"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/rapport-consolide/rapport-consolide.component.html": {
+    "mtime": 1781805877.0,
+    "ast_hash": "c3abe3578250ab3a1f4f643fa8a75adf",
+    "semantic_hash": "c3abe3578250ab3a1f4f643fa8a75adf"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/rapport-ristourne/rapport-ristourne.component.html": {
+    "mtime": 1780593401.0,
+    "ast_hash": "1f648a59ce17c7197317da2b9c338f6a",
+    "semantic_hash": "1f648a59ce17c7197317da2b9c338f6a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/sales-reports.component.html": {
+    "mtime": 1775162386.0,
+    "ast_hash": "fefc1740d98c00f86d3c4aa05d703909",
+    "semantic_hash": "fefc1740d98c00f86d3c4aa05d703909"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/reports/stats-ventes/stats-ventes.component.html": {
+    "mtime": 1780591695.0,
+    "ast_hash": "61343046a3c7fea8bfa5d95e6bffb169",
+    "semantic_hash": "61343046a3c7fea8bfa5d95e6bffb169"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/components/ristournes/ristourne-list.component.html": {
+    "mtime": 1780077010.0,
+    "ast_hash": "1139cac5de7967670943b190292c167c",
+    "semantic_hash": "1139cac5de7967670943b190292c167c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sales/layout/sales-layout.component.html": {
+    "mtime": 1784736259.7059119,
+    "ast_hash": "17049372a4dea3d0a31ed0a644f4a135",
+    "semantic_hash": "17049372a4dea3d0a31ed0a644f4a135"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/adjustments/adjustment-list.component.html": {
+    "mtime": 1783939544.2950199,
+    "ast_hash": "18b9391df1ac96cd24009e1b00816f0f",
+    "semantic_hash": "18b9391df1ac96cd24009e1b00816f0f"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/agences/agency-list.component.html": {
+    "mtime": 1775191932.0,
+    "ast_hash": "79cc2dfa17a81e5304811ad75a38863e",
+    "semantic_hash": "79cc2dfa17a81e5304811ad75a38863e"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/movement-analysis.component.html": {
+    "mtime": 1783940714.9836571,
+    "ast_hash": "ef0b7d605156eab187b6d913a1471955",
+    "semantic_hash": "ef0b7d605156eab187b6d913a1471955"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-analysis-report.component.html": {
+    "mtime": 1781807289.0,
+    "ast_hash": "5867e89e56c86b1c853d13df514b8341",
+    "semantic_hash": "5867e89e56c86b1c853d13df514b8341"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-movements.component.html": {
+    "mtime": 1782492801.0,
+    "ast_hash": "4303a8b545fc5d6c9a4edf80b991d713",
+    "semantic_hash": "4303a8b545fc5d6c9a4edf80b991d713"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-report.component.html": {
+    "mtime": 1781807277.0,
+    "ast_hash": "dc07eae965235150b18e983c779ff0e8",
+    "semantic_hash": "dc07eae965235150b18e983c779ff0e8"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/analyse/stock-valuation.component.html": {
+    "mtime": 1775218028.0,
+    "ast_hash": "99baf7983aff3cb340671addea079d88",
+    "semantic_hash": "99baf7983aff3cb340671addea079d88"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/casses/casse-list.component.html": {
+    "mtime": 1785146354.630442,
+    "ast_hash": "8799876a38e5e85d3a992fd929a71887",
+    "semantic_hash": "8799876a38e5e85d3a992fd929a71887"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/categories/category-list.component.html": {
+    "mtime": 1779812948.0,
+    "ast_hash": "6856e819ca374a3ea14bb83daa68c5cf",
+    "semantic_hash": "6856e819ca374a3ea14bb83daa68c5cf"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/dashboard/stock-dashboard.component.html": {
+    "mtime": 1780076646.0,
+    "ast_hash": "b881150eb1b9be35669d9f1afb57aa4d",
+    "semantic_hash": "b881150eb1b9be35669d9f1afb57aa4d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/livraisons/livraison-detail.component.html": {
+    "mtime": 1785343118.7416189,
+    "ast_hash": "840e98779aeb6cdeaa5caf51a25d3ec5",
+    "semantic_hash": "840e98779aeb6cdeaa5caf51a25d3ec5"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/livraisons/livraison-list.component.html": {
+    "mtime": 1782495646.0,
+    "ast_hash": "591f4fb253c437ec4434334ebbae6f8a",
+    "semantic_hash": "591f4fb253c437ec4434334ebbae6f8a"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/locations/location-list.component.html": {
+    "mtime": 1779812896.0,
+    "ast_hash": "bc8312e24977dd6c15dbdc41b718d1ae",
+    "semantic_hash": "bc8312e24977dd6c15dbdc41b718d1ae"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/picking-types/picking-type-list.component.html": {
+    "mtime": 1775218176.0,
+    "ast_hash": "4e38d97f4f879bd151a4c6018751bb57",
+    "semantic_hash": "4e38d97f4f879bd151a4c6018751bb57"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/products/product-list.component.html": {
+    "mtime": 1786962270.387968,
+    "ast_hash": "75628f813ff7d6bbb9f95ef7ce57d62b",
+    "semantic_hash": "75628f813ff7d6bbb9f95ef7ce57d62b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/bordereau.component.html": {
+    "mtime": 1783680887.5591407,
+    "ast_hash": "ae35531942b014e6cf5374380cff6286",
+    "semantic_hash": "ae35531942b014e6cf5374380cff6286"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/reception-detail.component.html": {
+    "mtime": 1782216342.0,
+    "ast_hash": "55b286a56d8f69fc0fe89bf2fc618566",
+    "semantic_hash": "55b286a56d8f69fc0fe89bf2fc618566"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/receptions/reception-list.component.html": {
+    "mtime": 1783101506.2747595,
+    "ast_hash": "f0fcbf7154e254f872a270096729096d",
+    "semantic_hash": "f0fcbf7154e254f872a270096729096d"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/stock-view/stock-view.component.html": {
+    "mtime": 1782232332.0,
+    "ast_hash": "f807886d943d89617f44560a5ce0c0a7",
+    "semantic_hash": "f807886d943d89617f44560a5ce0c0a7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-detail.component.html": {
+    "mtime": 1783681018.2277925,
+    "ast_hash": "401d1efbbc05dc4fe7d949546feb0350",
+    "semantic_hash": "401d1efbbc05dc4fe7d949546feb0350"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-list.component.html": {
+    "mtime": 1782495690.0,
+    "ast_hash": "f8fe7c114a10b7fd67cf6134137def27",
+    "semantic_hash": "f8fe7c114a10b7fd67cf6134137def27"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/transferts/transfert-reception-list.component.html": {
+    "mtime": 1779787758.0,
+    "ast_hash": "eb75b046c136acc7d622be7db212a4be",
+    "semantic_hash": "eb75b046c136acc7d622be7db212a4be"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/components/warehouses/warehouse-list.component.html": {
+    "mtime": 1782739338.3670418,
+    "ast_hash": "2324d1aa68075bfe943a25588ab140df",
+    "semantic_hash": "2324d1aa68075bfe943a25588ab140df"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/stock/layout/stock-layout.component.html": {
+    "mtime": 1784736363.8411045,
+    "ast_hash": "01ad75fa943f3abc796e8c42c39fa8ff",
+    "semantic_hash": "01ad75fa943f3abc796e8c42c39fa8ff"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/components/dashboard/sync-dashboard.component.html": {
+    "mtime": 1787149640.105085,
+    "ast_hash": "58f29855b6f5d82bbbc80a36e1721686",
+    "semantic_hash": "58f29855b6f5d82bbbc80a36e1721686"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/modules/sync/layout/sync-layout.component.html": {
+    "mtime": 1783336582.3719835,
+    "ast_hash": "e35a3cfdcb87d296e2dbd0504be796df",
+    "semantic_hash": "e35a3cfdcb87d296e2dbd0504be796df"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/extra-apps/extra-apps.component.html": {
+    "mtime": 1783099820.3747542,
+    "ast_hash": "22f32322c0e93030ea1abed6541a82c6",
+    "semantic_hash": "22f32322c0e93030ea1abed6541a82c6"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/license-blocked/license-blocked.component.html": {
+    "mtime": 1785322069.5348952,
+    "ast_hash": "a758640e994d033e9acde9f037d27d6c",
+    "semantic_hash": "a758640e994d033e9acde9f037d27d6c"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/license-pending/license-pending.component.html": {
+    "mtime": 1785322033.4353986,
+    "ast_hash": "bcb8f26487a277f94d238d33de66eaaa",
+    "semantic_hash": "bcb8f26487a277f94d238d33de66eaaa"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/login/login.component.html": {
+    "mtime": 1785837398.1221204,
+    "ast_hash": "111b0828cad4621273962cfc40af3a14",
+    "semantic_hash": "111b0828cad4621273962cfc40af3a14"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/pages/welcome/welcome.component.html": {
+    "mtime": 1783335903.2759879,
+    "ast_hash": "d0759338597180e251c4b2be19a7076b",
+    "semantic_hash": "d0759338597180e251c4b2be19a7076b"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/audit-trail/audit-trail.component.html": {
+    "mtime": 1782297263.0,
+    "ast_hash": "0ec83752c7eb4af1795478d0442c2fdd",
+    "semantic_hash": "0ec83752c7eb4af1795478d0442c2fdd"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/app/shared/components/print-preview/print-preview.component.html": {
+    "mtime": 1782744550.400218,
+    "ast_hash": "6f38ec5996e7546e27fadd8e38cef3f7",
+    "semantic_hash": "6f38ec5996e7546e27fadd8e38cef3f7"
+  },
+  "/home/automate/Documents/Projets 1.1/Projets/K.I.R.A Distributeurs/erp-frontend/src/index.html": {
+    "mtime": 1780347240.0,
+    "ast_hash": "6c20740a9e1e56421f404e1a2234e6ad",
+    "semantic_hash": "6c20740a9e1e56421f404e1a2234e6ad"
+  }
+}

@@ -2,6 +2,9 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { CompanyService } from '../../../core/services/company.service';
+import { AppBrandingService } from '../../../core/services/app-branding.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-accounting-layout',
@@ -16,13 +19,16 @@ export class AccountingLayoutComponent implements OnInit {
   companyName = 'Mon Entreprise';
   activeDropdown: string | null = null;
   showCompanyPicker = false;
+  mobileMenuOpen = false;
   navItems: any[] = [];
 
-  get isCentralized() { return this.authService.isCentralized(); }
-  get companies() { return this.authService.getSession()?.companies ?? []; }
-  get activeCompany() { return this.authService.getActiveCompany(); }
+  companies: { id: number; name: string; sigle: string }[] = [];
+  get activeCompany(): { id: number; name: string; sigle: string } | null { return null; }
 
-  constructor(private authService: AuthService, public router: Router) {}
+  get companyLogoUrl(): string { return this.companyService.getLogoUrl(); }
+  get companyDisplayName(): string { return this.companyService.getCached()?.name ?? ''; }
+
+  constructor(private authService: AuthService, private companyService: CompanyService, public branding: AppBrandingService, public router: Router, public themeService: ThemeService) {}
 
   ngOnInit(): void {
     this.userName = this.authService.getUserDisplayName();
@@ -42,23 +48,29 @@ export class AccountingLayoutComponent implements OnInit {
       items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/accounting/dashboard' });
     }
 
-    const journalChildren: any[] = [];
-    if (this.can('JOURNAUX'))           journalChildren.push({ label: 'Liste des journaux', icon: 'list', route: '/accounting/journals' });
-    if (this.can('ECRITURES', 'CREATE')) journalChildren.push({ label: "Saisie d'écriture", icon: 'edit', route: '/accounting/journal-entries/new' });
-    if (journalChildren.length)
-      items.push({ id: 'journals', label: 'Journaux', icon: 'book', children: journalChildren });
+    if (this.can('JOURNAUX'))
+      items.push({ id: 'journals', label: 'Journaux', icon: 'book', route: '/accounting/journals' });
 
     if (this.can('ECRITURES')) {
       items.push({
-        id: 'entries', label: 'Écritures', icon: 'receipt_long',
+        id: 'entries', label: 'Pièces Comptables', icon: 'receipt_long',
         children: [
-          { label: 'Toutes les écritures', icon: 'format_list_bulleted', route: '/accounting/journal-entries' },
-          { label: 'Brouillons',           icon: 'drafts',               route: '/accounting/journal-entries?state=draft' },
-          { label: 'Validées',             icon: 'check_circle',         route: '/accounting/journal-entries?state=posted' }
+          { label: 'Liste des pièces',  icon: 'receipt_long', route: '/accounting/journal-entries' },
+          { label: 'Nouvelle écriture', icon: 'add_circle',   route: '/accounting/journal-entries/new' }
         ]
       });
-      items.push({ id: 'chart',      label: 'Plan Comptable', icon: 'account_tree', route: '/accounting/chart-of-accounts' });
-      items.push({ id: 'grandlivre', label: 'Grand Livre',    icon: 'menu_book',    route: '/accounting/grand-livre' });
+    }
+
+    if (this.can('ECRITURES')) {
+      items.push({ id: 'chart', label: 'Plan Comptable', icon: 'account_tree', route: '/accounting/chart-of-accounts' });
+      items.push({
+        id: 'grandlivres', label: 'Grand Livre', icon: 'menu_book',
+        children: [
+          { label: 'Grand Livre des Comptes', icon: 'account_tree',    route: '/accounting/grand-livre' },
+          { label: 'Grand Livre des Tiers',   icon: 'people',          route: '/accounting/grand-livre-tiers' },
+          { label: 'Cashbook', icon: 'account_balance_wallet', route: '/accounting/cashbook' }
+        ]
+      });
       items.push({
         id: 'analytic', label: 'Analytique', icon: 'analytics',
         children: [
@@ -99,21 +111,28 @@ export class AccountingLayoutComponent implements OnInit {
 
   navigateTo(route: string): void {
     this.activeDropdown = null;
+    this.mobileMenuOpen = false;
     this.router.navigateByUrl(route);
   }
 
   switchCompany(id: number): void {
     this.authService.setActiveCompanyId(id);
     this.showCompanyPicker = false;
+    this.mobileMenuOpen = false;
     const url = this.router.url;
     this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
-  goHome(): void { this.router.navigate(['/welcome']); }
-  logout(): void { this.authService.logout(); this.router.navigate(['/login']); }
+  goHome(): void { this.mobileMenuOpen = false; this.router.navigate(['/welcome']); }
+  logout(): void { this.mobileMenuOpen = false; this.authService.logout(); this.router.navigate(['/login']); }
 
   isRouteActive(route: string): boolean {
-    return this.router.url === route || this.router.url.startsWith(route + '/');
+    const [routePath, routeQuery] = route.split('?');
+    const [currentPath, currentQuery] = this.router.url.split('?');
+    if (routeQuery) {
+      return currentPath === routePath && (currentQuery || '') === routeQuery;
+    }
+    return currentPath === routePath || currentPath.startsWith(routePath + '/');
   }
 
   hasActiveChild(children: any[]): boolean {

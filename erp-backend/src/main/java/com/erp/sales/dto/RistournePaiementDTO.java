@@ -27,7 +27,10 @@ public class RistournePaiementDTO {
     private String notes;
     private String typeRistourne;
     private LocalDateTime createdAt;
+    /** Lignes par catégorie (agrégé) */
     private List<LineDTO> lines;
+    /** Lignes par article individuel */
+    private List<ArticleLineDTO> articleLines;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class LineDTO {
@@ -38,5 +41,15 @@ public class RistournePaiementDTO {
         private BigDecimal montantUnitaire;
         private BigDecimal montantTotal;
         private BigDecimal montantTTC;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class ArticleLineDTO {
+        private String productCode;
+        private String productName;
+        private String categoryName;
+        private BigDecimal quantite;
+        private BigDecimal montantUnitaire;
+        private BigDecimal montantTotal;
     }
 }

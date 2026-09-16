@@ -1,0 +1,139 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <span class="material-icons">{{ myTicketsOnly ? 'person_pin' : 'list_alt' }}</span>
+        {{ myTicketsOnly ? 'Mes tickets' : 'Tous les tickets' }}
+      </h1>
+      <p class="page-sub">{{ filtered.length }} ticket(s) affiché(s)</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openNew()">
+        <span class="material-icons">add</span> Nouveau ticket
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filter-bar">
+    <select [(ngModel)]="filterStatus" (ngModelChange)="load()" class="form-control filter-sel">
+      <option value="">Tous les statuts</option>
+      <option value="OUVERT">Ouvert</option>
+      <option value="EN_COURS">En cours</option>
+      <option value="RESOLU">Résolu</option>
+      <option value="FERME">Fermé</option>
+    </select>
+    <select [(ngModel)]="filterPriority" class="form-control filter-sel">
+      <option value="">Toutes priorités</option>
+      <option value="BASSE">Basse</option>
+      <option value="MOYENNE">Moyenne</option>
+      <option value="HAUTE">Haute</option>
+      <option value="CRITIQUE">Critique</option>
+    </select>
+    <select [(ngModel)]="filterCategory" class="form-control filter-sel">
+      <option value="">Toutes catégories</option>
+      <option value="INCIDENT">Incident</option>
+      <option value="DEMANDE">Demande</option>
+      <option value="QUESTION">Question</option>
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (filtered.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">inbox</span>
+      <p>Aucun ticket trouvé</p>
+    </div>
+  } @else {
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Titre</th>
+            <th>Catégorie</th>
+            <th>Statut</th>
+            <th>Priorité</th>
+            <th>Créé par</th>
+            <th>Assigné à</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of filtered; track t.id) {
+            <tr class="clickable" (click)="router.navigate(['/helpdesk/tickets', t.id])">
+              <td class="mono">{{ t.ticketNumber }}</td>
+              <td class="col-title">{{ t.title }}</td>
+              <td><span class="badge badge-cat-{{ t.category }}">{{ categoryLabel(t.category) }}</span></td>
+              <td><span class="badge badge-status-{{ t.status }}">{{ statusLabel(t.status) }}</span></td>
+              <td><span class="badge badge-prio-{{ t.priority }}">{{ priorityLabel(t.priority) }}</span></td>
+              <td class="text-muted">{{ t.createdByUsername }}</td>
+              <td class="text-muted">{{ t.assignedToUsername || '—' }}</td>
+              <td class="text-muted">{{ t.createdAt | date:'dd/MM/yy HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- Modal nouveau ticket -->
+@if (showNewForm) {
+  <div class="modal-backdrop" (click)="showNewForm = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><span class="material-icons">confirmation_number</span> Nouveau ticket</h3>
+        <button class="btn-icon" (click)="showNewForm = false">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        @if (errorMsg) {
+          <div class="alert alert-danger">
+            <span class="material-icons">error</span> {{ errorMsg }}
+          </div>
+        }
+        <div class="form-group">
+          <label>Titre <span class="req">*</span></label>
+          <input type="text" [(ngModel)]="newTicket.title" class="form-control" placeholder="Résumé du problème…" />
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select [(ngModel)]="newTicket.category" class="form-control">
+              <option value="INCIDENT">Incident</option>
+              <option value="DEMANDE">Demande</option>
+              <option value="QUESTION">Question</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priorité</label>
+            <select [(ngModel)]="newTicket.priority" class="form-control">
+              <option value="BASSE">Basse</option>
+              <option value="MOYENNE">Moyenne</option>
+              <option value="HAUTE">Haute</option>
+              <option value="CRITIQUE">Critique</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group info-note">
+          <span class="material-icons">info</span>
+          Ce ticket sera transmis au hub pour prise en charge et affectation.
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="newTicket.description" class="form-control" rows="4" placeholder="Décrivez le problème…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showNewForm = false">Annuler</button>
+        <button class="btn-primary" (click)="saveNew()" [disabled]="saving">
+          <span class="material-icons">{{ saving ? 'hourglass_empty' : 'send' }}</span>
+          {{ saving ? 'Création...' : 'Créer le ticket' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,121 +1,278 @@
 <div class="page-container">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
   <div class="page-header no-print">
-    <h1 class="page-title">
-      <span class="material-icons">menu_book</span>
-      Grand Livre
-    </h1>
-    @if (generated) {
-      <div class="page-actions" style="display:flex;gap:8px">
-        <button class="btn btn-outline" (click)="exportPdf()">
-          <span class="material-icons">picture_as_pdf</span>
-          Exporter PDF
+    <div class="header-left">
+      <span class="material-icons page-icon">menu_book</span>
+      <div>
+        <h1 class="page-title">Grand Livre des Comptes</h1>
+        <p class="page-sub">Mouvements par compte comptable</p>
+      </div>
+    </div>
+    @if (generated && data.length > 0) {
+      <div class="header-actions">
+        <button class="btn-outline" (click)="print()">
+          <span class="material-icons">print</span> Imprimer
         </button>
-        <button class="btn btn-outline" (click)="exportExcel()">
-          <span class="material-icons">table_view</span>
-          Exporter Excel
+        <button class="btn-outline btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
         </button>
       </div>
     }
   </div>
 
-  <!-- FILTERS -->
-  <div class="filters-bar no-print">
-    <div class="filter-group">
-      <label>Du *</label>
-      <input type="date" class="form-control" [(ngModel)]="dateFrom">
-    </div>
-    <div class="filter-group">
-      <label>Au *</label>
-      <input type="date" class="form-control" [(ngModel)]="dateTo">
-    </div>
-    <div class="filter-group" style="flex:1">
-      <label>Comptes (optionnel, Ctrl+clic)</label>
-      <select class="form-control" multiple style="height:80px" #accountSelect
-(change)="onAccountChange(accountSelect.selectedOptions)"
-        >
-        @for (acc of accounts; track acc.id) {
-          <option [value]="acc.id">{{ acc.code }} - {{ acc.name }}</option>
+  <!-- ══ FILTRES ══════════════════════════════════════════════════════════ -->
+  <div class="filters-card no-print">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label>Période du</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>au</label>
+        <input type="date" class="form-ctl" [(ngModel)]="dateTo">
+      </div>
+
+      <!-- Sélecteur de comptes -->
+      <div class="filter-group picker-wrap">
+        <label>Comptes</label>
+        <button class="account-picker-btn" (click)="showAccountPicker = !showAccountPicker">
+          <span class="material-icons">account_balance</span>
+          <span class="picker-label">{{ selectedAccountNames }}</span>
+          <span class="material-icons picker-arrow">{{ showAccountPicker ? 'expand_less' : 'expand_more' }}</span>
+        </button>
+        @if (showAccountPicker) {
+          <div class="account-picker-dropdown">
+            <div class="picker-search">
+              <span class="material-icons">search</span>
+              <input type="text" placeholder="Rechercher un compte…" [(ngModel)]="accountPickerSearch" class="search-input" (click)="$event.stopPropagation()">
+            </div>
+            <div class="picker-list">
+              @if (selectedAccountIds.length > 0) {
+                <button class="picker-clear" (click)="clearAccountFilter()">
+                  <span class="material-icons">clear_all</span> Désélectionner tout
+                </button>
+              }
+              @for (acc of filteredPickerAccounts; track acc.id) {
+                <label class="picker-item" [class.selected]="isAccountSelected(acc.id!)" (click)="toggleAccountFilter(acc.id!)">
+                  <span class="acc-dot" [style.background]="accountColor(acc.code)"></span>
+                  <span class="acc-code">{{ acc.code }}</span>
+                  <span class="acc-name">{{ acc.name }}</span>
+                  @if (isAccountSelected(acc.id!)) {
+                    <span class="material-icons check-icon">check</span>
+                  }
+                </label>
+              }
+            </div>
+          </div>
         }
-      </select>
+      </div>
+
+      <div class="filter-group filter-btn-col">
+        <label>&nbsp;</label>
+        <button class="btn-generate" (click)="generate(); showAccountPicker = false" [disabled]="loading">
+          @if (loading) { <span class="btn-spinner"></span> Génération… }
+          @else { <span class="material-icons">play_arrow</span> Générer }
+        </button>
+      </div>
     </div>
-    <div class="filter-actions">
-      <button class="btn btn-primary" (click)="generate()" [disabled]="loading">
-        @if (loading) { <span class="spinner-sm-btn"></span> }
-        <span class="material-icons">play_arrow</span>
-        Générer
-      </button>
-    </div>
+    @if (errorMsg) {
+      <div class="alert-err"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
+    }
   </div>
 
-  @if (errorMsg) {
-    <div class="alert-error mb-3 no-print">
-      <span class="material-icons">error_outline</span>{{ errorMsg }}
-    </div>
-  }
-
-  <!-- PRINT HEADER -->
-  @if (generated) {
-    <div class="gl-print-header">
-      <h2>Grand Livre</h2>
-      <div class="gl-period">Période du {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</div>
-    </div>
-  }
-
-  <!-- RESULTS -->
+  <!-- ══ RÉSULTAT ════════════════════════════════════════════════════════ -->
   @if (loading) {
-    <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <p>Génération en cours…</p>
+    </div>
+
   } @else if (generated && data.length === 0) {
     <div class="empty-state">
       <span class="material-icons">menu_book</span>
-      <h3>Aucune écriture trouvée</h3>
-      <p>Aucun mouvement pour la période et les comptes sélectionnés.</p>
+      <p>Aucun compte avec des mouvements sur cette période</p>
     </div>
+
   } @else if (generated) {
-    <div class="grand-livre-content">
-      @for (account of data; track account.accountCode) {
-        <div class="grand-livre-account">
-          <div class="account-header-gl">
-            <span>{{ account.accountCode }} - {{ account.accountName }}</span>
-            <span>Solde final: {{ account.finalBalance | number:'1.2-2' }}</span>
+
+    <!-- En-tête impression -->
+    <div class="print-header print-only">
+      <h2>{{ companyName }}</h2>
+      <h3>GRAND LIVRE DES COMPTES</h3>
+      <p>Période : {{ dateFrom | date:'dd/MM/yyyy' }} au {{ dateTo | date:'dd/MM/yyyy' }}</p>
+    </div>
+
+    <!-- Barre outils accordéon -->
+    <div class="acc-toolbar no-print">
+      <div class="acc-info">
+        <span class="material-icons">menu_book</span>
+        {{ filteredData.length }} compte(s)
+        @if (searchAccount) { · filtrés }
+      </div>
+      <div class="acc-search">
+        <span class="material-icons">search</span>
+        <input type="text" placeholder="Rechercher un compte…" [(ngModel)]="searchAccount" class="search-input">
+      </div>
+      <div class="acc-btns">
+        <button class="btn-acc" (click)="expandAll()">
+          <span class="material-icons">unfold_more</span> Tout ouvrir
+        </button>
+        <button class="btn-acc" (click)="collapseAll()">
+          <span class="material-icons">unfold_less</span> Tout fermer
+        </button>
+      </div>
+    </div>
+
+    <!-- Accordéon par compte -->
+    <div class="gl-content">
+      @for (account of filteredData; track account.accountCode) {
+        <div class="partner-block" [class.is-open]="expandedAccounts.has(account.accountCode)">
+
+          <!-- En-tête compte (écran) -->
+          <div class="partner-header no-print" (click)="toggleAccount(account.accountCode)">
+            <div class="partner-header-left">
+              <div class="partner-avatar" [style.background]="accountColor(account.accountCode)">
+                {{ account.accountCode.charAt(0) }}
+              </div>
+              <div class="partner-name-block">
+                <span class="partner-name">{{ account.accountCode }} — {{ account.accountName }}</span>
+                <span class="partner-meta">{{ account.lines.length }} mouvement(s)</span>
+              </div>
+            </div>
+            <div class="partner-header-right">
+              <div class="balance-chips">
+                <span class="bal-chip chip-open">
+                  Ouv. {{ fmt2(account.openingBalance) }}
+                </span>
+                <span class="bal-chip chip-debit">+ {{ fmt2(account.totalDebit) }}</span>
+                <span class="bal-chip chip-credit">− {{ fmt2(account.totalCredit) }}</span>
+                <span class="bal-chip" [class.chip-pos]="account.finalBalance >= 0"
+                                       [class.chip-neg]="account.finalBalance < 0">
+                  Clôt. <strong>{{ fmt2(account.finalBalance) }}</strong>
+                </span>
+              </div>
+              <span class="material-icons acc-chevron">
+                {{ expandedAccounts.has(account.accountCode) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
           </div>
-          <table class="table-erp" style="border-radius:0">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>N° Pièce</th>
-                <th>Journal</th>
-                <th>Libellé</th>
-                <th class="text-right">Débit</th>
-                <th class="text-right">Crédit</th>
-                <th class="text-right">Solde</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (line of account.lines; track $index) {
-                <tr>
-                  <td>{{ line.date | date:'dd/MM/yyyy' }}</td>
-                  <td><strong>{{ line.moveRef }}</strong></td>
-                  <td>{{ line.journalCode }}</td>
-                  <td>{{ line.label }}</td>
-                  <td class="text-right">{{ line.debit > 0 ? (line.debit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right">{{ line.credit > 0 ? (line.credit | number:'1.2-2') : '' }}</td>
-                  <td class="text-right" [class.amount-debit]="line.balance >= 0" [class.amount-credit]="line.balance < 0">
-                    {{ line.balance | number:'1.2-2' }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" style="text-align:left">Total {{ account.accountCode }}</td>
-                <td>{{ account.totalDebit | number:'1.2-2' }}</td>
-                <td>{{ account.totalCredit | number:'1.2-2' }}</td>
-                <td>{{ account.finalBalance | number:'1.2-2' }}</td>
-              </tr>
-            </tfoot>
-          </table>
+
+          <!-- En-tête print -->
+          <div class="partner-header-print print-only"
+               [style.background]="accountColor(account.accountCode)">
+            <span class="partner-name-print">{{ account.accountCode }} — {{ account.accountName }}</span>
+            <span>Solde ouv. : {{ fmt2(account.openingBalance) }} | Clôture : {{ fmt2(account.finalBalance) }}</span>
+          </div>
+
+          <!-- Corps : lignes -->
+          <div class="partner-body" [class.body-hidden]="!expandedAccounts.has(account.accountCode)">
+
+            @if (account.lines.length === 0) {
+              <div class="no-lines no-print">Aucun mouvement dans la période — solde reporté uniquement.</div>
+            } @else {
+              <div class="table-wrap">
+                <table class="gl-table">
+                  <thead>
+                    <tr>
+                      <th class="point-th"></th>
+                      <th>Date</th>
+                      <th>N° Pièce</th>
+                      <th>Journal</th>
+                      <th>Tiers</th>
+                      <th>Libellé</th>
+                      <th class="r">Débit</th>
+                      <th class="r">Crédit</th>
+                      <th class="r">Solde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of account.lines; track $index) {
+                      <tr [class.line-pointed]="isPointed(account.accountCode, $index)"
+                          (click)="toggleLine(account.accountCode, $index, $event)">
+                        <td class="point-col">
+                          <span class="point-dot" [class.dot-active]="isPointed(account.accountCode, $index)"></span>
+                        </td>
+                        <td class="date-col">{{ fmtDate(line.date) }}</td>
+                        <td class="ref-col mono">{{ line.moveRef }}</td>
+                        <td class="jnl-col">{{ line.journalCode }}</td>
+                        <td class="lbl-col">{{ line.partner }}</td>
+                        <td class="lbl-col">{{ line.label }}</td>
+                        <td class="r mono" [class.debit-val]="line.debit > 0">
+                          {{ line.debit > 0 ? fmt2(line.debit) : '' }}
+                        </td>
+                        <td class="r mono" [class.credit-val]="line.credit > 0">
+                          {{ line.credit > 0 ? fmt2(line.credit) : '' }}
+                        </td>
+                        <td class="r mono bold" [class.bal-pos]="line.balance >= 0" [class.bal-neg]="line.balance < 0">
+                          {{ fmt2(line.balance) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="total-row">
+                      <td colspan="5" class="total-label">Total {{ account.accountCode }}</td>
+                      <td class="r mono debit-val">{{ fmt2(account.totalDebit) }}</td>
+                      <td class="r mono credit-val">{{ fmt2(account.totalCredit) }}</td>
+                      <td class="r mono bold" [class.bal-pos]="account.finalBalance >= 0" [class.bal-neg]="account.finalBalance < 0">
+                        {{ fmt2(account.finalBalance) }}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            }
+          </div>
+
         </div>
       }
+
+      <!-- Barre de pointage flottante -->
+      @if (hasPointing) {
+        <div class="pointing-bar no-print">
+          <div class="pb-left">
+            <span class="material-icons pb-icon">flag</span>
+            <span class="pb-count">{{ pointingSummary.count }} ligne(s) pointée(s)</span>
+          </div>
+          <div class="pb-values">
+            <div class="pb-item">
+              <span class="pb-lbl">Débit</span>
+              <strong class="pb-debit">{{ fmt2(pointingSummary.debit) }}</strong>
+            </div>
+            <div class="pb-sep"></div>
+            <div class="pb-item">
+              <span class="pb-lbl">Crédit</span>
+              <strong class="pb-credit">{{ fmt2(pointingSummary.credit) }}</strong>
+            </div>
+            <div class="pb-sep"></div>
+            <div class="pb-item">
+              <span class="pb-lbl">Net</span>
+              <strong [class.pb-net-pos]="pointingSummary.net >= 0" [class.pb-net-neg]="pointingSummary.net < 0">
+                {{ fmt2(pointingSummary.net) }}
+              </strong>
+            </div>
+          </div>
+          <button class="pb-clear" (click)="clearPointing()">
+            <span class="material-icons">close</span> Effacer
+          </button>
+        </div>
+      }
+
+      <!-- Grand total -->
+      <div class="grand-total">
+        <span class="gt-label">TOTAL GÉNÉRAL — {{ filteredData.length }} compte(s)</span>
+        <div class="gt-values">
+          <div class="gt-item"><span>Débit</span><strong>{{ fmt2(grandTotalDebit) }}</strong></div>
+          <div class="gt-item"><span>Crédit</span><strong>{{ fmt2(grandTotalCredit) }}</strong></div>
+          <div class="gt-item">
+            <span>Solde net</span>
+            <strong [class.bal-neg]="grandBalance < 0">{{ fmt2(grandBalance) }}</strong>
+          </div>
+        </div>
+      </div>
+
     </div>
   }
+
 </div>

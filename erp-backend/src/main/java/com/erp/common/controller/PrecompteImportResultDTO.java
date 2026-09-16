@@ -16,4 +16,5 @@ public class PrecompteImportResultDTO {
     private int processed;
     private int upserted;
     private List<String> errors;
+    private List<String> warnings;
 }

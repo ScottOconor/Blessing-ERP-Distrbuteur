@@ -6,7 +6,13 @@ import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 
 @Entity
-@Table(name = "partners")
+@Table(name = "partners", indexes = {
+    // Clients/fournisseurs référencés par chaque facture, commande, ristourne, remise — les
+    // listings (findByCompanyIdAndActiveTrue, ...AndType...) filtraient sans aucun index sur
+    // cette table jusqu'ici.
+    @Index(name = "idx_partners_company_active", columnList = "company_id, active"),
+    @Index(name = "idx_partners_company_type",   columnList = "company_id, type")
+})
 @Data
 @Builder
 @NoArgsConstructor

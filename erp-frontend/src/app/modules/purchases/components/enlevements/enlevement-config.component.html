@@ -1,0 +1,160 @@
+<div class="page-container">
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="material-icons">local_shipping</span>
+        Configuration des coûts d'enlèvement
+      </h1>
+      <span class="record-count">{{ enlevements.length }} catégorie(s)</span>
+    </div>
+    <button class="btn-new" (click)="openNew()">
+      <span class="material-icons">add</span> Nouveau tarif
+    </button>
+  </div>
+
+  <div class="card">
+    @if (loading) {
+      <div class="empty-state"><span class="material-icons spin">refresh</span><p>Chargement…</p></div>
+    } @else if (enlevements.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">local_shipping</span>
+        <p>Aucun tarif d'enlèvement configuré.</p>
+        <button class="btn-new" (click)="openNew()"><span class="material-icons">add</span> Créer le premier</button>
+      </div>
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Catégorie d'article</th>
+            <th class="text-right">Montant fixe HT / U.</th>
+            <th class="text-right">Coût interne HT / U.</th>
+            <th>Tarifs fournisseurs</th>
+            <th style="width: 100px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of enlevements; track e.id) {
+            <tr>
+              <td class="font-bold">{{ e.categoryName }}</td>
+              <td class="text-right font-mono">{{ e.montantFixe | number:'1.0-0' }} FCFA</td>
+              <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
+              <td>
+                @if (e.clients && e.clients.length > 0) {
+                  <span class="clients-badge" (click)="toggleExpand(e.id!)">
+                    <span class="material-icons">people</span>
+                    {{ e.clients.length }} fournisseur(s)
+                    <span class="material-icons caret">{{ expandedId === e.id ? 'expand_less' : 'expand_more' }}</span>
+                  </span>
+                  @if (expandedId === e.id) {
+                    <div class="clients-list">
+                      @for (c of e.clients; track c.partnerId) {
+                        <div class="client-row">
+                          <span class="client-name">{{ c.partnerName }}</span>
+                          <span class="client-amount font-mono">{{ c.montant | number:'1.0-0' }} FCFA</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                } @else {
+                  <span class="text-muted small">Tarif global</span>
+                }
+              </td>
+              <td class="actions">
+                <button class="btn-icon" (click)="openEdit(e)" title="Modifier">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon btn-icon-danger" (click)="remove(e.id!)" title="Supprimer">
+                  <span class="material-icons">delete_outline</span>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+</div>
+
+<!-- ══ MODAL ══════════════════════════════════════════════════════════════════ -->
+@if (showModal) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+
+      <div class="modal-hdr">
+        <div class="modal-title">
+          <span class="material-icons">local_shipping</span>
+          {{ editing ? 'Modifier' : 'Nouveau' }} tarif d'enlèvement
+        </div>
+        <button class="modal-close" (click)="closeModal()"><span class="material-icons">close</span></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="form-grid">
+          <div class="form-group form-full">
+            <label>Catégorie d'article <span class="req">*</span></label>
+            <select class="form-control" [(ngModel)]="form.categoryId">
+              <option [ngValue]="0" disabled>-- Sélectionner --</option>
+              @for (c of categories; track c.id) {
+                <option [ngValue]="c.id">{{ c.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Montant fixe HT / unité <span class="req">*</span></label>
+            <input type="number" class="form-control" [(ngModel)]="form.montantFixe" min="0">
+          </div>
+          <div class="form-group">
+            <label>Coût interne HT / unité</label>
+            <input type="number" class="form-control" [(ngModel)]="form.coutEnlevement" min="0">
+          </div>
+        </div>
+
+        <!-- Tarifs par fournisseur -->
+        <div class="section-title">
+          <span class="material-icons">people</span> Tarifs spécifiques par fournisseur
+          <button class="btn-add-line" (click)="addClientTarif()">
+            <span class="material-icons">add</span> Ajouter
+          </button>
+        </div>
+        <p class="section-hint">Ces montants remplacent le tarif global pour les fournisseurs concernés.</p>
+
+        @if (form.clients && form.clients.length > 0) {
+          <div class="client-form-list">
+            @for (c of form.clients; track $index; let i = $index) {
+              <div class="client-form-row">
+                <select class="form-control" [(ngModel)]="c.partnerId">
+                  <option [ngValue]="0" disabled>-- Fournisseur --</option>
+                  @for (s of suppliers; track s.id) {
+                    <option [ngValue]="s.id">{{ s.name }}</option>
+                  }
+                </select>
+                <input type="number" class="form-control w-amount" [(ngModel)]="c.montant" placeholder="Montant FCFA" min="0">
+                <button class="btn-remove-line" (click)="removeClientTarif(i)">
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-client-tarif">Aucun tarif fournisseur — le montant global s'applique à tous.</p>
+        }
+
+        @if (errMsg) {
+          <div class="alert-error"><span class="material-icons">error_outline</span>{{ errMsg }}</div>
+        }
+      </div>
+
+      <div class="modal-ftr">
+        <button class="btn-secondary" (click)="closeModal()">Annuler</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving">
+          <span class="material-icons" [class.spin]="saving">{{ saving ? 'hourglass_empty' : 'save' }}</span>
+          {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}

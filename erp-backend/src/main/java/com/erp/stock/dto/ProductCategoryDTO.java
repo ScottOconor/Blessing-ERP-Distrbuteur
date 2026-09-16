@@ -9,7 +9,6 @@ public class ProductCategoryDTO {
     private String code;
     private String stockAccountCode;
     private String stockInAccountCode;
-    private String cogsAccountCode;
     private Long parentId;
     private String parentName;
     private Long companyId;

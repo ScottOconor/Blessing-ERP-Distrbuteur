@@ -22,9 +22,6 @@ public class ProductCategory {
     /** Compte variation de stock entrée (ex: 6031) */
     private String stockInAccountCode;
 
-    /** Compte coût des ventes (ex: 60500) */
-    private String cogsAccountCode;
-
     @Column(name = "parent_id")
     private Long parentId;
 

@@ -82,9 +82,11 @@ public class AccountController {
     public ResponseEntity<List<AccountMoveDTO>> getMoves(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "journalId", required = false) Long journalId,
-            @RequestParam(name = "from", required = false) LocalDate from,
-            @RequestParam(name = "to", required = false) LocalDate to) {
-        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, from, to));
+            @RequestParam(name = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(name = "dateTo",   required = false) LocalDate dateTo,
+            @RequestParam(name = "state",    required = false) String state,
+            @RequestParam(name = "pageSize", required = false) Integer pageSize) {
+        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, dateFrom, dateTo, state, pageSize));
     }
 
     @GetMapping("/moves/{id}")
@@ -118,6 +120,11 @@ public class AccountController {
         return ResponseEntity.ok(accountingService.reverseEntry(id));
     }
 
+    @PostMapping("/moves/{id}/reset-to-draft")
+    public ResponseEntity<AccountMoveDTO> resetMoveToDraft(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(accountingService.resetToDraft(id));
+    }
+
     @GetMapping("/journals/{id}/account-balance")
     public ResponseEntity<java.util.Map<String, Object>> getJournalAccountBalance(
             @PathVariable("id") Long journalId,
@@ -129,9 +136,9 @@ public class AccountController {
     public ResponseEntity<List<AccountMoveDTO>> getMovesForJournal(
             @PathVariable("id") Long journalId,
             @RequestParam("companyId") Long companyId,
-            @RequestParam(name = "from", required = false) LocalDate from,
-            @RequestParam(name = "to", required = false) LocalDate to) {
-        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, from, to));
+            @RequestParam(name = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(name = "dateTo",   required = false) LocalDate dateTo) {
+        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, dateFrom, dateTo, null));
     }
 
     // ===================== SOLDES JOURNALIERS =====================

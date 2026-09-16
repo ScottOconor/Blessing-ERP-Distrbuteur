@@ -40,6 +40,10 @@ export const accountingRoutes: Routes = [
         loadComponent: () => import('./components/grand-livre/grand-livre.component').then(m => m.GrandLivreComponent)
       },
       {
+        path: 'grand-livre-tiers',
+        loadComponent: () => import('./components/grand-livre-tiers/grand-livre-tiers.component').then(m => m.GrandLivreTiersComponent)
+      },
+      {
         path: 'reports/general-balance-4',
         loadComponent: () => import('./components/reports/general-balance/general-balance4.component').then(m => m.GeneralBalance4Component)
       },
@@ -62,6 +66,10 @@ export const accountingRoutes: Routes = [
       {
         path: 'reports/profit-loss',
         loadComponent: () => import('./components/reports/profit-loss/profit-loss.component').then(m => m.ProfitLossComponent)
+      },
+      {
+        path: 'cashbook',
+        loadComponent: () => import('./components/cashbook/cashbook.component').then(m => m.CashbookComponent)
       },
       {
         path: 'analytic/accounts',

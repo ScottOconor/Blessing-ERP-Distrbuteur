@@ -1,15 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChildren, ElementRef, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { StockService, StockPicking, StockMove, StockPickingType, StockLocation, Product } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
+import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
 
 @Component({
   selector: 'app-reception-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AuditFooterComponent, AuditTrailComponent],
   templateUrl: './reception-detail.component.html',
   styleUrl: './reception-detail.component.scss'
 })
@@ -25,6 +27,7 @@ export class ReceptionDetailComponent implements OnInit {
   errorMsg = '';
   successMsg = '';
   isNew = false;
+  @ViewChildren('productInput') productInputs!: QueryList<ElementRef>;
 
   // Form fields
   selectedTypeId!: number;
@@ -37,6 +40,8 @@ export class ReceptionDetailComponent implements OnInit {
 
   lines: Array<{
     productId: number | null;
+    productSearch: string;
+    showSuggestions: boolean;
     qtyDemanded: number;
     qtyDone: number;
     priceUnit: number;
@@ -69,11 +74,10 @@ export class ReceptionDetailComponent implements OnInit {
       if (this.isNew) {
         this.scheduledDate = new Date().toISOString().split('T')[0];
         const defaultType = this.pickingTypes[0];
-        if (defaultType) this.selectedTypeId = defaultType.id!;
-        const supplier = locations.find(l => l.usage === 'supplier');
-        const stock = locations.find(l => l.usage === 'internal');
-        if (supplier) this.selectedSrcId = supplier.id!;
-        if (stock) this.selectedDestId = stock.id!;
+        if (defaultType) {
+          this.selectedTypeId = defaultType.id!;
+          this.applyPickingTypeDefaults(defaultType.id!);
+        }
       } else {
         this.loadPicking(Number(id));
       }
@@ -94,6 +98,8 @@ export class ReceptionDetailComponent implements OnInit {
         this.scheduledDate = p.scheduledDate || '';
         this.lines = (p.moves || []).map(m => ({
           productId: m.productId,
+          productSearch: this.productLabel(m.productId),
+          showSuggestions: false,
           qtyDemanded: m.qtyDemanded,
           qtyDone: m.qtyDone ?? m.qtyDemanded,
           priceUnit: m.priceUnit ?? 0,
@@ -105,8 +111,26 @@ export class ReceptionDetailComponent implements OnInit {
     });
   }
 
+  private applyPickingTypeDefaults(typeId: number): void {
+    const pt = this.pickingTypes.find(t => t.id === typeId);
+    if (pt) {
+      if (pt.defaultLocationSrcId) this.selectedSrcId = pt.defaultLocationSrcId;
+      if (pt.defaultLocationDestId) this.selectedDestId = pt.defaultLocationDestId;
+    } else {
+      // fallback si le type n'a pas de defaults configurés
+      const supplier = this.locations.find(l => l.usage === 'supplier');
+      const stock = this.locations.find(l => l.usage === 'internal');
+      if (supplier) this.selectedSrcId = supplier.id!;
+      if (stock) this.selectedDestId = stock.id!;
+    }
+  }
+
+  onTypeChange(): void {
+    if (this.isNew) this.applyPickingTypeDefaults(this.selectedTypeId);
+  }
+
   addLine(): void {
-    this.lines.push({ productId: null, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, uomName: '' });
+    this.lines.push({ productId: null, productSearch: '', showSuggestions: false, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, uomName: '' });
   }
 
   removeLine(i: number): void {
@@ -120,6 +144,56 @@ export class ReceptionDetailComponent implements OnInit {
       this.lines[i].uomName = prod.uomName || '';
       this.lines[i].priceUnit = prod.standardPrice || 0;
     }
+  }
+
+  filteredProducts(i: number): Product[] {
+    const q = (this.lines[i].productSearch || '').toLowerCase().trim();
+    const list = q
+      ? this.products.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          (p.defaultCode || '').toLowerCase().includes(q)
+        )
+      : this.products;
+    return list.slice(0, 25);
+  }
+
+  onProductSearch(i: number): void {
+    this.lines[i].productId = null;
+    this.lines[i].showSuggestions = true;
+  }
+
+  selectProduct(i: number, p: Product): void {
+    this.lines[i].productId = p.id!;
+    this.lines[i].productSearch = this.productLabel(p.id!);
+    this.lines[i].showSuggestions = false;
+    this.lines[i].uomName = p.uomName || '';
+    this.lines[i].priceUnit = p.standardPrice || 0;
+  }
+
+  onProductEnter(i: number, e: Event): void {
+    e.preventDefault();
+    const s = this.filteredProducts(i);
+    if (s.length > 0) { this.selectProduct(i, s[0]); return; }
+    // si déjà sélectionné, passe à la ligne suivante
+    if (this.lines[i].productId) this.onLineEnter();
+  }
+
+  onLineEnter(): void {
+    this.addLine();
+    setTimeout(() => {
+      const inputs = this.productInputs.toArray();
+      if (inputs.length > 0) inputs[inputs.length - 1].nativeElement.focus();
+    }, 50);
+  }
+
+  hideSuggestions(i: number): void {
+    setTimeout(() => { this.lines[i].showSuggestions = false; }, 150);
+  }
+
+  productLabel(id: number | null): string {
+    if (!id) return '';
+    const p = this.products.find(x => x.id === Number(id));
+    return p ? (p.defaultCode ? `[${p.defaultCode}] ` : '') + p.name : '';
   }
 
   get isDraft(): boolean { return !this.picking || this.picking.state === 'draft'; }
@@ -169,10 +243,32 @@ export class ReceptionDetailComponent implements OnInit {
     });
   }
 
+  /** Une réception inter-agences (transferReception + remoteAgencyId) doit passer par les
+   *  méthodes dédiées confirmInterCompanyReception/cancelInterCompanyReception plutôt que par
+   *  validatePicking/cancelPicking : ce sont elles qui notifient l'agence expéditrice, sans quoi
+   *  son expédition reste indéfiniment "en attente de réception" même après confirmation/annulation
+   *  ici. */
+  get isInterAgencyReception(): boolean {
+    return !!this.picking?.transferReception && !!this.picking?.remoteAgencyId;
+  }
+
   validate(): void {
     if (!this.picking) return;
     this.validating = true;
     this.errorMsg = '';
+
+    if (this.isInterAgencyReception) {
+      this.stockService.confirmInterCompanyReception(this.picking.id!).subscribe({
+        next: (p) => {
+          this.validating = false; this.picking = p;
+          if (p.senderNotifyWarning) this.errorMsg = p.senderNotifyWarning;
+          this.loadPicking(p.id!);
+        },
+        error: (e) => { this.validating = false; this.errorMsg = e.error?.message || 'Erreur validation'; }
+      });
+      return;
+    }
+
     // Si brouillon, sauvegarder d'abord les qtyDone
     const req = {
       pickingTypeId: this.selectedTypeId,
@@ -204,6 +300,18 @@ export class ReceptionDetailComponent implements OnInit {
   cancel(): void {
     if (!this.picking || !confirm('Annuler cette réception ?')) return;
     this.cancelling = true;
+
+    if (this.isInterAgencyReception) {
+      this.stockService.cancelInterCompanyReception(this.picking.id!).subscribe({
+        next: (p) => {
+          this.cancelling = false; this.picking = p;
+          if (p.senderNotifyWarning) this.errorMsg = p.senderNotifyWarning;
+        },
+        error: (e) => { this.cancelling = false; this.errorMsg = e.error?.message || 'Erreur'; }
+      });
+      return;
+    }
+
     this.stockService.cancelPicking(this.picking.id!).subscribe({
       next: (p) => { this.cancelling = false; this.picking = p; },
       error: (e) => { this.cancelling = false; this.errorMsg = e.error?.message || 'Erreur'; }

@@ -1,6 +1,9 @@
 <div class="pur-layout">
   <nav class="pur-navbar">
     <div class="pur-brand" (click)="goHome()">
+              @if (branding.hasAppLogo) {
+          <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">
+        }
       <span class="material-icons">chevron_left</span>
       <div class="brand-icon">
         <span class="material-icons">local_shipping</span>
@@ -10,73 +13,77 @@
 
     <div class="nav-divider"></div>
 
-    <nav class="pur-nav">
-      @for (item of navItems; track item.id) {
-        @if (!item.children) {
-          <a class="nav-link" [class.active]="isActive(item.route!)" (click)="navigateTo(item.route!)">
-            <span class="material-icons">{{ item.icon }}</span>
-            {{ item.label }}
-          </a>
-        }
-        @if (item.children) {
-          <div class="nav-item-dropdown" [class.open]="activeDropdown === item.id" [class.active]="hasActiveChild(item.children)">
-            <button class="nav-link dropdown-toggle" (click)="toggleDropdown(item.id)">
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
+
+    <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
+      <nav class="pur-nav nav-links">
+        @for (item of navItems; track item.id) {
+          @if (!item.children) {
+            <a class="nav-link" [class.active]="isActive(item.route!)" (click)="navigateTo(item.route!)">
               <span class="material-icons">{{ item.icon }}</span>
               {{ item.label }}
-              <span class="material-icons arrow">expand_more</span>
-            </button>
-            <div class="dropdown-panel">
-              @for (child of item.children; track child.route) {
-                <button class="dropdown-item" [class.active]="isActive(child.route)" (click)="navigateTo(child.route)">
-                  <span class="material-icons">{{ child.icon }}</span>
-                  {{ child.label }}
-                </button>
-              }
-            </div>
-          </div>
-        }
-      }
-    </nav>
-
-    <div class="nav-right">
-      @if (isCentralized) {
-        <button class="btn-group-home" (click)="router.navigate(['/group-home'])" title="Espace groupe">
-          <span class="material-icons">corporate_fare</span>
-          <span>Groupe</span>
-        </button>
-      }
-      @if (isCentralized) {
-        <div class="company-selector" [class.open]="showCompanyPicker">
-          <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
-            <span class="material-icons">business</span>
-            <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
-            <span class="material-icons arrow">expand_more</span>
-          </button>
-          @if (showCompanyPicker) {
-            <div class="company-dropdown">
-              @for (c of companies; track c.id) {
-                <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
-                  <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
-                  <span class="company-opt-name">{{ c.name }}</span>
-                  @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
-                </button>
-              }
+            </a>
+          }
+          @if (item.children) {
+            <div class="nav-item-dropdown" [class.open]="activeDropdown === item.id" [class.active]="hasActiveChild(item.children)">
+              <button class="nav-link dropdown-toggle" (click)="toggleDropdown(item.id)">
+                <span class="material-icons">{{ item.icon }}</span>
+                {{ item.label }}
+                <span class="material-icons arrow">expand_more</span>
+              </button>
+              <div class="dropdown-panel">
+                @for (child of item.children; track child.route) {
+                  <button class="dropdown-item" [class.active]="isActive(child.route)" (click)="navigateTo(child.route)">
+                    <span class="material-icons">{{ child.icon }}</span>
+                    {{ child.label }}
+                  </button>
+                }
+              </div>
             </div>
           }
-        </div>
-      }
-      <div class="user-pill">
-        <div class="user-avatar-sm">{{ userInitials }}</div>
-        <span class="user-name-sm">{{ userName }}</span>
-        @if (!isCentralized) {
-          <span class="company-name">| {{ activeCompany?.name || '' }}</span>
         }
+      </nav>
+
+      <div class="nav-right">
+        @if (companies.length > 1) {
+          <div class="company-selector" [class.open]="showCompanyPicker">
+            <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
+              <span class="material-icons">business</span>
+              <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
+              <span class="material-icons arrow">expand_more</span>
+            </button>
+            @if (showCompanyPicker) {
+              <div class="company-dropdown">
+                @for (c of companies; track c.id) {
+                  <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
+                    <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                    <span class="company-opt-name">{{ c.name }}</span>
+                    @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+        <div class="user-pill">
+          <div class="user-avatar-sm">{{ userInitials }}</div>
+          <span class="user-name-sm">{{ userName }}</span>
+          <span class="company-name">| {{ activeCompany?.name || '' }}</span>
+        </div>
+        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+        <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+          <span class="material-icons">logout</span>
+        </button>
       </div>
-      <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
-        <span class="material-icons">logout</span>
-      </button>
     </div>
   </nav>
+  @if (mobileMenuOpen) {
+    <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
+  }
 
   <main class="pur-content">
     <router-outlet></router-outlet>

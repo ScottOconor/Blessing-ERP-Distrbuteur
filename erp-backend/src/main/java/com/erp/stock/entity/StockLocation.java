@@ -29,9 +29,6 @@ public class StockLocation {
     @Column(name = "company_id")
     private Long companyId;
 
-    /** Compte stock OHADA associé à cet emplacement */
-    private String accountCode;
-
     @Builder.Default
     private boolean active = true;
 }

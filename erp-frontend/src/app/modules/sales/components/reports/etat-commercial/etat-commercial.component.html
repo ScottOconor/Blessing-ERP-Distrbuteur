@@ -8,10 +8,10 @@
     </h1>
     @if (generated) {
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" (click)="exportPdf()">
+        <button class="btn btn-export btn-pdf" (click)="exportPdf()">
           <span class="material-icons">picture_as_pdf</span> Exporter PDF
         </button>
-        <button class="btn btn-outline" (click)="exportExcel()">
+        <button class="btn btn-export btn-excel" (click)="exportExcel()">
           <span class="material-icons">table_view</span> Exporter Excel
         </button>
       </div>
@@ -93,8 +93,8 @@
                   <td class="mono">{{ line.productCode || '' }}</td>
                   <td>{{ line.productName }}</td>
                   <td class="text-right mono">{{ line.qty | number:'1.2-2' }}</td>
-                  <td class="text-right mono">{{ line.montantHT | number:'1.2-2' }}</td>
-                  <td class="text-right mono">{{ line.montantTTC | number:'1.2-2' }}</td>
+                  <td class="text-right mono">{{ line.caHT | number:'1.2-2' }}</td>
+                  <td class="text-right mono">{{ line.caTTC | number:'1.2-2' }}</td>
                 </tr>
               }
 

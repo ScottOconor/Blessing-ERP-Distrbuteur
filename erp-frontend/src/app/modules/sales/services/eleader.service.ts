@@ -20,6 +20,8 @@ export interface EleaderConfig {
   fraisEnlevementCode: string;
   autoConfirm: boolean;
   emballageMappings: EleaderEmballageMapping[];
+  /** Codes ERP supplémentaires traités comme consignes/emballages (exempt de TVA). */
+  extraConsigneCodes: string[];
 }
 
 export interface EleaderImportResult {

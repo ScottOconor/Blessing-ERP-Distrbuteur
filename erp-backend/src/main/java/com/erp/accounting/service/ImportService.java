@@ -1,8 +1,8 @@
 package com.erp.accounting.service;
 
 import com.erp.accounting.dto.ImportResult;
+import com.erp.accounting.dto.JournalPreviewDTO;
 import com.erp.accounting.entity.*;
-import com.erp.accounting.init.OhadaDataInitializer;
 import com.erp.accounting.repository.*;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
@@ -31,7 +31,6 @@ public class ImportService {
     private final AnalyticAccountRepository analyticAccountRepo;
     private final PartnerRepository partnerRepo;
     private final CompanyRepository companyRepo;
-    private final OhadaDataInitializer ohadaInitializer;
     private final WarehouseRepository warehouseRepo;
 
     // =====================================================
@@ -145,8 +144,6 @@ public class ImportService {
         } finally {
             wb.close();
         }
-
-        ohadaInitializer.reseedMissingGroupAccounts(company);
 
         result.setMessage(String.format("Import terminé : %d créés, %d mis à jour, %d ignorés, %d erreur(s)",
                 result.getCreated(), result.getUpdated(), result.getSkipped(), result.getErrors().size()));
@@ -316,6 +313,66 @@ public class ImportService {
     // =====================================================
     // JOURNAUX (account.journal) — nécessite le plan comptable
     // =====================================================
+
+    @Transactional(readOnly = true)
+    public List<JournalPreviewDTO> previewJournals(MultipartFile file, Long companyId) throws IOException {
+        List<JournalPreviewDTO> rows = new ArrayList<>();
+
+        Workbook wb = new XSSFWorkbook(file.getInputStream());
+        try {
+            Sheet sheet = wb.getSheetAt(0);
+            Map<String, Integer> headers = readHeaders(sheet);
+
+            Integer colName        = findCol(headers, "name", "Nom du journal", "Nom");
+            Integer colCode        = findCol(headers, "code", "Abréviation", "Abreviation", "Code");
+            Integer colType        = findCol(headers, "type", "Type");
+            Integer colDefaultAcct = findCol(headers, "default_account_id", "default_account_id/code",
+                                             "Compte par défaut", "Compte de contrepartie");
+
+            if (colName == null || colCode == null) return rows;
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                String code = getString(row, colCode);
+                if (code.isEmpty()) continue;
+
+                String name = getString(row, colName);
+                if (name.isEmpty()) continue;
+
+                String rawType = (colType != null) ? getString(row, colType) : "";
+                String type    = mapOdooJournalType(rawType);
+
+                String defaultAcctRaw  = (colDefaultAcct != null) ? getString(row, colDefaultAcct) : "";
+                String defaultAcctCode = extractCode(defaultAcctRaw);
+                boolean accountFound   = false;
+                String warning         = null;
+
+                if (!defaultAcctCode.isEmpty()) {
+                    accountFound = accountRepo.findFirstByCodeAndCompanyId(defaultAcctCode, companyId).isPresent();
+                    if (!accountFound) {
+                        warning = "Compte '" + defaultAcctCode + "' introuvable dans le plan comptable";
+                    }
+                }
+
+                boolean exists = journalRepo.findFirstByCodeAndCompanyId(code, companyId).isPresent();
+
+                rows.add(JournalPreviewDTO.builder()
+                        .code(code)
+                        .name(name)
+                        .type(type)
+                        .defaultAccountCode(defaultAcctCode)
+                        .accountFound(accountFound)
+                        .action(exists ? "update" : "create")
+                        .warning(warning)
+                        .build());
+            }
+        } finally {
+            wb.close();
+        }
+        return rows;
+    }
 
     public ImportResult importJournals(MultipartFile file, Long companyId) throws IOException {
         Company company = getCompany(companyId);
@@ -511,10 +568,19 @@ public class ImportService {
             return String.valueOf(cell.getBooleanCellValue());
         }
         if (ct == CellType.FORMULA) {
+            CellType resultType = cell.getCachedFormulaResultType();
+            if (resultType == CellType.BOOLEAN) {
+                return String.valueOf(cell.getBooleanCellValue());
+            }
+            if (resultType == CellType.NUMERIC) {
+                double v = cell.getNumericCellValue();
+                if (v == Math.floor(v)) return String.valueOf((long) v);
+                return String.valueOf(v);
+            }
             try {
                 return cell.getStringCellValue().trim();
             } catch (Exception e) {
-                return String.valueOf(cell.getNumericCellValue());
+                return "";
             }
         }
         return "";

@@ -6,7 +6,9 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "sales_order_lines")
+@Table(name = "sales_order_lines", indexes = {
+    @Index(name = "idx_sales_order_lines_order_id", columnList = "order_id")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -63,4 +65,14 @@ public class SalesOrderLine {
     @Builder.Default
     @Column(name = "is_consigne")
     private boolean consigne = false;
+
+    /** Rabais unitaire accordé à ce client (= salePrice - prixClient). 0 si aucun tarif client. */
+    @Builder.Default
+    @Column(name = "rabais_unitaire", precision = 20, scale = 2)
+    private BigDecimal rabaisUnitaire = BigDecimal.ZERO;
+
+    /** Montant total du rabais sur cette ligne = quantite × rabaisUnitaire */
+    @Builder.Default
+    @Column(name = "total_rabais_ligne", precision = 20, scale = 2)
+    private BigDecimal totalRabaisLigne = BigDecimal.ZERO;
 }

@@ -23,10 +23,21 @@ public class AccountMoveDTO {
     private String partnerName;
     private List<AccountMoveLineDTO> lines;
     private LocalDateTime createdAt;
+    private String createdBy;
+    private String updatedBy;
+    private LocalDateTime updatedAt;
     private BigDecimal totalDebit;
     private BigDecimal totalCredit;
     /** ID de l'extourne générée — non null = déjà extournée */
     private Long reversalId;
     /** Vrai si cette écriture est elle-même une extourne */
     private boolean isReversal;
+
+    // Traçabilité validation
+    private String postedBy;
+    private LocalDateTime postedAt;
+
+    // Traçabilité remise en brouillon
+    private String resetToDraftBy;
+    private LocalDateTime resetToDraftAt;
 }

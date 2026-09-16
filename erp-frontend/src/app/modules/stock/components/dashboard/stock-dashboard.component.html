@@ -1,110 +1,159 @@
-<div class="page-container">
-  <div class="page-header">
-    <h1 class="page-title"><span class="material-icons">dashboard</span> Tableau de bord stock</h1>
+<div class="dash">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="dash-header">
+    <div>
+      <h1 class="dash-title">Tableau de bord stock</h1>
+      <p class="dash-sub">Inventaire et mouvements en temps réel</p>
+    </div>
+    <button class="btn-refresh" (click)="ngOnInit()" [class.spinning]="loading">
+      <span class="material-icons">refresh</span>
+    </button>
   </div>
 
   @if (loading) {
-    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+    <div class="skeleton-row">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-card"></div> }
+    </div>
+  } @else if (errorMsg) {
+    <div class="error-state">
+      <span class="material-icons">cloud_off</span>
+      <p>{{ errorMsg }}</p>
+      <button class="btn-retry" (click)="ngOnInit()">
+        <span class="material-icons">refresh</span> Réessayer
+      </button>
+    </div>
   } @else if (dashboard) {
 
-    <div class="kpi-row">
-      <div class="kpi-card" (click)="router.navigate(['/stock/products'])">
-        <div class="kpi-icon blue"><span class="material-icons">category</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.nbProducts }}</div>
-          <div class="kpi-label">Articles actifs</div>
-        </div>
-      </div>
-      <div class="kpi-card" (click)="router.navigate(['/stock/warehouses'])">
-        <div class="kpi-icon indigo"><span class="material-icons">warehouse</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.nbWarehouses }}</div>
-          <div class="kpi-label">Entrepôts / Dépôts</div>
-        </div>
-      </div>
-      <div class="kpi-card highlight">
-        <div class="kpi-icon green"><span class="material-icons">paid</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.totalStockValue | number:'1.0-0' }}</div>
-          <div class="kpi-label">Valeur totale stock (FCFA)</div>
-        </div>
-      </div>
-      <div class="kpi-card" (click)="router.navigate(['/stock/receptions'])">
-        <div class="kpi-icon orange"><span class="material-icons">move_to_inbox</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.nbReceptionsDraft }}</div>
-          <div class="kpi-label">Réceptions en attente</div>
-        </div>
-      </div>
-      <div class="kpi-card" (click)="router.navigate(['/stock/livraisons'])">
-        <div class="kpi-icon teal"><span class="material-icons">local_shipping</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.nbLivraisons }}</div>
-          <div class="kpi-label">Livraisons totales</div>
-        </div>
-      </div>
-      <div class="kpi-card" (click)="router.navigate(['/stock/transferts'])">
-        <div class="kpi-icon purple"><span class="material-icons">compare_arrows</span></div>
-        <div class="kpi-body">
-          <div class="kpi-value">{{ dashboard.nbTransfertsDone }} / {{ dashboard.nbTransferts }}</div>
-          <div class="kpi-label">Transferts (fait / total)</div>
-        </div>
+  <!-- ══ KPI ROW ═══════════════════════════════════════════════════════════ -->
+  <div class="kpi-row">
+
+    <div class="kpi hero-green">
+      <div class="kpi-icon-wrap"><span class="material-icons">paid</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ (dashboard.totalStockValue / 1000000).toFixed(1) | number:'1.1-1' }}</span>
+        <span class="kpi-cur">M FCFA</span>
+        <span class="kpi-lbl">Valeur totale stock</span>
+        <span class="kpi-hint">{{ dashboard.totalStockValue | number:'1.0-0' }} FCFA</span>
       </div>
     </div>
 
-    <!-- Top stock par valeur -->
-    @if (topQuants.length > 0) {
-      <div class="card">
-        <div class="card-header">
-          <span>Top articles par valeur de stock</span>
-          <button class="btn-link" (click)="router.navigate(['/stock/stock'])">Voir tout →</button>
-        </div>
+    <div class="kpi hero-blue clickable" (click)="router.navigate(['/stock/products'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">category</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ dashboard.nbProducts }}</span>
+        <span class="kpi-lbl">Articles actifs</span>
+        <span class="kpi-hint">Gérer le catalogue</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <div class="kpi hero-indigo clickable" (click)="router.navigate(['/stock/warehouses'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">warehouse</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ dashboard.nbWarehouses }}</span>
+        <span class="kpi-lbl">Entrepôts / Dépôts</span>
+        <span class="kpi-hint">Voir les emplacements</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <div class="kpi clickable" [class.hero-orange]="dashboard.nbReceptionsDraft > 0" [class.hero-gray]="dashboard.nbReceptionsDraft === 0"
+         (click)="router.navigate(['/stock/receptions'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">move_to_inbox</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ dashboard.nbReceptionsDraft }}</span>
+        <span class="kpi-lbl">Réceptions en attente</span>
+        <span class="kpi-hint">{{ dashboard.nbReceptionsDone }} déjà traitées</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <div class="kpi hero-teal clickable" (click)="router.navigate(['/stock/expeditions'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">local_shipping</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ dashboard.nbLivraisons }}</span>
+        <span class="kpi-lbl">Livraisons</span>
+        <span class="kpi-hint">Total toutes périodes</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+    <div class="kpi hero-purple clickable" (click)="router.navigate(['/stock/transferts'])">
+      <div class="kpi-icon-wrap"><span class="material-icons">compare_arrows</span></div>
+      <div class="kpi-body">
+        <span class="kpi-val">{{ dashboard.nbTransfertsDone }}<span class="kpi-slash">/</span>{{ dashboard.nbTransferts }}</span>
+        <span class="kpi-lbl">Transferts</span>
+        <span class="kpi-hint">Fait / Total</span>
+      </div>
+      <span class="material-icons kpi-arrow">chevron_right</span>
+    </div>
+
+  </div>
+
+  <!-- ══ TOP ARTICLES ══════════════════════════════════════════════════════ -->
+  @if (topQuants.length > 0) {
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-title">
+          <span class="material-icons">workspace_premium</span> Top articles par valeur de stock
+        </span>
+        <button class="btn-link" (click)="router.navigate(['/stock/analyse/rapport'])">
+          Voir tout <span class="material-icons">arrow_forward</span>
+        </button>
+      </div>
+      <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th class="col-rank">#</th>
               <th>Référence</th>
               <th>Article</th>
               <th>Emplacement</th>
-              <th class="text-right">Qté</th>
-              <th class="text-right">CMUP</th>
-              <th class="text-right">Valeur</th>
+              <th class="r">Quantité</th>
+              <th class="r">CMUP</th>
+              <th class="r">Valeur stock</th>
             </tr>
           </thead>
           <tbody>
             @for (q of topQuants; track q.id; let i = $index) {
               <tr>
-                <td class="text-muted">{{ i + 1 }}</td>
-                <td class="font-mono text-muted">{{ q.productCode || '—' }}</td>
-                <td class="font-bold">{{ q.productName }}</td>
-                <td class="text-muted">{{ q.locationCompleteName || q.locationName }}</td>
-                <td class="text-right">{{ q.quantity | number:'1.0-2' }} {{ q.uomName }}</td>
-                <td class="text-right font-mono">{{ q.standardPrice | number:'1.0-0' }}</td>
-                <td class="text-right font-bold text-blue">{{ q.totalValue | number:'1.0-0' }}</td>
+                <td><span class="rank-badge">{{ i + 1 }}</span></td>
+                <td class="mono muted">{{ q.productCode || '—' }}</td>
+                <td class="bold">{{ q.productName }}</td>
+                <td class="muted small">{{ q.locationCompleteName || q.locationName }}</td>
+                <td class="r">{{ q.quantity | number:'1.0-2' }} <span class="unit">{{ q.uomName }}</span></td>
+                <td class="r mono">{{ q.standardPrice | number:'1.0-0' }}</td>
+                <td class="r bold val-blue">{{ q.totalValue | number:'1.0-0' }}</td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-    }
-
-    <!-- Quick actions -->
-    <div class="quick-actions">
-      <div class="qa-title">Créer rapidement</div>
-      <div class="qa-row">
-        <button class="qa-btn" (click)="router.navigate(['/stock/receptions/new'])">
-          <span class="material-icons">move_to_inbox</span> Nouvelle réception
-        </button>
-        <button class="qa-btn" (click)="router.navigate(['/stock/livraisons/new'])">
-          <span class="material-icons">local_shipping</span> Nouvelle livraison
-        </button>
-        <button class="qa-btn" (click)="router.navigate(['/stock/transferts/new'])">
-          <span class="material-icons">compare_arrows</span> Nouveau transfert
-        </button>
-        <button class="qa-btn" (click)="router.navigate(['/stock/products'])">
-          <span class="material-icons">add_circle</span> Nouvel article
-        </button>
-      </div>
     </div>
+  }
+
+  <!-- ══ ACTIONS RAPIDES ══════════════════════════════════════════════════ -->
+  <div class="quick-block">
+    <div class="quick-title"><span class="material-icons">bolt</span> Actions rapides</div>
+    <div class="quick-row">
+      <button class="quick-btn" (click)="router.navigate(['/stock/receptions/new'])">
+        <span class="material-icons">move_to_inbox</span> Nouvelle réception
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/stock/expeditions/new'])">
+        <span class="material-icons">local_shipping</span> Nouvelle livraison
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/stock/transferts/new'])">
+        <span class="material-icons">compare_arrows</span> Nouveau transfert
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/stock/products'])">
+        <span class="material-icons">add_circle_outline</span> Nouvel article
+      </button>
+      <button class="quick-btn" (click)="router.navigate(['/stock/analyse/rapport'])">
+        <span class="material-icons">assessment</span> Rapport stock
+      </button>
+    </div>
+  </div>
+
   }
 </div>

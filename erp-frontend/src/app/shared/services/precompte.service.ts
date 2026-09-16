@@ -14,6 +14,14 @@ export interface Precompte {
   active?: boolean;
 }
 
+export interface PrecompteImportResult {
+  success: boolean;
+  message: string;
+  errors?: string[];
+  /** Doublons partenaire+type détectés dans le fichier — n'affecte pas `success`, distinct de `errors`. */
+  warnings?: string[];
+}
+
 export interface EnlevementClient {
   id?: number;
   partnerId: number;
@@ -46,11 +54,11 @@ export class PrecompteService {
     return this.http.get(`${this.basePrecompte}/template`, { responseType: 'blob' });
   }
 
-  importPrecomptes(file: File, companyId: number): Observable<any> {
+  importPrecomptes(file: File, companyId: number): Observable<PrecompteImportResult> {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('companyId', String(companyId));
-    return this.http.post(`${this.basePrecompte}/import`, fd);
+    return this.http.post<PrecompteImportResult>(`${this.basePrecompte}/import`, fd);
   }
 
   getAllPrecomptes(companyId: number): Observable<Precompte[]> {

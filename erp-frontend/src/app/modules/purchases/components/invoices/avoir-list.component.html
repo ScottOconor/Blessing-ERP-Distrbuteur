@@ -35,6 +35,23 @@
     <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
   </div>
 
+  <!-- ── Regrouper par ──────────────────────────────────────── -->
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
+  </div>
+
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
@@ -59,30 +76,72 @@
           </tr>
         </thead>
         <tbody>
-          @for (avoir of filteredAvoirs; track avoir.id) {
-            <tr class="clickable-row" (click)="openAvoir(avoir)">
-              <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
-              <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
-              <td>{{ avoir.partnerName }}</td>
-              <td>
-                @if (avoir.originalInvoiceName) {
-                  <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td>
-                @if (avoir.purchaseOrderName) {
-                  <span class="link-ref">{{ avoir.purchaseOrderName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
-              <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
-              <td>
-                @if (avoir.accountMoveName) {
-                  <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
-            </tr>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="5">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }}</span>
+                </td>
+                <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
+                <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
+                <td></td><td></td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (avoir of getGroupItems(row.key); track avoir.id) {
+                  <tr class="detail-row clickable-row" (click)="openAvoir(avoir)">
+                    <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
+                    <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ avoir.partnerName }}</td>
+                    <td>
+                      @if (avoir.originalInvoiceName) {
+                        <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td>
+                      @if (avoir.purchaseOrderName) {
+                        <span class="link-ref">{{ avoir.purchaseOrderName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
+                    <td>
+                      @if (avoir.accountMoveName) {
+                        <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
+                  </tr>
+                }
+              }
+            }
+          } @else {
+            @for (avoir of filteredAvoirs; track avoir.id) {
+              <tr class="clickable-row" (click)="openAvoir(avoir)">
+                <td class="font-mono font-bold avoir-name">{{ avoir.name }}</td>
+                <td>{{ avoir.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ avoir.partnerName }}</td>
+                <td>
+                  @if (avoir.originalInvoiceName) {
+                    <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td>
+                  @if (avoir.purchaseOrderName) {
+                    <span class="link-ref">{{ avoir.purchaseOrderName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td class="text-right">{{ avoir.totalHT | number:'1.0-0' }}</td>
+                <td class="text-right font-bold">{{ avoir.totalTTC | number:'1.0-0' }}</td>
+                <td>
+                  @if (avoir.accountMoveName) {
+                    <span class="ecriture-chip">{{ avoir.accountMoveName }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td><span [class]="getStateBadge(avoir.state || '')">{{ getStateLabel(avoir.state || '') }}</span></td>
+              </tr>
+            }
           }
         </tbody>
       </table>
@@ -128,6 +187,14 @@
             </select>
           </div>
           <div class="form-group">
+            <label>Entrepôt</label>
+            <select [(ngModel)]="selectedWarehouseId" (ngModelChange)="onWarehouseChange()" class="form-control">
+              @for (w of warehouses; track w.id) {
+                <option [ngValue]="w.id">{{ w.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
             <label>Date</label>
             <input type="date" [(ngModel)]="avoirForm.date" class="form-control" />
           </div>
@@ -164,10 +231,11 @@
                     <th>#</th>
                     <th style="min-width:200px">Article / Description</th>
                     <th class="ar">Qté</th>
-                    <th class="ar">Prix U.</th>
+                    <th class="ar">P.U. HT</th>
+                    <th class="ar" style="color:#e65100">Rabais/u HT</th>
                     <th class="ar">TVA %</th>
-                    <th class="ar">HT</th>
-                    <th class="ar">TTC</th>
+                    <th class="ar">MNT HT</th>
+                    <th class="ar">MNT TTC</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -201,6 +269,9 @@
                                   @if (p.defaultCode) { <span class="sc">{{ p.defaultCode }}</span> }
                                   <span class="sn">{{ p.name }}</span>
                                   <span class="sp">{{ p.standardPrice | number:'1.0-0' }}</span>
+                                  <span class="sug-stock" [class.low]="(p.qtyAvailable ?? p.qtyOnHand ?? 0) <= 0">
+                                    {{ (p.qtyAvailable ?? p.qtyOnHand ?? 0) | number:'1.0-0' }} {{ p.uomName }}
+                                  </span>
                                 </div>
                               }
                               @if (getSuggestions(i).length === 0) {
@@ -210,8 +281,18 @@
                           }
                         </div>
                       </td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.prixUnitaire" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td>
+                        <input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" />
+                        @if (lineStockQty[i] !== undefined) {
+                          <span class="stock-tag" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
+                            {{ lineStockQty[i] | number:'1.0-0' }} dispo
+                          </span>
+                        }
+                      </td>
+                      <td><input type="number" class="inp ar" [ngModel]="lineCatHT[i]" (ngModelChange)="onCatHTChange(i, $event)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td class="ar" style="color:#e65100;font-weight:600">
+                        @if ((line.rabaisUnitaire ?? 0) > 0) { – {{ line.rabaisUnitaire | number:'1.0-0' }} } @else { — }
+                      </td>
                       <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
                       <td class="ar amt">{{ line.montantHT | number:'1.0-0' }}</td>
                       <td class="ar amt-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
@@ -230,6 +311,10 @@
               <div class="tot-row"><span>Total HT</span><span>{{ avoirForm.totalHT | number:'1.0-0' }} FCFA</span></div>
               <div class="tot-row"><span>TVA</span><span>{{ avoirForm.totalTVA | number:'1.0-0' }} FCFA</span></div>
               <div class="tot-row tot-ttc"><span>Total TTC</span><span>{{ avoirForm.totalTTC | number:'1.0-0' }} FCFA</span></div>
+              @if (totalRabaisHTAvoir > 0) {
+                <div class="tot-row" style="color:#e65100"><span>Rabais obtenus (601901)</span><span>– {{ totalRabaisHTAvoir | number:'1.0-0' }} FCFA</span></div>
+                <div class="tot-row tot-ttc"><span>Net à payer</span><span>{{ netApresRabais | number:'1.0-0' }} FCFA</span></div>
+              }
             </div>
           }
         </div>

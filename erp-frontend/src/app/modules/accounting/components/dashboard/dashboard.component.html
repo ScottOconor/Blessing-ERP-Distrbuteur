@@ -1,0 +1,147 @@
+<div class="dash-container">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <div class="dash-icon-wrap">
+        <span class="material-icons">account_balance</span>
+      </div>
+      <div>
+        <h1 class="dash-title">Tableau de Bord Comptable</h1>
+        <p class="dash-sub">{{ companyName }} · {{ currentMonthLabel | titlecase }}</p>
+      </div>
+    </div>
+    <button class="btn-new" (click)="router.navigate(['/accounting/journal-entries/new'])">
+      <span class="material-icons">add</span>
+      Nouvelle écriture
+    </button>
+  </div>
+
+  <!-- ══ KPI CARDS ═══════════════════════════════════════════════════════ -->
+  <div class="kpi-grid">
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon"><span class="material-icons">check_circle</span></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats.postedCount }}</div>
+        <div class="kpi-label">Écritures validées</div>
+      </div>
+      <div class="kpi-bg-icon"><span class="material-icons">check_circle</span></div>
+    </div>
+
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-icon"><span class="material-icons">pending_actions</span></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats.draftCount }}</div>
+        <div class="kpi-label">Brouillons en attente</div>
+      </div>
+      <div class="kpi-bg-icon"><span class="material-icons">pending_actions</span></div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon"><span class="material-icons">book</span></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats.journalsCount }}</div>
+        <div class="kpi-label">Journaux actifs</div>
+      </div>
+      <div class="kpi-bg-icon"><span class="material-icons">book</span></div>
+    </div>
+
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-icon"><span class="material-icons">account_tree</span></div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats.accountsCount }}</div>
+        <div class="kpi-label">Comptes actifs</div>
+      </div>
+      <div class="kpi-bg-icon"><span class="material-icons">account_tree</span></div>
+    </div>
+
+  </div>
+
+  <!-- ══ DERNIÈRES ÉCRITURES ══════════════════════════════════════════════ -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <span class="material-icons">history</span>
+        Dernières écritures
+      </div>
+      <button class="btn-see-all" (click)="router.navigate(['/accounting/journal-entries'])">
+        Voir tout <span class="material-icons">arrow_forward</span>
+      </button>
+    </div>
+
+    @if (loading) {
+      <div class="loading-state">
+        <div class="spinner-ring"></div>
+        <span>Chargement…</span>
+      </div>
+    } @else if (recentMoves.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">receipt_long</span>
+        <p>Aucune écriture. Commencez par créer votre première écriture comptable.</p>
+        <button class="btn-new-sm" (click)="router.navigate(['/accounting/journal-entries/new'])">
+          <span class="material-icons">add</span> Créer une écriture
+        </button>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table class="move-table">
+          <thead>
+            <tr>
+              <th>N° Pièce</th>
+              <th>Date</th>
+              <th>Journal</th>
+              <th>Référence</th>
+              <th class="r">Débit</th>
+              <th class="r">Crédit</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (move of recentMoves; track move.id) {
+              <tr (click)="router.navigate(['/accounting/journal-entries', move.id])">
+                <td><span class="piece-num">{{ move.name || 'Brouillon' }}</span></td>
+                <td class="date-col">{{ move.date | date:'dd/MM/yyyy' }}</td>
+                <td>{{ move.journalName }}</td>
+                <td class="text-muted">{{ move.ref || '—' }}</td>
+                <td class="r debit-val">
+                  {{ (move.totalDebit ?? 0) > 0 ? fmt(move.totalDebit ?? 0) : '' }}
+                </td>
+                <td class="r credit-val">
+                  {{ (move.totalCredit ?? 0) > 0 ? fmt(move.totalCredit ?? 0) : '' }}
+                </td>
+                <td>
+                  <span class="state-badge" [class]="'state-' + move.state">
+                    {{ getStateLabel(move.state) }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ══ ACCÈS RAPIDES ════════════════════════════════════════════════════ -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <span class="material-icons">bolt</span>
+        Accès rapides
+      </div>
+    </div>
+    <div class="quick-grid">
+      @for (action of quickActions; track action.label) {
+        <div class="quick-card" (click)="router.navigate([action.route])">
+          <div class="quick-icon-wrap" [style.background]="action.color + '18'">
+            <span class="material-icons" [style.color]="action.color">{{ action.icon }}</span>
+          </div>
+          <span class="quick-label">{{ action.label }}</span>
+          <span class="material-icons quick-arrow">chevron_right</span>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

@@ -6,12 +6,11 @@ import java.util.List;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class RoleDTO {
-    private Long id;
-    private String code;
-    private String label;
+    private Long    id;
+    private String  code;
+    private String  label;
     private boolean isSystem;
     private boolean active;
-    private Long groupId;
     private List<PermissionDTO> permissions;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

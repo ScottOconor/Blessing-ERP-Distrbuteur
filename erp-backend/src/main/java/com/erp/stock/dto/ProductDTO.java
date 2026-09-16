@@ -12,15 +12,19 @@ public class ProductDTO {
     private Long categoryId;
     private String categoryName;
     private String uomName;
+    private Long unitOfMeasureId;
     private BigDecimal standardPrice;
     private BigDecimal salePrice;
     private String type;
     private String stockAccountCode;
-    private String cogsAccountCode;
     private String description;
     private boolean active;
+    private boolean exemptTva;
+    private boolean exemptTvaAchat;
     private Long companyId;
-    // Stock disponible (calculé)
+    // Stock (calculé)
     private BigDecimal qtyOnHand;
+    private BigDecimal qtyReserved;
+    private BigDecimal qtyAvailable;
     private LocalDateTime createdAt;
 }

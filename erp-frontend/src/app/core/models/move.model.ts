@@ -31,4 +31,14 @@ export interface AccountMove {
   reversalId?: number;
   /** Vrai si cette écriture est elle-même une extourne — ne peut pas être extournée */
   isReversal?: boolean;
+  createdAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+  // Traçabilité validation
+  postedBy?: string;
+  postedAt?: string;
+  // Traçabilité remise en brouillon
+  resetToDraftBy?: string;
+  resetToDraftAt?: string;
 }

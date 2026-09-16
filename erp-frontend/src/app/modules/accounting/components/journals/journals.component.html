@@ -5,10 +5,14 @@
       Journaux Comptables
     </h1>
     <div class="page-actions">
-      <label class="btn btn-outline" [class.loading]="importing" title="Importer depuis Excel Odoo">
+      <button class="btn btn-ghost" (click)="downloadTemplate()" title="Télécharger le modèle Excel">
+        <span class="material-icons">download</span>
+        Modèle
+      </button>
+      <label class="btn btn-outline" [class.loading]="previewing || importing" title="Importer depuis Excel">
         <span class="material-icons">upload_file</span>
-        {{ importing ? 'Import...' : 'Importer' }}
-        <input type="file" accept=".xlsx,.xls" (change)="onImport($event)" style="display:none" [disabled]="importing">
+        {{ previewing ? 'Lecture...' : importing ? 'Import...' : 'Importer' }}
+        <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" style="display:none" [disabled]="previewing || importing">
       </label>
       <button class="btn btn-primary" (click)="openCreate()">
         <span class="material-icons">add</span>
@@ -87,6 +91,98 @@
     }
   </div>
 </div>
+
+@if (showPreviewModal) {
+  <div class="modal-overlay" (click)="cancelPreview()">
+    <div class="modal modal-preview" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <span class="material-icons">preview</span>
+          Prévisualisation de l'import
+        </h3>
+        <button class="modal-close" (click)="cancelPreview()"><span class="material-icons">close</span></button>
+      </div>
+
+      <div class="preview-summary">
+        <div class="preview-stat preview-stat-create">
+          <span class="material-icons">add_circle</span>
+          <span><strong>{{ previewCreateCount }}</strong> à créer</span>
+        </div>
+        <div class="preview-stat preview-stat-update">
+          <span class="material-icons">update</span>
+          <span><strong>{{ previewUpdateCount }}</strong> à mettre à jour</span>
+        </div>
+        @if (previewWarningCount > 0) {
+          <div class="preview-stat preview-stat-warn">
+            <span class="material-icons">warning</span>
+            <span><strong>{{ previewWarningCount }}</strong> avertissement{{ previewWarningCount > 1 ? 's' : '' }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="modal-body preview-body">
+        @if (previewRows.length === 0) {
+          <div class="empty-state" style="padding:40px 0">
+            <span class="material-icons">inbox</span>
+            <p>Aucune ligne valide trouvée dans le fichier</p>
+          </div>
+        } @else {
+          <table class="table-erp table-preview">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Type</th>
+                <th>Compte par défaut</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of previewRows; track row.code) {
+                <tr [class.row-warn]="!!row.warning">
+                  <td>
+                    @if (row.action === 'create') {
+                      <span class="badge badge-success">Créer</span>
+                    } @else {
+                      <span class="badge badge-info">Mettre à jour</span>
+                    }
+                  </td>
+                  <td><strong>{{ row.code }}</strong></td>
+                  <td>{{ row.name }}</td>
+                  <td>
+                    <span [class]="getTypeBadgeClass(row.type)">{{ getTypeLabel(row.type) }}</span>
+                  </td>
+                  <td>
+                    @if (row.defaultAccountCode) {
+                      <span [class.text-danger]="!row.accountFound" [class.text-success]="row.accountFound">
+                        {{ row.defaultAccountCode }}
+                        @if (!row.accountFound) {
+                          <span class="material-icons warn-icon" title="{{ row.warning }}">warning</span>
+                        } @else {
+                          <span class="material-icons ok-icon">check</span>
+                        }
+                      </span>
+                    } @else { <span class="text-muted">—</span> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="cancelPreview()">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="btn btn-primary" (click)="confirmImport()" [disabled]="previewRows.length === 0">
+          <span class="material-icons">check_circle</span>
+          Confirmer l'import ({{ previewRows.length }} journaux)
+        </button>
+      </div>
+    </div>
+  </div>
+}
 
 @if (showModal) {
   <div class="modal-overlay" (click)="closeModal()">

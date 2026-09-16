@@ -2,12 +2,9 @@
   <div class="page-header">
     <div>
       <h1 class="page-title"><span class="material-icons">admin_panel_settings</span> Rôles</h1>
-      <p class="page-sub">Rôles système prédéfinis et rôles personnalisés par groupe</p>
+      <p class="page-sub">Rôles système prédéfinis et rôles personnalisés</p>
     </div>
     <div class="header-actions">
-      <select class="form-control select-group" [(ngModel)]="filterGroupId" (ngModelChange)="loadRoles()">
-        @for (g of groups; track g.id) { <option [value]="g.id">{{ g.name }}</option> }
-      </select>
       <button class="btn-primary" (click)="openCreate()">
         <span class="material-icons">add</span> Nouveau rôle
       </button>
@@ -84,7 +81,7 @@
             <thead>
               <tr>
                 <th class="col-resource">Module / Ressource</th>
-                @for (act of ACTIONS; track act) {
+                @for (act of ACTION_COLUMNS; track act) {
                   <th class="col-action">{{ ACTION_LABELS[act] }}</th>
                 }
                 <th class="col-all">Tout</th>
@@ -92,41 +89,29 @@
             </thead>
             <tbody>
               @for (mod of MODULES; track mod) {
-                <!-- Ligne en-tête du module -->
                 <tr class="module-header-row">
                   <td class="module-header-cell">
                     <span class="module-dot"></span>
                     <strong>{{ MODULE_LABELS[mod] }}</strong>
-                    @if (isPartialModule(mod)) {
-                      <span class="partial-badge">partiel</span>
-                    }
+                    @if (isPartialModule(mod)) { <span class="partial-badge">partiel</span> }
                   </td>
-                  @for (act of ACTIONS; track act) {
-                    <td class="module-action-cell"></td>
-                  }
+                  @for (act of ACTION_COLUMNS; track act) { <td class="module-action-cell"></td> }
                   <td class="text-center module-action-cell">
-                    <input type="checkbox"
-                      [checked]="isAllModuleChecked(mod)"
-                      (change)="toggleAllModule(mod)"
-                      title="Tout cocher / décocher pour {{ MODULE_LABELS[mod] }}" />
+                    <input type="checkbox" [checked]="isAllModuleChecked(mod)" (change)="toggleAllModule(mod)" />
                   </td>
                 </tr>
-                <!-- Lignes ressources du module -->
                 @for (res of RESOURCES[mod]; track res) {
                   <tr class="resource-row">
-                    <td class="res-cell">
-                      <span class="res-indent">└</span>
-                      {{ RESOURCE_LABELS[res] }}
-                    </td>
-                    @for (act of ACTIONS; track act) {
-                      <td class="text-center">
-                        <input type="checkbox" [(ngModel)]="permMatrix[mod][res][act]" />
-                      </td>
+                    <td class="res-cell"><span class="res-indent">└</span> {{ RESOURCE_LABELS[res] }}</td>
+                    @for (act of ACTION_COLUMNS; track act) {
+                      @if (supportsAction(mod, res, act)) {
+                        <td class="text-center"><input type="checkbox" [(ngModel)]="permMatrix[mod][res][act]" /></td>
+                      } @else {
+                        <td class="text-center"></td>
+                      }
                     }
                     <td class="text-center">
-                      <input type="checkbox"
-                        [checked]="isAllActionsChecked(mod, res)"
-                        (change)="toggleAllActions(mod, res)" />
+                      <input type="checkbox" [checked]="isAllActionsChecked(mod, res)" (change)="toggleAllActions(mod, res)" />
                     </td>
                   </tr>
                 }

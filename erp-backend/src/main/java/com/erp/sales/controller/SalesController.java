@@ -6,8 +6,10 @@ import com.erp.sales.service.RistourneService;
 import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.util.List;
 
@@ -22,9 +24,11 @@ public class SalesController {
 
     // ===================== BONS DE COMMANDE =====================
 
+    /** Streaming — voir getInvoices plus bas pour le pourquoi. */
     @GetMapping("/orders")
-    public ResponseEntity<List<SalesOrderDTO>> getOrders(@RequestParam("companyId") Long companyId) {
-        return ResponseEntity.ok(salesService.getAllOrders(companyId));
+    public ResponseEntity<StreamingResponseBody> getOrders(@RequestParam("companyId") Long companyId) {
+        StreamingResponseBody body = out -> salesService.streamOrders(companyId, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/orders/{id}")
@@ -55,9 +59,15 @@ public class SalesController {
 
     // ===================== FACTURES =====================
 
+    /** Réponse en streaming : le JSON est écrit directement dans le flux HTTP au fil de la lecture
+     *  en base (curseur serveur), sans jamais charger toute la liste des factures en mémoire —
+     *  avec un très gros volume de factures, la version bufferisée (List&lt;SalesInvoiceDTO&gt;)
+     *  faisait planter la JVM en OutOfMemoryError sur ce seul endpoint. Le JSON produit sur le fil
+     *  est strictement identique (même tableau, mêmes champs) : aucun changement côté frontend. */
     @GetMapping("/invoices")
-    public ResponseEntity<List<SalesInvoiceDTO>> getInvoices(@RequestParam("companyId") Long companyId) {
-        return ResponseEntity.ok(salesService.getAllInvoices(companyId));
+    public ResponseEntity<StreamingResponseBody> getInvoices(@RequestParam("companyId") Long companyId) {
+        StreamingResponseBody body = out -> salesService.streamInvoices(companyId, "invoice", out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/invoices/{id}")
@@ -104,14 +114,18 @@ public class SalesController {
 
     // ===================== AVOIRS =====================
 
+    /** Streaming — voir getInvoices ci-dessus pour le pourquoi. */
     @GetMapping("/avoirs")
-    public ResponseEntity<List<SalesInvoiceDTO>> getAvoirs(@RequestParam("companyId") Long companyId) {
-        return ResponseEntity.ok(salesService.getAllAvoirs(companyId));
+    public ResponseEntity<StreamingResponseBody> getAvoirs(@RequestParam("companyId") Long companyId) {
+        StreamingResponseBody body = out -> salesService.streamInvoices(companyId, "credit_note", out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @PostMapping("/invoices/{id}/avoir")
-    public ResponseEntity<SalesInvoiceDTO> createAvoirFromInvoice(@PathVariable("id") Long id) {
-        return ResponseEntity.ok(salesService.createAvoirFromInvoice(id));
+    public ResponseEntity<SalesInvoiceDTO> createAvoirFromInvoice(
+            @PathVariable("id") Long id,
+            @RequestBody(required = false) com.erp.sales.dto.AvoirRequest req) {
+        return ResponseEntity.ok(salesService.createAvoirFromInvoice(id, req));
     }
 
     @PostMapping("/avoirs")
@@ -123,8 +137,17 @@ public class SalesController {
     public ResponseEntity<SalesInvoiceDTO> applyCredit(
             @PathVariable Long id,
             @RequestParam java.math.BigDecimal amount,
+            @RequestParam Long companyId,
+            @RequestParam(required = false) Long creditNoteId) {
+        return ResponseEntity.ok(salesService.applyCreditToInvoice(id, amount, companyId, creditNoteId));
+    }
+
+    /** Liste détaillée des avoirs disponibles ("crédits en circulation") d'un client, un par avoir. */
+    @GetMapping("/partners/{partnerId}/available-credits")
+    public ResponseEntity<List<com.erp.sales.dto.AvailableCreditDTO>> getAvailableCredits(
+            @PathVariable Long partnerId,
             @RequestParam Long companyId) {
-        return ResponseEntity.ok(salesService.applyCreditToInvoice(id, amount, companyId));
+        return ResponseEntity.ok(salesService.getAvailableCredits(partnerId, companyId));
     }
 
     @GetMapping("/partners/{partnerId}/balance")
@@ -151,6 +174,11 @@ public class SalesController {
         return ResponseEntity.ok(salesService.createPayment(request));
     }
 
+    @DeleteMapping("/payments/{id}")
+    public ResponseEntity<InvoicePaymentDTO> reversePayment(@PathVariable Long id) {
+        return ResponseEntity.ok(salesService.reversePayment(id));
+    }
+
     // ===================== CLIENTS =====================
 
     @GetMapping("/clients")
@@ -172,5 +200,81 @@ public class SalesController {
     public ResponseEntity<Void> deleteClient(@PathVariable Long id) {
         salesService.deleteClient(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ===================== LETTRAGE FACTURES VENTES =====================
+
+    @GetMapping("/invoices/{id}/available-moves")
+    public ResponseEntity<java.util.List<AvailableMoveDTO>> getAvailableMoves(
+            @PathVariable Long id,
+            @RequestParam Long companyId) {
+        return ResponseEntity.ok(salesService.getAvailableMovesForSalesReconciliation(id, companyId));
+    }
+
+    @GetMapping("/invoices/{id}/reconciliations")
+    public ResponseEntity<java.util.List<SalesInvoiceReconciliationDTO>> getReconciliations(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(salesService.getSalesReconciliations(id));
+    }
+
+    @PostMapping("/invoices/{id}/reconcile")
+    public ResponseEntity<SalesInvoiceReconciliationDTO> reconcile(
+            @PathVariable Long id,
+            @RequestBody ReconcileRequest request) {
+        return ResponseEntity.ok(salesService.reconcileSalesInvoice(id, request));
+    }
+
+    @DeleteMapping("/invoices/reconciliations/{reconciliationId}")
+    public ResponseEntity<Void> unreconcile(@PathVariable Long reconciliationId) {
+        salesService.unreconcileSalesInvoice(reconciliationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ===================== PRIX CLIENT PAR ARTICLE =====================
+
+    /** Tous les prix configurés pour un client */
+    @GetMapping("/client-prices")
+    public ResponseEntity<List<PrixClientArticleDTO>> getPrixClientByClient(
+            @RequestParam Long clientId,
+            @RequestParam Long companyId) {
+        return ResponseEntity.ok(salesService.getPrixClientByClient(clientId, companyId));
+    }
+
+    /** Prix pour un produit + client spécifique (null si aucun tarif configuré) */
+    @GetMapping("/client-prices/product")
+    public ResponseEntity<PrixClientArticleDTO> getPrixClientForProduct(
+            @RequestParam Long productId,
+            @RequestParam Long clientId,
+            @RequestParam Long companyId) {
+        PrixClientArticleDTO dto = salesService.getPrixClientForProduct(productId, clientId, companyId);
+        return dto != null ? ResponseEntity.ok(dto) : ResponseEntity.noContent().build();
+    }
+
+    /** Créer ou mettre à jour un prix client pour un article */
+    @PostMapping("/client-prices")
+    public ResponseEntity<PrixClientArticleDTO> savePrixClient(@RequestBody PrixClientArticleDTO dto) {
+        return ResponseEntity.ok(salesService.savePrixClient(dto));
+    }
+
+    /** Supprimer un prix client */
+    @DeleteMapping("/client-prices/{id}")
+    public ResponseEntity<Void> deletePrixClient(@PathVariable Long id) {
+        salesService.deletePrixClient(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Restaure le stock des factures annulées et recalcule les réservations depuis les bons confirmés */
+    @PostMapping("/fix-reservations")
+    public ResponseEntity<String> fixReservations(@RequestParam("companyId") Long companyId) {
+        int restored = salesService.recalculateReservations(companyId);
+        return ResponseEntity.ok("Réservations recalculées et stock restauré pour "
+                + restored + " facture(s) annulée(s)");
+    }
+
+    /** Remet à zéro TOUTES les réservations de stock de la société, sans recalcul. */
+    @PostMapping("/release-all-reservations")
+    public ResponseEntity<String> releaseAllReservations(@RequestParam("companyId") Long companyId) {
+        int cleared = salesService.releaseAllReservations(companyId);
+        return ResponseEntity.ok(cleared + " réservation(s) de stock remise(s) à zéro");
     }
 }

@@ -1,11 +1,17 @@
 <div class="page-container">
   <div class="page-header">
     <div class="header-left">
-      <button class="btn-back" (click)="router.navigate(['/stock/livraisons'])"><span class="material-icons">arrow_back</span></button>
+      <button class="btn-back" (click)="router.navigate(['/stock/expeditions'])">
+        <span class="material-icons">arrow_back</span>
+      </button>
       <div>
         <h1 class="page-title">
-          <span class="material-icons">local_shipping</span>
-          {{ isNew ? 'Nouvelle livraison' : (picking?.name || 'Livraison') }}
+          <span class="material-icons">{{ isIncoming ? 'move_to_inbox' : 'swap_horiz' }}</span>
+          @if (isNew) { Nouvelle expédition inter-agences }
+          @else if (picking) {
+            {{ picking.name }}
+            @if (isIncoming) { <span class="incoming-tag">Réception entrante</span> }
+          }
         </h1>
         @if (!isNew && picking) {
           <span class="state-badge" [attr.data-state]="picking.state">{{ stateLabel(picking.state || '') }}</span>
@@ -13,171 +19,338 @@
       </div>
     </div>
     <div class="header-actions">
-      @if (!isNew && picking) {
-        <button class="btn-secondary" (click)="openPrint()">
-          <span class="material-icons">print</span> Imprimer
-        </button>
-      }
-      @if (!isDone && !isCancelled) {
-        <button class="btn-secondary" (click)="save()" [disabled]="saving">
+      <!-- Boutons ÉMETTEUR (brouillon) -->
+      @if (!isReadonly && !isIncoming) {
+        <button class="btn-secondary" [disabled]="saving || validating" (click)="save()">
           <span class="material-icons">save</span> {{ saving ? 'Sauvegarde...' : 'Sauvegarder' }}
         </button>
       }
-      @if (!isNew && !isDone && !isCancelled) {
-        <button class="btn-validate" (click)="validate()" [disabled]="validating">
-          <span class="material-icons">local_shipping</span> {{ validating ? 'Validation...' : 'Valider la livraison' }}
+      @if (!isReadonly && !isIncoming && !isNew) {
+        <button class="btn-validate" [disabled]="validating || saving" (click)="validate()">
+          <span class="material-icons">local_shipping</span>
+          {{ validating ? 'Envoi...' : "Envoyer l'expédition" }}
         </button>
-        <button class="btn-cancel-picking" (click)="cancel()" [disabled]="cancelling">
+        <button class="btn-cancel-picking" [disabled]="cancelling" (click)="cancel()">
           <span class="material-icons">cancel</span>
+        </button>
+      }
+      <!-- Bouton RÉCEPTEUR -->
+      @if (isPendingReception && isIncoming) {
+        <button class="btn-validate" [disabled]="confirming" (click)="confirmReception()">
+          <span class="material-icons">check_circle</span>
+          {{ confirming ? 'Confirmation...' : 'Confirmer la réception' }}
+        </button>
+      }
+      <!-- Annuler côté émetteur en attente -->
+      @if (isPendingReception && !isIncoming) {
+        <button class="btn-cancel-picking" [disabled]="cancelling" (click)="cancel()">
+          <span class="material-icons">cancel</span> Annuler
+        </button>
+      }
+      @if ((isPendingReception || isDone) && !isNew && picking) {
+        <button class="btn-secondary" (click)="printBordereau()">
+          <span class="material-icons">print</span> Imprimer
         </button>
       }
     </div>
   </div>
 
-  @if (errorMsg) { <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div> }
-  @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
-  @if (isDone && picking?.accountMoveName) {
+  @if (errorMsg) {
+    <div class="alert alert-danger">
+      <span class="material-icons">error</span> {{ errorMsg }}
+      <button class="alert-close" (click)="errorMsg = ''"><span class="material-icons">close</span></button>
+    </div>
+  }
+  @if (successMsg) {
+    <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
+  }
+  @if (warningMsg) {
+    <div class="alert alert-warning">
+      <span class="material-icons">warning</span> {{ warningMsg }}
+      <button class="btn-retry" [disabled]="retryingNotify" (click)="retryNotifySender()">
+        <span class="material-icons">{{ retryingNotify ? 'hourglass_empty' : 'refresh' }}</span>
+        {{ retryingNotify ? 'Nouvel essai...' : 'Réessayer' }}
+      </button>
+    </div>
+  }
+
+  <!-- Bannière réception en attente -->
+  @if (isPendingReception && isIncoming && picking) {
+    <div class="info-banner info-banner-reception">
+      <span class="material-icons">move_to_inbox</span>
+      <div>
+        <strong>Réception à confirmer</strong> — expédition de
+        <strong>{{ picking.partnerName || '—' }}</strong>.
+        Vérifiez les quantités et confirmez pour mettre à jour votre stock.
+      </div>
+    </div>
+  }
+  @if (isPendingReception && !isIncoming && picking) {
     <div class="info-banner">
-      <span class="material-icons">book</span>
-      Coût marchandises livré comptabilisé : <strong>{{ picking!.accountMoveName }}</strong>
-      · Valeur : <strong>{{ picking!.totalValue | number:'1.0-0' }} FCFA</strong>
+      <span class="material-icons">hourglass_empty</span>
+      Stock sorti. En attente de réception par <strong>{{ picking.remoteAgencyName || picking.partnerName }}</strong>.
     </div>
   }
 
   @if (loading) {
-    <div class="loading"><span class="material-icons spin">refresh</span></div>
+    <div class="loading"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>
   } @else {
     <div class="form-layout">
+
+      <!-- ===== LIGNES ===== -->
       <div class="form-main">
         <div class="card">
           <div class="card-header">
-            <span>Lignes de livraison</span>
-            @if (isDraft) {
-              <button class="btn-add-line" (click)="addLine()"><span class="material-icons">add</span> Ajouter</button>
+            <span>{{ isIncoming ? 'Articles reçus' : 'Articles à expédier' }}</span>
+            @if (!isReadonly && !isIncoming) {
+              <button class="btn-add-line" (click)="addLine()">
+                <span class="material-icons">add</span> Ajouter
+              </button>
             }
           </div>
           <div class="lines-container">
-            @if (lines.length === 0) { <div class="empty-lines">Aucune ligne</div> }
+            @if (lines.length === 0) {
+              <div class="empty-lines">Aucun article</div>
+            }
             <table class="lines-table" [class.has-lines]="lines.length > 0">
               @if (lines.length > 0) {
                 <thead><tr>
-                  <th style="width:34%">Article</th><th>Unité</th>
-                  <th>Qté dem.</th><th>Qté livrée</th>
-                  <th>CMUP</th><th>Sous-total</th><th>Disponible</th>
-                  @if (isDraft) { <th></th> }
+                  <th style="width:36%">Article</th>
+                  <th>Unité</th>
+                  @if (!isReadonly && !isIncoming) {
+                    <th class="th-dispo">Dispo</th>
+                  }
+                  <th class="text-right">{{ (isReadonly || isIncoming) ? 'Quantité' : 'Qté à envoyer' }}</th>
+                  <th class="text-right">CMUP</th>
+                  <th class="text-right">Valeur</th>
+                  @if (!isReadonly && !isIncoming) { <th style="width:36px"></th> }
                 </tr></thead>
               }
               <tbody>
                 @for (line of lines; track $index; let i = $index) {
                   <tr>
                     <td>
-                      @if (isDraft) {
-                        <select class="line-select" [(ngModel)]="line.productId" (ngModelChange)="onProductChange(i)">
-                          <option [ngValue]="null">— Choisir —</option>
-                          @for (p of products; track p.id) {
-                            <option [value]="p.id">{{ p.defaultCode ? '['+p.defaultCode+'] ' : '' }}{{ p.name }}</option>
+                      @if (isReadonly || isIncoming) {
+                        <span class="font-bold">{{ productName(line.productId) }}</span>
+                      } @else {
+                        <div class="ac-wrap">
+                          <div class="ac-field">
+                            <span class="material-icons ac-icon">search</span>
+                            <input type="text" class="line-select"
+                                   #productInput
+                                   [(ngModel)]="lineSearchTexts[i]"
+                                   (input)="openDropdownIndex = i"
+                                   (focus)="openDropdownIndex = i"
+                                   (blur)="onLineBlur(i)"
+                                   (keydown.enter)="onProductEnter(i, $event)"
+                                   placeholder="Chercher un article…"
+                                   autocomplete="off" />
+                          </div>
+                          @if (openDropdownIndex === i && lineFilteredProducts(i).length > 0) {
+                            <div class="ac-dropdown">
+                              @for (p of lineFilteredProducts(i); track p.id) {
+                                <div class="ac-item" (mousedown)="selectLineProduct(i, p)">
+                                  @if (p.defaultCode) { <span class="ac-code">{{ p.defaultCode }}</span> }
+                                  <span class="ac-name">{{ p.name }}</span>
+                                  <span class="ac-qty" [class.qty-low]="(p.qtyOnHand ?? 0) <= 0">{{ (p.qtyOnHand ?? 0) | number:'1.0-0' }}</span>
+                                </div>
+                              }
+                            </div>
                           }
-                        </select>
-                      } @else { <span class="font-bold">{{ productName(line.productId) }}</span> }
-                    </td>
-                    <td>
-                      @if (isDraft) { <input type="text" class="line-input" [(ngModel)]="line.uomName" /> }
-                      @else { {{ line.uomName }} }
-                    </td>
-                    <td>
-                      @if (isDraft) { <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDemanded" min="0" (ngModelChange)="line.qtyDone = line.qtyDemanded" /> }
-                      @else { <span class="cell-right">{{ line.qtyDemanded }}</span> }
-                    </td>
-                    <td>
-                      @if (!isDone) { <input type="number" class="line-input text-right" [(ngModel)]="line.qtyDone" min="0" /> }
-                      @else { <span class="cell-right font-bold">{{ line.qtyDone }}</span> }
-                    </td>
-                    <td class="cell-right">{{ line.priceUnit | number:'1.0-0' }}</td>
-                    <td class="cell-right font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
-                    <td>
-                      @if (line.availableQty !== undefined) {
-                        <span [class]="line.availableQty < line.qtyDemanded ? 'qty-warn' : 'qty-ok'">
-                          {{ line.availableQty | number:'1.0-2' }}
-                        </span>
+                        </div>
                       }
                     </td>
-                    @if (isDraft) {
-                      <td><button class="btn-remove-line" (click)="removeLine(i)"><span class="material-icons">delete</span></button></td>
+                    <td>{{ line.uomName || '—' }}</td>
+                    @if (!isReadonly && !isIncoming) {
+                      <td class="td-dispo">
+                        <span [class]="line.availableQty < line.qtyDone ? 'qty-warn' : 'qty-ok'">
+                          {{ line.availableQty | number:'1.0-2' }}
+                        </span>
+                      </td>
+                    }
+                    <td class="text-right">
+                      @if (isReadonly || isIncoming) {
+                        <span class="font-bold">{{ line.qtyDone | number:'1.0-2' }}</span>
+                      } @else {
+                        <input type="number" class="line-input text-right"
+                               [(ngModel)]="line.qtyDone" min="0.01" step="0.01"
+                               (ngModelChange)="line.qtyDemanded = line.qtyDone"
+                               (keydown.enter)="onLineEnter()">
+                      }
+                    </td>
+                    <td class="text-right">{{ line.priceUnit | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
+                    @if (!isReadonly && !isIncoming) {
+                      <td><button class="btn-remove-line" (click)="removeLine(i)">
+                        <span class="material-icons">delete</span>
+                      </button></td>
                     }
                   </tr>
                 }
               </tbody>
               @if (lines.length > 0) {
                 <tfoot><tr>
-                  <td colspan="5" class="total-label">TOTAL COÛT</td>
-                  <td class="cell-right total-value">{{ lineTotal | number:'1.0-0' }} FCFA</td>
-                  <td colspan="2"></td>
+                  <td [attr.colspan]="(isReadonly || isIncoming) ? 3 : 5" class="total-label">VALEUR TOTALE</td>
+                  <td class="text-right total-value">{{ lineTotal | number:'1.0-0' }} FCFA</td>
+                  @if (!isReadonly && !isIncoming) { <td></td> }
                 </tr></tfoot>
               }
             </table>
           </div>
         </div>
+
+        @if (isDone && picking) {
+          <div class="info-card">
+            <span class="material-icons">check_circle</span>
+            <div>
+              <p class="info-title">{{ isIncoming ? 'Réception confirmée' : 'Expédition validée' }}</p>
+              <p class="info-body">
+                @if (isIncoming) {
+                  Stock reçu de <strong>{{ picking.partnerName }}</strong>
+                  et ajouté à <strong>{{ picking.locationDestName }}</strong>.
+                } @else {
+                  Stock sorti de <strong>{{ picking.sourceWarehouseName || picking.locationName }}</strong>
+                  vers <strong>{{ picking.remoteAgencyName || picking.partnerName }}</strong>.
+                }
+              </p>
+            </div>
+          </div>
+        }
       </div>
+
+      <!-- ===== PANNEAU LATÉRAL ===== -->
       <div class="form-side">
         <div class="card">
-          <div class="card-header">Informations</div>
+          <div class="card-header">
+            {{ isIncoming ? 'Expédition reçue de' : 'Agences & Emplacements' }}
+          </div>
+          <div class="card-body">
+
+            @if (isIncoming) {
+              <!-- ── VUE RÉCEPTION ── -->
+              <div class="form-group">
+                <label>Agence émettrice</label>
+                <div class="form-value">{{ picking?.partnerName || '—' }}</div>
+              </div>
+              <div class="form-group">
+                <label>Référence expédition</label>
+                <div class="form-value">{{ picking?.origin || '—' }}</div>
+              </div>
+              <div class="form-group">
+                <label>Entrepôt de réception</label>
+                <div class="form-value loc-value">
+                  <span class="material-icons">warehouse</span>
+                  {{ picking?.locationDestName || '—' }}
+                </div>
+              </div>
+
+            } @else {
+              <!-- ── VUE ÉMISSION ── -->
+              <div class="form-group">
+                <label>Agence émettrice</label>
+                <div class="form-value">{{ picking?.companyName || '—' }}</div>
+              </div>
+              <div class="form-group">
+                <label>Entrepôt source <span class="required">*</span></label>
+                @if (isReadonly) {
+                  <div class="form-value loc-value">
+                    <span class="material-icons">warehouse</span>
+                    {{ picking?.sourceWarehouseName || selectedWarehouse?.name || picking?.locationName || '—' }}
+                  </div>
+                } @else {
+                  <select class="form-control" [(ngModel)]="selectedWarehouseId" (ngModelChange)="onWarehouseChange()">
+                    @for (w of warehouses; track w.id) {
+                      <option [ngValue]="w.id">{{ w.name }}{{ w.code ? ' [' + w.code + ']' : '' }}</option>
+                    }
+                  </select>
+                  @if (warehouses.length === 0) {
+                    <small class="hint">Aucun entrepôt disponible</small>
+                  }
+                }
+              </div>
+
+              <div class="transfer-arrow"><span class="material-icons">south</span></div>
+
+              <div class="form-group">
+                <label>Agence distante destinataire <span class="required">*</span></label>
+                @if (isReadonly) {
+                  <div class="form-value">{{ picking?.remoteAgencyName || picking?.partnerName || '—' }}</div>
+                } @else {
+                  <select class="form-control" [(ngModel)]="selectedRemoteAgencyId">
+                    <option [ngValue]="null">— Sélectionner —</option>
+                    @for (a of remoteAgencies; track a.id) {
+                      <option [ngValue]="a.id">{{ a.name }} ({{ a.location || a.host }})</option>
+                    }
+                  </select>
+                  @if (remoteAgencies.length === 0) {
+                    <small class="hint">Aucune agence distante configurée</small>
+                  }
+                }
+              </div>
+
+              <div class="form-group">
+                <label>Emplacement de sortie <span class="required">*</span></label>
+                @if (isReadonly) {
+                  <div class="form-value loc-value">
+                    <span class="material-icons">place</span>
+                    {{ picking?.locationDestName || '—' }}
+                  </div>
+                } @else {
+                  <select class="form-control" [(ngModel)]="selectedDestLocationId">
+                    <option [ngValue]="null">— Sélectionner —</option>
+                    @for (w of warehouses; track w.id) {
+                      <option [ngValue]="w.stockLocationId">{{ w.name }} / Stock</option>
+                    }
+                  </select>
+                  <small class="hint">Emplacement depuis lequel les marchandises partent</small>
+                }
+              </div>
+            }
+
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 12px">
+          <div class="card-header">Détails</div>
           <div class="card-body">
             <div class="form-group">
-              <label>Type d'opération</label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedTypeId">
-                  @for (t of pickingTypes; track t.id) { <option [value]="t.id">{{ t.name }}</option> }
-                </select>
-              } @else { <div class="form-value">{{ picking?.pickingTypeName }}</div> }
-            </div>
-            <div class="form-group">
-              <label>Depuis (Source)</label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedSrcId">
-                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value">{{ locationName(picking?.locationId!) }}</div> }
-            </div>
-            <div class="form-group">
-              <label>Vers (Destination)</label>
-              @if (isDraft) {
-                <select class="form-control" [(ngModel)]="selectedDestId">
-                  @for (l of locations; track l.id) { <option [value]="l.id">{{ l.completeName || l.name }}</option> }
-                </select>
-              } @else { <div class="form-value">{{ locationName(picking?.locationDestId!) }}</div> }
-            </div>
-            <div class="form-group">
-              <label>Client</label>
-              @if (isDraft) { <input type="text" class="form-control" [(ngModel)]="partnerName" placeholder="Nom du client" /> }
-              @else { <div class="form-value">{{ partnerName || '—' }}</div> }
-            </div>
-            <div class="form-group">
               <label>Date planifiée</label>
-              @if (isDraft) { <input type="date" class="form-control" [(ngModel)]="scheduledDate" /> }
-              @else { <div class="form-value">{{ scheduledDate | date:'dd/MM/yyyy' }}</div> }
+              @if (isReadonly || isIncoming) {
+                <div class="form-value">{{ scheduledDate | date:'dd/MM/yyyy' }}</div>
+              } @else {
+                <input type="date" class="form-control" [(ngModel)]="scheduledDate">
+              }
             </div>
             <div class="form-group">
-              <label>Origine (FAC, BC...)</label>
-              @if (isDraft) { <input type="text" class="form-control" [(ngModel)]="origin" /> }
-              @else { <div class="form-value">{{ origin || '—' }}</div> }
+              <label>Référence / Origine</label>
+              @if (isReadonly || isIncoming) {
+                <div class="form-value">{{ origin || '—' }}</div>
+              } @else {
+                <input type="text" class="form-control" [(ngModel)]="origin" placeholder="BC-001, etc.">
+              }
             </div>
             <div class="form-group">
               <label>Notes</label>
-              @if (isDraft) { <textarea class="form-control" [(ngModel)]="notes" rows="2"></textarea> }
-              @else { <div class="form-value">{{ notes || '—' }}</div> }
+              @if (isReadonly || isIncoming) {
+                <div class="form-value">{{ notes || '—' }}</div>
+              } @else {
+                <textarea class="form-control" [(ngModel)]="notes" rows="3"></textarea>
+              }
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    @if (picking) {
+      <app-audit-footer
+        [createdBy]="picking.createdBy"
+        [createdAt]="picking.createdAt"
+        [updatedBy]="picking.updatedBy"
+        [updatedAt]="picking.updatedAt">
+      </app-audit-footer>
+
+      <app-audit-trail entityType="STOCK_PICKING" [entityId]="picking.id ?? null"></app-audit-trail>
+    }
   }
 </div>
-
-@if (showPrintModal && picking) {
-  <app-print-preview
-    [picking]="picking"
-    docType="bon"
-    [companyName]="printCompanyName"
-    (closed)="closePrint()">
-  </app-print-preview>
-}

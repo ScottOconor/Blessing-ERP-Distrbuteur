@@ -5,11 +5,6 @@
       <p class="page-sub">Créez et gérez les comptes utilisateurs</p>
     </div>
     <div class="header-actions">
-      <select class="form-control select-group" [(ngModel)]="filterGroupId" (ngModelChange)="onGroupChange()">
-        @for (g of groups; track g.id) {
-          <option [value]="g.id">{{ g.name }}</option>
-        }
-      </select>
       <button class="btn-primary" (click)="openCreate()">
         <span class="material-icons">person_add</span> Nouvel utilisateur
       </button>
@@ -29,14 +24,13 @@
             <th>Utilisateur</th>
             <th>Email</th>
             <th>Rôle</th>
-            <th>Affectation</th>
             <th>Statut</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           @if (users.length === 0) {
-            <tr><td colspan="6" class="empty-row">Aucun utilisateur dans ce groupe</td></tr>
+            <tr><td colspan="5" class="empty-row">Aucun utilisateur</td></tr>
           }
           @for (u of users; track u.id) {
             <tr [class.inactive-row]="!u.active">
@@ -45,7 +39,7 @@
                   <div class="user-avatar">{{ (u.fullName || u.username).slice(0,2).toUpperCase() }}</div>
                   <div>
                     <div class="user-name">{{ u.fullName || u.username }}</div>
-                    <div class="user-login">@{{ u.username }}</div>
+                    <div class="user-login">&#64;{{ u.username }}</div>
                   </div>
                 </div>
               </td>
@@ -54,15 +48,6 @@
                 <span class="role-badge" [class]="'role-' + (u.roleCode || 'custom')">
                   {{ u.roleLabel || roleLabel(u.roleCode) }}
                 </span>
-              </td>
-              <td class="text-muted">
-                @if (u.groupName && !u.companyName) {
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle">corporate_fare</span>
-                  {{ u.groupName }} (groupe entier)
-                } @else {
-                  <span class="material-icons" style="font-size:14px;vertical-align:middle">business</span>
-                  {{ u.companyName || '—' }}
-                }
               </td>
               <td>
                 <span class="status-badge" [class.active]="u.active">{{ u.active ? 'Actif' : 'Inactif' }}</span>
@@ -113,7 +98,7 @@
         </div>
         <div class="form-group">
           <label>Rôle <span class="req">*</span></label>
-          <select [(ngModel)]="form.roleId" (ngModelChange)="onRoleChange()" class="form-control">
+          <select [(ngModel)]="form.roleId" class="form-control">
             <option [value]="undefined" disabled>— Sélectionner —</option>
             @for (r of roles; track r.id) {
               <option [value]="r.id">
@@ -122,24 +107,6 @@
             }
           </select>
         </div>
-
-        @if (form.roleId && !isSystemRole) {
-          <div class="form-group">
-            <label>Entreprise <span class="req">*</span></label>
-            <select [(ngModel)]="form.companyId" class="form-control">
-              <option [value]="undefined" disabled>— Sélectionner —</option>
-              @for (c of companies; track c.id) {
-                <option [value]="c.id">{{ c.name }}</option>
-              }
-            </select>
-          </div>
-        }
-        @if (form.roleId && isSystemRole) {
-          <div class="info-banner">
-            <span class="material-icons">info</span>
-            Cet utilisateur aura accès à toutes les entreprises du groupe.
-          </div>
-        }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="showModal=false">Annuler</button>

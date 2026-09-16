@@ -42,5 +42,9 @@ public class SalesInvoiceRequest {
         private Long categoryId;
         /** Produit consigne : exclut du précompte, ristourne, enlèvement */
         private boolean consigne;
+        /** Rabais unitaire accordé à ce client (= salePrice - prixClient). 0 si aucun tarif client. */
+        private BigDecimal rabaisUnitaire;
+        /** Ligne de règlement de ristourne/remise (avoir) : ne doit jamais générer de PSA (précompte) */
+        private boolean excludePrecompte;
     }
 }

@@ -6,8 +6,8 @@
 
 .alert-error {
   display: flex; align-items: center; gap: 8px;
-  padding: 12px 16px; background: #f8d7da; border: 1px solid #f5c6cb;
-  border-radius: 8px; color: #721c24; font-size: 13px;
+  padding: 12px 16px; background: var(--danger-bg); border: 1px solid var(--danger-bg);
+  border-radius: 8px; color: var(--danger); font-size: 13px;
   .material-icons { font-size: 18px; }
 }
 
@@ -25,7 +25,7 @@
   text-align: center;
   margin-bottom: 14px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--border);
 
   h2 {
     font-size: 15px;
@@ -38,13 +38,13 @@
   .srpt-period {
     font-size: 12px;
     font-weight: 600;
-    color: #444;
+    color: var(--text-secondary);
     margin-bottom: 2px;
   }
 
   .srpt-meta {
     font-size: 10px;
-    color: #777;
+    color: var(--text-muted);
   }
 }
 
@@ -54,18 +54,18 @@
 .srpt-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--bg-surface);
   font-size: 12px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--border);
 
   th, td {
     padding: 6px 10px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--border);
     vertical-align: middle;
   }
 
   thead .srpt-thead th {
-    background-color: #017E84;
+    background-color: var(--accent);
     color: white;
     font-weight: 600;
     font-size: 11px;
@@ -75,17 +75,17 @@
 
   tbody {
     .srpt-client-header td {
-      background-color: #e8f4f4 !important;
+      background-color: var(--accent-light) !important;
       font-weight: 700;
-      color: #017E84;
+      color: var(--accent);
       font-size: 12px;
-      border-top: 2px solid #017E84;
+      border-top: 2px solid var(--accent);
       display: flex;
       align-items: center;
       gap: 6px;
 
       .material-icons { font-size: 16px; vertical-align: middle; }
-      .srpt-ref { font-weight: 400; font-size: 11px; color: #6c757d; }
+      .srpt-ref { font-weight: 400; font-size: 11px; color: var(--text-muted); }
     }
 
     // Fix: table row flex doesn't apply — use regular td
@@ -94,19 +94,19 @@
     }
 
     .srpt-line {
-      &:nth-child(even) { background-color: #fafafa; }
-      &:hover { background-color: #f0fbfb; }
+      &:nth-child(even) { background-color: var(--bg-elevated); }
+      &:hover { background-color: var(--bg-hover); }
 
-      td { color: #212529; }
+      td { color: var(--text-primary); }
       td.text-right { text-align: right; }
     }
 
     .srpt-client-subtotal td {
-      background-color: #e0f7fa !important;
+      background-color: var(--accent-light) !important;
       font-weight: 600;
-      border-top: 1px solid #00acc1;
+      border-top: 1px solid var(--accent);
       font-size: 11px;
-      color: #006064;
+      color: var(--accent);
       &:first-child { text-align: left; }
       &.text-right { text-align: right; }
     }
@@ -116,7 +116,7 @@
     background-color: #017E84 !important;
     color: white !important;
     font-weight: 700;
-    border-top: 2px solid #015f64;
+    border-top: 2px solid var(--accent);
     font-size: 12px;
     &:first-child { text-align: left; }
     &.text-right { text-align: right; }

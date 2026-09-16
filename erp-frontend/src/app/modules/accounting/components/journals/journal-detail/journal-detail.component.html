@@ -1,64 +1,269 @@
-<div class="page-container">
-  <!-- Header -->
+<div class="page-wrap">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
   <div class="page-header">
     <button class="btn-back" (click)="back()">
       <span class="material-icons">arrow_back</span>
     </button>
     <div class="header-info">
       @if (journal) {
-        <span class="journal-code-badge">{{ journal.code }}</span>
+        <span class="code-badge">{{ journal.code }}</span>
         <h1 class="page-title">{{ journal.name }}</h1>
-        <span class="type-badge" [class]="'type-' + journal.type">{{ getTypeLabel(journal.type) }}</span>
+        <span class="type-chip" [class]="'type-' + journal.type">{{ getTypeLabel(journal.type) }}</span>
       } @else {
         <h1 class="page-title">Journal #{{ journalId }}</h1>
       }
     </div>
-    <div class="header-actions">
-      <button class="btn-primary" (click)="router.navigate(['/accounting/journal-entries/new'])">
+    <div class="header-right">
+      <button class="btn-icon-refresh" (click)="refresh()" title="Actualiser">
+        <span class="material-icons">refresh</span>
+      </button>
+      <button class="btn-primary" (click)="router.navigate(['/accounting/journal-entries/new'], { queryParams: { journalId: journalId } })">
         <span class="material-icons">add</span> Nouvelle écriture
       </button>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="tabs">
+  <!-- ══ SOLDE ACTUEL (liquidité uniquement) ══════════════════════════════ -->
+  @if (hasDailyBalance()) {
+
+    @if (loadingBalances && balances.length === 0) {
+      <div class="balance-hero skeleton-hero"></div>
+    } @else {
+      <div class="balance-hero" [class.hero-positive]="currentBalance >= 0" [class.hero-negative]="currentBalance < 0">
+        <div class="hero-left">
+          <div class="hero-icon-wrap">
+            <span class="material-icons">{{ journal?.type === 'cash' ? 'account_balance_wallet' : 'account_balance' }}</span>
+          </div>
+          <div class="hero-text">
+            <span class="hero-label">Solde actuel</span>
+            @if (latestDate) {
+              <span class="hero-date">Arrêté au {{ fmt(latestDate) }}</span>
+            }
+          </div>
+        </div>
+        <div class="hero-balance">
+          <span class="balance-amount" [class.neg]="currentBalance < 0">
+            {{ currentBalance | number:'1.0-0' }}
+          </span>
+          <span class="balance-cur">FCFA</span>
+          @if (latestBalance) {
+            <span class="balance-trend" [class.trend-up]="latestBalance.totalDebit >= latestBalance.totalCredit"
+                                        [class.trend-down]="latestBalance.totalDebit < latestBalance.totalCredit">
+              <span class="material-icons">
+                {{ latestBalance.totalDebit >= latestBalance.totalCredit ? 'trending_up' : 'trending_down' }}
+              </span>
+              {{ latestBalance.totalDebit >= latestBalance.totalCredit ? '+' : '-' }}
+              {{ (latestBalance.totalDebit - latestBalance.totalCredit | number:'1.0-0') }}
+            </span>
+          }
+        </div>
+        <div class="hero-actions">
+          @if (latestBalance && !latestBalance.closed) {
+            <button class="btn-close-day" (click)="closeToday()" [disabled]="closingDay">
+              <span class="material-icons">lock_clock</span>
+              {{ closingDay ? 'Clôture…' : "Clôturer aujourd'hui" }}
+            </button>
+          }
+          @if (latestBalance?.closed) {
+            <span class="closed-pill">
+              <span class="material-icons">check_circle</span> Journée clôturée
+            </span>
+          }
+        </div>
+      </div>
+    }
+
+    @if (closeMsg)   { <div class="alert-ok"><span class="material-icons">check_circle</span> {{ closeMsg }}</div> }
+    @if (closeError) { <div class="alert-err"><span class="material-icons">error_outline</span> {{ closeError }}</div> }
+
+    <!-- KPIs période -->
+    @if (balances.length > 0) {
+      <div class="kpi-row">
+        <div class="kpi-card kpi-in">
+          <div class="kpi-icon-w"><span class="material-icons">south_west</span></div>
+          <div class="kpi-body">
+            <span class="kpi-val">{{ periodTotalDebit | number:'1.0-0' }}</span>
+            <span class="kpi-cur">FCFA</span>
+            <span class="kpi-lbl">Entrées (débits)</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-out">
+          <div class="kpi-icon-w"><span class="material-icons">north_east</span></div>
+          <div class="kpi-body">
+            <span class="kpi-val">{{ periodTotalCredit | number:'1.0-0' }}</span>
+            <span class="kpi-cur">FCFA</span>
+            <span class="kpi-lbl">Sorties (crédits)</span>
+          </div>
+        </div>
+        <div class="kpi-card" [class.kpi-net-pos]="periodNet >= 0" [class.kpi-net-neg]="periodNet < 0">
+          <div class="kpi-icon-w"><span class="material-icons">balance</span></div>
+          <div class="kpi-body">
+            <span class="kpi-val" [class.neg]="periodNet < 0">{{ periodNet | number:'1.0-0' }}</span>
+            <span class="kpi-cur">FCFA</span>
+            <span class="kpi-lbl">Flux net</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-count">
+          <div class="kpi-icon-w"><span class="material-icons">today</span></div>
+          <div class="kpi-body">
+            <span class="kpi-val">{{ filteredBalances.length }}</span>
+            <span class="kpi-lbl">Jour(s) avec activité</span>
+          </div>
+        </div>
+      </div>
+    }
+
+  }
+
+  <!-- ══ TABS ══════════════════════════════════════════════════════════════ -->
+  <div class="tabs-bar">
     <button class="tab-btn" [class.active]="activeTab === 'moves'" (click)="activeTab = 'moves'">
-      <span class="material-icons">receipt_long</span> Écritures ({{ moves.length }})
+      <span class="material-icons">receipt_long</span>
+      Écritures <span class="tab-count">{{ moves.length }}</span>
     </button>
     @if (hasDailyBalance()) {
       <button class="tab-btn" [class.active]="activeTab === 'balances'" (click)="activeTab = 'balances'">
-        <span class="material-icons">account_balance_wallet</span> Soldes journaliers
+        <span class="material-icons">monitoring</span>
+        Historique soldes <span class="tab-count">{{ balances.length }}</span>
       </button>
     }
   </div>
 
-  <!-- Tab: Moves -->
+  <!-- ══ TAB : ÉCRITURES ═══════════════════════════════════════════════════ -->
   @if (activeTab === 'moves') {
-    <!-- Filters -->
-    <div class="filters-bar">
-      <select class="filter-control" [(ngModel)]="filterState">
+    <div class="filters-row">
+      <select class="filter-ctl" [(ngModel)]="filterState">
         <option value="">Tous les états</option>
         <option value="draft">Brouillon</option>
         <option value="posted">Validée</option>
         <option value="cancel">Annulée</option>
       </select>
-      <input type="date" class="filter-control" [(ngModel)]="filterDateFrom" placeholder="Du">
-      <input type="date" class="filter-control" [(ngModel)]="filterDateTo" placeholder="Au">
+      <input type="date" class="filter-ctl" [(ngModel)]="filterDateFrom">
+      <input type="date" class="filter-ctl" [(ngModel)]="filterDateTo">
       @if (filterState || filterDateFrom || filterDateTo) {
         <button class="btn-clear" (click)="clearFilters()">
           <span class="material-icons">close</span> Effacer
         </button>
       }
-      <span class="filter-count">{{ filteredMoves.length }} écriture(s)</span>
+      <span class="filter-info">{{ filteredMoves.length }} écriture(s)</span>
     </div>
 
     @if (loadingMoves) {
-      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
+      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement…</div>
     } @else if (filteredMoves.length === 0) {
       <div class="empty-state">
         <span class="material-icons">receipt_long</span>
-        <p>Aucune écriture pour ce journal</p>
+        <p>Aucune écriture trouvée</p>
       </div>
+
+    <!-- ── Vue par MOIS (caisse / banque) ─────────────────────────────── -->
+    } @else if (hasDailyBalance()) {
+
+      <div class="months-toolbar">
+        <span class="months-info">{{ monthGroups.length }} mois · {{ filteredMoves.length }} écriture(s)</span>
+        <div class="months-btns">
+          <button class="btn-sm-acc" (click)="expandAllMonths()">
+            <span class="material-icons">unfold_more</span> Tout ouvrir
+          </button>
+          <button class="btn-sm-acc" (click)="collapseAllMonths()">
+            <span class="material-icons">unfold_less</span> Tout fermer
+          </button>
+        </div>
+      </div>
+
+      <div class="months-list">
+        @for (mg of monthGroups; track mg.monthKey) {
+          <div class="month-block" [class.is-open]="isMonthExpanded(mg.monthKey)">
+
+            <!-- En-tête mois -->
+            <div class="month-hd" (click)="toggleMonth(mg.monthKey)">
+              <div class="month-hd-left">
+                <span class="material-icons month-chevron">
+                  {{ isMonthExpanded(mg.monthKey) ? 'expand_less' : 'expand_more' }}
+                </span>
+                <span class="month-name">{{ mg.monthLabel }}</span>
+                <span class="month-badge">{{ mg.moves.length }} pièce(s)</span>
+              </div>
+              <div class="month-hd-right">
+                <span class="m-chip m-chip-in">+ {{ mg.totalDebit | number:'1.0-0' }}</span>
+                <span class="m-chip m-chip-out">− {{ mg.totalCredit | number:'1.0-0' }}</span>
+                @if (mg.closingBalance !== null) {
+                  <span class="m-chip" [class.m-chip-pos]="mg.closingBalance >= 0" [class.m-chip-neg]="mg.closingBalance < 0">
+                    Solde <strong>{{ mg.closingBalance | number:'1.0-0' }}</strong>
+                  </span>
+                } @else {
+                  <span class="m-chip m-chip-loading">
+                    <span class="mini-spin"></span> Solde…
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Lignes du mois -->
+            @if (isMonthExpanded(mg.monthKey)) {
+              <div class="month-body">
+                <table class="moves-table">
+                  <thead>
+                    <tr>
+                      <th>Référence</th>
+                      <th>Date</th>
+                      <th>Libellé</th>
+                      <th>Partenaire</th>
+                      <th>État</th>
+                      <th class="r">Débit</th>
+                      <th class="r">Crédit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (move of mg.moves; track move.id) {
+                      <tr class="move-row" (click)="openEntry(move)">
+                        <td class="mono">{{ move.name || '—' }}</td>
+                        <td class="date-col">{{ move.date | date:'dd/MM/yyyy' }}</td>
+                        <td class="ref-col">{{ move.ref || '—' }}</td>
+                        <td class="partner-col muted">{{ move.partnerName || '—' }}</td>
+                        <td><span [class]="getStateBadge(move.state || 'draft')">{{ getStateLabel(move.state || 'draft') }}</span></td>
+                        <td class="r mono debit-val">{{ (move.totalDebit || 0) | number:'1.0-0' }}</td>
+                        <td class="r mono credit-val">{{ (move.totalCredit || 0) | number:'1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="month-totals-row">
+                      <td colspan="5" class="foot-label">Mouvement {{ mg.monthLabel }}</td>
+                      <td class="r mono foot-val debit-val">+ {{ mg.totalDebit | number:'1.0-0' }}</td>
+                      <td class="r mono foot-val credit-val">− {{ mg.totalCredit | number:'1.0-0' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <!-- Barre solde fin de mois -->
+                @if (mg.closingBalance !== null) {
+                  <div class="month-balance-bar"
+                       [class.mbb-pos]="mg.closingBalance >= 0"
+                       [class.mbb-neg]="mg.closingBalance < 0">
+                    <div class="mbb-left">
+                      <span class="material-icons mbb-icon">
+                        {{ mg.closingBalance >= 0 ? 'account_balance_wallet' : 'warning' }}
+                      </span>
+                      <div class="mbb-labels">
+                        <span class="mbb-title">Solde du compte</span>
+                        <span class="mbb-sub">Au 31 {{ mg.monthLabel }}</span>
+                      </div>
+                    </div>
+                    <div class="mbb-amount">
+                      <span class="mbb-value">{{ mg.closingBalance | number:'1.0-0' }}</span>
+                      <span class="mbb-cur">FCFA</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+          </div>
+        }
+      </div>
+
+    <!-- ── Vue plate (autres journaux) ───────────────────────────────── -->
     } @else {
       <div class="table-card">
         <table class="moves-table">
@@ -69,28 +274,28 @@
               <th>Libellé</th>
               <th>Partenaire</th>
               <th>État</th>
-              <th class="text-right">Débit</th>
-              <th class="text-right">Crédit</th>
+              <th class="r">Débit</th>
+              <th class="r">Crédit</th>
             </tr>
           </thead>
           <tbody>
             @for (move of filteredMoves; track move.id) {
               <tr class="move-row" (click)="openEntry(move)">
-                <td class="font-mono">{{ move.name || '—' }}</td>
-                <td>{{ move.date | date:'dd/MM/yyyy' }}</td>
-                <td>{{ move.ref || '—' }}</td>
-                <td class="text-muted">{{ move.partnerName || '—' }}</td>
+                <td class="mono">{{ move.name || '—' }}</td>
+                <td class="date-col">{{ move.date | date:'dd/MM/yyyy' }}</td>
+                <td class="ref-col">{{ move.ref || '—' }}</td>
+                <td class="partner-col muted">{{ move.partnerName || '—' }}</td>
                 <td><span [class]="getStateBadge(move.state || 'draft')">{{ getStateLabel(move.state || 'draft') }}</span></td>
-                <td class="text-right font-mono">{{ move.totalDebit | number:'1.0-0' }}</td>
-                <td class="text-right font-mono">{{ move.totalCredit | number:'1.0-0' }}</td>
+                <td class="r mono debit-val">{{ (move.totalDebit || 0) | number:'1.0-0' }}</td>
+                <td class="r mono credit-val">{{ (move.totalCredit || 0) | number:'1.0-0' }}</td>
               </tr>
             }
           </tbody>
           <tfoot>
-            <tr class="totals-row">
-              <td colspan="5"><strong>Totaux</strong></td>
-              <td class="text-right font-mono"><strong>{{ totalDebit() | number:'1.0-0' }}</strong></td>
-              <td class="text-right font-mono"><strong>{{ totalCredit() | number:'1.0-0' }}</strong></td>
+            <tr>
+              <td colspan="5" class="foot-label">Totaux</td>
+              <td class="r mono foot-val debit-val">{{ totalDebit() | number:'1.0-0' }}</td>
+              <td class="r mono foot-val credit-val">{{ totalCredit() | number:'1.0-0' }}</td>
             </tr>
           </tfoot>
         </table>
@@ -98,51 +303,100 @@
     }
   }
 
-  <!-- Tab: Daily Balances -->
-  @if (activeTab === 'balances') {
+  <!-- ══ TAB : HISTORIQUE SOLDES ═══════════════════════════════════════════ -->
+  @if (activeTab === 'balances' && hasDailyBalance()) {
+
+    <!-- Filtre période -->
+    <div class="filters-row">
+      <label class="filter-label">Période :</label>
+      <input type="date" class="filter-ctl" [(ngModel)]="balDateFrom" placeholder="Du">
+      <input type="date" class="filter-ctl" [(ngModel)]="balDateTo"   placeholder="Au">
+      @if (balDateFrom || balDateTo) {
+        <button class="btn-clear" (click)="balDateFrom = ''; balDateTo = ''">
+          <span class="material-icons">close</span> Effacer
+        </button>
+      }
+    </div>
+
     @if (loadingBalances) {
-      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
-    } @else if (balances.length === 0) {
+      <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement…</div>
+    } @else if (filteredBalances.length === 0) {
       <div class="empty-state">
-        <span class="material-icons">account_balance_wallet</span>
-        <p>Aucun solde journalier enregistré</p>
+        <span class="material-icons">monitoring</span>
+        <p>Aucun solde enregistré pour cette période</p>
       </div>
     } @else {
+
+      <!-- Mini bar chart (flux par jour) -->
+      <div class="card chart-card">
+        <div class="card-hd">
+          <span class="card-title"><span class="material-icons">bar_chart</span> Flux journaliers</span>
+          <div class="chart-legend">
+            <span class="legend-dot dot-in"></span><span>Entrées</span>
+            <span class="legend-dot dot-out"></span><span>Sorties</span>
+          </div>
+        </div>
+        <div class="flux-chart">
+          @for (bal of filteredBalances.slice().reverse().slice(-14); track bal.date) {
+            <div class="flux-col">
+              <div class="flux-bars">
+                <div class="bar-in"  [style.height.%]="barPct(bal.totalDebit)"  title="Entrées: {{ bal.totalDebit | number:'1.0-0' }} FCFA"></div>
+                <div class="bar-out" [style.height.%]="barPct(bal.totalCredit)" title="Sorties: {{ bal.totalCredit | number:'1.0-0' }} FCFA"></div>
+              </div>
+              <span class="flux-date">{{ fmt(bal.date).slice(0, 5) }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Tableau des soldes -->
       <div class="table-card">
         <table class="balances-table">
           <thead>
             <tr>
               <th>Date</th>
-              <th class="text-right">Solde ouverture</th>
-              <th class="text-right">Total débit</th>
-              <th class="text-right">Total crédit</th>
-              <th class="text-right">Solde clôture</th>
-              <th class="text-center">Clôturé</th>
+              <th class="r">Solde ouverture</th>
+              <th class="r">Entrées</th>
+              <th class="r">Sorties</th>
+              <th class="r">Solde clôture</th>
+              <th class="c">Clôturé</th>
             </tr>
           </thead>
           <tbody>
-            @for (bal of balances; track bal.date) {
-              <tr>
-                <td>{{ bal.date | date:'dd/MM/yyyy' }}</td>
-                <td class="text-right font-mono">{{ bal.openingBalance | number:'1.0-0' }}</td>
-                <td class="text-right font-mono debit-col">{{ bal.totalDebit | number:'1.0-0' }}</td>
-                <td class="text-right font-mono credit-col">{{ bal.totalCredit | number:'1.0-0' }}</td>
-                <td class="text-right font-mono" [class.positive]="bal.closingBalance >= 0" [class.negative]="bal.closingBalance < 0">
-                  <strong>{{ bal.closingBalance | number:'1.0-0' }}</strong>
+            @for (bal of filteredBalances; track bal.date) {
+              <tr [class.row-closed]="bal.closed">
+                <td class="date-col bold">{{ fmt(bal.date) }}</td>
+                <td class="r mono muted">{{ bal.openingBalance | number:'1.0-0' }}</td>
+                <td class="r mono debit-val">+ {{ bal.totalDebit | number:'1.0-0' }}</td>
+                <td class="r mono credit-val">− {{ bal.totalCredit | number:'1.0-0' }}</td>
+                <td class="r mono bold" [class.balance-pos]="bal.closingBalance >= 0" [class.balance-neg]="bal.closingBalance < 0">
+                  {{ bal.closingBalance | number:'1.0-0' }}
                 </td>
-                <td class="text-center">
+                <td class="c">
                   @if (bal.closed) {
-                    <span class="material-icons" style="color:#198754;font-size:18px">check_circle</span>
+                    <span class="closed-icon"><span class="material-icons">lock</span></span>
                   } @else {
-                    <span class="material-icons" style="color:#dee2e6;font-size:18px">radio_button_unchecked</span>
+                    <span class="open-icon"><span class="material-icons">lock_open</span></span>
                   }
                 </td>
               </tr>
             }
           </tbody>
+          <tfoot>
+            <tr>
+              <td class="foot-label">Totaux période</td>
+              <td></td>
+              <td class="r mono foot-val debit-val">+ {{ periodTotalDebit | number:'1.0-0' }}</td>
+              <td class="r mono foot-val credit-val">− {{ periodTotalCredit | number:'1.0-0' }}</td>
+              <td class="r mono foot-val" [class.balance-pos]="periodNet >= 0" [class.balance-neg]="periodNet < 0">
+                {{ periodNet | number:'1.0-0' }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     }
   }
-</div>
 
+</div>

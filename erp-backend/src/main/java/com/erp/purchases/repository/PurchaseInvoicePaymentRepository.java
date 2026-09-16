@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface PurchaseInvoicePaymentRepository extends JpaRepository<PurchaseInvoicePayment, Long> {
@@ -22,4 +23,7 @@ public interface PurchaseInvoicePaymentRepository extends JpaRepository<Purchase
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(p.name, LENGTH(p.name) - 4) AS int)), 0) " +
            "FROM PurchaseInvoicePayment p WHERE p.company.id = :companyId AND YEAR(p.date) = :year")
     Integer findMaxSequenceByCompanyAndYear(@Param("companyId") Long companyId, @Param("year") int year);
+
+    @Query("SELECT p.accountMove.id FROM PurchaseInvoicePayment p WHERE p.invoice.partner.id = :partnerId AND p.accountMove IS NOT NULL")
+    Set<Long> findAccountMoveIdsByPartner(@Param("partnerId") Long partnerId);
 }

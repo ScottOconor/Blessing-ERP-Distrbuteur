@@ -28,13 +28,45 @@
 
   <div class="toolbar">
     <input class="search-input" placeholder="Rechercher par nom, référence..." [(ngModel)]="search" (ngModelChange)="applyFilter()" />
+    @if (warehouses.length > 1) {
+      <select class="wh-select" [(ngModel)]="selectedWarehouseId" (ngModelChange)="onWarehouseChange()">
+        <option value="">Tous les entrepôts</option>
+        @for (wh of warehouses; track wh.id) {
+          <option [value]="wh.id">{{ wh.name }}</option>
+        }
+      </select>
+    }
     <div class="filter-tabs">
-      @for (t of ['all','product','service','consu']; track t) {
-        <button class="filter-btn" [class.active]="filterType === t" (click)="filterType = t; applyFilter()">
-          {{ t === 'all' ? 'Tous' : typeLabels[t] }}
+      @for (tab of [
+        { k: 'autres',     label: 'Tous',        icon: 'apps'        },
+        { k: 'articles',   label: 'Articles',     icon: 'local_bar'   },
+        { k: 'emballages', label: 'Emballages',   icon: 'inventory_2' },
+        { k: 'bouteilles', label: 'Bouteilles',   icon: 'liquor'      }
+      ]; track tab.k) {
+        <button class="filter-btn" [class.active]="filterCat === tab.k"
+                (click)="filterCat = tab.k; applyFilter()">
+          <span class="material-icons">{{ tab.icon }}</span>
+          {{ tab.label }}
+          <span class="filter-count">{{ catCounts[tab.k] }}</span>
         </button>
       }
     </div>
+  </div>
+
+  <div class="groupby-bar">
+    <span class="groupby-label">Regrouper par :</span>
+    <div class="groupby-btns">
+      @for (opt of groupByOptions; track opt.key) {
+        <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+          <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+        </button>
+      }
+    </div>
+    @if (groupBy) {
+      <button class="groupby-reset" (click)="setGroupBy('')">
+        <span class="material-icons">close</span> Annuler
+      </button>
+    }
   </div>
 
   <div class="card">
@@ -53,38 +85,100 @@
             <th>Unité</th>
             <th class="text-right">CMUP</th>
             <th class="text-right">Prix vente</th>
-            <th class="text-right">Stock</th>
+            <th class="text-right">En stock</th>
+            <th class="text-right">Réservé</th>
+            <th class="text-right">Disponible</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          @for (p of filtered; track p.id) {
-            <tr>
-              <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
-              <td class="font-bold">{{ p.name }}</td>
-              <td class="text-muted">{{ p.categoryName || '—' }}</td>
-              <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
-              <td class="text-muted">{{ p.uomName || '—' }}</td>
-              <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
-              <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
-              <td class="text-right">
-                @if (p.type === 'product') {
-                  <span [class]="(p.qtyOnHand || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyOnHand | number:'1.0-2' }}</span>
-                } @else { <span class="text-muted">—</span> }
-              </td>
-              <td style="display:flex;gap:4px">
-                @if (canEdit) {
-                  <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
-                    <span class="material-icons">edit</span>
-                  </button>
+          @if (groupBy) {
+            @for (row of groupedRows; track row.key) {
+              <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                <td class="group-header-cell" colspan="11">
+                  <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                  <span class="group-label">{{ row.label }}</span>
+                  <span class="badge">{{ row.count }} article(s)</span>
+                </td>
+              </tr>
+              @if (isExpanded(row.key)) {
+                @for (p of getGroupItems(row.key); track p.id) {
+                  <tr class="detail-row">
+                    <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
+                    <td class="font-bold">{{ p.name }}</td>
+                    <td class="text-muted">{{ p.categoryName || '—' }}</td>
+                    <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
+                    <td class="text-muted">{{ p.uomName || '—' }}</td>
+                    <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
+                    <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
+                    <td class="text-right font-mono">
+                      @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-right">
+                      @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
+                        <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td class="text-right">
+                      @if (p.type === 'product') {
+                        <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
+                      } @else { <span class="text-muted">—</span> }
+                    </td>
+                    <td style="display:flex;gap:4px">
+                      @if (canEdit) {
+                        <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
+                          <span class="material-icons">edit</span>
+                        </button>
+                      }
+                      @if (canDelete) {
+                        <button class="btn-icon btn-icon-danger" (click)="deleteProduct(p)" title="Supprimer">
+                          <span class="material-icons">delete</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
                 }
-                @if (canDelete) {
-                  <button class="btn-icon btn-icon-danger" (click)="deleteProduct(p)" title="Supprimer">
-                    <span class="material-icons">delete</span>
-                  </button>
-                }
-              </td>
-            </tr>
+              }
+            }
+          } @else {
+            @for (p of filtered; track p.id) {
+              <tr>
+                <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
+                <td class="font-bold">{{ p.name }}</td>
+                <td class="text-muted">{{ p.categoryName || '—' }}</td>
+                <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
+                <td class="text-muted">{{ p.uomName || '—' }}</td>
+                <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
+                <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
+                <td class="text-right font-mono">
+                  @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td class="text-right">
+                  @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
+                    <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td class="text-right">
+                  @if (p.type === 'product') {
+                    <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
+                  } @else { <span class="text-muted">—</span> }
+                </td>
+                <td style="display:flex;gap:4px">
+                  @if (canEdit) {
+                    <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
+                      <span class="material-icons">edit</span>
+                    </button>
+                  }
+                  @if (canDelete) {
+                    <button class="btn-icon btn-icon-danger" (click)="deleteProduct(p)" title="Supprimer">
+                      <span class="material-icons">delete</span>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
           }
         </tbody>
       </table>
@@ -175,7 +269,13 @@
         <div class="form-row">
           <div class="form-group">
             <label>Unité de mesure</label>
-            <input type="text" [(ngModel)]="form.uomName" class="form-control" placeholder="Unité, kg, L..." />
+            <select [(ngModel)]="form.unitOfMeasureId" (ngModelChange)="onUomSelect()" class="form-control">
+              <option [ngValue]="null">— Texte libre —</option>
+              @for (u of uoms; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+            </select>
+            @if (!form.unitOfMeasureId) {
+              <input type="text" [(ngModel)]="form.uomName" class="form-control" placeholder="Unité, kg, L..." style="margin-top:6px" />
+            }
           </div>
           <div class="form-group">
             <label>Prix de revient (CMUP)</label>
@@ -198,6 +298,188 @@
           <label>Description</label>
           <textarea [(ngModel)]="form.description" class="form-control" rows="2"></textarea>
         </div>
+        <div class="form-group">
+          <label class="toggle-label" [class.toggle-on]="form.exemptTva" (click)="form.exemptTva = !form.exemptTva">
+            <span class="toggle-slider" [class.active]="form.exemptTva"></span>
+            <span class="toggle-text">
+              Exempté de TVA à la vente
+              <span class="toggle-hint">
+                @if (form.exemptTva) {
+                  — Aucune TVA ne sera appliquée sur les lignes de facturation vente de cet article
+                } @else {
+                  — La TVA standard (19,25%) sera appliquée sur les factures de vente
+                }
+              </span>
+            </span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="toggle-label" [class.toggle-on]="form.exemptTvaAchat" (click)="form.exemptTvaAchat = !form.exemptTvaAchat">
+            <span class="toggle-slider" [class.active]="form.exemptTvaAchat"></span>
+            <span class="toggle-text">
+              Exempté de TVA à l'achat
+              <span class="toggle-hint">
+                @if (form.exemptTvaAchat) {
+                  — Aucune TVA ne sera appliquée sur les lignes de facturation achat de cet article
+                } @else {
+                  — La TVA standard (19,25%) sera appliquée sur les factures d'achat
+                }
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- ── Tarifs clients (uniquement en modification) ── -->
+        @if (editingProduct) {
+          <div class="tarifs-block">
+            <div class="tarifs-toggle" (click)="showTarifsSection = !showTarifsSection">
+              <span class="material-icons">{{ showTarifsSection ? 'expand_less' : 'expand_more' }}</span>
+              <span class="tarifs-toggle-label">
+                <span class="material-icons" style="font-size:16px;color:#e65100">sell</span>
+                Tarifs clients
+                @if (productPrices.length > 0) {
+                  <span class="tarifs-badge">{{ productPrices.length }}</span>
+                }
+              </span>
+            </div>
+            @if (showTarifsSection) {
+              <div class="tarifs-content">
+                @if (loadingPrices) {
+                  <div class="tarifs-loading">Chargement…</div>
+                } @else if (productPrices.length > 0) {
+                  <table class="tarifs-table">
+                    <thead>
+                      <tr>
+                        <th>Client</th>
+                        <th class="text-right">Prix standard</th>
+                        <th class="text-right">Prix client</th>
+                        <th class="text-right rabais-col">Rabais/u</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of productPrices; track p.clientId) {
+                        <tr>
+                          <td>{{ p.clientName }}</td>
+                          <td class="text-right text-muted">{{ (p.salePriceStandard ?? 0) | number:'1.0-0' }}</td>
+                          <td class="text-right font-bold">{{ p.prixClient | number:'1.0-0' }}</td>
+                          <td class="text-right rabais-col">– {{ (p.rabaisUnitaire ?? 0) | number:'1.0-0' }}</td>
+                          <td style="text-align:right">
+                            <button class="btn-del-price" (click)="removeClientPrice(p)" title="Supprimer">
+                              <span class="material-icons">delete_outline</span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+
+                <!-- Formulaire ajout -->
+                <div class="tarifs-add-row">
+                  <select class="tarif-select" [(ngModel)]="newPriceClientId">
+                    <option [ngValue]="null">— Client —</option>
+                    @for (c of availableClients; track c.id) {
+                      <option [ngValue]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                  <div class="tarif-prix-wrap">
+                    <input type="number" class="tarif-input" [(ngModel)]="newPrixClient"
+                           placeholder="Prix client" min="0" />
+                    @if (newPrixClient > 0 && (form.salePrice ?? 0) > 0) {
+                      <span class="tarif-rabais-preview">– {{ newPriceRabais | number:'1.0-0' }}</span>
+                    }
+                  </div>
+                  <button class="btn-add-price" (click)="saveClientPrice()" [disabled]="!newPriceClientId || newPrixClient <= 0 || savingPrice">
+                    <span class="material-icons">{{ savingPrice ? 'hourglass_empty' : 'add' }}</span>
+                    Ajouter
+                  </button>
+                </div>
+                <div class="tarif-hint">
+                  Prix standard : <strong>{{ (form.salePrice ?? 0) | number:'1.0-0' }} FCFA</strong> —
+                  le rabais est calculé automatiquement (prix standard − prix client)
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- ── Tarifs fournisseurs ── -->
+          <div class="tarifs-block tarifs-block-fourni">
+            <div class="tarifs-toggle" (click)="showFournisseurTarifsSection = !showFournisseurTarifsSection">
+              <span class="material-icons">{{ showFournisseurTarifsSection ? 'expand_less' : 'expand_more' }}</span>
+              <span class="tarifs-toggle-label">
+                <span class="material-icons" style="font-size:16px;color:#017E84">local_shipping</span>
+                Tarifs fournisseurs
+                @if (productFournisseurPrices.length > 0) {
+                  <span class="tarifs-badge tarifs-badge-fourni">{{ productFournisseurPrices.length }}</span>
+                }
+              </span>
+            </div>
+            @if (showFournisseurTarifsSection) {
+              <div class="tarifs-content">
+                @if (loadingFournisseurPrices) {
+                  <div class="tarifs-loading">Chargement…</div>
+                } @else if (productFournisseurPrices.length > 0) {
+                  <table class="tarifs-table">
+                    <thead>
+                      <tr>
+                        <th>Fournisseur</th>
+                        <th class="text-right">Coût standard</th>
+                        <th class="text-right">Prix fournisseur</th>
+                        <th class="text-right rabais-fourni-col">Rabais/u</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of productFournisseurPrices; track p.fournisseurId) {
+                        <tr>
+                          <td>{{ p.fournisseurName }}</td>
+                          <td class="text-right text-muted">{{ (p.standardPrice ?? 0) | number:'1.0-0' }}</td>
+                          <td class="text-right font-bold">{{ p.prixFournisseur | number:'1.0-0' }}</td>
+                          <td class="text-right rabais-fourni-col">
+                            @if ((p.standardPrice ?? 0) > p.prixFournisseur) {
+                              – {{ ((p.standardPrice ?? 0) - p.prixFournisseur) | number:'1.0-0' }}
+                            } @else { — }
+                          </td>
+                          <td style="text-align:right">
+                            <button class="btn-del-price" (click)="removeFournisseurPrice(p)" title="Supprimer">
+                              <span class="material-icons">delete_outline</span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+
+                <!-- Formulaire ajout -->
+                <div class="tarifs-add-row">
+                  <select class="tarif-select" [(ngModel)]="newFournisseurId">
+                    <option [ngValue]="null">— Fournisseur —</option>
+                    @for (f of availableFournisseurs; track f.id) {
+                      <option [ngValue]="f.id">{{ f.name }}</option>
+                    }
+                  </select>
+                  <div class="tarif-prix-wrap">
+                    <input type="number" class="tarif-input" [(ngModel)]="newPrixFournisseur"
+                           placeholder="Prix fournisseur" min="0" />
+                    @if (newPrixFournisseur >= 0 && (form.standardPrice ?? 0) > 0) {
+                      <span class="tarif-rabais-preview tarif-rabais-fourni">– {{ newFournisseurRabais | number:'1.0-0' }}</span>
+                    }
+                  </div>
+                  <button class="btn-add-price btn-add-price-fourni" (click)="saveFournisseurPrice()" [disabled]="!newFournisseurId || newPrixFournisseur < 0 || savingFournisseurPrice">
+                    <span class="material-icons">{{ savingFournisseurPrice ? 'hourglass_empty' : 'add' }}</span>
+                    Ajouter
+                  </button>
+                </div>
+                <div class="tarif-hint">
+                  Coût standard : <strong>{{ (form.standardPrice ?? 0) | number:'1.0-0' }} FCFA</strong> —
+                  le rabais est calculé automatiquement (coût standard − prix fournisseur)
+                </div>
+              </div>
+            }
+          </div>
+        }
       </div>
       <div class="modal-footer">
         <button class="btn-secondary" (click)="closeModal()">Annuler</button>

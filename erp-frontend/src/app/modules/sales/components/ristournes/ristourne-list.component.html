@@ -48,55 +48,116 @@
 
   <!-- ===================== CONFIG TAB ===================== -->
   @if (activeTab === 'config') {
-    <div class="card">
-      @if (loadingRst) {
-        <div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div>
-      } @else if (ristournes.length === 0) {
+
+    @if (loadingRst) {
+      <div class="card"><div class="loading-state"><span class="material-icons spin">sync</span><p>Chargement…</p></div></div>
+
+    } @else if (ristournes.length === 0) {
+      <div class="card">
         <div class="empty-state">
           <span class="material-icons">redeem</span>
           <p>Aucune ristourne configurée.</p>
           <button class="btn-new" (click)="openNewRst()"><span class="material-icons">add</span> Ajouter</button>
         </div>
-      } @else {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Catégorie</th>
-              <th class="text-right">Montant HT / unité</th>
-              <th class="text-right">TTC / unité</th>
-              <th>Type</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (r of ristournes; track r.id) {
-              <tr>
-                <td class="font-bold">{{ r.partnerName }}</td>
-                <td>{{ r.categoryName }}</td>
-                <td class="text-right font-mono">{{ r.montantFixe | number:'1.0-2' }}</td>
-                <td class="text-right font-mono" style="color:#017E84;font-weight:600">
-                  {{ r.montantTTCUnitaire | number:'1.0-2' }}
-                </td>
-                <td>
-                  @if (r.typeRistourne === 'brasserie') {
-                    <span class="badge badge-brasserie">Brasserie</span>
-                  } @else if (r.typeRistourne === 'guinness') {
-                    <span class="badge badge-guinness">Guinness</span>
-                  } @else {
-                    <span class="badge badge-ht">Autre</span>
-                  }
-                </td>
-                <td class="actions-cell">
-                  <button class="btn-icon" (click)="editRst(r)"><span class="material-icons">edit</span></button>
-                  <button class="btn-icon danger" (click)="deleteRst(r.id!)"><span class="material-icons">delete</span></button>
-                </td>
-              </tr>
+      </div>
+
+    } @else {
+      <!-- Barre outils accordéon -->
+      <div class="accordion-toolbar">
+        <span class="acc-count">{{ clientGroups.length }} client{{ clientGroups.length > 1 ? 's' : '' }} · {{ ristournes.length }} ristourne{{ ristournes.length > 1 ? 's' : '' }}</span>
+        <div class="acc-actions">
+          <button class="btn-acc-ctrl" (click)="expandAll()">
+            <span class="material-icons">unfold_more</span> Tout déplier
+          </button>
+          <button class="btn-acc-ctrl" (click)="collapseAll()">
+            <span class="material-icons">unfold_less</span> Tout replier
+          </button>
+        </div>
+      </div>
+
+      <!-- Accordéon par client -->
+      <div class="accordion">
+        @for (group of clientGroups; track group.partnerId) {
+          <div class="acc-item" [class.open]="expandedClients.has(group.partnerId)">
+
+            <!-- En-tête client -->
+            <div class="acc-header" (click)="toggleClient(group.partnerId)">
+              <div class="acc-header-left">
+                <div class="acc-avatar">{{ group.partnerName.charAt(0).toUpperCase() }}</div>
+                <div class="acc-name-block">
+                  <span class="acc-client-name">{{ group.partnerName }}</span>
+                  <span class="acc-badge-row">
+                    @if (group.nbBrasserie > 0) {
+                      <span class="type-chip chip-brasserie">{{ group.nbBrasserie }} Brasserie</span>
+                    }
+                    @if (group.nbGuinness > 0) {
+                      <span class="type-chip chip-guinness">{{ group.nbGuinness }} Guinness</span>
+                    }
+                    @if (group.nbAutre > 0) {
+                      <span class="type-chip chip-ht">{{ group.nbAutre }} Autre</span>
+                    }
+                  </span>
+                </div>
+              </div>
+              <div class="acc-header-right">
+                <span class="acc-total-hint">{{ group.items.length }} ligne{{ group.items.length > 1 ? 's' : '' }}</span>
+                <span class="material-icons acc-chevron">
+                  {{ expandedClients.has(group.partnerId) ? 'expand_less' : 'expand_more' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Contenu déplié -->
+            @if (expandedClients.has(group.partnerId)) {
+              <div class="acc-body">
+                <table class="rst-table">
+                  <thead>
+                    <tr>
+                      <th>Catégorie</th>
+                      <th>Type</th>
+                      <th class="r">Montant HT / u</th>
+                      <th class="r">TTC / u</th>
+                      <th class="r">Actif</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of group.items; track r.id) {
+                      <tr>
+                        <td class="bold">{{ r.categoryName }}</td>
+                        <td>
+                          @if (r.typeRistourne === 'brasserie') {
+                            <span class="badge badge-brasserie">Brasserie</span>
+                          } @else if (r.typeRistourne === 'guinness') {
+                            <span class="badge badge-guinness">Guinness</span>
+                          } @else {
+                            <span class="badge badge-ht">Autre</span>
+                          }
+                        </td>
+                        <td class="r mono">{{ r.montantFixe | number:'1.0-2' }}</td>
+                        <td class="r mono ttc-val">{{ r.montantTTCUnitaire | number:'1.0-2' }}</td>
+                        <td class="r">
+                          <span class="active-dot" [class.on]="r.active !== false"></span>
+                        </td>
+                        <td class="actions-cell">
+                          <button class="btn-icon" (click)="editRst(r); $event.stopPropagation()">
+                            <span class="material-icons">edit</span>
+                          </button>
+                          <button class="btn-icon danger" (click)="deleteRst(r.id!); $event.stopPropagation()">
+                            <span class="material-icons">delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
             }
-          </tbody>
-        </table>
-      }
-    </div>
+
+          </div>
+        }
+      </div>
+    }
   }
 
   <!-- ===================== BRASSERIES TAB ===================== -->

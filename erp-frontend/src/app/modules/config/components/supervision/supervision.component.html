@@ -1,0 +1,161 @@
+<div class="supv-page">
+
+  <!-- ══ EN-TÊTE ══ -->
+  <div class="supv-header">
+    <div class="header-left">
+      <span class="material-icons header-icon">manage_search</span>
+      <div>
+        <h1>Supervision des opérations</h1>
+        <p>Journal d'activité complet — qui a fait quoi, quand</p>
+      </div>
+    </div>
+    <div class="header-right">
+      @if (totalElements > 0) {
+        <span class="total-badge">{{ totalElements }} entrée{{ totalElements > 1 ? 's' : '' }}</span>
+      }
+      <button class="btn-refresh" (click)="search()" [disabled]="loading" title="Rafraîchir">
+        <span class="material-icons" [class.spin]="loading">refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ BARRE DE FILTRES ══ -->
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label><span class="material-icons">person_search</span> Opérateur</label>
+      <input type="text" [(ngModel)]="filterOperator" placeholder="Login ou nom…"
+             (keyup.enter)="search()" />
+    </div>
+
+    <div class="filter-group">
+      <label><span class="material-icons">category</span> Module</label>
+      <select [(ngModel)]="filterEntityType">
+        <option value="">Tous les modules</option>
+        <option value="SALE_INVOICE">Factures vente</option>
+        <option value="PURCHASE_INVOICE">Factures achat</option>
+        <option value="STOCK_PICKING">Mouvements stock</option>
+        <option value="ACCOUNT_MOVE">Écritures comptables</option>
+        <option value="CAISSE">Caisse</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label><span class="material-icons">calendar_today</span> Du</label>
+      <input type="date" [(ngModel)]="filterFrom" />
+    </div>
+
+    <div class="filter-group">
+      <label><span class="material-icons">event</span> Au</label>
+      <input type="date" [(ngModel)]="filterTo" />
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn-search" (click)="search()">
+        <span class="material-icons">search</span> Rechercher
+      </button>
+      <button class="btn-reset" (click)="reset()" title="Réinitialiser les filtres">
+        <span class="material-icons">filter_alt_off</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ TABLEAU ══ -->
+  @if (loading) {
+    <div class="loading-row">
+      <span class="material-icons spin">sync</span>
+      Chargement des logs…
+    </div>
+  } @else if (logs.length === 0) {
+    <div class="empty-state">
+      <span class="material-icons">search_off</span>
+      <p>Aucune opération trouvée pour ces critères.</p>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="supv-table">
+        <thead>
+          <tr>
+            <th class="col-date">Date &amp; heure</th>
+            <th class="col-op">Opérateur</th>
+            <th class="col-module">Module</th>
+            <th class="col-ref">Référence</th>
+            <th class="col-action">Action</th>
+            <th class="col-details">Détails</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (log of logs; track log.id) {
+            <tr>
+              <td class="col-date mono">{{ fmtDate(log.performedAt) }}</td>
+              <td class="col-op">
+                <div class="operator-cell">
+                  <span class="op-avatar">{{ (log.performedByFullname || log.performedBy).charAt(0).toUpperCase() }}</span>
+                  <div class="op-info">
+                    <span class="op-name">{{ log.performedByFullname || log.performedBy }}</span>
+                    @if (log.performedByFullname) {
+                      <span class="op-login">{{ log.performedBy }}</span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td class="col-module">
+                <span class="module-chip">{{ entityLabel(log.entityType) }}</span>
+              </td>
+              <td class="col-ref mono">{{ log.entityRef || '—' }}</td>
+              <td class="col-action">
+                <span class="action-badge" [class]="actionClass(log.action)">
+                  {{ log.actionLabel || actionLabel(log.action) }}
+                </span>
+              </td>
+              <td class="col-details">
+                @let det = parseDetails(log.details);
+                @if (det) {
+                  <div class="details-chips">
+                    @for (item of $any(det) | keyvalue; track item.key) {
+                      <span class="detail-chip">
+                        <span class="chip-key">{{ item.key }}</span>
+                        <span class="chip-val">{{ item.value }}</span>
+                      </span>
+                    }
+                  </div>
+                } @else if (log.details) {
+                  <span class="detail-raw">{{ log.details }}</span>
+                } @else {
+                  <span class="no-details">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══ PAGINATION ══ -->
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage === 0" (click)="goPage(currentPage - 1)">
+          <span class="material-icons">chevron_left</span>
+        </button>
+
+        @for (p of pages; track $index) {
+          @if (p === -1) {
+            <span class="page-ellipsis">…</span>
+          } @else {
+            <button class="page-btn" [class.active]="p === currentPage" (click)="goPage(p)">
+              {{ p + 1 }}
+            </button>
+          }
+        }
+
+        <button class="page-btn" [disabled]="currentPage >= totalPages - 1" (click)="goPage(currentPage + 1)">
+          <span class="material-icons">chevron_right</span>
+        </button>
+
+        <span class="page-info">
+          Page {{ currentPage + 1 }} / {{ totalPages }}
+          &nbsp;·&nbsp; {{ totalElements }} entrée{{ totalElements > 1 ? 's' : '' }}
+        </span>
+      </div>
+    }
+  }
+</div>

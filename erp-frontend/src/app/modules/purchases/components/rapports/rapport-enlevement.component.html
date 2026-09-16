@@ -1,0 +1,168 @@
+<div class="page-container">
+
+  <!-- ═══ EN-TÊTE ════════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <span class="material-icons">local_shipping</span>
+        Rapport des coûts d'enlèvement
+      </h1>
+    </div>
+    @if (generated && entries.length > 0) {
+      <div class="export-actions">
+        <button class="btn-export btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
+        </button>
+        <button class="btn-export btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ FILTRES ═══════════════════════════════════════════════════════════ -->
+  <div class="filter-card">
+    <div class="filter-card-title">
+      <span class="material-icons">tune</span> Paramètres du rapport
+    </div>
+    <div class="group-section">
+      <span class="group-label-text"><span class="material-icons">layers</span> Détail sous chaque fournisseur</span>
+      <div class="group-chips">
+        <button class="group-chip" [class.active]="subGroupBy === 'articles'" (click)="setSubGroup('articles')">
+          <span class="material-icons">inventory_2</span> Par articles (Qté + P.U.)
+        </button>
+        <button class="group-chip" [class.active]="subGroupBy === 'categories'" (click)="setSubGroup('categories')">
+          <span class="material-icons">category</span> Par catégories (Totaux)
+        </button>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Période du</label>
+        <input type="date" class="form-input" [(ngModel)]="dateFrom">
+      </div>
+      <div class="filter-group">
+        <label>au</label>
+        <input type="date" class="form-input" [(ngModel)]="dateTo">
+      </div>
+      <button class="btn-generate" (click)="generate()" [disabled]="loading">
+        @if (loading) { <span class="material-icons spin">hourglass_empty</span> Génération… }
+        @else { <span class="material-icons">play_arrow</span> Générer }
+      </button>
+    </div>
+    @if (errorMsg) {
+      <div class="alert-error"><span class="material-icons">error_outline</span> {{ errorMsg }}</div>
+    }
+  </div>
+
+  <!-- ═══ RÉSULTAT ══════════════════════════════════════════════════════════ -->
+  @if (generated) {
+    @if (entries.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">search_off</span>
+        <p>Aucun coût d'enlèvement calculé sur cette période.</p>
+      </div>
+    } @else {
+
+      <!-- KPIs -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon stat-total"><span class="material-icons">local_shipping</span></div>
+          <div class="stat-body">
+            <div class="stat-label">Total enlèvements</div>
+            <div class="stat-value">{{ grandTotal | number:'1.0-0' }} <span class="stat-cur">FCFA</span></div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-partners"><span class="material-icons">store</span></div>
+          <div class="stat-body">
+            <div class="stat-label">Fournisseurs</div>
+            <div class="stat-value">{{ partnerCount }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-cat"><span class="material-icons">category</span></div>
+          <div class="stat-body">
+            <div class="stat-label">Catégories</div>
+            <div class="stat-value">{{ categoryCount }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar accordéon -->
+      <div class="acc-toolbar">
+        <span class="acc-info">
+          <span class="material-icons">store</span>
+          {{ entries.length }} fournisseur(s) — détail {{ subGroupBy === 'articles' ? 'par articles' : 'par catégories' }}
+        </span>
+        <div class="acc-btns">
+          <button class="btn-acc" (click)="expandAll()"><span class="material-icons">unfold_more</span> Tout ouvrir</button>
+          <button class="btn-acc" (click)="collapseAll()"><span class="material-icons">unfold_less</span> Tout fermer</button>
+        </div>
+      </div>
+
+      <!-- Accordéon -->
+      <div class="groups-list">
+        @for (entry of entries; track entry.partnerId) {
+          <div class="group-block" [class.is-open]="isExpanded(entry.partnerName)">
+
+            <div class="group-header" (click)="togglePartner(entry.partnerName)">
+              <div class="group-header-left">
+                <span class="material-icons group-chevron">{{ isExpanded(entry.partnerName) ? 'expand_less' : 'expand_more' }}</span>
+                <div class="client-avatar">{{ entry.partnerName.charAt(0).toUpperCase() }}</div>
+                <span class="group-name">{{ entry.partnerName }}</span>
+                <span class="group-lines-count">{{ catLines(entry).length }} ligne(s)</span>
+              </div>
+              <div class="group-header-right">
+                <span class="group-total-chip">{{ entry.totalAmount | number:'1.0-0' }} FCFA</span>
+              </div>
+            </div>
+
+            @if (isExpanded(entry.partnerName)) {
+              <div class="group-body">
+                <table class="lines-table">
+                  <thead>
+                    <tr>
+                      @if (subGroupBy === 'articles') { <th>Article</th> }
+                      <th>Catégorie</th>
+                      <th class="col-num r">Quantité</th>
+                      @if (subGroupBy === 'articles') { <th class="col-num r">P.U. (FCFA)</th> }
+                      <th class="col-amount r">Total (FCFA)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of catLines(entry); track $index) {
+                      <tr>
+                        @if (subGroupBy === 'articles') {
+                          <td class="label-cell">{{ l.productName || '—' }}</td>
+                        }
+                        <td class="text-muted">{{ l.categoryName }}</td>
+                        <td class="r font-mono">{{ l.quantite | number:'1.0-2' }}</td>
+                        @if (subGroupBy === 'articles') {
+                          <td class="r font-mono">{{ l.montantUnit | number:'1.0-0' }}</td>
+                        }
+                        <td class="r font-mono font-bold">{{ l.montantTotal | number:'1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr class="sub-total-row">
+                      <td [attr.colspan]="subGroupBy === 'articles' ? 4 : 2" class="sub-total-label">Sous-total {{ entry.partnerName }}</td>
+                      <td class="r font-mono font-bold">{{ entry.totalAmount | number:'1.0-0' }} FCFA</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="grand-total">
+          <span class="gt-label">TOTAL GÉNÉRAL — {{ entries.length }} fournisseur(s)</span>
+          <span class="gt-value">{{ grandTotal | number:'1.0-0' }} FCFA</span>
+        </div>
+      </div>
+    }
+  }
+
+</div>

@@ -1,0 +1,176 @@
+<div class="page-container">
+
+  <!-- En-tête avec actions -->
+  <div class="detail-header">
+    <button class="btn-icon" (click)="router.navigate(['/helpdesk/tickets'])" title="Retour">
+      <span class="material-icons">arrow_back</span>
+    </button>
+
+    @if (ticket) {
+      <div class="title-wrap">
+        <span class="ticket-num mono">{{ ticket.ticketNumber }}</span>
+        @if (!editing) { <h1>{{ ticket.title }}</h1> }
+      </div>
+      <div class="action-bar">
+        @if (ticket.status !== 'FERME') {
+          <button class="btn-icon" (click)="editing = !editing" [title]="editing ? 'Annuler' : 'Modifier'">
+            <span class="material-icons">{{ editing ? 'close' : 'edit' }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (successMsg) {
+    <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div>
+  }
+  @if (errorMsg) {
+    <div class="alert alert-danger"><span class="material-icons">error</span> {{ errorMsg }}</div>
+  }
+
+  @if (loading) {
+    <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
+  } @else if (ticket) {
+    <div class="ticket-body">
+
+      <!-- Fiche ticket -->
+      <div class="card ticket-card">
+        @if (editing) {
+          <div class="form-group">
+            <label>Titre</label>
+            <input type="text" [(ngModel)]="ticket.title" class="form-control" />
+          </div>
+        }
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Statut</span>
+            <span class="badge badge-status-{{ ticket.status }}">{{ statusLabel(ticket.status) }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Priorité</span>
+            @if (editing) {
+              <select [(ngModel)]="ticket.priority" class="form-control-sm">
+                <option value="BASSE">Basse</option>
+                <option value="MOYENNE">Moyenne</option>
+                <option value="HAUTE">Haute</option>
+                <option value="CRITIQUE">Critique</option>
+              </select>
+            } @else {
+              <span class="badge badge-prio-{{ ticket.priority }}">{{ priorityLabel(ticket.priority) }}</span>
+            }
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Catégorie</span>
+            @if (editing) {
+              <select [(ngModel)]="ticket.category" class="form-control-sm">
+                <option value="INCIDENT">Incident</option>
+                <option value="DEMANDE">Demande</option>
+                <option value="QUESTION">Question</option>
+              </select>
+            } @else {
+              <span class="badge badge-cat-{{ ticket.category }}">{{ categoryLabel(ticket.category) }}</span>
+            }
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Créé par</span>
+            <span>{{ ticket.createdByUsername }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Pris en charge par</span>
+            <span>{{ ticket.assignedToUsername || 'En attente du support' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Créé le</span>
+            <span>{{ ticket.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          @if (ticket.resolvedAt) {
+            <div class="meta-item">
+              <span class="meta-label">Résolu le</span>
+              <span>{{ ticket.resolvedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="desc-section">
+          <span class="meta-label">Description</span>
+          @if (editing) {
+            <textarea [(ngModel)]="ticket.description" class="form-control" rows="5"></textarea>
+          } @else {
+            <div class="desc-text">{{ ticket.description || 'Aucune description.' }}</div>
+          }
+        </div>
+
+        @if (editing) {
+          <div class="edit-actions">
+            <button class="btn-secondary" (click)="editing = false">Annuler</button>
+            <button class="btn-primary" (click)="save()" [disabled]="saving">
+              <span class="material-icons">{{ saving ? 'hourglass_empty' : 'save' }}</span>
+              {{ saving ? 'Sauvegarde...' : 'Enregistrer' }}
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Thread commentaires -->
+      <div class="card comments-card">
+        <h3 class="comments-title">
+          <span class="material-icons">forum</span>
+          Commentaires ({{ ticket.comments?.length || 0 }})
+        </h3>
+
+        @if (!ticket.comments?.length) {
+          <p class="no-comments">Aucun commentaire pour l'instant.</p>
+        } @else {
+          <div class="comments-list">
+            @for (c of ticket.comments; track c.id) {
+              <div class="comment" [class.comment-internal]="c.internal" [class.comment-from-hub]="c.fromHub">
+                <div class="comment-header">
+                  <span class="comment-author">
+                    <span class="material-icons">{{ c.fromHub ? 'support_agent' : 'person' }}</span>{{ c.authorUsername }}
+                  </span>
+                  @if (c.fromHub) {
+                    <span class="badge-hub">Support Hub</span>
+                  }
+                  @if (c.internal) {
+                    <span class="badge-internal">Note interne</span>
+                  }
+                  <span class="comment-date">{{ c.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <div class="comment-body">{{ c.content }}</div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (ticket.status === 'OUVERT') {
+          <div class="comment-waiting">
+            <span class="material-icons">hourglass_empty</span>
+            En attente de prise en charge par le support — vous pouvez déjà écrire, le support vous répondra dès que possible.
+          </div>
+        }
+        @if (ticket.status !== 'FERME') {
+          <div class="comment-form">
+            <textarea
+              [(ngModel)]="newComment"
+              class="form-control"
+              rows="3"
+              placeholder="Répondre ou apporter des précisions…"></textarea>
+            <div class="comment-form-footer">
+              <button class="btn-primary btn-sm" (click)="sendComment()"
+                      [disabled]="sendingComment || !newComment.trim()">
+                <span class="material-icons">send</span>
+                {{ sendingComment ? 'Envoi...' : 'Envoyer' }}
+              </button>
+            </div>
+          </div>
+        } @else {
+          <p class="comment-closed">Ticket clôturé — discussion fermée.</p>
+        }
+      </div>
+
+      <app-audit-trail entityType="TICKET" [entityId]="ticket.id ?? null"></app-audit-trail>
+
+    </div>
+  }
+</div>

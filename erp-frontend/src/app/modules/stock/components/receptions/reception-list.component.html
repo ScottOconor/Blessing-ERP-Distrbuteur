@@ -6,9 +6,11 @@
         <p class="page-subtitle">Réceptions fournisseurs — manuelles ou depuis achat</p>
       </div>
     </div>
-    <button class="btn-primary" (click)="router.navigate(['/stock/receptions/new'])">
-      <span class="material-icons">add</span> Nouvelle réception
-    </button>
+    <div class="header-actions">
+      <button class="btn-primary" (click)="openDirectModal()">
+        <span class="material-icons">add_box</span> Nouvelle réception
+      </button>
+    </div>
   </div>
 
   <!-- Tabs -->
@@ -37,6 +39,21 @@
       </div>
       <button class="filter-btn" (click)="clearDateFilter()">Toutes dates</button>
     </div>
+    <div class="groupby-bar">
+      <span class="groupby-label">Regrouper par :</span>
+      <div class="groupby-btns">
+        @for (opt of groupByOptions; track opt.key) {
+          <button [class.active]="groupBy === opt.key" (click)="setGroupBy(opt.key)">
+            <span class="material-icons">{{ opt.icon }}</span> {{ opt.label }}
+          </button>
+        }
+      </div>
+      @if (groupBy) {
+        <button class="groupby-reset" (click)="setGroupBy('')">
+          <span class="material-icons">close</span> Annuler
+        </button>
+      }
+    </div>
   }
 
   <!-- Pending receptions (bordereau workflow) -->
@@ -48,7 +65,7 @@
         <div class="empty">
           <span class="material-icons">inbox</span>
           <p>Aucune réception en attente</p>
-          <span class="empty-hint">Les réceptions apparaissent ici après validation d'une facture fournisseur</span>
+          <span class="empty-hint">Utilisez "Nouvelle réception" pour enregistrer une réception directe</span>
         </div>
       } @else {
         <table class="data-table">
@@ -105,25 +122,59 @@
             </tr>
           </thead>
           <tbody>
-            @for (p of pickings; track p.id) {
-              <tr (click)="router.navigate(['/stock/receptions', p.id])" class="clickable">
-                <td class="font-mono font-bold text-blue">{{ p.name }}</td>
-                <td>{{ p.partnerName || '—' }}</td>
-                <td class="text-muted">{{ p.origin || '—' }}</td>
-                <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
-                <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
-                <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
-                <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
-                <td (click)="$event.stopPropagation()">
-                  @if (p.state === 'done') {
-                    <button class="btn-bordereau" (click)="openBordereau(p.id!)">
-                      <span class="material-icons">assignment</span> Bordereau
-                    </button>
-                  } @else {
-                    <span class="material-icons chevron">chevron_right</span>
+            @if (groupBy) {
+              @for (row of groupedRows; track row.key) {
+                <tr class="group-header-row" (click)="toggleGroup(row.key)">
+                  <td class="group-header-cell" colspan="8">
+                    <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
+                    <span class="group-label">{{ row.label }}</span>
+                    <span class="badge">{{ row.count }}</span>
+                  </td>
+                </tr>
+                @if (isExpanded(row.key)) {
+                  @for (p of getGroupItems(row.key); track p.id) {
+                    <tr class="detail-row clickable" (click)="router.navigate(['/stock/receptions', p.id])">
+                      <td class="font-mono font-bold text-blue">{{ p.name }}</td>
+                      <td>{{ p.partnerName || '—' }}</td>
+                      <td class="text-muted">{{ p.origin || '—' }}</td>
+                      <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                      <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
+                      <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                      <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                      <td (click)="$event.stopPropagation()">
+                        @if (p.state === 'done') {
+                          <button class="btn-bordereau" (click)="openBordereau(p.id!)">
+                            <span class="material-icons">assignment</span> Bordereau
+                          </button>
+                        } @else {
+                          <span class="material-icons chevron">chevron_right</span>
+                        }
+                      </td>
+                    </tr>
                   }
-                </td>
-              </tr>
+                }
+              }
+            } @else {
+              @for (p of pickings; track p.id) {
+                <tr (click)="router.navigate(['/stock/receptions', p.id])" class="clickable">
+                  <td class="font-mono font-bold text-blue">{{ p.name }}</td>
+                  <td>{{ p.partnerName || '—' }}</td>
+                  <td class="text-muted">{{ p.origin || '—' }}</td>
+                  <td class="text-muted">{{ p.scheduledDate | date:'dd/MM/yyyy' }}</td>
+                  <td class="text-muted">{{ p.dateDone ? (p.dateDone | date:'dd/MM/yyyy') : '—' }}</td>
+                  <td><span class="state-badge" [attr.data-state]="p.state">{{ stateLabel(p.state || '') }}</span></td>
+                  <td class="text-right font-mono">{{ p.totalValue | number:'1.0-0' }}</td>
+                  <td (click)="$event.stopPropagation()">
+                    @if (p.state === 'done') {
+                      <button class="btn-bordereau" (click)="openBordereau(p.id!)">
+                        <span class="material-icons">assignment</span> Bordereau
+                      </button>
+                    } @else {
+                      <span class="material-icons chevron">chevron_right</span>
+                    }
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
@@ -131,3 +182,106 @@
     </div>
   }
 </div>
+
+<!-- ─── Modal réception directe ────────────────────────────────────────────── -->
+@if (showDirectModal) {
+  <div class="modal-backdrop" (click)="closeDirectModal()"></div>
+  <div class="modal-panel" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><span class="material-icons">add_box</span> Réception directe fournisseur</h2>
+      <button class="btn-icon" (click)="closeDirectModal()"><span class="material-icons">close</span></button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fournisseur</label>
+          <input type="text" class="form-control" [(ngModel)]="directForm.supplierName" placeholder="Nom du fournisseur" />
+        </div>
+        <div class="form-group">
+          <label>Référence</label>
+          <input type="text" class="form-control" [(ngModel)]="directForm.reference" placeholder="N° BL, bon de commande…" />
+        </div>
+        <div class="form-group form-group-sm">
+          <label>Date</label>
+          <input type="date" class="form-control" [(ngModel)]="directForm.date" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Entrepôt de réception</label>
+          <select class="form-control" [(ngModel)]="directForm.warehouseId">
+            <option [ngValue]="null">— Magasin principal (par défaut) —</option>
+            @for (wh of warehouses; track wh.id) {
+              <option [ngValue]="wh.id">{{ wh.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <table class="lines-table">
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th class="text-right">Qté</th>
+            <th class="text-right">Prix achat (HT)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (line of directForm.lines; track $index; let i = $index) {
+            <tr>
+              <td class="col-product-search">
+                <div class="ac-wrap">
+                  <input type="text" class="form-control" [(ngModel)]="line.productSearch"
+                         (ngModelChange)="onDirectProductSearch(i)"
+                         placeholder="Chercher article…" autocomplete="off" />
+                  @if (line.searchResults.length > 0) {
+                    <div class="ac-results">
+                      @for (p of line.searchResults; track p.id) {
+                        <div class="ac-item" (click)="selectDirectProduct(i, p)">
+                          <span class="ac-code">{{ p.defaultCode || '' }}</span>
+                          <span class="ac-name">{{ p.name }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </td>
+              <td class="text-right">
+                <input type="number" class="form-control text-right" [(ngModel)]="line.qty" min="0.001" step="1" />
+              </td>
+              <td class="text-right">
+                <input type="number" class="form-control text-right" [(ngModel)]="line.prixUnitaire" min="0" step="1" />
+              </td>
+              <td>
+                @if (directForm.lines.length > 1) {
+                  <button class="btn-icon-sm" (click)="removeDirectLine(i)">
+                    <span class="material-icons">delete_outline</span>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <button class="btn-add-line" (click)="addDirectLine()">
+        <span class="material-icons">add</span> Ajouter article
+      </button>
+
+      @if (directError) {
+        <div class="alert-error">{{ directError }}</div>
+      }
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeDirectModal()">Annuler</button>
+      <button class="btn-primary" (click)="submitDirectReception()" [disabled]="directSaving">
+        @if (directSaving) { <span class="material-icons spin">refresh</span> }
+        Valider la réception
+      </button>
+    </div>
+  </div>
+}

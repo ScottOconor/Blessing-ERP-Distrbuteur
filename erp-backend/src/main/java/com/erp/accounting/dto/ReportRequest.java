@@ -35,5 +35,26 @@ public class ReportRequest {
 
     private List<Long> partnerIds;
 
-    private List<Long> accountIds;
+private List<Long> accountIds;
+
+    /**
+     * periodType: monthly / quarterly / yearly / custom
+     * Utilisé pour le bilan OHADA et le compte de résultat (calcul de la période N-1).
+     */
+    private String periodType;
+
+    /**
+     * includeUnposted: inclure les écritures non validées (draft) en plus des postées.
+     */
+    private Boolean includeUnposted;
+
+    /**
+     * comparisonEnabled: activer la comparaison N-1.
+     */
+    private Boolean comparisonEnabled;
+
+    /**
+     * mode: mensuel / annuel (compte de résultat).
+     */
+    private String mode;
 }
