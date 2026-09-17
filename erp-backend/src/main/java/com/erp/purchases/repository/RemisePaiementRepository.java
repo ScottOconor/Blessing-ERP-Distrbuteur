@@ -13,6 +13,13 @@ public interface RemisePaiementRepository extends JpaRepository<RemisePaiement, 
 
     List<RemisePaiement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
+    /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
+     *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
+    @Query("SELECT r FROM RemisePaiement r WHERE r.companyId = :companyId " +
+           "AND (r.date IS NULL OR r.date >= :since) ORDER BY r.createdAt DESC")
+    List<RemisePaiement> findByCompanyIdSince(@Param("companyId") Long companyId,
+                                               @Param("since") LocalDate since);
+
     List<RemisePaiement> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);
 
     boolean existsByInvoiceIdAndTypeRemise(Long invoiceId, String typeRemise);

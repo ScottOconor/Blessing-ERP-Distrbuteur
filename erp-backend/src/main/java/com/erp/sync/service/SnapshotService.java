@@ -413,17 +413,19 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Fenêtrées comme saleInvoices/purchaseInvoices (2 ans, sans limite si snapshot forcé) —
-        // avant ce correctif, ristournePaiements/remisePaiements étaient les deux seules listes
-        // historiques du snapshot sans aucune borne de date, ce qui les faisait grossir
-        // indéfiniment avec l'ancienneté du site et contribuait au dépassement de la taille max
-        // du broker (16 Mo) reproduit chaque heure sur un client à gros volume (cf.
-        // accountMoveLines et saleInvoices/purchaseInvoices plus bas, même incident).
-        LocalDate twoYearsAgo = today.minusYears(2);
+        // Fenêtrées comme saleInvoices/purchaseInvoices (2 ans, 5 ans si snapshot forcé — jamais
+        // illimité) — avant ce correctif, "Forcer envoi" (full=true) désactivait complètement le
+        // filtre de date, ET ce filtre s'appliquait de toute façon APRÈS avoir chargé la table
+        // entière en entités JPA (findByCompanyIdOrderByCreatedAtDesc n'a jamais eu de borne SQL).
+        // Sur un client ancien à gros volume (Blessing), ça matérialisait chaque heure — pas
+        // seulement lors d'un "Forcer envoi" — l'intégralité de l'historique en mémoire avant de le
+        // tronquer côté Java, un risque d'OutOfMemoryError croissant avec l'ancienneté du site (cf.
+        // plantages répétés de septembre 2026). Les nouvelles requêtes *Since filtrent directement
+        // en SQL : plus aucune liste historique n'est jamais chargée sans borne.
+        LocalDate invoicesWindowStart = today.minusYears(full ? 5 : 2);
 
         List<SpokeSnapshotPayload.RistournePaiementItem> ristournePaiements =
-                ristournePaiementRepo.findByCompanyIdOrderByCreatedAtDesc(cid).stream()
-                .filter(r -> full || r.getDate() == null || !r.getDate().isBefore(twoYearsAgo))
+                ristournePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart).stream()
                 .map(r -> SpokeSnapshotPayload.RistournePaiementItem.builder()
                         .id(r.getId()).name(r.getName())
                         .partnerName(r.getPartner() != null ? r.getPartner().getName() : null)
@@ -433,8 +435,7 @@ public class SnapshotService {
                 .collect(Collectors.toList());
 
         List<SpokeSnapshotPayload.RemisePaiementItem> remisePaiements =
-                remisePaiementRepo.findByCompanyIdOrderByCreatedAtDesc(cid).stream()
-                .filter(r -> full || r.getDate() == null || !r.getDate().isBefore(twoYearsAgo))
+                remisePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart).stream()
                 .map(r -> SpokeSnapshotPayload.RemisePaiementItem.builder()
                         .id(r.getId()).name(r.getName())
                         .partnerName(r.getPartner() != null ? r.getPartner().getName() : null)
@@ -486,10 +487,9 @@ public class SnapshotService {
         Map<Long, String> warehouseNames = warehouseRepo.findByCompanyIdOrderByNameAsc(cid).stream()
                 .collect(Collectors.toMap(com.erp.stock.entity.Warehouse::getId, com.erp.stock.entity.Warehouse::getName));
 
-        // ── Factures de vente (2 dernières années, sans limite si snapshot forcé) ───────────
+        // ── Factures de vente (2 ans, 5 ans si snapshot forcé, filtré en SQL) ────────────────
         List<SpokeSnapshotPayload.SaleInvoiceItem> saleInvoices =
-                salesInvoiceRepo.findByCompanyIdAndStateNotOrderByDateDescNameDesc(cid, "draft").stream()
-                .filter(inv -> full || inv.getDate() == null || !inv.getDate().isBefore(twoYearsAgo))
+                salesInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
                 .map(inv -> SpokeSnapshotPayload.SaleInvoiceItem.builder()
                         .id(inv.getId())
                         .name(inv.getName())
@@ -510,10 +510,9 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
-        // ── Factures d'achat (2 dernières années, sans limite si snapshot forcé) ────────────
+        // ── Factures d'achat (2 ans, 5 ans si snapshot forcé, filtré en SQL) ─────────────────
         List<SpokeSnapshotPayload.PurchaseInvoiceItem> purchaseInvoices =
-                purchaseInvoiceRepo.findByCompanyIdAndStateNotOrderByDateDescNameDesc(cid, "draft").stream()
-                .filter(inv -> full || inv.getDate() == null || !inv.getDate().isBefore(twoYearsAgo))
+                purchaseInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
                 .map(inv -> SpokeSnapshotPayload.PurchaseInvoiceItem.builder()
                         .id(inv.getId())
                         .name(inv.getName())
@@ -530,15 +529,9 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
-        // ── Bons de commande (tout sauf brouillon), fenêtrés à 2 ans comme les factures ────────
-        // Ancien commentaire : "volume nettement plus faible que les factures donc pas besoin de
-        // le limiter" — c'était le même raisonnement qui avait laissé ristournePaiements/
-        // remisePaiements sans borne jusqu'à ce qu'elles finissent par dépasser la limite de
-        // taille du broker (cf. correctif ci-dessus). Même classe de bug, même correctif par
-        // précaution avant qu'un client à gros volume de commandes ne la reproduise.
+        // ── Bons de commande (tout sauf brouillon), fenêtrés comme les factures, filtré en SQL ──
         List<SpokeSnapshotPayload.SaleOrderItem> salesOrders =
-                salesOrderRepo.findByCompanyIdAndStateNotOrderByDateDescNameDesc(cid, "draft").stream()
-                .filter(o -> full || o.getDate() == null || !o.getDate().isBefore(twoYearsAgo))
+                salesOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
                 .map(o -> SpokeSnapshotPayload.SaleOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())
@@ -550,8 +543,7 @@ public class SnapshotService {
                 .collect(Collectors.toList());
 
         List<SpokeSnapshotPayload.PurchaseOrderItem> purchaseOrders =
-                purchaseOrderRepo.findByCompanyIdAndStateNotOrderByCreatedAtDesc(cid, "draft").stream()
-                .filter(o -> full || o.getDate() == null || !o.getDate().isBefore(twoYearsAgo))
+                purchaseOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
                 .map(o -> SpokeSnapshotPayload.PurchaseOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())

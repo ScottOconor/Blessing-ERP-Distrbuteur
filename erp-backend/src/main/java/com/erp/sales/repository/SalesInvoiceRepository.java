@@ -38,6 +38,18 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
      *  filet de sécurité de réconciliation avec le Hub. */
     List<SalesInvoice> findByCompanyIdAndStateNotOrderByDateDescNameDesc(Long companyId, String excludedState);
 
+    /** Version bornée dans le temps de la requête ci-dessus, filtrée en SQL — utilisée par
+     *  SnapshotService, qui chargeait auparavant TOUTE la table (peu importe la fenêtre demandée)
+     *  avant de la tronquer côté Java. Sur un client ancien à gros volume, cette requête
+     *  intégralement non filtrée matérialisait chaque heure l'ensemble des factures en entités JPA
+     *  avant d'en jeter la plus grande partie — un risque d'OutOfMemoryError qui grandit avec
+     *  l'ancienneté du site (cf. incidents Blessing de septembre 2026). */
+    @Query("SELECT i FROM SalesInvoice i WHERE i.company.id = :companyId AND i.state <> :excludedState " +
+           "AND (i.date IS NULL OR i.date >= :since) ORDER BY i.date DESC, i.name DESC")
+    List<SalesInvoice> findByCompanyIdAndStateNotSince(@Param("companyId") Long companyId,
+                                                        @Param("excludedState") String excludedState,
+                                                        @Param("since") LocalDate since);
+
     List<SalesInvoice> findByCompanyIdAndPartnerIdOrderByDateDesc(Long companyId, Long partnerId);
 
     Optional<SalesInvoice> findFirstBySalesOrderId(Long orderId);

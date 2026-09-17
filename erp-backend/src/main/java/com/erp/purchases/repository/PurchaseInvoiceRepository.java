@@ -36,6 +36,14 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
      *  filet de sécurité de réconciliation avec le Hub. */
     List<PurchaseInvoice> findByCompanyIdAndStateNotOrderByDateDescNameDesc(Long companyId, String excludedState);
 
+    /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
+     *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
+    @Query("SELECT i FROM PurchaseInvoice i WHERE i.company.id = :companyId AND i.state <> :excludedState " +
+           "AND (i.date IS NULL OR i.date >= :since) ORDER BY i.date DESC, i.name DESC")
+    List<PurchaseInvoice> findByCompanyIdAndStateNotSince(@Param("companyId") Long companyId,
+                                                           @Param("excludedState") String excludedState,
+                                                           @Param("since") LocalDate since);
+
     Optional<PurchaseInvoice> findFirstByPurchaseOrderId(Long orderId);
 
     List<PurchaseInvoice> findByOriginalInvoiceId(Long originalInvoiceId);

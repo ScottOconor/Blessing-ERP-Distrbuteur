@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.QueryHint;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -24,6 +25,14 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     /** Tous les bons de commande "actifs" (tout sauf brouillon) pour le snapshot — seul filet de
      *  sécurité de réconciliation pour PURCHASE_ORDER_RECEIVED côté Hub. */
     List<PurchaseOrder> findByCompanyIdAndStateNotOrderByCreatedAtDesc(Long companyId, String excludedState);
+
+    /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
+     *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
+    @Query("SELECT o FROM PurchaseOrder o WHERE o.company.id = :companyId AND o.state <> :excludedState " +
+           "AND (o.date IS NULL OR o.date >= :since) ORDER BY o.createdAt DESC")
+    List<PurchaseOrder> findByCompanyIdAndStateNotSince(@Param("companyId") Long companyId,
+                                                         @Param("excludedState") String excludedState,
+                                                         @Param("since") LocalDate since);
 
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(p.name, 9) AS int)), 0) FROM PurchaseOrder p WHERE p.company.id = :cid AND p.name LIKE CONCAT('AC-', :year, '-%')")
     Integer findMaxSequenceByCompanyAndYear(@Param("cid") Long companyId, @Param("year") int year);

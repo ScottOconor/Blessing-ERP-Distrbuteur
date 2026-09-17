@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.QueryHint;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -28,6 +29,14 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     /** Tous les bons de commande "actifs" (tout sauf brouillon) pour le snapshot — seul filet de
      *  sécurité de réconciliation pour SALE_ORDER_CONFIRMED côté Hub. */
     List<SalesOrder> findByCompanyIdAndStateNotOrderByDateDescNameDesc(Long companyId, String excludedState);
+
+    /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
+     *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
+    @Query("SELECT o FROM SalesOrder o WHERE o.company.id = :companyId AND o.state <> :excludedState " +
+           "AND (o.date IS NULL OR o.date >= :since) ORDER BY o.date DESC, o.name DESC")
+    List<SalesOrder> findByCompanyIdAndStateNotSince(@Param("companyId") Long companyId,
+                                                      @Param("excludedState") String excludedState,
+                                                      @Param("since") LocalDate since);
 
     List<SalesOrder> findByCompanyIdAndPartnerIdOrderByDateDesc(Long companyId, Long partnerId);
 

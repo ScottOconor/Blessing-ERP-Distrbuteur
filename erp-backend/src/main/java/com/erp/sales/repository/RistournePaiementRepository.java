@@ -13,6 +13,13 @@ public interface RistournePaiementRepository extends JpaRepository<RistournePaie
 
     List<RistournePaiement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
+    /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
+     *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
+    @Query("SELECT r FROM RistournePaiement r WHERE r.companyId = :companyId " +
+           "AND (r.date IS NULL OR r.date >= :since) ORDER BY r.createdAt DESC")
+    List<RistournePaiement> findByCompanyIdSince(@Param("companyId") Long companyId,
+                                                  @Param("since") LocalDate since);
+
     List<RistournePaiement> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);
 
     List<RistournePaiement> findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(Long companyId, String typeRistourne);
