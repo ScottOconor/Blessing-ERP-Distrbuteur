@@ -19,7 +19,10 @@ public class CaisseDTO {
     private Long companyId;
     private CaisseStatus status;
     private String responsableName;
+    private Long sellerId;
+    private String sellerName;
     private boolean active;
     private LocalDate lastSessionDate;
     private BigDecimal soldeActuel;
+    private BigDecimal seuilEcart;
 }

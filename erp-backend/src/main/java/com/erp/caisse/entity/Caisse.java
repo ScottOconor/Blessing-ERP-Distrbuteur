@@ -3,6 +3,7 @@ package com.erp.caisse.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -36,8 +37,16 @@ public class Caisse {
 
     private String responsableName;
 
+    /** Vendeur responsable de cette caisse (facultatif, comme le concept de vendeur lui-même). */
+    @Column(name = "seller_id")
+    private Long sellerId;
+
     @Builder.Default
     private boolean active = true;
 
     private LocalDate lastSessionDate;
+
+    /** Seuil d'écart de caisse toléré (FCFA). Null = pas de seuil, aucune alerte. */
+    @Column(name = "seuil_ecart", precision = 17, scale = 2)
+    private BigDecimal seuilEcart;
 }

@@ -11,4 +11,7 @@ public interface CaisseSessionRepository extends JpaRepository<CaisseSession, Lo
     List<CaisseSession> findByCaisseIdOrderByDateSessionDesc(Long caisseId);
     Optional<CaisseSession> findByCaisseIdAndDateSession(Long caisseId, LocalDate dateSession);
     boolean existsByCaisseIdAndDateSession(Long caisseId, LocalDate dateSession);
+    Optional<CaisseSession> findByCaisseIdAndDateSessionAndStatus(Long caisseId, LocalDate dateSession, String status);
+    List<CaisseSession> findByCaisseIdInAndDateSessionBetweenOrderByDateSessionDesc(
+        List<Long> caisseIds, LocalDate dateFrom, LocalDate dateTo);
 }

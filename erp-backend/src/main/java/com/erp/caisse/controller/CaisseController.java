@@ -80,15 +80,25 @@ public class CaisseController {
         return caisseService.addOperation(req, userName);
     }
 
-    // ── Clôture ──
+    // ── Ouverture / Clôture ──
 
-    @PostMapping("/{id}/cloturer")
+    @PostMapping("/{id}/ouvrir")
+    public CaisseSessionDTO ouvrirSession(
+            @PathVariable Long id,
+            @RequestBody(required = false) OuvertureCaisseRequest req,
+            Principal principal) {
+        String userName = principal != null ? principal.getName() : "système";
+        return caisseService.ouvrirSession(id, req != null ? req : OuvertureCaisseRequest.builder().build(), userName);
+    }
+
+    @PutMapping("/{id}/cloturer")
     public CaisseSessionDTO cloturerCaisse(
             @PathVariable Long id,
             @RequestParam Long companyId,
+            @RequestBody(required = false) ClotureCaisseRequest req,
             Principal principal) {
         String userName = principal != null ? principal.getName() : "système";
-        return caisseService.cloturerCaisse(id, companyId, userName);
+        return caisseService.cloturerCaisse(id, companyId, req, userName);
     }
 
     @PostMapping("/{id}/rouvrir")
@@ -96,11 +106,61 @@ public class CaisseController {
         return caisseService.rouvrirCaisse(id);
     }
 
+    // ── Coupures ──
+
+    @GetMapping("/denominations")
+    public List<CashDenominationDTO> getDenominations(@RequestParam Long companyId) {
+        return caisseService.getDenominations(companyId);
+    }
+
+    @PostMapping("/denominations")
+    public CashDenominationDTO createDenomination(@RequestBody CashDenominationDTO dto) {
+        return caisseService.createDenomination(dto);
+    }
+
+    @PostMapping("/denominations/seed-defaults")
+    public List<CashDenominationDTO> seedDefaultDenominations(@RequestParam Long companyId) {
+        caisseService.seedDefaultDenominations(companyId);
+        return caisseService.getDenominations(companyId);
+    }
+
+    @PutMapping("/denominations/{id}")
+    public CashDenominationDTO updateDenomination(@PathVariable Long id, @RequestBody CashDenominationDTO dto) {
+        return caisseService.updateDenomination(id, dto);
+    }
+
+    @DeleteMapping("/denominations/{id}")
+    public ResponseEntity<Void> deleteDenomination(@PathVariable Long id) {
+        caisseService.deleteDenomination(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Sessions ──
 
     @GetMapping("/{id}/sessions")
     public List<CaisseSessionDTO> getSessions(@PathVariable Long id) {
         return caisseService.getSessions(id);
+    }
+
+    @GetMapping("/{id}/session-active")
+    public CaisseSessionDTO getActiveSession(@PathVariable Long id) {
+        return caisseService.getActiveSessionForCaisse(id);
+    }
+
+    // ── Rapports ──
+
+    @GetMapping("/sessions/{sessionId}/rapport-cloture")
+    public RapportClotureDTO getRapportCloture(@PathVariable Long sessionId) {
+        return caisseService.getRapportCloture(sessionId);
+    }
+
+    @GetMapping("/rapport-consolide")
+    public RapportConsolideDTO getRapportConsolide(
+            @RequestParam Long companyId,
+            @RequestParam(required = false) List<Long> caisseIds,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+        return caisseService.getRapportConsolide(caisseIds, dateFrom, dateTo, companyId);
     }
 
     // ── Brouillard ──
