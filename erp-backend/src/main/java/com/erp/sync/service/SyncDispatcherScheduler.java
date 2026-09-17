@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -52,6 +53,55 @@ public class SyncDispatcherScheduler {
     @Value("${sync.outbox.sent-retention-days:7}") private int    sentRetentionDays;
 
     private String spokeApiUrl;
+
+    /**
+     * Sans publisher confirms, rabbitTemplate.convertAndSend() rend la main dès que le frame est
+     * écrit sur le socket : un rejet broker qui n'est PAS "message trop gros" (donc pas intercepté
+     * par isMessageTooLarge ci-dessous, ex: fermeture de channel/returns asynchrones) arrive de
+     * façon asynchrone et l'événement outbox reste marqué SENT sans avoir jamais été livré au Hub
+     * — succès affiché côté spoke, rien ne remonte (cf. incident "Forcer envoi" du 2026-09-17).
+     * confirmCallback/returnsCallback corrigent ce statut optimiste dès que le broker signale
+     * explicitement l'échec, en complément du cas synchrone déjà géré dans dispatch().
+     */
+    @PostConstruct
+    void wireConfirmCallbacks() {
+        rabbitTemplate.setConfirmCallback((correlationData, ack, cause) -> {
+            if (ack || correlationData == null) return;
+            markDeliveryFailed(correlationData.getId(), "Rejeté par le broker : " + cause);
+        });
+        rabbitTemplate.setReturnsCallback(returned -> {
+            String correlationId = returned.getMessage().getMessageProperties().getCorrelationId();
+            markDeliveryFailed(correlationId, "Message non routable (retour broker, code "
+                    + returned.getReplyCode() + " " + returned.getReplyText() + ")");
+        });
+    }
+
+    /** Remet en PENDING (ou FAILED si tentatives épuisées) un événement marqué SENT à tort par
+     *  dispatch() avant que le broker ne signale le rejet réel de façon asynchrone. */
+    private void markDeliveryFailed(String outboxId, String reason) {
+        if (outboxId == null) return;
+        try {
+            Long id = Long.valueOf(outboxId);
+            outboxRepo.findById(id).ifPresent(event -> {
+                if (event.getStatus() != OutboxStatus.SENT) return; // déjà repris par ailleurs
+                event.setRetryCount(event.getRetryCount() + 1);
+                event.setLastAttemptAt(LocalDateTime.now());
+                event.setErrorMessage(reason);
+                if (isMessageTooLarge(new RuntimeException(reason)) || event.getRetryCount() >= MAX_RETRIES) {
+                    event.setStatus(OutboxStatus.FAILED);
+                    log.warn("Événement {} id={} FAILED (rejet broker asynchrone) : {}",
+                            event.getEventType(), event.getEntityId(), reason);
+                } else {
+                    event.setStatus(OutboxStatus.PENDING);
+                    log.warn("Événement {} id={} rejeté par le broker, remis en PENDING : {}",
+                            event.getEventType(), event.getEntityId(), reason);
+                }
+                outboxRepo.save(event);
+            });
+        } catch (NumberFormatException e) {
+            log.warn("Rejet broker sans correlation id exploitable ({}) : {}", outboxId, reason);
+        }
+    }
 
     @PostConstruct
     void detectSpokeApiUrl() {
@@ -219,7 +269,8 @@ public class SyncDispatcherScheduler {
             try {
                 SyncMessage msg = buildMessage(event);
                 String routingKey = "erp.sync." + event.getEventType().name().toLowerCase();
-                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, msg);
+                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, msg,
+                        new CorrelationData(String.valueOf(event.getId())));
                 event.setStatus(OutboxStatus.SENT);
                 event.setLastAttemptAt(LocalDateTime.now());
                 event.setErrorMessage(null);

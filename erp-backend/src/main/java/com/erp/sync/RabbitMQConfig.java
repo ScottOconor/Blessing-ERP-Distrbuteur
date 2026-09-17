@@ -62,6 +62,12 @@ public class RabbitMQConfig {
         RabbitTemplate tpl = new RabbitTemplate(cf);
         tpl.setMessageConverter(mc);
         tpl.setBeforePublishPostProcessors(new GZipPostProcessor());
+        // mandatory + publisher confirms (spring.rabbitmq.publisher-confirm-type/returns) : sans ça,
+        // un rejet broker survenant après l'écriture du message sur le socket reste invisible côté
+        // spoke — SyncDispatcherScheduler.confirmCallback s'appuie là-dessus pour corriger le statut
+        // SENT optimiste en cas de rejet réel non couvert par isMessageTooLarge (cf. incident
+        // "Forcer envoi" du 2026-09-17).
+        tpl.setMandatory(true);
         return tpl;
     }
 }
