@@ -202,6 +202,29 @@ public class SalesController {
         return ResponseEntity.noContent().build();
     }
 
+    // ===================== VENDEURS =====================
+
+    @GetMapping("/sellers")
+    public ResponseEntity<List<SellerDTO>> getSellers(@RequestParam Long companyId) {
+        return ResponseEntity.ok(salesService.getSellers(companyId));
+    }
+
+    @PostMapping("/sellers")
+    public ResponseEntity<SellerDTO> createSeller(@RequestBody SellerDTO dto) {
+        return ResponseEntity.ok(salesService.createSeller(dto));
+    }
+
+    @PutMapping("/sellers/{id}")
+    public ResponseEntity<SellerDTO> updateSeller(@PathVariable Long id, @RequestBody SellerDTO dto) {
+        return ResponseEntity.ok(salesService.updateSeller(id, dto));
+    }
+
+    @DeleteMapping("/sellers/{id}")
+    public ResponseEntity<Void> deleteSeller(@PathVariable Long id) {
+        salesService.deleteSeller(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // ===================== LETTRAGE FACTURES VENTES =====================
 
     @GetMapping("/invoices/{id}/available-moves")

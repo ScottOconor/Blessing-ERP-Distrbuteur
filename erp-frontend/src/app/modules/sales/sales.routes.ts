@@ -48,6 +48,10 @@ export const salesRoutes: Routes = [
         loadComponent: () => import('./components/clients/client-price.component').then(m => m.ClientPriceComponent)
       },
       {
+        path: 'vendeurs',
+        loadComponent: () => import('./components/sellers/seller-list.component').then(m => m.SellerListComponent)
+      },
+      {
         path: 'reports/stats-ventes',
         loadComponent: () => import('./components/reports/stats-ventes/stats-ventes.component').then(m => m.StatsVentesComponent)
       },

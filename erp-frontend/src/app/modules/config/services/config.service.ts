@@ -94,7 +94,7 @@ export const OPTIONAL_ACTION_RESOURCES: Record<string, string[]> = {
 export const SYSTEM_ROLE_CODES = ['SUPER_ADMIN', 'ADMIN'];
 
 export const RESOURCES: Record<string, string[]> = {
-  VENTES:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'CLIENTS', 'PAIEMENTS', 'RISTOURNES', 'PRECOMPTES'],
+  VENTES:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'CLIENTS', 'VENDEURS', 'PAIEMENTS', 'RISTOURNES', 'PRECOMPTES'],
   ACHATS:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'PAIEMENTS', 'REMISES', 'ENLEVEMENTS'],
   STOCK:        ['PRODUITS', 'MOUVEMENTS', 'INVENTAIRE', 'CASSES'],
   COMPTABILITE: ['JOURNAUX', 'ECRITURES', 'RAPPORTS'],
@@ -112,7 +112,7 @@ export const MODULE_LABELS: Record<string, string> = {
 
 export const RESOURCE_LABELS: Record<string, string> = {
   COMMANDES: 'Commandes', FACTURES: 'Factures', AVOIRS: 'Avoirs',
-  CLIENTS: 'Clients', PAIEMENTS: 'Paiements', RISTOURNES: 'Ristournes',
+  CLIENTS: 'Clients', VENDEURS: 'Vendeurs', PAIEMENTS: 'Paiements', RISTOURNES: 'Ristournes',
   REMISES: 'Remises fournisseurs', ENLEVEMENTS: 'Enlèvements',
   PRODUITS: 'Produits', MOUVEMENTS: 'Mouvements de stock', INVENTAIRE: 'Inventaire', CASSES: 'Trous & Casses',
   JOURNAUX: 'Journaux', ECRITURES: 'Écritures comptables', RAPPORTS: 'Rapports', PRECOMPTES: 'Précomptes',

@@ -60,11 +60,15 @@ export class SalesLayoutComponent implements OnInit {
     if (invoiceChildren.length)
       items.push({ id: 'invoices', label: 'Factures & Avoirs', icon: 'description', children: invoiceChildren });
 
-    if (this.can('CLIENTS', 'VIEW')) {
-      const clientChildren: any[] = [
-        { label: 'Fiche clients', icon: 'people', route: '/sales/clients' },
-        { label: 'Tarifs par client', icon: 'sell', route: '/sales/clients/prix' }
-      ];
+    if (this.can('CLIENTS', 'VIEW') || this.can('VENDEURS', 'VIEW')) {
+      const clientChildren: any[] = [];
+      if (this.can('CLIENTS', 'VIEW')) {
+        clientChildren.push({ label: 'Fiche clients', icon: 'people', route: '/sales/clients' });
+        clientChildren.push({ label: 'Tarifs par client', icon: 'sell', route: '/sales/clients/prix' });
+      }
+      if (this.can('VENDEURS', 'VIEW')) {
+        clientChildren.push({ label: 'Vendeurs', icon: 'badge', route: '/sales/vendeurs' });
+      }
       items.push({ id: 'clients', label: 'Clients', icon: 'people', children: clientChildren });
     }
 
