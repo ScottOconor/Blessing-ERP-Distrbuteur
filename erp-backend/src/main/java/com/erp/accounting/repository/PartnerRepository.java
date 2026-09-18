@@ -11,6 +11,15 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     List<Partner> findByCompanyId(Long companyId);
     List<Partner> findByCompanyIdAndActiveTrue(Long companyId);
+
+    /** Snapshot incrémental (SnapshotService) : ne renvoie que les clients/fournisseurs modifiés
+     *  depuis le dernier snapshot réussi, au lieu de la liste entière à chaque passage horaire. */
+    List<Partner> findByCompanyIdAndActiveTrueAndUpdatedAtGreaterThanEqual(Long companyId, java.time.LocalDateTime modifiedSince);
+
+    /** Total réel de clients pour le dashboard (nbClients) — indépendant du filtrage incrémental
+     *  de la liste "partners" du snapshot, qui ne contient que les partenaires modifiés récemment
+     *  et sous-compterait sinon largement ce total sur un snapshot horaire. */
+    long countByCompanyIdAndActiveTrueAndTypeIn(Long companyId, List<String> types);
     List<Partner> findByCompanyIdAndTypeAndActiveTrue(Long companyId, String type);
     java.util.Optional<Partner> findByNameIgnoreCaseAndCompanyId(String name, Long companyId);
 

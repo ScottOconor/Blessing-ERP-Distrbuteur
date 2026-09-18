@@ -101,8 +101,16 @@ public class SnapshotService {
         for (Company company : companies) {
             if (!company.isActive()) continue;
             try {
+                // Capturé AVANT buildSnapshot() (pas après) : toute modification survenant pendant
+                // la construction du snapshot reste couverte par la prochaine fenêtre incrémentale
+                // (updatedAt >= ce timestamp). Utiliser l'heure de FIN ferait perdre définitivement
+                // toute modification survenue entre le début et la fin de la construction — jamais
+                // incluse dans ce passage (déjà interrogé), ni dans le suivant (updatedAt antérieur
+                // au nouveau seuil).
+                LocalDateTime snapshotStartedAt = LocalDateTime.now();
                 SpokeSnapshotPayload snapshot = buildSnapshot(company, full);
                 publisher.publishSnapshot(snapshot);
+                companyRepo.updateLastSnapshotSentAt(company.getId(), snapshotStartedAt);
                 log.info("Snapshot {} publié — société {} ({})", full ? "complet" : "horaire",
                         company.getName(), company.getId());
             } catch (Exception e) {
@@ -113,6 +121,15 @@ public class SnapshotService {
 
     private SpokeSnapshotPayload buildSnapshot(Company company, boolean full) {
         Long       cid   = company.getId();
+
+        // Incrémental : null pour "Forcer envoi" (full=true) ou le tout premier passage pour cette
+        // société (lastSnapshotSentAt jamais renseigné) — dans ces deux cas on retombe sur les
+        // requêtes fenêtrées habituelles (2/5 ans, 60 jours) au lieu de filtrer par date de
+        // modification, ce qui établit une base propre pour que les passages horaires suivants
+        // deviennent réellement incrémentaux au lieu de renvoyer la même fenêtre en entier à
+        // chaque fois (c'est ce qui faisait dépasser 16-30 Mo même en version horaire "allégée").
+        LocalDateTime modifiedSince = full ? null : company.getLastSnapshotSentAt();
+
         LocalDate  today = LocalDate.now();
         LocalDate  hier  = today.minusDays(1);
         LocalDate  yearStart  = today.withDayOfYear(1);
@@ -365,9 +382,10 @@ public class SnapshotService {
         long nbFactJour = salesInvoiceRepo.countFacturesVentesByDate(cid, today);
         long nbFactMois = salesInvoiceRepo.countFacturesVentesByMonth(cid, today.getYear(), today.getMonthValue());
 
-        // ── Référentiels ─────────────────────────────────────────────────────
-        List<SpokeSnapshotPayload.PartnerItem> partners = partnerRepo
-                .findByCompanyIdAndActiveTrue(cid).stream()
+        // ── Référentiels (incrémental : voir modifiedSince en tête de méthode) ─────────────────
+        List<SpokeSnapshotPayload.PartnerItem> partners = (modifiedSince != null
+                ? partnerRepo.findByCompanyIdAndActiveTrueAndUpdatedAtGreaterThanEqual(cid, modifiedSince)
+                : partnerRepo.findByCompanyIdAndActiveTrue(cid)).stream()
                 .map(p -> SpokeSnapshotPayload.PartnerItem.builder()
                         .id(p.getId()).ref(p.getRef()).name(p.getName())
                         .type(p.getType()).phone(p.getPhone()).email(p.getEmail())
@@ -389,8 +407,9 @@ public class SnapshotService {
             }
         }
 
-        List<SpokeSnapshotPayload.ProductItem> products = productRepo
-                .findByCompanyIdAndActiveOrderByNameAsc(cid, true).stream()
+        List<SpokeSnapshotPayload.ProductItem> products = (modifiedSince != null
+                ? productRepo.findByCompanyIdAndActiveAndUpdatedAtGreaterThanEqual(cid, true, modifiedSince)
+                : productRepo.findByCompanyIdAndActiveOrderByNameAsc(cid, true)).stream()
                 .map(p -> {
                     BigDecimal qty = firstQtyByProduct.getOrDefault(p.getId(), BigDecimal.ZERO);
                     Long warehouseId = productValuationService.resolveWarehouseId(firstLocationByProduct.get(p.getId()));
@@ -425,7 +444,9 @@ public class SnapshotService {
         LocalDate invoicesWindowStart = today.minusYears(full ? 5 : 2);
 
         List<SpokeSnapshotPayload.RistournePaiementItem> ristournePaiements =
-                ristournePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? ristournePaiementRepo.findByCompanyIdModifiedSince(cid, modifiedSince)
+                        : ristournePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart)).stream()
                 .map(r -> SpokeSnapshotPayload.RistournePaiementItem.builder()
                         .id(r.getId()).name(r.getName())
                         .partnerName(r.getPartner() != null ? r.getPartner().getName() : null)
@@ -435,7 +456,9 @@ public class SnapshotService {
                 .collect(Collectors.toList());
 
         List<SpokeSnapshotPayload.RemisePaiementItem> remisePaiements =
-                remisePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? remisePaiementRepo.findByCompanyIdModifiedSince(cid, modifiedSince)
+                        : remisePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart)).stream()
                 .map(r -> SpokeSnapshotPayload.RemisePaiementItem.builder()
                         .id(r.getId()).name(r.getName())
                         .partnerName(r.getPartner() != null ? r.getPartner().getName() : null)
@@ -489,7 +512,9 @@ public class SnapshotService {
 
         // ── Factures de vente (2 ans, 5 ans si snapshot forcé, filtré en SQL) ────────────────
         List<SpokeSnapshotPayload.SaleInvoiceItem> saleInvoices =
-                salesInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? salesInvoiceRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
+                        : salesInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart)).stream()
                 .map(inv -> SpokeSnapshotPayload.SaleInvoiceItem.builder()
                         .id(inv.getId())
                         .name(inv.getName())
@@ -512,7 +537,9 @@ public class SnapshotService {
 
         // ── Factures d'achat (2 ans, 5 ans si snapshot forcé, filtré en SQL) ─────────────────
         List<SpokeSnapshotPayload.PurchaseInvoiceItem> purchaseInvoices =
-                purchaseInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? purchaseInvoiceRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
+                        : purchaseInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart)).stream()
                 .map(inv -> SpokeSnapshotPayload.PurchaseInvoiceItem.builder()
                         .id(inv.getId())
                         .name(inv.getName())
@@ -531,7 +558,9 @@ public class SnapshotService {
 
         // ── Bons de commande (tout sauf brouillon), fenêtrés comme les factures, filtré en SQL ──
         List<SpokeSnapshotPayload.SaleOrderItem> salesOrders =
-                salesOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? salesOrderRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
+                        : salesOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart)).stream()
                 .map(o -> SpokeSnapshotPayload.SaleOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())
@@ -543,7 +572,9 @@ public class SnapshotService {
                 .collect(Collectors.toList());
 
         List<SpokeSnapshotPayload.PurchaseOrderItem> purchaseOrders =
-                purchaseOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart).stream()
+                (modifiedSince != null
+                        ? purchaseOrderRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
+                        : purchaseOrderRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart)).stream()
                 .map(o -> SpokeSnapshotPayload.PurchaseOrderItem.builder()
                         .id(o.getId())
                         .name(o.getName())
@@ -564,6 +595,14 @@ public class SnapshotService {
         // 2026-09-14 : ce dépassement de taille est apparu juste avant un OOM Postgres). Le
         // snapshot horaire n'est qu'un filet de reconciliation (chaque écriture a déjà déclenché
         // son propre événement temps réel) — 60 jours suffisent largement à cet usage.
+        // PAS incrémental, volontairement : le Hub (SnapshotIngestService.ingestAccountMoveLines)
+        // détecte et SUPPRIME comme "orphelines" toutes les lignes de ses 60 derniers jours absentes
+        // de CE payload — un vrai incident (2026-09-14) l'a déjà démontré quand les deux fenêtres
+        // (spoke/hub) divergeaient. Passer cette liste en incrémental sans aussi changer la
+        // détection d'orphelins côté Hub effacerait silencieusement toutes les lignes valides que
+        // ce passage-ci ne renvoie pas. Les 8 autres listes (partners/products/factures/commandes/
+        // ristournes/remises) restent incrémentales : le Hub les upsert sans jamais rien supprimer
+        // par absence, donc un envoi partiel y est sûr.
         LocalDate accountMoveLinesFrom = today.minusDays(60);
         List<SpokeSnapshotPayload.AccountMoveLineItem> accountMoveLines;
         try {
@@ -672,7 +711,7 @@ public class SnapshotService {
                 .totalCoutVentes(totalCoutVentes)
                 .nbFacturesJour(nbFactJour)
                 .nbFacturesMois(nbFactMois)
-                .nbClients((long) partners.stream().filter(p -> "customer".equals(p.getType()) || "both".equals(p.getType())).count())
+                .nbClients(partnerRepo.countByCompanyIdAndActiveTrueAndTypeIn(cid, List.of("customer", "both")))
                 .nbSpokes(1L)
                 .partners(partners)
                 .products(products)

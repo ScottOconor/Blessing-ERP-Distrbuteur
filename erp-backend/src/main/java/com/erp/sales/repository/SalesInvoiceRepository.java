@@ -50,6 +50,16 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
                                                         @Param("excludedState") String excludedState,
                                                         @Param("since") LocalDate since);
 
+    /** Snapshot incrémental (SnapshotService) : ne renvoie que les factures modifiées depuis le
+     *  dernier snapshot réussi (updatedAt, pas la date métier) — sur un client actif, la fenêtre de
+     *  2 ans ci-dessus est encore renvoyée intégralement à chaque passage horaire alors que seule
+     *  une poignée de factures a réellement changé depuis la dernière heure. */
+    @Query("SELECT i FROM SalesInvoice i WHERE i.company.id = :companyId AND i.state <> :excludedState " +
+           "AND i.updatedAt >= :modifiedSince ORDER BY i.date DESC, i.name DESC")
+    List<SalesInvoice> findByCompanyIdAndStateNotModifiedSince(@Param("companyId") Long companyId,
+                                                                @Param("excludedState") String excludedState,
+                                                                @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
+
     List<SalesInvoice> findByCompanyIdAndPartnerIdOrderByDateDesc(Long companyId, Long partnerId);
 
     Optional<SalesInvoice> findFirstBySalesOrderId(Long orderId);

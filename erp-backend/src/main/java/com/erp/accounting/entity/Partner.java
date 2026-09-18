@@ -4,6 +4,7 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "partners", indexes = {
@@ -55,4 +56,10 @@ public class Partner {
     @ColumnDefault("false")
     @Column(name = "exempt_taxe_guinness")
     private boolean exemptTaxeGuinness = false;
+
+    /** Alimente le snapshot incrémental (SnapshotService) : ne renvoyer au Hub que les
+     *  clients/fournisseurs modifiés depuis le dernier envoi, au lieu de la liste entière à
+     *  chaque passage horaire. */
+    @UpdateTimestamp
+    private java.time.LocalDateTime updatedAt;
 }

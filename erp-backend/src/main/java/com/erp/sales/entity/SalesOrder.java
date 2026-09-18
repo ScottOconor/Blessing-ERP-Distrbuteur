@@ -6,6 +6,7 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -87,6 +88,11 @@ public class SalesOrder {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    /** Alimente le snapshot incrémental (SnapshotService) : ne renvoyer au Hub que les commandes
+     *  modifiées depuis le dernier envoi, au lieu de la fenêtre entière à chaque passage horaire. */
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     @CreatedBy
     @Column(name = "created_by", updatable = false)

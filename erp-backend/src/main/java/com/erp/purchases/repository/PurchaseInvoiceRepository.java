@@ -44,6 +44,14 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
                                                            @Param("excludedState") String excludedState,
                                                            @Param("since") LocalDate since);
 
+    /** Snapshot incrémental — voir SalesInvoiceRepository.findByCompanyIdAndStateNotModifiedSince
+     *  pour le contexte complet. */
+    @Query("SELECT i FROM PurchaseInvoice i WHERE i.company.id = :companyId AND i.state <> :excludedState " +
+           "AND i.updatedAt >= :modifiedSince ORDER BY i.date DESC, i.name DESC")
+    List<PurchaseInvoice> findByCompanyIdAndStateNotModifiedSince(@Param("companyId") Long companyId,
+                                                                   @Param("excludedState") String excludedState,
+                                                                   @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
+
     Optional<PurchaseInvoice> findFirstByPurchaseOrderId(Long orderId);
 
     List<PurchaseInvoice> findByOriginalInvoiceId(Long originalInvoiceId);

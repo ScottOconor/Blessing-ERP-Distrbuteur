@@ -67,4 +67,16 @@ public class Company {
      *  démarrage, pour toujours, un coût qui ne fait que croître avec l'ancienneté de l'agence. */
     @Column(name = "stock_ledger_reconciled_at")
     private LocalDateTime stockLedgerReconciledAt;
+
+    /** Horodatage du dernier snapshot (horaire ou "Forcer envoi") publié avec succès pour cette
+     *  société. Sert de base à l'incrémental : le prochain snapshot horaire ne renvoie que les
+     *  enregistrements modifiés depuis cette date, au lieu de toujours renvoyer une fenêtre fixe
+     *  (2 ans de factures, etc.) en entier à chaque passage — c'est ce qui faisait dépasser 16-30 Mo
+     *  même en version "allégée" horaire (cf. SnapshotService, incident Blessing 2026-09). Null tant
+     *  qu'aucun snapshot n'a encore réussi pour cette société : le premier passage envoie donc
+     *  toujours tout (comportement fenêtré existant), ce qui établit une base propre pour que tous
+     *  les passages suivants deviennent réellement incrémentaux.
+     */
+    @Column(name = "last_snapshot_sent_at")
+    private LocalDateTime lastSnapshotSentAt;
 }

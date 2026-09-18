@@ -5,6 +5,7 @@ import com.erp.accounting.entity.Partner;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -80,4 +81,9 @@ public class RemisePaiement {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    /** Alimente le snapshot incrémental (SnapshotService) : ne renvoyer au Hub que les paiements
+     *  modifiés depuis le dernier envoi, au lieu de la fenêtre entière à chaque passage horaire. */
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

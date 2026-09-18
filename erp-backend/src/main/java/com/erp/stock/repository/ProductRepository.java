@@ -10,6 +10,10 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
+
+    /** Snapshot incrémental (SnapshotService) : ne renvoie que les articles modifiés depuis le
+     *  dernier snapshot réussi, au lieu du catalogue entier à chaque passage horaire. */
+    List<Product> findByCompanyIdAndActiveAndUpdatedAtGreaterThanEqual(Long companyId, boolean active, java.time.LocalDateTime modifiedSince);
     List<Product> findByCompanyIdOrderByNameAsc(Long companyId);
     Optional<Product> findFirstByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
 

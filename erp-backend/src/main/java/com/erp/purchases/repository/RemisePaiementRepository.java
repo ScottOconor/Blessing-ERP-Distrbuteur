@@ -20,6 +20,13 @@ public interface RemisePaiementRepository extends JpaRepository<RemisePaiement, 
     List<RemisePaiement> findByCompanyIdSince(@Param("companyId") Long companyId,
                                                @Param("since") LocalDate since);
 
+    /** Snapshot incrémental — voir SalesInvoiceRepository.findByCompanyIdAndStateNotModifiedSince
+     *  pour le contexte complet. */
+    @Query("SELECT r FROM RemisePaiement r WHERE r.companyId = :companyId " +
+           "AND r.updatedAt >= :modifiedSince ORDER BY r.createdAt DESC")
+    List<RemisePaiement> findByCompanyIdModifiedSince(@Param("companyId") Long companyId,
+                                                       @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
+
     List<RemisePaiement> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);
 
     boolean existsByInvoiceIdAndTypeRemise(Long invoiceId, String typeRemise);

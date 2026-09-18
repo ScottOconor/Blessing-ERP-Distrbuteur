@@ -4,10 +4,14 @@ import com.erp.common.entity.Company;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +28,13 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Company c WHERE c.id = :id")
     Optional<Company> findByIdForUpdate(@Param("id") Long id);
+
+    /** Snapshot incrémental (SnapshotService) : appelée depuis buildAndPublish(), qui tourne dans
+     *  une transaction @Transactional(readOnly = true) — REQUIRES_NEW est nécessaire ici pour que
+     *  cet UPDATE s'exécute dans sa propre transaction en écriture, sinon Hibernate/le driver JDBC
+     *  refuse toute écriture sur une connexion marquée lecture seule. */
+    @Modifying
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Query("UPDATE Company c SET c.lastSnapshotSentAt = :sentAt WHERE c.id = :id")
+    void updateLastSnapshotSentAt(@Param("id") Long id, @Param("sentAt") LocalDateTime sentAt);
 }

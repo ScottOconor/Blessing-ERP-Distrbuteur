@@ -3,6 +3,7 @@ package com.erp.stock.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -80,4 +81,9 @@ public class Product {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    /** Alimente le snapshot incrémental (SnapshotService) : ne renvoyer au Hub que les produits
+     *  modifiés depuis le dernier envoi, au lieu du catalogue entier à chaque passage horaire. */
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

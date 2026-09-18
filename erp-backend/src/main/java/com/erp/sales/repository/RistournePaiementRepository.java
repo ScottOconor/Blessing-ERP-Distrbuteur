@@ -20,6 +20,13 @@ public interface RistournePaiementRepository extends JpaRepository<RistournePaie
     List<RistournePaiement> findByCompanyIdSince(@Param("companyId") Long companyId,
                                                   @Param("since") LocalDate since);
 
+    /** Snapshot incrémental — voir SalesInvoiceRepository.findByCompanyIdAndStateNotModifiedSince
+     *  pour le contexte complet. */
+    @Query("SELECT r FROM RistournePaiement r WHERE r.companyId = :companyId " +
+           "AND r.updatedAt >= :modifiedSince ORDER BY r.createdAt DESC")
+    List<RistournePaiement> findByCompanyIdModifiedSince(@Param("companyId") Long companyId,
+                                                          @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
+
     List<RistournePaiement> findByPartnerIdAndCompanyId(Long partnerId, Long companyId);
 
     List<RistournePaiement> findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(Long companyId, String typeRistourne);

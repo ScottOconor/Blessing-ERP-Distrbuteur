@@ -38,6 +38,14 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
                                                       @Param("excludedState") String excludedState,
                                                       @Param("since") LocalDate since);
 
+    /** Snapshot incrémental — voir SalesInvoiceRepository.findByCompanyIdAndStateNotModifiedSince
+     *  pour le contexte complet. */
+    @Query("SELECT o FROM SalesOrder o WHERE o.company.id = :companyId AND o.state <> :excludedState " +
+           "AND o.updatedAt >= :modifiedSince ORDER BY o.date DESC, o.name DESC")
+    List<SalesOrder> findByCompanyIdAndStateNotModifiedSince(@Param("companyId") Long companyId,
+                                                              @Param("excludedState") String excludedState,
+                                                              @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
+
     List<SalesOrder> findByCompanyIdAndPartnerIdOrderByDateDesc(Long companyId, Long partnerId);
 
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(o.name, LENGTH(o.name) - 4) AS int)), 0) " +
