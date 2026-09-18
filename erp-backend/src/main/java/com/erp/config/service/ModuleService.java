@@ -28,6 +28,11 @@ public class ModuleService {
     private final ModuleInstallRepository repo;
     private final TenantGuard tenantGuard;
 
+    /** RH masqué par défaut sur ce déploiement (Blessing Distributeurs n'utilise pas la paie via
+     *  l'ERP) — reste dans MODULE_CODES et togglable normalement via setInstalled() si jamais
+     *  besoin, seul le défaut change quand aucune ligne module_installs n'existe encore. */
+    private static final String DEFAULT_HIDDEN_MODULE = "RH";
+
     @Transactional(readOnly = true)
     public List<ModuleStateDTO> getModuleStates(Long companyId) {
         // GET est en self-service-bypass des permissions (tout utilisateur authentifié peut lire
@@ -38,11 +43,12 @@ public class ModuleService {
         List<ModuleInstall> overrides = repo.findByCompanyId(companyId);
         return MODULE_CODES.stream()
                 .map(code -> {
+                    boolean defaultInstalled = !DEFAULT_HIDDEN_MODULE.equals(code);
                     boolean installed = overrides.stream()
                             .filter(o -> o.getModuleCode().equals(code))
                             .findFirst()
                             .map(ModuleInstall::isInstalled)
-                            .orElse(true); // pas de ligne = installé par défaut
+                            .orElse(defaultInstalled); // pas de ligne = valeur par défaut du module
                     return ModuleStateDTO.builder().code(code).installed(installed).build();
                 })
                 .toList();
