@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/app.component.ts"],
+  "sourcesContent": ["\n    :host { display: block; height: 100%; }\n    .idle-warning {\n      position: fixed; top: 0; left: 0; right: 0; z-index: 99999;\n      background: #b45309; color: #fff;\n      padding: 10px 20px;\n      display: flex; align-items: center; gap: 12px;\n      font-size: .9rem; font-weight: 600;\n      animation: slide-in .3s ease;\n      button {\n        margin-left: auto; background: rgba(255,255,255,.2);\n        border: 1px solid rgba(255,255,255,.5); border-radius: 6px;\n        color: #fff; padding: 4px 14px; cursor: pointer; font-size: .875rem;\n      }\n    }\n    @keyframes slide-in { from { transform: translateY(-100%); } to { transform: translateY(0); } }\n  "],
+  "mappings": ";AACI;AAAQ,WAAA;AAAgB,UAAA;;AACxB,CAAA;AACE,YAAA;AAAiB,OAAA;AAAQ,QAAA;AAAS,SAAA;AAAU,WAAA;AAC5C,cAAA;AAAqB,SAAA;AACrB,WAAA,KAAA;AACA,WAAA;AAAe,eAAA;AAAqB,OAAA;AACpC,aAAA;AAAkB,eAAA;AAClB,aAAA,SAAA,KAAA;;AACA,CAPF,aAOE;AACE,eAAA;AAAmB,cAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AACnB,UAAA,IAAA,MAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AAAwC,iBAAA;AACxC,SAAA;AAAa,WAAA,IAAA;AAAmB,UAAA;AAAiB,aAAA;;AAGrD,WAPE;AAOoB;AAAO,eAAA,WAAA;;AAAgC;AAAK,eAAA,WAAA;;;",
+  "names": []
+}

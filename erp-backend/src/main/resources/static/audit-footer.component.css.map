@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/audit-footer/audit-footer.component.ts"],
+  "sourcesContent": ["\n    .audit-footer {\n      margin-top: 24px;\n      padding-top: 12px;\n      border-top: 1px solid #e0e0e0;\n      font-size: 0.78rem;\n      color: #888;\n    }\n    .audit-row {\n      display: flex;\n      align-items: center;\n      gap: 6px;\n      line-height: 1.8;\n    }\n    .audit-label {\n      font-weight: 600;\n      color: #aaa;\n      min-width: 90px;\n    }\n    .audit-value {\n      color: #666;\n    }\n    .audit-date {\n      color: #bbb;\n    }\n  "],
+  "mappings": ";AACI,CAAA;AACE,cAAA;AACA,eAAA;AACA,cAAA,IAAA,MAAA;AACA,aAAA;AACA,SAAA;;AAEF,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,eAAA;;AAEF,CAAA;AACE,eAAA;AACA,SAAA;AACA,aAAA;;AAEF,CAAA;AACE,SAAA;;AAEF,CAAA;AACE,SAAA;;",
+  "names": []
+}

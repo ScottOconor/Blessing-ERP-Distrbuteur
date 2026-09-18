@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/modules/hr/components/config/payroll-config.component.ts"],
+  "sourcesContent": ["\n    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }\n    .tab { border: none; background: transparent; padding: 10px 16px; cursor: pointer; font-weight: 600;\n      color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }\n    .tab:hover { color: var(--text-primary); }\n    .tab.active { color: #7C3AED; border-bottom-color: #7C3AED; }\n  "],
+  "mappings": ";AACI,CAAA;AAAQ,WAAA;AAAe,OAAA;AAAU,iBAAA,IAAA,MAAA,IAAA;AAAwC,iBAAA;;AACzE,CAAA;AAAO,UAAA;AAAc,cAAA;AAAyB,WAAA,KAAA;AAAoB,UAAA;AAAiB,eAAA;AACjF,SAAA,IAAA;AAA0B,iBAAA,IAAA,MAAA;AAAsC,iBAAA;;AAClE,CAFA,GAEA;AAAa,SAAA,IAAA;;AACb,CAHA,GAGA,CAAA;AAAc,SAAA;AAAgB,uBAAA;;",
+  "names": []
+}

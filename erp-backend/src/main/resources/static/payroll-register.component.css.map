@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/modules/hr/components/payroll-register/payroll-register.component.ts"],
+  "sourcesContent": ["\n    .reg { font-size: .82rem; }\n    tfoot .tot-row td { font-weight: 700; background: var(--bg-elevated); border-top: 2px solid var(--border); color: var(--text-primary); }\n  "],
+  "mappings": ";AACI,CAAA;AAAO,aAAA;;AACP,MAAA,CAAA,QAAA;AAAoB,eAAA;AAAkB,cAAA,IAAA;AAAgC,cAAA,IAAA,MAAA,IAAA;AAAqC,SAAA,IAAA;;",
+  "names": []
+}

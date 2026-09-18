@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/modules/hr/components/payslips/payslips.component.ts"],
+  "sourcesContent": ["\n    .section-title { margin: 16px 0 8px; font-size: .82rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .3px; }\n    .row-line { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; margin-bottom: 8px; align-items: center; }\n    .input-hint { font-size: .78rem; color: var(--text-muted); margin: -4px 0 8px 2px; }\n    .input-hint.warn { color: #d97706; font-weight: 600; }\n  "],
+  "mappings": ";AACI,CAAA;AAAiB,UAAA,KAAA,EAAA;AAAoB,aAAA;AAAmB,eAAA;AAAkB,SAAA,IAAA;AAA8B,kBAAA;AAA2B,kBAAA;;AACnI,CAAA;AAAY,WAAA;AAAe,yBAAA,IAAA,MAAA;AAAuC,OAAA;AAAU,iBAAA;AAAoB,eAAA;;AAChG,CAAA;AAAc,aAAA;AAAmB,SAAA,IAAA;AAA0B,UAAA,KAAA,EAAA,IAAA;;AAC3D,CADA,UACA,CAAA;AAAmB,SAAA;AAAgB,eAAA;;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/license-readonly-banner/license-readonly-banner.component.ts"],
+  "sourcesContent": ["\n    .license-banner {\n      position: fixed; top: 0; left: 0; right: 0; z-index: 99998;\n      height: 36px; box-sizing: border-box;\n      background: var(--warning-bg); color: var(--warning);\n      border-bottom: 1px solid var(--warning);\n      padding: 0 20px;\n      display: flex; align-items: center; gap: 10px;\n      font-size: .875rem; font-weight: 600;\n      justify-content: center;\n    }\n    .material-icons { font-size: 18px; }\n  "],
+  "mappings": ";AACI,CAAA;AACE,YAAA;AAAiB,OAAA;AAAQ,QAAA;AAAS,SAAA;AAAU,WAAA;AAC5C,UAAA;AAAc,cAAA;AACd,cAAA,IAAA;AAA+B,SAAA,IAAA;AAC/B,iBAAA,IAAA,MAAA,IAAA;AACA,WAAA,EAAA;AACA,WAAA;AAAe,eAAA;AAAqB,OAAA;AACpC,aAAA;AAAoB,eAAA;AACpB,mBAAA;;AAEF,CAAA;AAAkB,aAAA;;",
+  "names": []
+}
