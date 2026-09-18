@@ -61,6 +61,12 @@ public class SecurityConfig {
                 // qu'à un appelant réellement authentifié (voir ConfigService.isRealAuthentication) —
                 // un visiteur anonyme ne reçoit que le sous-ensemble branding (nom/appName/logo).
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/config/companies/*").permitAll()
+                // Photo d'article : servie via une simple balise <img>, qui n'envoie jamais le jeton
+                // JWT (contrairement aux appels HttpClient d'Angular) — sans cette exception, le
+                // navigateur reçoit un 401 et la photo ne s'affiche jamais dans le formulaire article.
+                // Seule la lecture (GET) est publique ; upload/suppression restent authentifiés comme
+                // le reste de l'API.
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/stock/products/*/photo").permitAll()
                 .requestMatchers("/api/inter-agency/**").permitAll()
                 // Seul le canal Hub→spoke helpdesk (hub-status/hub-comment) est public au niveau
                 // Spring Security — protégé en amont par InterAgencyApiKeyFilter (X-Api-Key).
