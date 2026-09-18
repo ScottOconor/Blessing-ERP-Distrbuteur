@@ -502,6 +502,33 @@ public class StockService {
         productRepo.save(p);
     }
 
+    public record ProductPhoto(byte[] data, String contentType) {}
+
+    @Transactional
+    public void uploadProductPhoto(Long productId, byte[] data, String contentType) {
+        Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        tenantGuard.check(p.getCompanyId());
+        p.setPhotoData(data);
+        p.setPhotoContentType(contentType);
+        productRepo.save(p);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductPhoto getProductPhoto(Long productId) {
+        Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        if (p.getPhotoData() == null) return null;
+        return new ProductPhoto(p.getPhotoData(), p.getPhotoContentType());
+    }
+
+    @Transactional
+    public void deleteProductPhoto(Long productId) {
+        Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
+        tenantGuard.check(p.getCompanyId());
+        p.setPhotoData(null);
+        p.setPhotoContentType(null);
+        productRepo.save(p);
+    }
+
     /**
      * Marque tous les produits des catégories contenant "EMBALLAG" comme exempts de TVA.
      * Idempotent : peut être appelé plusieurs fois sans effet de bord.
@@ -558,6 +585,7 @@ public class StockService {
                 .exemptTvaAchat(Boolean.TRUE.equals(p.getExemptTvaAchat()))
                 .companyId(p.getCompanyId()).qtyOnHand(qtyOnHand)
                 .qtyReserved(reserved).qtyAvailable(available)
+                .hasPhoto(p.getPhotoData() != null)
                 .createdAt(p.getCreatedAt())
                 .build();
     }

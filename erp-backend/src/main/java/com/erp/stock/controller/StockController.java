@@ -105,6 +105,29 @@ public class StockController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/products/{id}/photo")
+    public ResponseEntity<Void> uploadProductPhoto(@PathVariable("id") Long id,
+                                                     @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        stockService.uploadProductPhoto(id, file.getBytes(), file.getContentType());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/products/{id}/photo")
+    public ResponseEntity<byte[]> getProductPhoto(@PathVariable("id") Long id) {
+        var photo = stockService.getProductPhoto(id);
+        if (photo == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, photo.contentType() != null ? photo.contentType() : MediaType.IMAGE_PNG_VALUE)
+                .header(HttpHeaders.CACHE_CONTROL, "max-age=86400")
+                .body(photo.data());
+    }
+
+    @DeleteMapping("/products/{id}/photo")
+    public ResponseEntity<Void> deleteProductPhoto(@PathVariable("id") Long id) {
+        stockService.deleteProductPhoto(id);
+        return ResponseEntity.noContent().build();
+    }
+
     /** Marque tous les produits des catégories EMBALLAGES comme exemptes de TVA. */
     @PostMapping("/products/apply-emballages-tva-exempt")
     public ResponseEntity<java.util.Map<String, Object>> applyEmballagesTvaExempt(@RequestParam("companyId") Long companyId) {

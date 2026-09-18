@@ -71,6 +71,13 @@ public class Product {
     @Column(name = "company_id", nullable = false)
     private Long companyId;
 
+    /** Photo de l'article (affichée dans le formulaire et la liste articles) */
+    @Column(name = "photo_data", columnDefinition = "bytea")
+    private byte[] photoData;
+
+    @Column(name = "photo_content_type")
+    private String photoContentType;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

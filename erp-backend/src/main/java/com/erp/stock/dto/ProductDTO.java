@@ -26,5 +26,6 @@ public class ProductDTO {
     private BigDecimal qtyOnHand;
     private BigDecimal qtyReserved;
     private BigDecimal qtyAvailable;
+    private boolean hasPhoto;
     private LocalDateTime createdAt;
 }
