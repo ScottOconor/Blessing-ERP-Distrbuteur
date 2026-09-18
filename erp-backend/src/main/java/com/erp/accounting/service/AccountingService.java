@@ -793,9 +793,9 @@ public class AccountingService {
 
         MoveListCache cache = new MoveListCache();
         if (!lineIds.isEmpty()) {
-            cache.distributionsByLineId = batchedByLineIds(lineIds, analyticDistributionItemRepo::findByMoveLineIdIn).stream()
+            cache.distributionsByLineId = batchedByLineIdsArray(lineIds, analyticDistributionItemRepo::findByMoveLineIdInArray).stream()
                     .collect(Collectors.groupingBy(d -> d.getMoveLine().getId()));
-            cache.analyticLinesByLineId = batchedByLineIds(lineIds, analyticLineRepo::findByMoveLineIdIn).stream()
+            cache.analyticLinesByLineId = batchedByLineIdsArray(lineIds, analyticLineRepo::findByMoveLineIdInArray).stream()
                     .collect(Collectors.groupingBy(l -> l.getMoveLine().getId()));
         }
 
@@ -819,6 +819,18 @@ public class AccountingService {
         }
         return result;
     }
+
+        /** Variante qui appelle les repository natifs acceptant un tableau PostgreSQL (Long[]),
+         *  évite d'expanser des dizaines de milliers de paramètres nommés. */
+        private static <T> List<T> batchedByLineIdsArray(List<Long> lineIds, java.util.function.Function<Long[], List<T>> fetcher) {
+                if (lineIds.size() <= SQL_IN_BATCH_SIZE) return fetcher.apply(lineIds.toArray(new Long[0]));
+                List<T> result = new ArrayList<>();
+                for (int i = 0; i < lineIds.size(); i += SQL_IN_BATCH_SIZE) {
+                        Long[] chunk = lineIds.subList(i, Math.min(i + SQL_IN_BATCH_SIZE, lineIds.size())).toArray(new Long[0]);
+                        result.addAll(fetcher.apply(chunk));
+                }
+                return result;
+        }
 
     /** Cache mémoïsé le temps d'un seul appel liste (jamais partagé entre requêtes : AccountingService
      *  est un singleton, donc ce cache doit toujours rester local à une méthode, jamais un champ). */

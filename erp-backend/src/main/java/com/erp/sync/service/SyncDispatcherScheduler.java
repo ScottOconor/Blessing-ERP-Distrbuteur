@@ -15,6 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.amqp.support.postprocessor.GZipPostProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -51,6 +55,7 @@ public class SyncDispatcherScheduler {
     @Value("${server.port:8085}")                 private int    serverPort;
     @Value("${sync.spoke.public-url:}")           private String configuredPublicUrl;
     @Value("${sync.outbox.sent-retention-days:7}") private int    sentRetentionDays;
+    @Value("${sync.broker.max-message-bytes:16777216}") private int brokerMaxMessageBytes;
 
     private String spokeApiUrl;
 
@@ -269,6 +274,28 @@ public class SyncDispatcherScheduler {
             try {
                 SyncMessage msg = buildMessage(event);
                 String routingKey = "erp.sync." + event.getEventType().name().toLowerCase();
+                // Mesure de la taille APRES compression (GZIP) pour éviter d'envoyer un payload
+                // que le broker rejettera avec PRECONDITION_FAILED (message too large).
+                try {
+                    MessageConverter mc = rabbitTemplate.getMessageConverter();
+                    MessageProperties props = new MessageProperties();
+                    Message raw = mc.toMessage(msg, props);
+                    Message gz = new GZipPostProcessor().postProcessMessage(raw);
+                    if (gz.getBody() != null && gz.getBody().length > brokerMaxMessageBytes) {
+                        // trop gros : marque en FAILED définitif sans retries automatiques
+                        event.setStatus(OutboxStatus.FAILED);
+                        event.setAutoRequeueCount(MAX_AUTO_REQUEUES);
+                        event.setErrorMessage("Payload too large (" + gz.getBody().length + " bytes)");
+                        outboxRepo.save(event);
+                        log.error("Événement {} id={} FAILED : payload compressé trop volumineux ({} bytes)",
+                                event.getEventType(), event.getEntityId(), gz.getBody().length);
+                        continue;
+                    }
+                } catch (Exception ex) {
+                    // En cas d'erreur de (dé)sérialisation locale, ne bloquer pas tout : laisser le
+                    // processus d'envoi original tenter et se débrouiller (confirmCallbacks géreront).
+                    log.debug("Impossible de mesurer la taille du message avant envoi : {}", ex.getMessage());
+                }
                 rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, msg,
                         new CorrelationData(String.valueOf(event.getId())));
                 event.setStatus(OutboxStatus.SENT);

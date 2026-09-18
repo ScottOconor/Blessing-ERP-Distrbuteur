@@ -78,6 +78,10 @@ public interface AnalyticLineRepository extends JpaRepository<AnalyticLine, Long
     @Query("SELECT l FROM AnalyticLine l JOIN FETCH l.analyticAccount WHERE l.moveLine.id IN :moveLineIds")
     List<AnalyticLine> findByMoveLineIdIn(@Param("moveLineIds") List<Long> moveLineIds);
 
+    /** Version native utilisant un tableau PostgreSQL (évite d'expanser des milliers de paramètres). */
+    @Query(value = "SELECT l.* FROM analytic_lines l WHERE l.move_line_id = ANY(:moveLineIds)", nativeQuery = true)
+    List<AnalyticLine> findByMoveLineIdInArray(@Param("moveLineIds") Long[] moveLineIds);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM AnalyticLine l WHERE l.moveLine.id = :moveLineId")
     void deleteByMoveLineId(@Param("moveLineId") Long moveLineId);
