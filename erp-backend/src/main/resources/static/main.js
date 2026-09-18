@@ -4530,7 +4530,7 @@ var routes = [
   },
   {
     path: "login",
-    loadComponent: () => import("./chunk-HZ6JY3MD.js").then((m) => m.LoginComponent),
+    loadComponent: () => import("./chunk-FA2LEMWA.js").then((m) => m.LoginComponent),
     canActivate: [licenseGuard]
   },
   {
