@@ -13,6 +13,7 @@ export const stockRoutes: Routes = [
       { path: 'receptions/bordereau/:id', loadComponent: () => import('./components/receptions/bordereau.component').then(m => m.BordereauComponent) },
       { path: 'receptions/:id', loadComponent: () => import('./components/receptions/reception-detail.component').then(m => m.ReceptionDetailComponent) },
       { path: 'products', loadComponent: () => import('./components/products/product-list.component').then(m => m.ProductListComponent) },
+      { path: 'services', loadComponent: () => import('./components/products/product-list.component').then(m => m.ProductListComponent), data: { serviceMode: true } },
       { path: 'warehouses', loadComponent: () => import('./components/warehouses/warehouse-list.component').then(m => m.WarehouseListComponent) },
       { path: 'adjustments', loadComponent: () => import('./components/adjustments/adjustment-list.component').then(m => m.AdjustmentListComponent) },
       { path: 'casses', loadComponent: () => import('./components/casses/casse-list.component').then(m => m.CasseListComponent) },

@@ -79,6 +79,7 @@ export class StockLayoutComponent implements OnInit {
     const configChildren: any[] = [];
     if (this.can('PRODUITS')) {
       configChildren.push({ label: 'Articles',           icon: 'category',   route: '/stock/products' });
+      configChildren.push({ label: 'Services',           icon: 'design_services', route: '/stock/services' });
       configChildren.push({ label: "Catégories d'articles", icon: 'folder', route: '/stock/categories' });
       configChildren.push({ label: 'Unités de mesure',   icon: 'straighten', route: '/stock/units-of-measure' });
     }
