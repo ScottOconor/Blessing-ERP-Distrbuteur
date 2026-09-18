@@ -108,6 +108,17 @@
             <label>Responsable</label>
             <input type="text" [(ngModel)]="form.responsableName" placeholder="Nom du responsable" />
           </div>
+          <div class="form-row">
+            <label>Vendeur responsable</label>
+            <select [(ngModel)]="form.sellerId">
+              <option [ngValue]="undefined">— Aucun —</option>
+              @for (s of sellers; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Seuil d'écart toléré (FCFA)</label>
+            <input type="number" [(ngModel)]="form.seuilEcart" placeholder="Ex: 500 — vide = pas de seuil" min="0" />
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" (click)="closeForm()">Annuler</button>

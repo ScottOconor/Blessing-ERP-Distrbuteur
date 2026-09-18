@@ -1,0 +1,65 @@
+<div class="report-page">
+  <h1><span class="material-icons">bar_chart</span> Rapport consolidé</h1>
+
+  <div class="filter-panel">
+    <div class="input-row">
+      <div class="input-group">
+        <label>Du</label>
+        <input type="date" [(ngModel)]="dateFrom" />
+      </div>
+      <div class="input-group">
+        <label>Au</label>
+        <input type="date" [(ngModel)]="dateTo" />
+      </div>
+    </div>
+    <div class="caisse-chips">
+      @for (c of caisses; track c.id) {
+        <button class="chip" [class.active]="selectedCaisseIds.includes(c.id!)" (click)="toggleCaisse(c.id!)">
+          {{ c.name }}
+        </button>
+      }
+      @if (caisses.length === 0) { <span class="muted">Aucune caisse configurée</span> }
+    </div>
+    <p class="hint">Aucune caisse sélectionnée = toutes les caisses.</p>
+    <button class="btn-generate" (click)="generate()" [disabled]="loading">
+      @if (loading) { <span class="material-icons spin">sync</span> } @else { <span class="material-icons">play_arrow</span> }
+      Générer
+    </button>
+    @if (error) { <div class="error-row">{{ error }}</div> }
+  </div>
+
+  @if (data) {
+    <div class="kpi-row">
+      <div class="kpi"><span>Sessions</span><strong>{{ data.totalSessions }}</strong></div>
+      <div class="kpi"><span>Total entrées</span><strong>{{ formatAmount(data.grandTotalEntrees) }}</strong></div>
+      <div class="kpi"><span>Total sorties</span><strong>{{ formatAmount(data.grandTotalSorties) }}</strong></div>
+      <div class="kpi" [class.warn]="data.grandTotalEcarts"><span>Total écarts</span><strong>{{ formatAmount(data.grandTotalEcarts) }}</strong></div>
+    </div>
+
+    <table class="sessions-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Caisse</th><th>Statut</th><th>Solde début</th><th>Entrées</th><th>Sorties</th><th>Solde fin</th><th>Écart</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of data.sessions; track s.id) {
+          <tr>
+            <td>{{ s.dateSession | date:'dd/MM/yyyy' }}</td>
+            <td>{{ s.caisseName }}</td>
+            <td><span class="status-badge" [class.en-cours]="s.status === 'EN_COURS'">{{ s.status }}</span></td>
+            <td>{{ formatAmount(s.soldeDebut) }}</td>
+            <td>{{ formatAmount(s.totalEntrees) }}</td>
+            <td>{{ formatAmount(s.totalSorties) }}</td>
+            <td>{{ formatAmount(s.soldeFin) }}</td>
+            <td [class.warn]="s.ecartDepasseSeuil">{{ formatAmount(s.ecart) }}</td>
+            <td><button class="btn-link" (click)="voirRapport(s.id)">Détails</button></td>
+          </tr>
+        }
+        @if (data.sessions.length === 0) {
+          <tr><td colspan="9" class="empty">Aucune session sur cette période.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

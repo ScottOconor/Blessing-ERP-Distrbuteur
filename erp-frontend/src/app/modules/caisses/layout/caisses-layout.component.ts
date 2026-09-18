@@ -67,6 +67,15 @@ export class CaissesLayoutComponent implements OnInit {
     if (canView) items.push({ id: 'brouillard',  label: 'Brouillard',          icon: 'receipt_long',  route: '/caisses/brouillard' });
     if (canView) items.push({ id: 'suivi-tiers', label: 'Dettes & Créances',   icon: 'swap_horiz',    route: '/caisses/suivi-tiers' });
 
+    if (canView) items.push({
+      id: 'rapports', label: 'Rapports', icon: 'summarize',
+      children: [
+        { label: 'Rapport consolidé', icon: 'bar_chart', route: '/caisses/rapport-consolide' }
+      ]
+    });
+
+    if (canCreate) items.push({ id: 'coupures', label: 'Coupures', icon: 'payments', route: '/caisses/coupures' });
+
     return items;
   }
 

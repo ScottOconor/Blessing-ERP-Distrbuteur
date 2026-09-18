@@ -2,12 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { CaisseService, CaisseDTO } from '../../services/caisse.service';
+import { CaisseService, CaisseDTO, CaisseSessionDTO } from '../../services/caisse.service';
+import { CaisseCountModalComponent } from '../count-modal/caisse-count-modal.component';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-caisse-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CaisseCountModalComponent],
   templateUrl: './caisse-dashboard.component.html',
   styleUrl: './caisse-dashboard.component.scss'
 })
@@ -16,6 +18,9 @@ export class CaisseDashboardComponent implements OnInit {
   loading = true;
   error = '';
   companyId = 0;
+
+  countModalCaisse: CaisseDTO | null = null;
+  countModalMode: 'ouverture' | 'cloture' = 'ouverture';
 
   constructor(
     private caisseService: CaisseService,
@@ -50,16 +55,22 @@ export class CaisseDashboardComponent implements OnInit {
     this.router.navigate(['/caisses/brouillard'], { queryParams: { caisseId: caisse.id, date: today } });
   }
 
+  ouvrirCaisse(caisse: CaisseDTO): void {
+    this.countModalCaisse = caisse;
+    this.countModalMode = 'ouverture';
+  }
+
   cloturerCaisse(caisse: CaisseDTO): void {
-    if (!confirm(`Clôturer la caisse "${caisse.name}" pour aujourd'hui ?`)) return;
-    this.caisseService.cloturerCaisse(caisse.id!, this.companyId).subscribe({
-      next: () => this.load(),
-      error: (e) => alert(e.error?.message || 'Erreur lors de la clôture.')
-    });
+    this.countModalCaisse = caisse;
+    this.countModalMode = 'cloture';
+  }
+
+  onCountModalClosed(session: CaisseSessionDTO | null): void {
+    this.countModalCaisse = null;
+    if (session) this.load();
   }
 
   formatAmount(v: number | undefined | null): string {
-    if (v == null) return '0 FCFA';
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) + ' FCFA';
+    return formatFCFA(v);
   }
 }

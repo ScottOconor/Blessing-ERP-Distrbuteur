@@ -12,9 +12,78 @@ export interface CaisseDTO {
   companyId: number;
   status?: 'OUVERTE' | 'CLOTUREE';
   responsableName?: string;
+  sellerId?: number;
+  sellerName?: string;
   active?: boolean;
   lastSessionDate?: string;
   soldeActuel?: number;
+  seuilEcart?: number;
+}
+
+export interface CashDenominationDTO {
+  id?: number;
+  companyId: number;
+  label: string;
+  valeur: number;
+  active?: boolean;
+}
+
+export interface DenominationCountRequest {
+  denominationId: number;
+  quantite: number;
+}
+
+export interface OuvertureCaisseRequest {
+  companyId?: number;
+  counts: DenominationCountRequest[];
+  notes?: string;
+}
+
+export interface ClotureCaisseRequest {
+  companyId?: number;
+  counts: DenominationCountRequest[];
+  notes?: string;
+}
+
+export interface DenominationCountLine {
+  label: string;
+  valeur: number;
+  quantite: number;
+  total: number;
+}
+
+export interface RapportClotureDTO {
+  sessionId: number;
+  caisseId: number;
+  caisseName: string;
+  dateSession: string;
+  createdBy?: string;
+  status: string;
+  soldeDebut: number;
+  montantCompteOuverture?: number;
+  ecartOuverture?: number;
+  ouvertureControlee: boolean;
+  totalEntrees: number;
+  totalSorties: number;
+  soldeFin: number;
+  montantCompteCloture?: number;
+  ecart?: number;
+  seuilEcart?: number;
+  ecartDepasseSeuil: boolean;
+  dateCloture?: string;
+  countsOuverture: DenominationCountLine[];
+  countsCloture: DenominationCountLine[];
+  operations: CaisseOperationDTO[];
+}
+
+export interface RapportConsolideDTO {
+  dateFrom: string;
+  dateTo: string;
+  sessions: CaisseSessionDTO[];
+  totalSessions: number;
+  grandTotalEntrees: number;
+  grandTotalSorties: number;
+  grandTotalEcarts: number;
 }
 
 export interface CaisseOperationDTO {
@@ -64,6 +133,13 @@ export interface CaisseSessionDTO {
   totalSorties: number;
   dateCloture?: string;
   createdBy?: string;
+  userId?: number;
+  montantCompteOuverture?: number;
+  montantCompteCloture?: number;
+  ecartOuverture?: number;
+  ecart?: number;
+  ouvertureControlee?: boolean;
+  ecartDepasseSeuil?: boolean;
 }
 
 export interface BrouillardLineDTO {
@@ -139,8 +215,12 @@ export class CaisseService {
     return this.http.post<CaisseOperationDTO>(`${this.base}/operations`, req);
   }
 
-  cloturerCaisse(id: number, companyId: number): Observable<CaisseSessionDTO> {
-    return this.http.post<CaisseSessionDTO>(`${this.base}/${id}/cloturer`, null, { params: { companyId } });
+  cloturerCaisse(id: number, companyId: number, req?: ClotureCaisseRequest): Observable<CaisseSessionDTO> {
+    return this.http.put<CaisseSessionDTO>(`${this.base}/${id}/cloturer`, req ?? { counts: [] }, { params: { companyId } });
+  }
+
+  ouvrirSession(id: number, req: OuvertureCaisseRequest): Observable<CaisseSessionDTO> {
+    return this.http.post<CaisseSessionDTO>(`${this.base}/${id}/ouvrir`, req);
   }
 
   rouvrirCaisse(id: number): Observable<CaisseDTO> {
@@ -151,7 +231,38 @@ export class CaisseService {
     return this.http.get<CaisseSessionDTO[]>(`${this.base}/${caisseId}/sessions`);
   }
 
+  getSessionActive(caisseId: number): Observable<CaisseSessionDTO | null> {
+    return this.http.get<CaisseSessionDTO | null>(`${this.base}/${caisseId}/session-active`);
+  }
+
   getBrouillard(caisseId: number, date: string): Observable<BrouillardDTO> {
     return this.http.get<BrouillardDTO>(`${this.base}/${caisseId}/brouillard`, { params: { date } });
+  }
+
+  // Coupures
+  getDenominations(companyId: number): Observable<CashDenominationDTO[]> {
+    return this.http.get<CashDenominationDTO[]>(`${this.base}/denominations`, { params: { companyId } });
+  }
+  seedDefaultDenominations(companyId: number): Observable<CashDenominationDTO[]> {
+    return this.http.post<CashDenominationDTO[]>(`${this.base}/denominations/seed-defaults`, null, { params: { companyId } });
+  }
+  createDenomination(dto: CashDenominationDTO): Observable<CashDenominationDTO> {
+    return this.http.post<CashDenominationDTO>(`${this.base}/denominations`, dto);
+  }
+  updateDenomination(id: number, dto: CashDenominationDTO): Observable<CashDenominationDTO> {
+    return this.http.put<CashDenominationDTO>(`${this.base}/denominations/${id}`, dto);
+  }
+  deleteDenomination(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/denominations/${id}`);
+  }
+
+  // Rapports
+  getRapportCloture(sessionId: number): Observable<RapportClotureDTO> {
+    return this.http.get<RapportClotureDTO>(`${this.base}/sessions/${sessionId}/rapport-cloture`);
+  }
+  getRapportConsolide(companyId: number, dateFrom: string, dateTo: string, caisseIds?: number[]): Observable<RapportConsolideDTO> {
+    let params: any = { companyId, dateFrom, dateTo };
+    if (caisseIds && caisseIds.length) params['caisseIds'] = caisseIds;
+    return this.http.get<RapportConsolideDTO>(`${this.base}/rapport-consolide`, { params });
   }
 }

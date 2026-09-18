@@ -1,0 +1,87 @@
+$accent: #16A34A;
+
+.list-page { padding: 28px 32px; max-width: 900px; margin: 0 auto; }
+
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 24px; gap: 16px;
+  .page-title {
+    display: flex; align-items: center; gap: 14px;
+    .material-icons { font-size: 32px; color: #{$accent}; }
+    h1 { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
+    p  { font-size: 13px; color: var(--text-muted); margin: 0; }
+  }
+  .header-actions { display: flex; gap: 8px; }
+}
+
+.btn-primary, .btn-outline {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  .material-icons { font-size: 17px; }
+}
+.btn-primary { background: #{$accent}; border: none; color: white; &:hover { background: #15803D; } }
+.btn-outline { background: var(--bg-page); border: 1px solid var(--border); color: var(--text-muted); &:hover { color: var(--text-primary); } }
+
+.loading-state, .empty-state {
+  text-align: center; padding: 50px 24px;
+  background: var(--bg-surface); border-radius: 12px; border: 1px dashed var(--border);
+  color: var(--text-muted);
+  .material-icons { font-size: 44px; color: var(--text-muted); display: block; margin-bottom: 12px; }
+}
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.data-table {
+  width: 100%; border-collapse: collapse; background: var(--bg-surface);
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase;
+       color: var(--text-muted); background: var(--bg-page); border-bottom: 1px solid var(--border); }
+  td { padding: 12px 14px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+}
+
+.status-badge {
+  padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
+  background: rgba(22,163,74,0.12); color: #{$accent};
+  &.inactive { background: rgba(100,116,139,0.12); color: #64748B; }
+}
+
+.actions { display: flex; gap: 4px; }
+.btn-icon {
+  width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-page);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted);
+  .material-icons { font-size: 15px; }
+  &.danger:hover { border-color: #DC2626; color: #DC2626; background: rgba(220,38,38,0.08); }
+}
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+}
+.modal-box { background: var(--bg-surface); border-radius: 16px; width: 420px; max-width: 95vw; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-header {
+  display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--border);
+  .material-icons { font-size: 22px; color: #{$accent}; }
+  h2 { flex: 1; font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0; }
+}
+.btn-close {
+  width: 30px; height: 30px; border-radius: 6px; border: none; background: none; cursor: pointer; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  .material-icons { font-size: 18px; }
+  &:hover { background: var(--bg-hover); color: var(--text-primary); }
+}
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.form-row {
+  display: flex; flex-direction: column; gap: 5px;
+  label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+  input { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-page); color: var(--text-primary); }
+}
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+.btn-cancel { padding: 8px 18px; border-radius: 8px; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-muted); font-size: 13px; cursor: pointer; }
+.btn-save {
+  display: flex; align-items: center; gap: 6px; padding: 8px 20px; border-radius: 8px;
+  background: #{$accent}; border: none; color: white; font-size: 13px; font-weight: 600; cursor: pointer;
+  &:hover:not(:disabled) { background: #15803D; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}

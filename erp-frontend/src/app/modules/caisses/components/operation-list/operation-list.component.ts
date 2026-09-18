@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CaisseService, CaisseOperationDTO, CaisseDTO } from '../../services/caisse.service';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-operation-list',
@@ -58,8 +59,7 @@ export class OperationListComponent implements OnInit {
   }
 
   formatAmount(v: number | undefined | null): string {
-    if (v == null) return '0 FCFA';
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) + ' FCFA';
+    return formatFCFA(v);
   }
 
   get totalMontant(): number {

@@ -1,10 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { CaisseService, CaisseDTO } from '../../services/caisse.service';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
+import { environment } from '../../../../../environments/environment';
+
+interface Seller {
+  id?: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-caisse-list',
@@ -16,6 +24,7 @@ import { CaisseService, CaisseDTO } from '../../services/caisse.service';
 export class CaisseListComponent implements OnInit {
   caisses: CaisseDTO[] = [];
   journals: any[] = [];
+  sellers: Seller[] = [];
   loading = true;
   error = '';
   companyId = 0;
@@ -29,6 +38,7 @@ export class CaisseListComponent implements OnInit {
   constructor(
     private caisseService: CaisseService,
     private accountingService: AccountingService,
+    private http: HttpClient,
     private authService: AuthService,
     public router: Router
   ) {}
@@ -38,6 +48,14 @@ export class CaisseListComponent implements OnInit {
     this.form.companyId = this.companyId;
     this.load();
     this.loadJournals();
+    this.loadSellers();
+  }
+
+  loadSellers(): void {
+    this.http.get<Seller[]>(`${environment.apiUrl}/api/sales/sellers`, { params: { companyId: this.companyId } }).subscribe({
+      next: data => this.sellers = data,
+      error: () => { this.sellers = []; }
+    });
   }
 
   load(): void {
@@ -107,7 +125,6 @@ export class CaisseListComponent implements OnInit {
   }
 
   formatAmount(v: number | undefined | null): string {
-    if (v == null) return '0 FCFA';
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) + ' FCFA';
+    return formatFCFA(v);
   }
 }

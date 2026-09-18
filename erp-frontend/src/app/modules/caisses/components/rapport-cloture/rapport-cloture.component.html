@@ -1,0 +1,107 @@
+<div class="report-page">
+  <div class="page-header no-print">
+    <button class="btn-back" (click)="router.navigate(['/caisses/dashboard'])">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <h1>Rapport de clôture</h1>
+    @if (rapport) {
+      <button class="btn-print" (click)="print()"><span class="material-icons">print</span> Imprimer</button>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="state-row"><span class="material-icons spin">sync</span> Chargement…</div>
+  }
+  @if (error) {
+    <div class="state-row error"><span class="material-icons">error_outline</span> {{ error }}</div>
+  }
+
+  @if (rapport) {
+    <div class="report-card">
+      <div class="report-title">
+        <h2>{{ rapport.caisseName }}</h2>
+        <span class="date">{{ rapport.dateSession | date:'dd/MM/yyyy' }}</span>
+      </div>
+      <div class="meta-row">
+        <span>Ouvert/clôturé par : <strong>{{ rapport.createdBy || '—' }}</strong></span>
+        <span>Statut : <strong>{{ rapport.status }}</strong></span>
+      </div>
+
+      <div class="section">
+        <h3>Ouverture</h3>
+        @if (rapport.ouvertureControlee) {
+          <div class="kpi-row">
+            <div class="kpi"><span>Solde théorique</span><strong>{{ formatAmount(rapport.soldeDebut) }}</strong></div>
+            <div class="kpi"><span>Compté</span><strong>{{ formatAmount(rapport.montantCompteOuverture) }}</strong></div>
+            <div class="kpi" [class.warn]="rapport.ecartOuverture"><span>Écart</span><strong>{{ formatAmount(rapport.ecartOuverture) }}</strong></div>
+          </div>
+          @if (rapport.countsOuverture.length) {
+            <table class="counts-table">
+              <thead><tr><th>Coupure</th><th>Valeur</th><th>Qté</th><th>Total</th></tr></thead>
+              <tbody>
+                @for (l of rapport.countsOuverture; track l.label) {
+                  <tr><td>{{ l.label }}</td><td>{{ formatAmount(l.valeur) }}</td><td>{{ l.quantite }}</td><td>{{ formatAmount(l.total) }}</td></tr>
+                }
+              </tbody>
+            </table>
+          }
+        } @else {
+          <p class="muted">Ouverture non contrôlée — aucun comptage effectué.</p>
+        }
+      </div>
+
+      <div class="section">
+        <h3>Mouvements du jour</h3>
+        <div class="kpi-row">
+          <div class="kpi"><span>Entrées</span><strong>{{ formatAmount(rapport.totalEntrees) }}</strong></div>
+          <div class="kpi"><span>Sorties</span><strong>{{ formatAmount(rapport.totalSorties) }}</strong></div>
+        </div>
+        @if (rapport.operations.length) {
+          <table class="counts-table">
+            <thead><tr><th>Heure</th><th>Type</th><th>Libellé</th><th>Tiers</th><th>Montant</th></tr></thead>
+            <tbody>
+              @for (op of rapport.operations; track op.id) {
+                <tr>
+                  <td>{{ op.createdAt | date:'HH:mm' }}</td>
+                  <td>{{ op.type === 'ENTREE' ? 'Entrée' : 'Sortie' }}</td>
+                  <td>{{ op.libelle || '—' }}</td>
+                  <td>{{ op.tiersName || '—' }}</td>
+                  <td>{{ formatAmount(op.montant) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="muted">Aucune opération enregistrée ce jour.</p>
+        }
+      </div>
+
+      <div class="section">
+        <h3>Clôture</h3>
+        <div class="kpi-row">
+          <div class="kpi"><span>Solde théorique</span><strong>{{ formatAmount(rapport.soldeFin) }}</strong></div>
+          @if (rapport.montantCompteCloture != null) {
+            <div class="kpi"><span>Compté</span><strong>{{ formatAmount(rapport.montantCompteCloture) }}</strong></div>
+            <div class="kpi" [class.warn]="rapport.ecartDepasseSeuil"><span>Écart</span><strong>{{ formatAmount(rapport.ecart) }}</strong></div>
+          }
+        </div>
+        @if (rapport.ecartDepasseSeuil) {
+          <div class="alert-warn">
+            <span class="material-icons">warning</span>
+            L'écart dépasse le seuil toléré ({{ formatAmount(rapport.seuilEcart) }}).
+          </div>
+        }
+        @if (rapport.countsCloture.length) {
+          <table class="counts-table">
+            <thead><tr><th>Coupure</th><th>Valeur</th><th>Qté</th><th>Total</th></tr></thead>
+            <tbody>
+              @for (l of rapport.countsCloture; track l.label) {
+                <tr><td>{{ l.label }}</td><td>{{ formatAmount(l.valeur) }}</td><td>{{ l.quantite }}</td><td>{{ formatAmount(l.total) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
+  }
+</div>

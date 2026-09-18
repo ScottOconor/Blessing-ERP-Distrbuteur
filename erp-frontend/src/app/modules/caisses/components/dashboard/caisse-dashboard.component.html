@@ -105,6 +105,10 @@
                   Clôturer
                 </button>
               } @else {
+                <button class="btn-entree" (click)="ouvrirCaisse(caisse)">
+                  <span class="material-icons">lock_open</span>
+                  Ouvrir
+                </button>
                 <button class="btn-outline-sm" (click)="viewBrouillard(caisse)">
                   <span class="material-icons">receipt_long</span>
                   Voir brouillard
@@ -115,5 +119,13 @@
         }
       </div>
     }
+  }
+
+  @if (countModalCaisse) {
+    <app-caisse-count-modal
+      [caisse]="countModalCaisse"
+      [mode]="countModalMode"
+      (closed)="onCountModalClosed($event)">
+    </app-caisse-count-modal>
   }
 </div>

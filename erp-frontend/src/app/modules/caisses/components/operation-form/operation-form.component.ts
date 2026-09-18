@@ -7,6 +7,7 @@ import { AccountingService } from '../../../accounting/services/accounting.servi
 import { CaisseService, CaisseDTO, AddOperationRequest } from '../../services/caisse.service';
 import { Partner } from '../../../../core/models/account.model';
 import { AmountInputDirective } from '../../../../shared/directives/amount-input.directive';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-operation-form',
@@ -209,7 +210,6 @@ export class OperationFormComponent implements OnInit {
   }
 
   formatAmount(v: number | undefined | null): string {
-    if (v == null) return '0 FCFA';
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(+v) + ' FCFA';
+    return formatFCFA(v);
   }
 }

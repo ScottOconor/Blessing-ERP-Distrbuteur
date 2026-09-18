@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CaisseService, CaisseDTO, BrouillardDTO } from '../../services/caisse.service';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-brouillard',
@@ -51,8 +52,7 @@ export class BrouillardComponent implements OnInit {
   }
 
   formatAmount(v: number | undefined | null): string {
-    if (v == null) return '0 FCFA';
-    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v) + ' FCFA';
+    return formatFCFA(v);
   }
 
   print(): void {

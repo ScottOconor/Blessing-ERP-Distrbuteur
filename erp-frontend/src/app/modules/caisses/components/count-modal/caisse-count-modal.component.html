@@ -1,0 +1,104 @@
+<div class="modal-overlay" (click)="!result && close()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <span class="material-icons">{{ mode === 'ouverture' ? 'lock_open' : 'lock' }}</span>
+      <h2>{{ title }} — {{ caisse.name }}</h2>
+      <button class="btn-close" (click)="close()"><span class="material-icons">close</span></button>
+    </div>
+
+    @if (!result) {
+      <div class="modal-body">
+        @if (loading) {
+          <div class="loading-row"><span class="material-icons spin">sync</span> Chargement des coupures…</div>
+        } @else if (denominations.length === 0) {
+          <div class="empty-row">
+            <span class="material-icons">info</span>
+            Aucune coupure configurée pour cette société — configurez-les dans Gestion des caisses,
+            ou ignorez le comptage.
+          </div>
+        } @else {
+          <p class="hint">Comptez les espèces présentes dans le tiroir, coupure par coupure. Le comptage est
+            recommandé mais facultatif.</p>
+          <div class="count-grid">
+            <div class="count-head">
+              <span>Coupure</span><span>Valeur</span><span>Qté</span><span>Total</span>
+            </div>
+            @for (d of denominations; track d.id) {
+              <div class="count-row">
+                <span class="d-label">{{ d.label }}</span>
+                <span class="d-valeur">{{ formatAmount(d.valeur) }}</span>
+                <input type="number" min="0" [(ngModel)]="quantities[d.id!]" class="d-qty" />
+                <span class="d-total">{{ formatAmount((quantities[d.id!] || 0) * d.valeur) }}</span>
+              </div>
+            }
+          </div>
+          <div class="total-row">
+            <span>Total compté</span>
+            <strong>{{ formatAmount(total) }}</strong>
+          </div>
+          <div class="form-row">
+            <label>Notes</label>
+            <input type="text" [(ngModel)]="notes" placeholder="Facultatif" />
+          </div>
+        }
+
+        @if (error) {
+          <div class="error-row"><span class="material-icons">error_outline</span> {{ error }}</div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="skip()" [disabled]="saving">
+          {{ mode === 'ouverture' ? 'Ouvrir sans comptage' : 'Clôturer sans comptage' }}
+        </button>
+        <button class="btn-save" (click)="confirm()" [disabled]="saving || loading || !hasAnyCount">
+          @if (saving) { <span class="material-icons spin">sync</span> }
+          @else { <span class="material-icons">check_circle</span> }
+          {{ saving ? 'Enregistrement…' : (mode === 'ouverture' ? 'Ouvrir avec ce comptage' : 'Clôturer avec ce comptage') }}
+        </button>
+      </div>
+    } @else {
+      <div class="modal-body result-body">
+        <div class="result-icon" [class.warn]="result.ecartDepasseSeuil">
+          <span class="material-icons">{{ result.ecartDepasseSeuil ? 'warning' : 'check_circle' }}</span>
+        </div>
+        <p class="result-title">
+          {{ mode === 'ouverture' ? 'Caisse ouverte' : 'Caisse clôturée' }}
+        </p>
+        @if (mode === 'ouverture') {
+          @if (result.ouvertureControlee) {
+            <p class="result-line">Solde théorique : <strong>{{ formatAmount(result.soldeDebut) }}</strong></p>
+            <p class="result-line">Compté : <strong>{{ formatAmount(result.montantCompteOuverture) }}</strong></p>
+            <p class="result-line" [class.ecart-warn]="result.ecartOuverture">
+              Écart : <strong>{{ formatAmount(result.ecartOuverture) }}</strong>
+            </p>
+          } @else {
+            <p class="result-line muted">Ouverture sans comptage — aucun écart calculé.</p>
+          }
+        } @else {
+          <p class="result-line">Solde théorique : <strong>{{ formatAmount(result.soldeFin) }}</strong></p>
+          @if (result.ouvertureControlee || result.montantCompteCloture) {
+            <p class="result-line">Compté : <strong>{{ formatAmount(result.montantCompteCloture) }}</strong></p>
+            <p class="result-line" [class.ecart-warn]="result.ecartDepasseSeuil">
+              Écart : <strong>{{ formatAmount(result.ecart) }}</strong>
+              @if (result.ecartDepasseSeuil) { <span class="badge-warn">dépasse le seuil</span> }
+            </p>
+          } @else {
+            <p class="result-line muted">Clôture sans comptage — aucun écart calculé.</p>
+          }
+          <p class="result-line muted">La caisse a été vidée vers le compte 585000 (virements de fonds) — la prochaine ouverture repartira d'un solde à zéro.</p>
+        }
+      </div>
+      <div class="modal-footer">
+        @if (mode === 'cloture') {
+          <button class="btn-cancel" (click)="voirRapport()">
+            <span class="material-icons">summarize</span> Voir le rapport
+          </button>
+        }
+        <button class="btn-save" (click)="close()">
+          <span class="material-icons">done</span> Fermer
+        </button>
+      </div>
+    }
+  </div>
+</div>
