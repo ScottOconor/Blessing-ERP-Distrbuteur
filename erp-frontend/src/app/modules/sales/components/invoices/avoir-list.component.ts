@@ -8,6 +8,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { StockService, Product, Warehouse } from '../../../stock/services/stock.service';
 import { AccountJournal } from '../../../../core/models/account.model';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-avoir-list',
@@ -371,7 +372,7 @@ export class AvoirListComponent implements OnInit {
   }
 
   fmtN(v: number): string {
-    return new Intl.NumberFormat('fr-FR').format(v || 0);
+    return formatFCFA(v, false);
   }
 
   saveAvoir(): void {

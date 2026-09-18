@@ -161,6 +161,10 @@
         <div class="info-label">Échéance</div>
         <div class="info-value">{{ invoice.dateEcheance ? (invoice.dateEcheance | date:'dd/MM/yyyy') : '—' }}</div>
       </div>
+      <div class="info-card">
+        <div class="info-label">Vendeur</div>
+        <div class="info-value">{{ invoice.sellerName || '—' }}</div>
+      </div>
 
       <!-- Entrepôt -->
       @if (isInvoice) {

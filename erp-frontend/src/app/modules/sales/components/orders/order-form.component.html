@@ -74,13 +74,19 @@
                        placeholder="Chercher un client…"
                        autocomplete="off" />
               </div>
-              @if (clientDropdown && filteredClients.length > 0) {
+              @if (clientDropdown && !isReadOnly && (filteredClients.length > 0 || clientSearch.trim())) {
                 <div class="ac-dropdown">
                   @for (c of filteredClients; track c.id) {
                     <div class="ac-item" (mousedown)="selectClient(c)">
                       <span class="ac-avatar">{{ c.name.charAt(0) }}</span>
                       <span class="ac-name">{{ c.name }}</span>
                       @if (c.ref) { <span class="ac-code">{{ c.ref }}</span> }
+                    </div>
+                  }
+                  @if (clientSearch.trim()) {
+                    <div class="ac-item ac-create" (mousedown)="openCreateClient()">
+                      <span class="material-icons">person_add</span>
+                      <span class="ac-name">Créer "{{ clientSearch.trim() }}" comme nouveau client</span>
                     </div>
                   }
                 </div>
@@ -125,6 +131,20 @@
               </select>
             } @else {
               <div class="form-control form-readonly">{{ order.warehouseName || '—' }}</div>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Vendeur <span class="form-hint">(facultatif)</span></label>
+            @if (!isReadOnly) {
+              <select [(ngModel)]="order.sellerId" class="form-control">
+                <option [ngValue]="undefined">— Aucun —</option>
+                @for (s of sellers; track s.id) {
+                  <option [value]="s.id">{{ s.name }}</option>
+                }
+              </select>
+            } @else {
+              <div class="form-control form-readonly">{{ order.sellerName || '—' }}</div>
             }
           </div>
 
@@ -392,6 +412,42 @@
 </div>
 
 <!-- ── Modal Déconsigne ── -->
+@if (showCreateClient) {
+  <div class="modal-backdrop" (click)="closeCreateClient()">
+    <div class="modal-create-client" (click)="$event.stopPropagation()">
+      <div class="modal-d-header">
+        <span class="material-icons">person_add</span>
+        <div>
+          <div class="modal-d-title">Nouveau client</div>
+          <div class="modal-d-sub">Créé et sélectionné automatiquement sur ce bon</div>
+        </div>
+      </div>
+      <div class="modal-d-body">
+        <div class="field-row">
+          <label>Nom <span class="required">*</span></label>
+          <input type="text" [(ngModel)]="newClient.name" class="form-control" placeholder="Nom du client" />
+        </div>
+        <div class="field-row">
+          <label>Téléphone</label>
+          <input type="text" [(ngModel)]="newClient.phone" class="form-control" placeholder="Téléphone" />
+        </div>
+      </div>
+      @if (createClientError) {
+        <div class="modal-d-error"><span class="material-icons">error_outline</span> {{ createClientError }}</div>
+      }
+      <div class="modal-d-actions">
+        <button class="btn-modal-cancel" (click)="closeCreateClient()">
+          <span class="material-icons">close</span> Annuler
+        </button>
+        <button class="btn-modal-confirm" [disabled]="creatingClient" (click)="createClient()">
+          <span class="material-icons">{{ creatingClient ? 'hourglass_empty' : 'check_circle' }}</span>
+          {{ creatingClient ? 'Création…' : 'Créer et sélectionner' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 @if (showDeconsigneModal) {
   <div class="modal-backdrop" (click)="cancelDeconsigne()">
     <div class="modal-deconsigne" (click)="$event.stopPropagation()">

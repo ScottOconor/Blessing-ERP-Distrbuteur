@@ -95,6 +95,18 @@
 }
 textarea.form-control { resize: vertical; }
 
+.photo-field { display: flex; align-items: center; gap: 14px; }
+.photo-preview {
+  width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.photo-placeholder {
+  width: 72px; height: 72px; border-radius: 8px; border: 1px dashed var(--border); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+  .material-icons { font-size: 28px; }
+}
+.photo-actions { display: flex; flex-direction: column; gap: 6px; }
+
 /* ── Tarifs clients section ── */
 .tarifs-block { margin-top: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .tarifs-toggle {

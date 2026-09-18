@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/core/utils/currency-format.util.ts"],
+  "sourcesContent": ["/**\n * Formate un montant en FCFA avec un vrai espace comme séparateur de milliers.\n *\n * Intl.NumberFormat('fr-FR') insère U+202F (espace fine insécable) comme séparateur de groupe,\n * un caractère quasi invisible dans de nombreuses polices/navigateurs — un montant comme 150000\n * s'affiche alors \"150000\" au lieu de \"150 000\", illisible. On reformate donc avec une espace\n * normale (U+0020) pour un rendu fiable partout.\n */\nexport function formatFCFA(v: number | null | undefined, withSuffix = true): string {\n  const amount = v ?? 0;\n  const formatted = new Intl.NumberFormat('fr-FR', {\n    minimumFractionDigits: 0,\n    maximumFractionDigits: 0\n  }).format(amount).replace(/[  ]/g, ' ');\n  return withSuffix ? `${formatted} FCFA` : formatted;\n}\n"],
+  "mappings": ";AAQM,SAAU,WAAW,GAA8B,aAAa,MAAI;AACxE,QAAM,SAAS,KAAK;AACpB,QAAM,YAAY,IAAI,KAAK,aAAa,SAAS;IAC/C,uBAAuB;IACvB,uBAAuB;GACxB,EAAE,OAAO,MAAM,EAAE,QAAQ,SAAS,GAAG;AACtC,SAAO,aAAa,GAAG,SAAS,UAAU;AAC5C;",
+  "names": []
+}

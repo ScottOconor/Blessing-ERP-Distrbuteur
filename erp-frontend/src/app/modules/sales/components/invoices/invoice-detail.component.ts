@@ -12,6 +12,7 @@ import { PrintPreviewComponent, PrintDocType } from '../../../../shared/componen
 import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
 import { CONSIGNE_CODES } from '../../../../shared/constants/consigne-codes';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -452,7 +453,7 @@ export class InvoiceDetailComponent implements OnInit {
   }
 
   fmtM(n: number): string {
-    return n > 0 ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n) : '';
+    return n > 0 ? formatFCFA(n, false) : '';
   }
   parseM(s: string): number {
     return Math.round(parseFloat((s || '').replace(/[\s  ]/g, '').replace(',', '.')) || 0);

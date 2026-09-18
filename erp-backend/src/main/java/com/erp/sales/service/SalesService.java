@@ -93,12 +93,15 @@ public class SalesService {
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
+    private final SellerRepository sellerRepo;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String DEFAULT_REVENUE_ACCOUNT    = "701100";
     private static final String RABAIS_ACCOUNT             = "701901";
     private static final String DEFAULT_RECEIVABLE_ACCOUNT = "411100";
     private static final String TVA_ACCOUNT                = "443100";
+    /** TVA collectée sur les prestations de services — distincte de celle sur les articles (443100). */
+    private static final String TVA_ACCOUNT_SERVICES       = "443150";
     private static final String ENLEVEMENT_ACCOUNT         = "701500";
     private static final String ENLEVEMENT_TVA_ACCOUNT     = "443200";
     private static final String PSA_ACCOUNT                = "441200";
@@ -212,6 +215,7 @@ public class SalesService {
                 .journal(journal)
                 .company(company)
                 .warehouseId(req.getWarehouseId())
+                .sellerId(req.getSellerId())
                 .build();
 
         buildOrderLines(order, req.getLines());
@@ -245,6 +249,7 @@ public class SalesService {
         order.setPartner(partner);
         order.setJournal(journal);
         if (req.getWarehouseId() != null) order.setWarehouseId(req.getWarehouseId());
+        order.setSellerId(req.getSellerId());
 
         order.getLines().clear();
         buildOrderLines(order, req.getLines());
@@ -613,6 +618,7 @@ public class SalesService {
                 .journal(journal)
                 .company(company)
                 .warehouseId(req.getWarehouseId())
+                .sellerId(req.getSellerId())
                 .montantPaye(ZERO)
                 .build();
 
@@ -645,6 +651,7 @@ public class SalesService {
         invoice.setPartner(partner);
         invoice.setJournal(journal);
         if (req.getWarehouseId() != null) invoice.setWarehouseId(req.getWarehouseId());
+        invoice.setSellerId(req.getSellerId());
 
         invoice.getLines().clear();
         buildInvoiceLines(invoice, req.getLines());
@@ -713,6 +720,9 @@ public class SalesService {
                 .or(() -> accountRepo.findFirstByCodeAndCompanyId("4431", companyId))
                 .or(() -> accountRepo.findFirstByCodeAndCompanyId("443",  companyId))
                 .orElse(null);
+        AccountAccount tvaAccountServices = findOrCreateAccount(
+                TVA_ACCOUNT_SERVICES, "TVA facturée sur prestations de services",
+                "liability", companyId, invoice.getJournal(), invoice.getCompany());
 
         String docRef = isAvoir ? "Avoir " : "Facture ";
         String libelle411 = isAvoir
@@ -799,15 +809,38 @@ public class SalesService {
             }
         }
 
-        // Ligne TVA collectée 443100 : crédit pour facture, débit pour avoir
-        BigDecimal totalTVA = (invoice.getTotalTVA() != null ? invoice.getTotalTVA() : ZERO)
-                .setScale(0, RoundingMode.HALF_UP);
-        if (totalTVA.compareTo(ZERO) != 0 && tvaAccount != null) {
+        // Ligne(s) TVA collectée : crédit pour facture, débit pour avoir. Les prestations de services
+        // (Product.type = "service") sont comptabilisées sur un compte de TVA distinct (443150) de
+        // celui des articles (443100) — on répartit donc le total TVA ligne par ligne selon le type
+        // du produit vendu, plutôt que de poster un seul montant agrégé sur 443100.
+        BigDecimal tvaArticles = ZERO;
+        BigDecimal tvaServices = ZERO;
+        for (SalesInvoiceLine line : invoice.getLines()) {
+            BigDecimal tvaLigne = line.getMontantTVA() != null ? line.getMontantTVA() : ZERO;
+            if (tvaLigne.compareTo(ZERO) == 0) continue;
+            boolean isService = line.getProductId() != null
+                    && stockProductRepo.findById(line.getProductId())
+                        .map(p -> "service".equals(p.getType())).orElse(false);
+            if (isService) tvaServices = tvaServices.add(tvaLigne);
+            else tvaArticles = tvaArticles.add(tvaLigne);
+        }
+        tvaArticles = tvaArticles.setScale(0, RoundingMode.HALF_UP);
+        tvaServices = tvaServices.setScale(0, RoundingMode.HALF_UP);
+        if (tvaArticles.compareTo(ZERO) != 0 && tvaAccount != null) {
             moveLines.add(AccountMoveLine.builder()
                     .move(move).account(tvaAccount).partner(invoice.getPartner())
                     .name((isAvoir ? "TVA avoir " : "TVA collectée - ") + invoice.getName()).date(date)
-                    .debit(isAvoir ? totalTVA : ZERO)
-                    .credit(isAvoir ? ZERO : totalTVA)
+                    .debit(isAvoir ? tvaArticles : ZERO)
+                    .credit(isAvoir ? ZERO : tvaArticles)
+                    .journal(invoice.getJournal()).company(invoice.getCompany())
+                    .build());
+        }
+        if (tvaServices.compareTo(ZERO) != 0 && tvaAccountServices != null) {
+            moveLines.add(AccountMoveLine.builder()
+                    .move(move).account(tvaAccountServices).partner(invoice.getPartner())
+                    .name((isAvoir ? "TVA avoir services " : "TVA collectée services - ") + invoice.getName()).date(date)
+                    .debit(isAvoir ? tvaServices : ZERO)
+                    .credit(isAvoir ? ZERO : tvaServices)
                     .journal(invoice.getJournal()).company(invoice.getCompany())
                     .build());
         }
@@ -1818,6 +1851,61 @@ public class SalesService {
         partnerRepo.save(partner);
     }
 
+    // ===================== VENDEURS =====================
+
+    @Transactional(readOnly = true)
+    public List<SellerDTO> getSellers(Long companyId) {
+        return sellerRepo.findByCompanyIdAndActiveTrue(companyId).stream()
+                .map(this::toSellerDTO)
+                .collect(Collectors.toList());
+    }
+
+    public SellerDTO createSeller(SellerDTO dto) {
+        Company company = companyRepo.findById(dto.getCompanyId())
+                .orElseThrow(() -> new EntityNotFoundException("Société introuvable"));
+
+        Seller seller = Seller.builder()
+                .ref(dto.getRef())
+                .name(dto.getName())
+                .phone(dto.getPhone())
+                .email(dto.getEmail())
+                .company(company)
+                .build();
+
+        return toSellerDTO(sellerRepo.save(seller));
+    }
+
+    public SellerDTO updateSeller(Long id, SellerDTO dto) {
+        Seller seller = sellerRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Vendeur introuvable: " + id));
+        tenantGuard.check(seller.getCompany() != null ? seller.getCompany().getId() : null);
+
+        seller.setRef(dto.getRef());
+        seller.setName(dto.getName());
+        seller.setPhone(dto.getPhone());
+        seller.setEmail(dto.getEmail());
+
+        return toSellerDTO(sellerRepo.save(seller));
+    }
+
+    public void deleteSeller(Long id) {
+        Seller seller = sellerRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Vendeur introuvable: " + id));
+        tenantGuard.check(seller.getCompany() != null ? seller.getCompany().getId() : null);
+        seller.setActive(false);
+        sellerRepo.save(seller);
+    }
+
+    private SellerDTO toSellerDTO(Seller s) {
+        return SellerDTO.builder()
+                .id(s.getId()).ref(s.getRef()).name(s.getName())
+                .phone(s.getPhone()).email(s.getEmail())
+                .companyId(s.getCompany() != null ? s.getCompany().getId() : null)
+                .companyName(s.getCompany() != null ? s.getCompany().getName() : null)
+                .active(s.isActive())
+                .build();
+    }
+
     // ===================== MÉTHODES PRIVÉES =====================
 
     private void createInvoiceFromOrder(SalesOrder order) {
@@ -1842,6 +1930,7 @@ public class SalesService {
                 .company(order.getCompany())
                 .salesOrder(order)
                 .warehouseId(order.getWarehouseId())
+                .sellerId(order.getSellerId())
                 .montantPaye(ZERO)
                 .build();
 
@@ -3342,6 +3431,10 @@ public class SalesService {
                 .companyId(order.getCompany() != null ? order.getCompany().getId() : null)
                 .warehouseId(order.getWarehouseId())
                 .warehouseName(warehouseName)
+                .sellerId(order.getSellerId())
+                .sellerName(order.getSellerId() != null
+                        ? sellerRepo.findById(order.getSellerId()).map(Seller::getName).orElse(null)
+                        : null)
                 .totalHT(order.getTotalHT()).totalTVA(order.getTotalTVA())
                 .totalTTC(order.getTotalTTC()).totalRemise(order.getTotalRemise())
                 .totalPrecompte(invoice != null ? invoice.getTotalPrecompte() : null)
@@ -3472,6 +3565,10 @@ public class SalesService {
                 .accountMoveName(invoice.getAccountMove() != null ? invoice.getAccountMove().getName() : null)
                 .warehouseId(invoice.getWarehouseId())
                 .warehouseName(warehouseName)
+                .sellerId(invoice.getSellerId())
+                .sellerName(invoice.getSellerId() != null
+                        ? sellerRepo.findById(invoice.getSellerId()).map(Seller::getName).orElse(null)
+                        : null)
                 .partnerBalance(partnerBalance)
                 .partnerCreditDisponible(partnerCreditDisponible)
                 .totalHT(invoice.getTotalHT()).totalTVA(invoice.getTotalTVA()).totalTTC(invoice.getTotalTTC())

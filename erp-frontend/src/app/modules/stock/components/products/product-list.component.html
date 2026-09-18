@@ -4,8 +4,8 @@
 
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><span class="material-icons">category</span> Articles</h1>
-      <span class="badge-count">{{ filtered.length }} article(s)</span>
+      <h1 class="page-title"><span class="material-icons">{{ serviceMode ? 'design_services' : 'category' }}</span> {{ serviceMode ? 'Services' : 'Articles' }}</h1>
+      <span class="badge-count">{{ filtered.length }} {{ serviceMode ? 'service(s)' : 'article(s)' }}</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       @if (canImport) {
@@ -18,7 +18,7 @@
       }
       @if (canCreate) {
         <button class="btn-primary" (click)="openCreate()">
-          <span class="material-icons">add</span> Nouvel article
+          <span class="material-icons">add</span> {{ serviceMode ? 'Nouveau service' : 'Nouvel article' }}
         </button>
       }
     </div>
@@ -28,7 +28,7 @@
 
   <div class="toolbar">
     <input class="search-input" placeholder="Rechercher par nom, référence..." [(ngModel)]="search" (ngModelChange)="applyFilter()" />
-    @if (warehouses.length > 1) {
+    @if (!serviceMode && warehouses.length > 1) {
       <select class="wh-select" [(ngModel)]="selectedWarehouseId" (ngModelChange)="onWarehouseChange()">
         <option value="">Tous les entrepôts</option>
         @for (wh of warehouses; track wh.id) {
@@ -36,21 +36,23 @@
         }
       </select>
     }
-    <div class="filter-tabs">
-      @for (tab of [
-        { k: 'autres',     label: 'Tous',        icon: 'apps'        },
-        { k: 'articles',   label: 'Articles',     icon: 'local_bar'   },
-        { k: 'emballages', label: 'Emballages',   icon: 'inventory_2' },
-        { k: 'bouteilles', label: 'Bouteilles',   icon: 'liquor'      }
-      ]; track tab.k) {
-        <button class="filter-btn" [class.active]="filterCat === tab.k"
-                (click)="filterCat = tab.k; applyFilter()">
-          <span class="material-icons">{{ tab.icon }}</span>
-          {{ tab.label }}
-          <span class="filter-count">{{ catCounts[tab.k] }}</span>
-        </button>
-      }
-    </div>
+    @if (!serviceMode) {
+      <div class="filter-tabs">
+        @for (tab of [
+          { k: 'autres',     label: 'Tous',        icon: 'apps'        },
+          { k: 'articles',   label: 'Articles',     icon: 'local_bar'   },
+          { k: 'emballages', label: 'Emballages',   icon: 'inventory_2' },
+          { k: 'bouteilles', label: 'Bouteilles',   icon: 'liquor'      }
+        ]; track tab.k) {
+          <button class="filter-btn" [class.active]="filterCat === tab.k"
+                  (click)="filterCat = tab.k; applyFilter()">
+            <span class="material-icons">{{ tab.icon }}</span>
+            {{ tab.label }}
+            <span class="filter-count">{{ catCounts[tab.k] }}</span>
+          </button>
+        }
+      </div>
+    }
   </div>
 
   <div class="groupby-bar">
@@ -83,11 +85,13 @@
             <th>Catégorie</th>
             <th>Type</th>
             <th>Unité</th>
-            <th class="text-right">CMUP</th>
+            <th class="text-right">{{ serviceMode ? 'Coût' : 'CMUP' }}</th>
             <th class="text-right">Prix vente</th>
-            <th class="text-right">En stock</th>
-            <th class="text-right">Réservé</th>
-            <th class="text-right">Disponible</th>
+            @if (!serviceMode) {
+              <th class="text-right">En stock</th>
+              <th class="text-right">Réservé</th>
+              <th class="text-right">Disponible</th>
+            }
             <th></th>
           </tr>
         </thead>
@@ -95,7 +99,7 @@
           @if (groupBy) {
             @for (row of groupedRows; track row.key) {
               <tr class="group-header-row" (click)="toggleGroup(row.key)">
-                <td class="group-header-cell" colspan="11">
+                <td class="group-header-cell" [attr.colspan]="serviceMode ? 8 : 11">
                   <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
                   <span class="group-label">{{ row.label }}</span>
                   <span class="badge">{{ row.count }} article(s)</span>
@@ -111,20 +115,22 @@
                     <td class="text-muted">{{ p.uomName || '—' }}</td>
                     <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
                     <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
-                    <td class="text-right font-mono">
-                      @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
-                      } @else { <span class="text-muted">—</span> }
-                    </td>
-                    <td class="text-right">
-                      @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
-                        <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
-                      } @else { <span class="text-muted">—</span> }
-                    </td>
-                    <td class="text-right">
-                      @if (p.type === 'product') {
-                        <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
-                      } @else { <span class="text-muted">—</span> }
-                    </td>
+                    @if (!serviceMode) {
+                      <td class="text-right font-mono">
+                        @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                      <td class="text-right">
+                        @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
+                          <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                      <td class="text-right">
+                        @if (p.type === 'product') {
+                          <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                    }
                     <td style="display:flex;gap:4px">
                       @if (canEdit) {
                         <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
@@ -151,20 +157,22 @@
                 <td class="text-muted">{{ p.uomName || '—' }}</td>
                 <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
                 <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
-                <td class="text-right font-mono">
-                  @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
-                  } @else { <span class="text-muted">—</span> }
-                </td>
-                <td class="text-right">
-                  @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
-                    <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
-                  } @else { <span class="text-muted">—</span> }
-                </td>
-                <td class="text-right">
-                  @if (p.type === 'product') {
-                    <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
-                  } @else { <span class="text-muted">—</span> }
-                </td>
+                @if (!serviceMode) {
+                  <td class="text-right font-mono">
+                    @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
+                    } @else { <span class="text-muted">—</span> }
+                  </td>
+                  <td class="text-right">
+                    @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
+                      <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
+                    } @else { <span class="text-muted">—</span> }
+                  </td>
+                  <td class="text-right">
+                    @if (p.type === 'product') {
+                      <span [class]="(p.qtyAvailable || 0) <= 0 ? 'qty-zero' : 'qty-ok'">{{ p.qtyAvailable | number:'1.0-2' }}</span>
+                    } @else { <span class="text-muted">—</span> }
+                  </td>
+                }
                 <td style="display:flex;gap:4px">
                   @if (canEdit) {
                     <button class="btn-icon" (click)="openEdit(p)" title="Modifier">
@@ -234,7 +242,7 @@
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>{{ editingProduct ? 'Modifier' : 'Nouvel article' }}</h2>
+        <h2>{{ editingProduct ? (serviceMode ? 'Modifier le service' : 'Modifier') : (serviceMode ? 'Nouveau service' : 'Nouvel article') }}</h2>
         <button class="btn-close" (click)="closeModal()"><span class="material-icons">close</span></button>
       </div>
       <div class="modal-body">
@@ -242,11 +250,11 @@
         <div class="form-row">
           <div class="form-group">
             <label>Référence (SKU)</label>
-            <input type="text" [(ngModel)]="form.defaultCode" class="form-control" placeholder="REF-001" />
+            <input type="text" [(ngModel)]="form.defaultCode" class="form-control" [placeholder]="serviceMode ? 'SRV-001' : 'REF-001'" />
           </div>
           <div class="form-group required-field">
             <label>Nom <span class="req">*</span></label>
-            <input type="text" [(ngModel)]="form.name" class="form-control" placeholder="Nom de l'article" />
+            <input type="text" [(ngModel)]="form.name" class="form-control" [placeholder]="serviceMode ? 'Nom du service' : 'Nom de l\'article'" />
           </div>
         </div>
         <div class="form-row">
@@ -257,14 +265,16 @@
               @for (c of categories; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
             </select>
           </div>
-          <div class="form-group">
-            <label>Type</label>
-            <select [(ngModel)]="form.type" class="form-control">
-              <option value="product">Stockable</option>
-              <option value="service">Service</option>
-              <option value="consu">Consommable</option>
-            </select>
-          </div>
+          @if (!serviceMode) {
+            <div class="form-group">
+              <label>Type</label>
+              <select [(ngModel)]="form.type" class="form-control">
+                <option value="product">Stockable</option>
+                <option value="service">Service</option>
+                <option value="consu">Consommable</option>
+              </select>
+            </div>
+          }
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -278,7 +288,7 @@
             }
           </div>
           <div class="form-group">
-            <label>Prix de revient (CMUP)</label>
+            <label>{{ serviceMode ? 'Coût (prestataire externe, si applicable)' : 'Prix de revient (CMUP)' }}</label>
             <input type="number" [(ngModel)]="form.standardPrice" class="form-control" min="0" />
           </div>
         </div>
@@ -293,6 +303,27 @@
               <input type="text" [(ngModel)]="form.stockAccountCode" class="form-control" placeholder="311000" />
             </div>
           }
+        </div>
+        <div class="form-group">
+          <label>Photo {{ serviceMode ? '' : "(affichée dans la liste articles)" }}</label>
+          <input #photoInput type="file" accept="image/*" capture="environment" style="display:none" (change)="onPhotoSelected($event)" />
+          <div class="photo-field">
+            @if (photoPreviewUrl) {
+              <img [src]="photoPreviewUrl" class="photo-preview" alt="" />
+            } @else {
+              <div class="photo-placeholder"><span class="material-icons">image</span></div>
+            }
+            <div class="photo-actions">
+              <button type="button" class="btn-secondary" (click)="triggerPhotoPicker()">
+                <span class="material-icons">photo_camera</span> {{ photoPreviewUrl ? 'Changer' : 'Prendre / choisir une photo' }}
+              </button>
+              @if (photoPreviewUrl) {
+                <button type="button" class="btn-secondary" [disabled]="uploadingPhoto" (click)="removePhoto()">
+                  <span class="material-icons">delete</span> Retirer
+                </button>
+              }
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>Description</label>

@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest } from '../../services/stock.service';
 import { SalesService, SalesClient, PrixClientArticle } from '../../../sales/services/sales.service';
 import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/services/purchase.service';
@@ -12,6 +13,11 @@ import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/ex
 const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Prix de vente', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
 const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '700', '500', 'Bières', '1000', 'Caisse', 'Non', 'Non'];
 
+// Pas de quantité en stock (les services n'ont pas d'existence physique) ; la catégorie reste
+// une simple catégorie d'article (optionnelle) — ce projet n'a pas de notion de point de vente.
+const SERVICE_HEADERS = ['Nom', 'Référence interne', 'Prix de vente', 'Coût', 'Catégorie d\'article', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
+const SERVICE_SAMPLE  = ['Installation', 'SRV-INST', '15000', '0', '', 'Forfait', 'Non', 'Non'];
+
 @Component({
   selector: 'app-product-list',
   standalone: true,
@@ -21,6 +27,10 @@ const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '700', '500', 'Bières',
 })
 export class ProductListComponent implements OnInit {
   @ViewChild('importInput') importInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('photoInput') photoInput?: ElementRef<HTMLInputElement>;
+
+  /** Vrai quand affiché via /stock/services — filtre et catégorise sur les services uniquement. */
+  serviceMode = false;
 
   products: Product[] = [];
   categories: ProductCategory[] = [];
@@ -41,6 +51,11 @@ export class ProductListComponent implements OnInit {
   selectedWarehouseId: number | '' = '';
 
   form: Partial<Product> = this.emptyForm();
+
+  // === Photo article ===
+  photoFile: File | null = null;
+  photoPreviewUrl: string | null = null;
+  uploadingPhoto = false;
 
   // === Import Excel ===
   showImportModal = false;
@@ -83,10 +98,12 @@ export class ProductListComponent implements OnInit {
     private salesService: SalesService,
     private purchaseService: PurchaseService,
     private accountingService: AccountingService,
-    private authService: AuthService
+    private authService: AuthService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    this.serviceMode = this.route.snapshot.data['serviceMode'] === true;
     this.companyId = this.authService.getCompanyId();
     this.canCreate = this.authService.hasPermission('STOCK', 'PRODUITS', 'CREATE');
     this.canEdit   = this.authService.hasPermission('STOCK', 'PRODUITS', 'EDIT');
@@ -137,6 +154,9 @@ export class ProductListComponent implements OnInit {
 
   applyFilter(): void {
     let list = [...this.products];
+    if (this.serviceMode) {
+      list = list.filter(p => p.type === 'service');
+    }
     if (this.search) {
       const q = this.search.toLowerCase();
       list = list.filter(p =>
@@ -151,8 +171,9 @@ export class ProductListComponent implements OnInit {
   }
 
   get catCounts(): Record<string, number> {
-    const counts: Record<string, number> = { autres: this.products.length, articles: 0, emballages: 0, bouteilles: 0 };
-    this.products.forEach(p => {
+    const source = this.serviceMode ? this.products.filter(p => p.type === 'service') : this.products;
+    const counts: Record<string, number> = { autres: source.length, articles: 0, emballages: 0, bouteilles: 0 };
+    source.forEach(p => {
       const g = this.catGroup(p);
       if (g !== 'autres') counts[g]++;
     });
@@ -172,6 +193,7 @@ export class ProductListComponent implements OnInit {
     this.form = this.emptyForm();
     this.showModal = true;
     this.errorMsg = '';
+    this.resetPhotoState();
   }
 
   openEdit(p: Product): void {
@@ -179,6 +201,7 @@ export class ProductListComponent implements OnInit {
     this.form = { ...p };
     this.showModal = true;
     this.errorMsg = '';
+    this.resetPhotoState();
     this.showTarifsSection = false;
     this.showFournisseurTarifsSection = false;
     this.productPrices = [];
@@ -194,7 +217,14 @@ export class ProductListComponent implements OnInit {
     this.loadProductFournisseurPrices(p.id!);
   }
 
-  closeModal(): void { this.showModal = false; this.productPrices = []; this.productFournisseurPrices = []; }
+  closeModal(): void {
+    this.showModal = false;
+    this.productPrices = [];
+    this.productFournisseurPrices = [];
+    if (this.photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.photoPreviewUrl);
+    this.photoFile = null;
+    this.photoPreviewUrl = null;
+  }
 
   loadProductPrices(productId: number): void {
     this.loadingPrices = true;
@@ -314,13 +344,62 @@ export class ProductListComponent implements OnInit {
       ? this.stockService.updateProduct(this.editingProduct.id!, dto)
       : this.stockService.createProduct(dto);
     obs.subscribe({
-      next: () => { this.saving = false; this.showModal = false; this.load(); },
+      next: (saved) => {
+        if (this.photoFile && saved.id) {
+          this.stockService.uploadProductPhoto(saved.id, this.photoFile).subscribe({
+            next: () => { this.saving = false; this.showModal = false; this.load(); },
+            error: (e) => { this.saving = false; this.errorMsg = 'Article enregistré, mais erreur sur la photo : ' + (e.error?.message || 'erreur inconnue'); this.load(); }
+          });
+        } else {
+          this.saving = false;
+          this.showModal = false;
+          this.load();
+        }
+      },
       error: (e) => { this.saving = false; this.errorMsg = e.error?.message || 'Erreur'; }
     });
   }
 
+  // === Photo article ===
+
+  private resetPhotoState(): void {
+    this.photoFile = null;
+    if (this.photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.photoPreviewUrl);
+    this.photoPreviewUrl = this.editingProduct?.id && this.editingProduct.hasPhoto
+      ? this.stockService.getProductPhotoUrl(this.editingProduct.id)
+      : null;
+  }
+
+  triggerPhotoPicker(): void {
+    this.photoInput?.nativeElement.click();
+  }
+
+  onPhotoSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.photoFile = file;
+    if (this.photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.photoPreviewUrl);
+    this.photoPreviewUrl = URL.createObjectURL(file);
+  }
+
+  removePhoto(): void {
+    if (this.photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(this.photoPreviewUrl);
+    this.photoFile = null;
+    this.photoPreviewUrl = null;
+    if (!this.editingProduct?.id || !this.editingProduct.hasPhoto) return;
+    if (!confirm('Supprimer la photo de cet article ?')) return;
+    this.uploadingPhoto = true;
+    this.stockService.deleteProductPhoto(this.editingProduct.id).subscribe({
+      next: () => { this.uploadingPhoto = false; this.editingProduct!.hasPhoto = false; },
+      error: () => { this.uploadingPhoto = false; }
+    });
+  }
+
   private emptyForm(): Partial<Product> {
-    return { type: 'product', active: true, uomName: 'Unité', standardPrice: 0, salePrice: 0, exemptTva: false, exemptTvaAchat: false };
+    return {
+      type: this.serviceMode ? 'service' : 'product',
+      active: true, uomName: 'Unité', standardPrice: 0, salePrice: 0, exemptTva: false, exemptTvaAchat: false
+    };
   }
 
   get typeLabels(): Record<string, string> {
@@ -330,7 +409,11 @@ export class ProductListComponent implements OnInit {
   // === Import Excel ===
 
   downloadTemplate(): void {
-    downloadExcelTemplate(PRODUCT_HEADERS, PRODUCT_SAMPLE, 'modele_articles.xlsx');
+    if (this.serviceMode) {
+      downloadExcelTemplate(SERVICE_HEADERS, SERVICE_SAMPLE, 'modele_services.xlsx');
+    } else {
+      downloadExcelTemplate(PRODUCT_HEADERS, PRODUCT_SAMPLE, 'modele_articles.xlsx');
+    }
   }
 
   triggerImport(): void {
@@ -385,12 +468,13 @@ export class ProductListComponent implements OnInit {
     for (const row of this.importRows) {
       const name = String(row['Nom'] || row['Nom*'] || '').trim();
       if (!name) continue;
-      const qty = parseFloat(row['Quantité en stock'] || '0') || 0;
+      // Les services n'ont pas d'existence physique : pas de quantité en stock à initialiser.
+      const qty = this.serviceMode ? 0 : (parseFloat(row['Quantité en stock'] || '0') || 0);
       const uomName = String(row['Unité de mesure'] || row['Unité'] || 'Unité').trim();
       const dto: Product = {
         name,
         defaultCode: String(row['Référence interne'] || row['Code (Référence)'] || '').trim() || undefined,
-        type: 'product',
+        type: this.serviceMode ? 'service' : 'product',
         categoryId: this.getCategoryId(String(row['Catégorie d\'article'] || row['Catégorie'] || '')),
         standardPrice: parseFloat(row['Coût'] || row['Prix Achat (FCFA)']) || 0,
         salePrice: parseFloat(row['Prix de vente'] || row['Prix Vente (FCFA)']) || 0,

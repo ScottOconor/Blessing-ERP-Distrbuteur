@@ -37,6 +37,8 @@ public class SalesInvoiceDTO {
     private String accountMoveName;
     private Long warehouseId;
     private String warehouseName;
+    private Long sellerId;
+    private String sellerName;
     /** Solde courant du partenaire : positif = il nous doit, négatif = on lui doit */
     private java.math.BigDecimal partnerBalance;
     /** Total des avoirs non encore compensés disponibles pour ce client */

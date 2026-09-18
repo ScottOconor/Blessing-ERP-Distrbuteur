@@ -154,6 +154,10 @@ public class SalesInvoice {
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
+    /** Vendeur ayant réalisé la vente (nullable — facultatif) */
+    @Column(name = "seller_id")
+    private Long sellerId;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

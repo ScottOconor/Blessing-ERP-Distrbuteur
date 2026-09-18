@@ -2,7 +2,7 @@ import { Component, OnInit, HostListener, ViewChildren, ElementRef, QueryList } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { SalesService, SalesOrder, SalesOrderLine, SalesClient, PrixClientArticle } from '../../services/sales.service';
+import { SalesService, SalesOrder, SalesOrderLine, SalesClient, PrixClientArticle, Seller } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CompanyService } from '../../../../core/services/company.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
@@ -23,6 +23,7 @@ export class OrderFormComponent implements OnInit {
   orderId: number | null = null;
   order: SalesOrder = this.emptyOrder();
   clients: SalesClient[] = [];
+  sellers: Seller[] = [];
   journals: AccountJournal[] = [];
   warehouses: Warehouse[] = [];
   allProducts: Product[] = [];
@@ -55,6 +56,46 @@ export class OrderFormComponent implements OnInit {
     this.onClientChange(c.id!);
   }
   onClientBlur(): void { setTimeout(() => this.clientDropdown = false, 200); }
+
+  // ─── Création client à la volée ─────────────────────────────────────
+  showCreateClient = false;
+  creatingClient = false;
+  createClientError = '';
+  newClient: Partial<SalesClient> = {};
+
+  openCreateClient(): void {
+    this.newClient = { type: 'customer', name: this.clientSearch.trim() };
+    this.createClientError = '';
+    this.showCreateClient = true;
+    this.clientDropdown = false;
+  }
+
+  closeCreateClient(): void { this.showCreateClient = false; }
+
+  createClient(): void {
+    if (!this.newClient.name?.trim()) { this.createClientError = 'Nom obligatoire.'; return; }
+    this.creatingClient = true;
+    this.createClientError = '';
+    const companyId = this.authService.getCompanyId();
+    const dto: SalesClient = {
+      name: this.newClient.name.trim(),
+      type: 'customer',
+      phone: this.newClient.phone,
+      companyId
+    };
+    this.salesService.createClient(dto).subscribe({
+      next: (created) => {
+        this.creatingClient = false;
+        this.showCreateClient = false;
+        this.clients.push(created);
+        this.selectClient(created);
+      },
+      error: (e) => {
+        this.creatingClient = false;
+        this.createClientError = e.error?.message || 'Erreur lors de la création du client.';
+      }
+    });
+  }
 
   // Autocomplete state per line
   lineSearches: string[] = [];
@@ -180,6 +221,10 @@ export class OrderFormComponent implements OnInit {
 
     this.stockService.getWarehouses(companyId).subscribe({
       next: (data) => { this.warehouses = data.filter(w => w.active !== false); }
+    });
+
+    this.salesService.getSellers(companyId).subscribe({
+      next: (data) => { this.sellers = data; }
     });
 
     this.accountingService.getJournals(companyId).subscribe({

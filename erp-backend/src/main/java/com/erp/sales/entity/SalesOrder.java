@@ -77,6 +77,10 @@ public class SalesOrder {
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
+    /** Vendeur ayant réalisé la vente (nullable — facultatif) */
+    @Column(name = "seller_id")
+    private Long sellerId;
+
     /** Référence de la facture eLeader d'origine (si importé via le module eLeader) */
     @Column(name = "eleader_reference")
     private String eleaderReference;

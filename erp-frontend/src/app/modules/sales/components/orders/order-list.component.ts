@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SalesService, SalesOrder } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 @Component({
   selector: 'app-order-list',
@@ -222,6 +223,6 @@ export class OrderListComponent implements OnInit {
   }
 
   fmtN(v: number): string {
-    return new Intl.NumberFormat('fr-FR').format(v || 0);
+    return formatFCFA(v, false);
   }
 }

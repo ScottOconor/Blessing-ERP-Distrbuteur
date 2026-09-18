@@ -49,6 +49,8 @@ export interface SalesOrder {
   lines: SalesOrderLine[];
   warehouseId?: number;
   warehouseName?: string;
+  sellerId?: number;
+  sellerName?: string;
   createdAt?: string;
   createdBy?: string;
   invoiceId?: number;
@@ -136,6 +138,8 @@ export interface SalesInvoice {
   companyId: number;
   warehouseId?: number;
   warehouseName?: string;
+  sellerId?: number;
+  sellerName?: string;
   partnerBalance?: number | null;
   partnerCreditDisponible?: number | null;
   salesOrderId?: number;
@@ -203,6 +207,17 @@ export interface SalesClient {
   creditLimit?: number;
   receivableAccountCode?: string;
   exemptTaxeGuinness?: boolean;
+}
+
+export interface Seller {
+  id?: number;
+  ref?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  companyId: number;
+  companyName?: string;
+  active?: boolean;
 }
 
 // ===== Lettrage =====
@@ -420,6 +435,22 @@ export class SalesService {
   }
   deleteClient(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/clients/${id}`);
+  }
+
+  // Vendeurs
+  getSellers(companyId: number): Observable<Seller[]> {
+    return this.http.get<Seller[]>(`${this.apiUrl}/sellers`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+  createSeller(seller: Seller): Observable<Seller> {
+    return this.http.post<Seller>(`${this.apiUrl}/sellers`, seller);
+  }
+  updateSeller(id: number, seller: Seller): Observable<Seller> {
+    return this.http.put<Seller>(`${this.apiUrl}/sellers/${id}`, seller);
+  }
+  deleteSeller(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/sellers/${id}`);
   }
 
   // Lettrage

@@ -27,6 +27,8 @@ public class SalesOrderDTO {
     private Long companyId;
     private Long warehouseId;
     private String warehouseName;
+    private Long sellerId;
+    private String sellerName;
 
     private BigDecimal totalHT;
     private BigDecimal totalTVA;

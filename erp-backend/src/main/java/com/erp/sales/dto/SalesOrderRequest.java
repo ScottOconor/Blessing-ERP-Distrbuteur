@@ -19,6 +19,7 @@ public class SalesOrderRequest {
     private String notes;
     private Long companyId;
     private Long warehouseId;
+    private Long sellerId;
     private List<LineRequest> lines;
 
     @Data

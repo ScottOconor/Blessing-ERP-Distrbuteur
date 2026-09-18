@@ -4546,25 +4546,25 @@ var routes = [
   },
   {
     path: "sales",
-    loadChildren: () => import("./chunk-3MR57KPC.js").then((m) => m.salesRoutes),
+    loadChildren: () => import("./chunk-KZMGIQWD.js").then((m) => m.salesRoutes),
     canActivate: [licenseGuard, authGuard, permissionGuard, moduleInstalledGuard],
     data: { permModule: "VENTES" }
   },
   {
     path: "purchases",
-    loadChildren: () => import("./chunk-AFYU2EHV.js").then((m) => m.purchasesRoutes),
+    loadChildren: () => import("./chunk-SZDMVZQ5.js").then((m) => m.purchasesRoutes),
     canActivate: [licenseGuard, authGuard, permissionGuard, moduleInstalledGuard],
     data: { permModule: "ACHATS" }
   },
   {
     path: "stock",
-    loadChildren: () => import("./chunk-7QLBGANA.js").then((m) => m.stockRoutes),
+    loadChildren: () => import("./chunk-C4LV3I3I.js").then((m) => m.stockRoutes),
     canActivate: [licenseGuard, authGuard, permissionGuard, moduleInstalledGuard],
     data: { permModule: "STOCK" }
   },
   {
     path: "config",
-    loadChildren: () => import("./chunk-TBMBDUVV.js").then((m) => m.configRoutes),
+    loadChildren: () => import("./chunk-QHUUV4XR.js").then((m) => m.configRoutes),
     canActivate: [licenseGuard, authGuard, permissionGuard],
     data: { permModule: "CONFIG" }
   },
@@ -4580,7 +4580,7 @@ var routes = [
   },
   {
     path: "caisses",
-    loadChildren: () => import("./chunk-BWXROHIU.js").then((m) => m.caissesRoutes),
+    loadChildren: () => import("./chunk-RFEE7IUK.js").then((m) => m.caissesRoutes),
     canActivate: [licenseGuard, authGuard, permissionGuard, moduleInstalledGuard],
     data: { permModule: "CAISSE" }
   },

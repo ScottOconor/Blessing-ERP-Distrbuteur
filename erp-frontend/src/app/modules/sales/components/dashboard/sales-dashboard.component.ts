@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { SalesService, SalesOrder, SalesInvoice } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
 interface Creance {
   name: string;
@@ -196,7 +197,7 @@ export class SalesDashboardComponent implements OnInit {
   }
 
   fmtFull(n: number): string {
-    return new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+    return formatFCFA(Math.round(n));
   }
 
   stateLabel(s: string): string {

@@ -439,4 +439,22 @@ $accent: #017E84;
   color: var(--text-muted); background: var(--bg-elevated);
   padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
 }
+.ac-create {
+  color: $accent;
+  .material-icons { font-size: 18px; }
+  &:hover { background: rgba(1,126,132,0.08); }
+}
+
+// ─── Modal création client à la volée ──────────────────────────────────────
+.modal-create-client {
+  background: var(--bg-surface); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  width: 100%; max-width: 420px; overflow: hidden;
+  display: flex; flex-direction: column; max-height: 90vh;
+}
+.field-row {
+  display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px;
+  &:last-child { margin-bottom: 0; }
+  label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .required { color: var(--danger); }
+}
 

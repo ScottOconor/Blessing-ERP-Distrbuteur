@@ -41,6 +41,7 @@ export interface Product {
   qtyOnHand?: number;
   qtyReserved?: number;
   qtyAvailable?: number;
+  hasPhoto?: boolean;
   createdAt?: string;
 }
 
@@ -481,6 +482,17 @@ export class StockService {
   }
   deleteProduct(id: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/products/${id}`);
+  }
+  uploadProductPhoto(id: number, file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<void>(`${this.api}/products/${id}/photo`, form);
+  }
+  deleteProductPhoto(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/products/${id}/photo`);
+  }
+  getProductPhotoUrl(id: number): string {
+    return `${this.api}/products/${id}/photo`;
   }
 
   // Warehouses

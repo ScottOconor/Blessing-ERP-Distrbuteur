@@ -70,6 +70,7 @@
             <th>Date</th>
             <th>Client</th>
             <th>Bon de commande</th>
+            <th>Vendeur</th>
             <th class="text-right">Total HT</th>
             <th class="text-right">Total TTC</th>
             <th class="text-right">Payé</th>
@@ -87,6 +88,7 @@
                   <span class="group-label">{{ row.label }}</span>
                   <span class="badge">{{ row.count }}</span>
                 </td>
+                <td></td>
                 <td class="text-right group-num">{{ fmtN(row.totalHT) }}</td>
                 <td class="text-right group-num">{{ fmtN(row.totalTTC) }}</td>
                 <td class="text-right group-num text-success">{{ fmtN(row.paye) }}</td>
@@ -104,6 +106,7 @@
                         <span class="link-ref">{{ inv.salesOrderName }}</span>
                       } @else { <span class="text-muted">—</span> }
                     </td>
+                    <td>{{ inv.sellerName || '—' }}</td>
                     <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
                     <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
                     <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
@@ -134,6 +137,7 @@
                     <span class="link-ref">{{ inv.salesOrderName }}</span>
                   } @else { <span class="text-muted">—</span> }
                 </td>
+                <td>{{ inv.sellerName || '—' }}</td>
                 <td class="text-right">{{ inv.totalHT | number:'1.0-0' }}</td>
                 <td class="text-right font-bold">{{ inv.totalTTC | number:'1.0-0' }}</td>
                 <td class="text-right text-success">{{ inv.montantPaye | number:'1.0-0' }}</td>
@@ -156,6 +160,7 @@
         <tfoot>
           <tr class="totals-row">
             <td colspan="4" class="font-bold">Totaux ({{ filteredInvoices.length }})</td>
+            <td></td>
             <td class="text-right font-bold">{{ totals.ht | number:'1.0-0' }}</td>
             <td class="text-right font-bold">{{ totals.ttc | number:'1.0-0' }}</td>
             <td class="text-right text-success font-bold">{{ totals.paye | number:'1.0-0' }}</td>
