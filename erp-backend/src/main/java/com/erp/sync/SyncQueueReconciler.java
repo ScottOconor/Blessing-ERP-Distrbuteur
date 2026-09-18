@@ -22,9 +22,15 @@ import java.util.concurrent.TimeoutException;
  * s'est pas rétablie sans redéclarer la queue (cf. RabbitMQConfig côté hub-backend, même
  * correctif : incident Blessing du 27/08, puis récurrences observées le 16/09).
  *
- * Ne supprime la queue existante que si elle est vide (messageCount == 0) : sinon on risquerait
- * de perdre des events non consommés côté Hub, ce qui est strictement pire que l'échec actuel.
- * Dans ce cas on laisse RabbitAdmin échouer normalement plus loin, avec un log explicite.
+ * Supprime et recrée la queue même si elle contient des messages non consommés. Avant ce
+ * correctif, la réparation était refusée tant que messageCount > 0 pour ne pas perdre d'events —
+ * mais tant que la queue reste mal formée, RIEN n'est jamais consommé (le mismatch bloque la
+ * déclaration à chaque démarrage), donc elle ne redevient jamais vide : blocage définitif
+ * observé en prod (cf. erp.log.txt Blessing du 2026-09-17 — PRECONDITION_FAILED des dizaines de
+ * fois par jour, aucune réparation jamais tentée). Les events perdus ici (créations/paiements/
+ * mouvements individuels en attente) sont rattrapés par le snapshot horaire/"Forcer envoi", qui
+ * renvoie l'état complet de chaque société à chaque passage — un filet de reconciliation déjà
+ * conçu pour ce cas, donc purger la queue est un compromis acceptable face au blocage permanent.
  */
 @Component
 @RequiredArgsConstructor
@@ -79,13 +85,14 @@ public class SyncQueueReconciler implements ApplicationRunner {
             try (Channel repair = connection.createChannel()) {
                 AMQP.Queue.DeclareOk info = repair.queueDeclarePassive(RabbitMQConfig.QUEUE);
                 if (info.getMessageCount() > 0) {
-                    log.error("ARRÊT DE LA RÉPARATION : la queue {} contient {} message(s) non consommé(s) et ses arguments ne correspondent pas — "
-                                    + "suppression automatique refusée pour ne pas perdre de données. Intervention manuelle requise.",
+                    log.warn("Queue {} supprimée avec {} message(s) non consommé(s) encore en attente — "
+                                    + "perte acceptée (voir javadoc de cette classe) : le snapshot horaire/"
+                                    + "\"Forcer envoi\" renverra l'état complet et rattrapera ces events.",
                             RabbitMQConfig.QUEUE, info.getMessageCount());
-                    return;
+                } else {
+                    log.warn("Queue {} vide supprimée — sera recréée avec les arguments DLX corrects par RabbitAdmin.", RabbitMQConfig.QUEUE);
                 }
                 repair.queueDelete(RabbitMQConfig.QUEUE);
-                log.warn("Queue {} vide supprimée — sera recréée avec les arguments DLX corrects par RabbitAdmin.", RabbitMQConfig.QUEUE);
             }
         }
     }
