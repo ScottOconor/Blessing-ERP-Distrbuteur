@@ -18,6 +18,8 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
   dispatching = false;
   retrying = false;
   snapshotting = false;
+  snapshottingHourly = false;
+  forcingFailed = false;
   clearingFailed = false;
   testingHub = false;
   hubTest: HubTestResult | null = null;
@@ -123,6 +125,7 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Bouton "Snapshot complet" : renvoie tout l'historique (pas de fenêtre de 2 ans). */
   forceSnapshot(): void {
     this.snapshotting = true;
     this.syncService.forceSnapshot().subscribe({
@@ -131,11 +134,38 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Bouton "Snapshot horaire" : déclenche tout de suite le même snapshot incrémental que le job
+   *  planifié, au lieu d'attendre jusqu'à une heure pour vérifier l'effet d'un changement. */
+  triggerHourlySnapshot(): void {
+    this.snapshottingHourly = true;
+    this.syncService.triggerHourlySnapshot().subscribe({
+      next: () => { this.snapshottingHourly = false; setTimeout(() => this.loadAll(), 800); },
+      error: () => { this.snapshottingHourly = false; }
+    });
+  }
+
   forceDispatch(): void {
     this.dispatching = true;
     this.syncService.forceDispatch().subscribe({
       next: () => { this.dispatching = false; setTimeout(() => this.loadAll(), 500); },
       error: () => { this.dispatching = false; }
+    });
+  }
+
+  /** Bouton "Forcer envoi" : remet en attente tout ce qui a échoué PUIS déclenche l'envoi tout de
+   *  suite, au lieu d'attendre le prochain passage planifié (30s) — un vrai "renvoyer maintenant
+   *  tout ce qui a échoué", distinct du bouton "Snapshot complet" qui reconstruit un nouveau
+   *  snapshot plutôt que de rejouer des événements déjà en échec. */
+  forceFailedRetry(): void {
+    this.forcingFailed = true;
+    this.syncService.retryAll().subscribe({
+      next: () => {
+        this.syncService.forceDispatch().subscribe({
+          next: () => { this.forcingFailed = false; setTimeout(() => this.loadAll(), 500); },
+          error: () => { this.forcingFailed = false; this.loadAll(); }
+        });
+      },
+      error: () => { this.forcingFailed = false; }
     });
   }
 

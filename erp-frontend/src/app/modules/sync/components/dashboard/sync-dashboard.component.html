@@ -17,11 +17,17 @@
       <button class="btn-action btn-snapshot" (click)="forceSnapshot()" [disabled]="snapshotting"
               title="Envoie l'état complet du système au Hub, sans limite d'historique (factures, avoirs, bons de commande...) — à utiliser pour rattraper des documents restés bloqués">
         <span class="material-icons" [class.spinning]="snapshotting">cloud_upload</span>
-        {{ snapshotting ? 'Snapshot...' : 'Envoyer snapshot' }}
+        {{ snapshotting ? 'Snapshot...' : 'Snapshot complet' }}
       </button>
-      <button class="btn-action btn-dispatch" (click)="forceDispatch()" [disabled]="dispatching">
-        <span class="material-icons" [class.spinning]="dispatching">send</span>
-        {{ dispatching ? 'Envoi...' : 'Forcer envoi' }}
+      <button class="btn-action btn-snapshot-hourly" (click)="triggerHourlySnapshot()" [disabled]="snapshottingHourly"
+              title="Déclenche tout de suite le même snapshot incrémental que le job planifié (seulement ce qui a changé depuis le dernier envoi), sans attendre le prochain passage horaire">
+        <span class="material-icons" [class.spinning]="snapshottingHourly">schedule_send</span>
+        {{ snapshottingHourly ? 'Snapshot...' : 'Snapshot horaire' }}
+      </button>
+      <button class="btn-action btn-dispatch" (click)="forceFailedRetry()" [disabled]="forcingFailed"
+              title="Renvoie tout de suite tous les événements en échec, au lieu d'attendre une nouvelle tentative automatique">
+        <span class="material-icons" [class.spinning]="forcingFailed">send</span>
+        {{ forcingFailed ? 'Envoi...' : 'Forcer envoi' }}
       </button>
       <button class="btn-action btn-refresh" (click)="loadAll()" [disabled]="loading">
         <span class="material-icons" [class.spinning]="loading">refresh</span>

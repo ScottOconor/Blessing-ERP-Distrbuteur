@@ -82,6 +82,11 @@ var SyncService = class _SyncService {
   forceSnapshot() {
     return this.http.post(`${this.base}/snapshot/force`, {});
   }
+  /** Déclenche tout de suite le même snapshot incrémental que le job planifié, sans attendre le
+   *  prochain passage horaire. */
+  triggerHourlySnapshot() {
+    return this.http.post(`${this.base}/snapshot/hourly`, {});
+  }
   testHub() {
     return this.http.get(`${this.base}/test-hub`);
   }
@@ -108,11 +113,11 @@ var SyncService = class _SyncService {
 var _c0 = () => [1, 2, 3, 4, 5];
 var _forTrack0 = ($index, $item) => $item.id;
 var _forTrack1 = ($index, $item) => $item.value;
-function SyncDashboardComponent_Conditional_54_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_58_Template(rf, ctx) {
   if (rf & 1) {
     const _r1 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 18)(1, "button", 32);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_54_Template_button_click_1_listener() {
+    \u0275\u0275domElementStart(0, "div", 19)(1, "button", 33);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_58_Template_button_click_1_listener() {
       \u0275\u0275restoreView(_r1);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.retryAll());
@@ -122,8 +127,8 @@ function SyncDashboardComponent_Conditional_54_Template(rf, ctx) {
     \u0275\u0275domElementEnd();
     \u0275\u0275text(4);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(5, "button", 33);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_54_Template_button_click_5_listener() {
+    \u0275\u0275domElementStart(5, "button", 34);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_58_Template_button_click_5_listener() {
       \u0275\u0275restoreView(_r1);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.clearFailed());
@@ -146,9 +151,9 @@ function SyncDashboardComponent_Conditional_54_Template(rf, ctx) {
     \u0275\u0275textInterpolate1(" ", ctx_r1.clearingFailed ? "..." : "Vider les \xE9checs", " ");
   }
 }
-function SyncDashboardComponent_Conditional_64_Conditional_18_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_68_Conditional_18_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 40)(1, "span", 3);
+    \u0275\u0275domElementStart(0, "span", 41)(1, "span", 3);
     \u0275\u0275text(2, "error");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3);
@@ -160,9 +165,9 @@ function SyncDashboardComponent_Conditional_64_Conditional_18_Template(rf, ctx) 
     \u0275\u0275textInterpolate1(" ", ctx_r1.progress.failed, " \xE9chou\xE9s ");
   }
 }
-function SyncDashboardComponent_Conditional_64_Conditional_19_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_68_Conditional_19_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 41)(1, "span", 3);
+    \u0275\u0275domElementStart(0, "span", 42)(1, "span", 3);
     \u0275\u0275text(2, "bolt");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3);
@@ -174,9 +179,9 @@ function SyncDashboardComponent_Conditional_64_Conditional_19_Template(rf, ctx) 
     \u0275\u0275textInterpolate2(" Dernier batch : ", ctx_r1.progress.lastBatchSent, "/", ctx_r1.progress.lastBatchSize, " ");
   }
 }
-function SyncDashboardComponent_Conditional_64_Conditional_20_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_68_Conditional_20_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 42)(1, "span", 3);
+    \u0275\u0275domElementStart(0, "span", 43)(1, "span", 3);
     \u0275\u0275text(2, "access_time");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3);
@@ -188,33 +193,33 @@ function SyncDashboardComponent_Conditional_64_Conditional_20_Template(rf, ctx) 
     \u0275\u0275textInterpolate1(" Dernier envoi : ", ctx_r1.fmtDate(ctx_r1.progress.lastDispatchAt), " ");
   }
 }
-function SyncDashboardComponent_Conditional_64_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_68_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 20)(1, "div", 34)(2, "div", 35)(3, "span", 3);
+    \u0275\u0275domElementStart(0, "div", 21)(1, "div", 35)(2, "div", 36)(3, "span", 3);
     \u0275\u0275text(4, "sync");
     \u0275\u0275domElementEnd();
     \u0275\u0275domElementStart(5, "strong");
     \u0275\u0275text(6, "Progression globale");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(7, "span", 36);
+    \u0275\u0275domElementStart(7, "span", 37);
     \u0275\u0275text(8);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(9, "div", 37)(10, "span", 38)(11, "span", 3);
+    \u0275\u0275domElementStart(9, "div", 38)(10, "span", 39)(11, "span", 3);
     \u0275\u0275text(12, "check_circle");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(13);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(14, "span", 39)(15, "span", 3);
+    \u0275\u0275domElementStart(14, "span", 40)(15, "span", 3);
     \u0275\u0275text(16, "schedule");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(17);
     \u0275\u0275domElementEnd();
-    \u0275\u0275conditionalCreate(18, SyncDashboardComponent_Conditional_64_Conditional_18_Template, 4, 1, "span", 40);
-    \u0275\u0275conditionalCreate(19, SyncDashboardComponent_Conditional_64_Conditional_19_Template, 4, 2, "span", 41);
-    \u0275\u0275conditionalCreate(20, SyncDashboardComponent_Conditional_64_Conditional_20_Template, 4, 1, "span", 42);
+    \u0275\u0275conditionalCreate(18, SyncDashboardComponent_Conditional_68_Conditional_18_Template, 4, 1, "span", 41);
+    \u0275\u0275conditionalCreate(19, SyncDashboardComponent_Conditional_68_Conditional_19_Template, 4, 2, "span", 42);
+    \u0275\u0275conditionalCreate(20, SyncDashboardComponent_Conditional_68_Conditional_20_Template, 4, 1, "span", 43);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(21, "div", 43);
-    \u0275\u0275domElement(22, "div", 44);
+    \u0275\u0275domElementStart(21, "div", 44);
+    \u0275\u0275domElement(22, "div", 45);
     \u0275\u0275domElementEnd()();
   }
   if (rf & 2) {
@@ -236,9 +241,9 @@ function SyncDashboardComponent_Conditional_64_Template(rf, ctx) {
     \u0275\u0275classProp("bar-full", ctx_r1.progress.progressPct === 100)("bar-warn", ctx_r1.progress.failed > 0);
   }
 }
-function SyncDashboardComponent_Conditional_65_Conditional_10_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_69_Conditional_10_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 49);
+    \u0275\u0275domElementStart(0, "span", 50);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -248,9 +253,9 @@ function SyncDashboardComponent_Conditional_65_Conditional_10_Template(rf, ctx) 
     \u0275\u0275textInterpolate1("", ctx_r1.hubTest.latencyMs, " ms");
   }
 }
-function SyncDashboardComponent_Conditional_65_Conditional_11_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_69_Conditional_11_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 50);
+    \u0275\u0275domElementStart(0, "span", 51);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -260,26 +265,26 @@ function SyncDashboardComponent_Conditional_65_Conditional_11_Template(rf, ctx) 
     \u0275\u0275textInterpolate(ctx_r1.hubTest.message);
   }
 }
-function SyncDashboardComponent_Conditional_65_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_69_Template(rf, ctx) {
   if (rf & 1) {
     const _r3 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 45)(1, "span", 3);
+    \u0275\u0275domElementStart(0, "div", 46)(1, "span", 3);
     \u0275\u0275text(2);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(3, "div", 46)(4, "strong");
+    \u0275\u0275domElementStart(3, "div", 47)(4, "strong");
     \u0275\u0275text(5);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(6, "span", 47);
+    \u0275\u0275domElementStart(6, "span", 48);
     \u0275\u0275text(7);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(8, "span", 48);
+    \u0275\u0275domElementStart(8, "span", 49);
     \u0275\u0275text(9);
     \u0275\u0275domElementEnd();
-    \u0275\u0275conditionalCreate(10, SyncDashboardComponent_Conditional_65_Conditional_10_Template, 2, 1, "span", 49);
-    \u0275\u0275conditionalCreate(11, SyncDashboardComponent_Conditional_65_Conditional_11_Template, 2, 1, "span", 50);
+    \u0275\u0275conditionalCreate(10, SyncDashboardComponent_Conditional_69_Conditional_10_Template, 2, 1, "span", 50);
+    \u0275\u0275conditionalCreate(11, SyncDashboardComponent_Conditional_69_Conditional_11_Template, 2, 1, "span", 51);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(12, "button", 51);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_65_Template_button_click_12_listener() {
+    \u0275\u0275domElementStart(12, "button", 52);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_69_Template_button_click_12_listener() {
       \u0275\u0275restoreView(_r3);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.hubTest = null);
@@ -305,9 +310,9 @@ function SyncDashboardComponent_Conditional_65_Template(rf, ctx) {
     \u0275\u0275conditional(!ctx_r1.hubTest.reachable ? 11 : -1);
   }
 }
-function SyncDashboardComponent_Conditional_66_For_2_Conditional_7_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_70_For_2_Conditional_7_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 58);
+    \u0275\u0275domElementStart(0, "span", 59);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -318,9 +323,9 @@ function SyncDashboardComponent_Conditional_66_For_2_Conditional_7_Template(rf, 
     \u0275\u0275textInterpolate1("", ctx_r1.moduleStats(tab_r5.id).pending, " en attente");
   }
 }
-function SyncDashboardComponent_Conditional_66_For_2_Conditional_8_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_70_For_2_Conditional_8_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 59);
+    \u0275\u0275domElementStart(0, "span", 60);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -331,9 +336,9 @@ function SyncDashboardComponent_Conditional_66_For_2_Conditional_8_Template(rf, 
     \u0275\u0275textInterpolate1("", ctx_r1.moduleStats(tab_r5.id).failed, " \xE9chou\xE9(s)");
   }
 }
-function SyncDashboardComponent_Conditional_66_For_2_Conditional_9_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_70_For_2_Conditional_9_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 60)(1, "span", 61);
+    \u0275\u0275domElementStart(0, "span", 61)(1, "span", 62);
     \u0275\u0275text(2, "check");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3);
@@ -346,25 +351,25 @@ function SyncDashboardComponent_Conditional_66_For_2_Conditional_9_Template(rf, 
     \u0275\u0275textInterpolate1(" OK \u2014 ", ctx_r1.moduleStats(tab_r5.id).sent, " envoy\xE9(s) ");
   }
 }
-function SyncDashboardComponent_Conditional_66_For_2_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_70_For_2_Template(rf, ctx) {
   if (rf & 1) {
     const _r4 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 53);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_66_For_2_Template_div_click_0_listener() {
+    \u0275\u0275domElementStart(0, "div", 54);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_70_For_2_Template_div_click_0_listener() {
       const tab_r5 = \u0275\u0275restoreView(_r4).$implicit;
       const ctx_r1 = \u0275\u0275nextContext(2);
       return \u0275\u0275resetView(ctx_r1.selectTab(tab_r5.id));
     });
-    \u0275\u0275domElementStart(1, "div", 54)(2, "span", 55);
+    \u0275\u0275domElementStart(1, "div", 55)(2, "span", 56);
     \u0275\u0275text(3);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(4, "span", 56);
+    \u0275\u0275domElementStart(4, "span", 57);
     \u0275\u0275text(5);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(6, "div", 57);
-    \u0275\u0275conditionalCreate(7, SyncDashboardComponent_Conditional_66_For_2_Conditional_7_Template, 2, 1, "span", 58);
-    \u0275\u0275conditionalCreate(8, SyncDashboardComponent_Conditional_66_For_2_Conditional_8_Template, 2, 1, "span", 59);
-    \u0275\u0275conditionalCreate(9, SyncDashboardComponent_Conditional_66_For_2_Conditional_9_Template, 4, 1, "span", 60);
+    \u0275\u0275domElementStart(6, "div", 58);
+    \u0275\u0275conditionalCreate(7, SyncDashboardComponent_Conditional_70_For_2_Conditional_7_Template, 2, 1, "span", 59);
+    \u0275\u0275conditionalCreate(8, SyncDashboardComponent_Conditional_70_For_2_Conditional_8_Template, 2, 1, "span", 60);
+    \u0275\u0275conditionalCreate(9, SyncDashboardComponent_Conditional_70_For_2_Conditional_9_Template, 4, 1, "span", 61);
     \u0275\u0275domElementEnd()();
   }
   if (rf & 2) {
@@ -383,10 +388,10 @@ function SyncDashboardComponent_Conditional_66_For_2_Template(rf, ctx) {
     \u0275\u0275conditional(ctx_r1.moduleStats(tab_r5.id).pending === 0 && ctx_r1.moduleStats(tab_r5.id).failed === 0 ? 9 : -1);
   }
 }
-function SyncDashboardComponent_Conditional_66_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_70_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 22);
-    \u0275\u0275repeaterCreate(1, SyncDashboardComponent_Conditional_66_For_2_Template, 10, 7, "div", 52, _forTrack0);
+    \u0275\u0275domElementStart(0, "div", 23);
+    \u0275\u0275repeaterCreate(1, SyncDashboardComponent_Conditional_70_For_2_Template, 10, 7, "div", 53, _forTrack0);
     \u0275\u0275domElementEnd();
   }
   if (rf & 2) {
@@ -395,9 +400,9 @@ function SyncDashboardComponent_Conditional_66_Template(rf, ctx) {
     \u0275\u0275repeater(ctx_r1.tabs);
   }
 }
-function SyncDashboardComponent_For_71_Conditional_4_Template(rf, ctx) {
+function SyncDashboardComponent_For_75_Conditional_4_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 63);
+    \u0275\u0275domElementStart(0, "span", 64);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -408,9 +413,9 @@ function SyncDashboardComponent_For_71_Conditional_4_Template(rf, ctx) {
     \u0275\u0275textInterpolate(ctx_r1.moduleStats(tab_r7.id).pending);
   }
 }
-function SyncDashboardComponent_For_71_Conditional_5_Template(rf, ctx) {
+function SyncDashboardComponent_For_75_Conditional_5_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 64);
+    \u0275\u0275domElementStart(0, "span", 65);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -421,11 +426,11 @@ function SyncDashboardComponent_For_71_Conditional_5_Template(rf, ctx) {
     \u0275\u0275textInterpolate(ctx_r1.moduleStats(tab_r7.id).failed);
   }
 }
-function SyncDashboardComponent_For_71_Template(rf, ctx) {
+function SyncDashboardComponent_For_75_Template(rf, ctx) {
   if (rf & 1) {
     const _r6 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "button", 62);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_For_71_Template_button_click_0_listener() {
+    \u0275\u0275domElementStart(0, "button", 63);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_For_75_Template_button_click_0_listener() {
       const tab_r7 = \u0275\u0275restoreView(_r6).$implicit;
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.selectTab(tab_r7.id));
@@ -434,8 +439,8 @@ function SyncDashboardComponent_For_71_Template(rf, ctx) {
     \u0275\u0275text(2);
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3);
-    \u0275\u0275conditionalCreate(4, SyncDashboardComponent_For_71_Conditional_4_Template, 2, 1, "span", 63);
-    \u0275\u0275conditionalCreate(5, SyncDashboardComponent_For_71_Conditional_5_Template, 2, 1, "span", 64);
+    \u0275\u0275conditionalCreate(4, SyncDashboardComponent_For_75_Conditional_4_Template, 2, 1, "span", 64);
+    \u0275\u0275conditionalCreate(5, SyncDashboardComponent_For_75_Conditional_5_Template, 2, 1, "span", 65);
     \u0275\u0275domElementEnd();
   }
   if (rf & 2) {
@@ -452,11 +457,11 @@ function SyncDashboardComponent_For_71_Template(rf, ctx) {
     \u0275\u0275conditional(ctx_r1.moduleStats(tab_r7.id).failed > 0 ? 5 : -1);
   }
 }
-function SyncDashboardComponent_For_74_Template(rf, ctx) {
+function SyncDashboardComponent_For_78_Template(rf, ctx) {
   if (rf & 1) {
     const _r8 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "button", 65);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_For_74_Template_button_click_0_listener() {
+    \u0275\u0275domElementStart(0, "button", 66);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_For_78_Template_button_click_0_listener() {
       const f_r9 = \u0275\u0275restoreView(_r8).$implicit;
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.selectStatus(f_r9.value));
@@ -473,31 +478,31 @@ function SyncDashboardComponent_For_74_Template(rf, ctx) {
     \u0275\u0275textInterpolate1(" ", f_r9.label, " ");
   }
 }
-function SyncDashboardComponent_Conditional_97_For_1_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_101_For_1_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "tr", 66)(1, "td", 67);
-    \u0275\u0275domElement(2, "div", 68);
+    \u0275\u0275domElementStart(0, "tr", 67)(1, "td", 68);
+    \u0275\u0275domElement(2, "div", 69);
     \u0275\u0275domElementEnd()();
   }
 }
-function SyncDashboardComponent_Conditional_97_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_101_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275repeaterCreate(0, SyncDashboardComponent_Conditional_97_For_1_Template, 3, 0, "tr", 66, \u0275\u0275repeaterTrackByIdentity);
+    \u0275\u0275repeaterCreate(0, SyncDashboardComponent_Conditional_101_For_1_Template, 3, 0, "tr", 67, \u0275\u0275repeaterTrackByIdentity);
   }
   if (rf & 2) {
     \u0275\u0275repeater(\u0275\u0275pureFunction0(0, _c0));
   }
 }
-function SyncDashboardComponent_Conditional_98_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_102_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "tr")(1, "td", 69)(2, "span", 3);
+    \u0275\u0275domElementStart(0, "tr")(1, "td", 70)(2, "span", 3);
     \u0275\u0275text(3, "inbox");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(4, " Aucune op\xE9ration trouv\xE9e ");
     \u0275\u0275domElementEnd()();
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_5_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_5_Template(rf, ctx) {
   if (rf & 1) {
     \u0275\u0275domElementStart(0, "span");
     \u0275\u0275text(1);
@@ -510,9 +515,9 @@ function SyncDashboardComponent_Conditional_99_For_1_Conditional_5_Template(rf, 
     \u0275\u0275textInterpolate(ev_r11.eventModule);
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_17_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_17_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 86);
+    \u0275\u0275domElementStart(0, "span", 87);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -523,16 +528,16 @@ function SyncDashboardComponent_Conditional_99_For_1_Conditional_17_Template(rf,
     \u0275\u0275textInterpolate(ev_r11.retryCount);
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_18_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_18_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 81);
+    \u0275\u0275domElementStart(0, "span", 82);
     \u0275\u0275text(1, "\u2014");
     \u0275\u0275domElementEnd();
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_20_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_20_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 83);
+    \u0275\u0275domElementStart(0, "span", 84);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -543,18 +548,18 @@ function SyncDashboardComponent_Conditional_99_For_1_Conditional_20_Template(rf,
     \u0275\u0275textInterpolate1(" ", ev_r11.errorMessage.length > 40 ? ev_r11.errorMessage.slice(0, 40) + "\u2026" : ev_r11.errorMessage, " ");
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_21_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_21_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 81);
+    \u0275\u0275domElementStart(0, "span", 82);
     \u0275\u0275text(1, "\u2014");
     \u0275\u0275domElementEnd();
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Conditional_23_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Conditional_23_Template(rf, ctx) {
   if (rf & 1) {
     const _r12 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "button", 87);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_99_For_1_Conditional_23_Template_button_click_0_listener($event) {
+    \u0275\u0275domElementStart(0, "button", 88);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_103_For_1_Conditional_23_Template_button_click_0_listener($event) {
       \u0275\u0275restoreView(_r12);
       const ev_r11 = \u0275\u0275nextContext().$implicit;
       const ctx_r1 = \u0275\u0275nextContext(2);
@@ -572,42 +577,42 @@ function SyncDashboardComponent_Conditional_99_For_1_Conditional_23_Template(rf,
     \u0275\u0275textInterpolate(ctx_r1.retryingId === ev_r11.id ? "hourglass_empty" : "replay");
   }
 }
-function SyncDashboardComponent_Conditional_99_For_1_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_For_1_Template(rf, ctx) {
   if (rf & 1) {
     const _r10 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "tr", 71);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_99_For_1_Template_tr_click_0_listener() {
+    \u0275\u0275domElementStart(0, "tr", 72);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_103_For_1_Template_tr_click_0_listener() {
       const ev_r11 = \u0275\u0275restoreView(_r10).$implicit;
       const ctx_r1 = \u0275\u0275nextContext(2);
       return \u0275\u0275resetView(ctx_r1.openDetail(ev_r11));
     });
-    \u0275\u0275domElementStart(1, "td", 72);
+    \u0275\u0275domElementStart(1, "td", 73);
     \u0275\u0275text(2);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(3, "td", 73);
+    \u0275\u0275domElementStart(3, "td", 74);
     \u0275\u0275text(4);
-    \u0275\u0275conditionalCreate(5, SyncDashboardComponent_Conditional_99_For_1_Conditional_5_Template, 2, 4, "span", 74);
+    \u0275\u0275conditionalCreate(5, SyncDashboardComponent_Conditional_103_For_1_Conditional_5_Template, 2, 4, "span", 75);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(6, "td", 75)(7, "span", 76);
+    \u0275\u0275domElementStart(6, "td", 76)(7, "span", 77);
     \u0275\u0275text(8);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(9, "td")(10, "span", 77);
+    \u0275\u0275domElementStart(9, "td")(10, "span", 78);
     \u0275\u0275text(11);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(12, "td", 78);
+    \u0275\u0275domElementStart(12, "td", 79);
     \u0275\u0275text(13);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(14, "td", 78);
+    \u0275\u0275domElementStart(14, "td", 79);
     \u0275\u0275text(15);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(16, "td", 79);
-    \u0275\u0275conditionalCreate(17, SyncDashboardComponent_Conditional_99_For_1_Conditional_17_Template, 2, 3, "span", 80)(18, SyncDashboardComponent_Conditional_99_For_1_Conditional_18_Template, 2, 0, "span", 81);
+    \u0275\u0275domElementStart(16, "td", 80);
+    \u0275\u0275conditionalCreate(17, SyncDashboardComponent_Conditional_103_For_1_Conditional_17_Template, 2, 3, "span", 81)(18, SyncDashboardComponent_Conditional_103_For_1_Conditional_18_Template, 2, 0, "span", 82);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(19, "td", 82);
-    \u0275\u0275conditionalCreate(20, SyncDashboardComponent_Conditional_99_For_1_Conditional_20_Template, 2, 2, "span", 83)(21, SyncDashboardComponent_Conditional_99_For_1_Conditional_21_Template, 2, 0, "span", 81);
+    \u0275\u0275domElementStart(19, "td", 83);
+    \u0275\u0275conditionalCreate(20, SyncDashboardComponent_Conditional_103_For_1_Conditional_20_Template, 2, 2, "span", 84)(21, SyncDashboardComponent_Conditional_103_For_1_Conditional_21_Template, 2, 0, "span", 82);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(22, "td", 84);
-    \u0275\u0275conditionalCreate(23, SyncDashboardComponent_Conditional_99_For_1_Conditional_23_Template, 3, 2, "button", 85);
+    \u0275\u0275domElementStart(22, "td", 85);
+    \u0275\u0275conditionalCreate(23, SyncDashboardComponent_Conditional_103_For_1_Conditional_23_Template, 3, 2, "button", 86);
     \u0275\u0275domElementEnd()();
   }
   if (rf & 2) {
@@ -638,20 +643,20 @@ function SyncDashboardComponent_Conditional_99_For_1_Template(rf, ctx) {
     \u0275\u0275conditional(ev_r11.status === "FAILED" ? 23 : -1);
   }
 }
-function SyncDashboardComponent_Conditional_99_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_103_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275repeaterCreate(0, SyncDashboardComponent_Conditional_99_For_1_Template, 24, 16, "tr", 70, _forTrack0);
+    \u0275\u0275repeaterCreate(0, SyncDashboardComponent_Conditional_103_For_1_Template, 24, 16, "tr", 71, _forTrack0);
   }
   if (rf & 2) {
     const ctx_r1 = \u0275\u0275nextContext();
     \u0275\u0275repeater(ctx_r1.events);
   }
 }
-function SyncDashboardComponent_Conditional_100_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_104_Template(rf, ctx) {
   if (rf & 1) {
     const _r13 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 31)(1, "button", 88);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_100_Template_button_click_1_listener() {
+    \u0275\u0275domElementStart(0, "div", 32)(1, "button", 89);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_104_Template_button_click_1_listener() {
       \u0275\u0275restoreView(_r13);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.prevPage());
@@ -659,11 +664,11 @@ function SyncDashboardComponent_Conditional_100_Template(rf, ctx) {
     \u0275\u0275domElementStart(2, "span", 3);
     \u0275\u0275text(3, "chevron_left");
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(4, "span", 89);
+    \u0275\u0275domElementStart(4, "span", 90);
     \u0275\u0275text(5);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(6, "button", 88);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_100_Template_button_click_6_listener() {
+    \u0275\u0275domElementStart(6, "button", 89);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_104_Template_button_click_6_listener() {
       \u0275\u0275restoreView(_r13);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.nextPage());
@@ -682,9 +687,9 @@ function SyncDashboardComponent_Conditional_100_Template(rf, ctx) {
     \u0275\u0275domProperty("disabled", ctx_r1.currentPage + 1 >= ctx_r1.totalPages);
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_49_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_49_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 101)(1, "dt");
+    \u0275\u0275domElementStart(0, "div", 102)(1, "dt");
     \u0275\u0275text(2, "Derni\xE8re tentative");
     \u0275\u0275domElementEnd();
     \u0275\u0275domElementStart(3, "dd");
@@ -697,12 +702,12 @@ function SyncDashboardComponent_Conditional_101_Conditional_49_Template(rf, ctx)
     \u0275\u0275textInterpolate(ctx_r1.fmtDate(ctx_r1.detailEvent.lastAttemptAt));
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_50_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_50_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 101)(1, "dt");
+    \u0275\u0275domElementStart(0, "div", 102)(1, "dt");
     \u0275\u0275text(2, "Tentatives");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(3, "dd")(4, "span", 86);
+    \u0275\u0275domElementStart(3, "dd")(4, "span", 87);
     \u0275\u0275text(5);
     \u0275\u0275domElementEnd()()();
   }
@@ -714,14 +719,14 @@ function SyncDashboardComponent_Conditional_101_Conditional_50_Template(rf, ctx)
     \u0275\u0275textInterpolate1(" ", ctx_r1.detailEvent.retryCount, " / 5 ");
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_51_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_51_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "section", 98)(1, "h3", 107)(2, "span", 3);
+    \u0275\u0275domElementStart(0, "section", 99)(1, "h3", 108)(2, "span", 3);
     \u0275\u0275text(3, "error");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(4, " Erreur d'envoi ");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(5, "div", 108);
+    \u0275\u0275domElementStart(5, "div", 109);
     \u0275\u0275text(6);
     \u0275\u0275domElementEnd()();
   }
@@ -731,11 +736,11 @@ function SyncDashboardComponent_Conditional_101_Conditional_51_Template(rf, ctx)
     \u0275\u0275textInterpolate(ctx_r1.detailEvent.errorMessage);
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_52_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_52_Template(rf, ctx) {
   if (rf & 1) {
     const _r15 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 104)(1, "button", 8);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_101_Conditional_52_Template_button_click_1_listener($event) {
+    \u0275\u0275domElementStart(0, "div", 105)(1, "button", 110);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_105_Conditional_52_Template_button_click_1_listener($event) {
       \u0275\u0275restoreView(_r15);
       const ctx_r1 = \u0275\u0275nextContext(2);
       ctx_r1.retryOne(ctx_r1.detailEvent, $event);
@@ -753,25 +758,25 @@ function SyncDashboardComponent_Conditional_101_Conditional_52_Template(rf, ctx)
     \u0275\u0275domProperty("disabled", ctx_r1.retryingId === ctx_r1.detailEvent.id);
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_58_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_58_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 105)(1, "span", 109);
+    \u0275\u0275domElementStart(0, "div", 106)(1, "span", 111);
     \u0275\u0275text(2, "refresh");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(3, " Chargement... ");
     \u0275\u0275domElementEnd();
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_59_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_59_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "p", 81);
+    \u0275\u0275domElementStart(0, "p", 82);
     \u0275\u0275text(1, "Aucune donn\xE9e disponible.");
     \u0275\u0275domElementEnd();
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional_4_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Conditional_4_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "span", 115);
+    \u0275\u0275domElementStart(0, "span", 117);
     \u0275\u0275text(1);
     \u0275\u0275pipe(2, "json");
     \u0275\u0275domElementEnd();
@@ -783,7 +788,7 @@ function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional
     \u0275\u0275textInterpolate(\u0275\u0275pipeBind1(2, 1, ctx_r1.payloadValue(key_r16)));
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional_5_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Conditional_5_Template(rf, ctx) {
   if (rf & 1) {
     \u0275\u0275text(0);
   }
@@ -793,13 +798,13 @@ function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional
     \u0275\u0275textInterpolate1(" ", ctx_r1.payloadValue(key_r16) ?? "\u2014", " ");
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 111)(1, "span", 113);
+    \u0275\u0275domElementStart(0, "div", 113)(1, "span", 115);
     \u0275\u0275text(2);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(3, "span", 114);
-    \u0275\u0275conditionalCreate(4, SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional_4_Template, 3, 3, "span", 115)(5, SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Conditional_5_Template, 1, 1);
+    \u0275\u0275domElementStart(3, "span", 116);
+    \u0275\u0275conditionalCreate(4, SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Conditional_4_Template, 3, 3, "span", 117)(5, SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Conditional_5_Template, 1, 1);
     \u0275\u0275domElementEnd()();
   }
   if (rf & 2) {
@@ -811,15 +816,15 @@ function SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Template(rf
     \u0275\u0275conditional(ctx_r1.isObject(ctx_r1.payloadValue(key_r16)) ? 4 : 5);
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_60_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_60_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "div", 110);
-    \u0275\u0275repeaterCreate(1, SyncDashboardComponent_Conditional_101_Conditional_60_For_2_Template, 6, 2, "div", 111, \u0275\u0275repeaterTrackByIdentity);
+    \u0275\u0275domElementStart(0, "div", 112);
+    \u0275\u0275repeaterCreate(1, SyncDashboardComponent_Conditional_105_Conditional_60_For_2_Template, 6, 2, "div", 113, \u0275\u0275repeaterTrackByIdentity);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(3, "details", 112)(4, "summary");
+    \u0275\u0275domElementStart(3, "details", 114)(4, "summary");
     \u0275\u0275text(5, "Voir JSON brut");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(6, "pre", 106);
+    \u0275\u0275domElementStart(6, "pre", 107);
     \u0275\u0275text(7);
     \u0275\u0275domElementEnd()();
   }
@@ -831,9 +836,9 @@ function SyncDashboardComponent_Conditional_101_Conditional_60_Template(rf, ctx)
     \u0275\u0275textInterpolate(ctx_r1.formatPayload());
   }
 }
-function SyncDashboardComponent_Conditional_101_Conditional_61_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Conditional_61_Template(rf, ctx) {
   if (rf & 1) {
-    \u0275\u0275domElementStart(0, "pre", 106);
+    \u0275\u0275domElementStart(0, "pre", 107);
     \u0275\u0275text(1);
     \u0275\u0275domElementEnd();
   }
@@ -843,27 +848,27 @@ function SyncDashboardComponent_Conditional_101_Conditional_61_Template(rf, ctx)
     \u0275\u0275textInterpolate(ctx_r1.formatPayload());
   }
 }
-function SyncDashboardComponent_Conditional_101_Template(rf, ctx) {
+function SyncDashboardComponent_Conditional_105_Template(rf, ctx) {
   if (rf & 1) {
     const _r14 = \u0275\u0275getCurrentView();
-    \u0275\u0275domElementStart(0, "div", 90);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_101_Template_div_click_0_listener() {
+    \u0275\u0275domElementStart(0, "div", 91);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_105_Template_div_click_0_listener() {
       \u0275\u0275restoreView(_r14);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.closeDetail());
     });
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(1, "aside", 91)(2, "div", 92)(3, "div", 93)(4, "span", 77);
+    \u0275\u0275domElementStart(1, "aside", 92)(2, "div", 93)(3, "div", 94)(4, "span", 78);
     \u0275\u0275text(5);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(6, "span", 94);
+    \u0275\u0275domElementStart(6, "span", 95);
     \u0275\u0275text(7);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275domElementStart(8, "h2", 95);
+    \u0275\u0275domElementStart(8, "h2", 96);
     \u0275\u0275text(9);
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(10, "button", 96);
-    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_101_Template_button_click_10_listener() {
+    \u0275\u0275domElementStart(10, "button", 97);
+    \u0275\u0275domListener("click", function SyncDashboardComponent_Conditional_105_Template_button_click_10_listener() {
       \u0275\u0275restoreView(_r14);
       const ctx_r1 = \u0275\u0275nextContext();
       return \u0275\u0275resetView(ctx_r1.closeDetail());
@@ -871,52 +876,52 @@ function SyncDashboardComponent_Conditional_101_Template(rf, ctx) {
     \u0275\u0275domElementStart(11, "span", 3);
     \u0275\u0275text(12, "close");
     \u0275\u0275domElementEnd()()();
-    \u0275\u0275domElementStart(13, "div", 97)(14, "section", 98)(15, "h3", 99)(16, "span", 3);
+    \u0275\u0275domElementStart(13, "div", 98)(14, "section", 99)(15, "h3", 100)(16, "span", 3);
     \u0275\u0275text(17, "info");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(18, " Informations ");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(19, "dl", 100)(20, "div", 101)(21, "dt");
+    \u0275\u0275domElementStart(19, "dl", 101)(20, "div", 102)(21, "dt");
     \u0275\u0275text(22, "ID \xE9v\xE9nement");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(23, "dd")(24, "span", 102);
+    \u0275\u0275domElementStart(23, "dd")(24, "span", 103);
     \u0275\u0275text(25);
     \u0275\u0275domElementEnd()()();
-    \u0275\u0275domElementStart(26, "div", 101)(27, "dt");
+    \u0275\u0275domElementStart(26, "div", 102)(27, "dt");
     \u0275\u0275text(28, "Spoke");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(29, "dd")(30, "span", 102);
+    \u0275\u0275domElementStart(29, "dd")(30, "span", 103);
     \u0275\u0275text(31);
     \u0275\u0275domElementEnd()()();
-    \u0275\u0275domElementStart(32, "div", 101)(33, "dt");
+    \u0275\u0275domElementStart(32, "div", 102)(33, "dt");
     \u0275\u0275text(34, "R\xE9f. entit\xE9");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(35, "dd")(36, "span", 102);
+    \u0275\u0275domElementStart(35, "dd")(36, "span", 103);
     \u0275\u0275text(37);
     \u0275\u0275domElementEnd()()();
-    \u0275\u0275domElementStart(38, "div", 101)(39, "dt");
+    \u0275\u0275domElementStart(38, "div", 102)(39, "dt");
     \u0275\u0275text(40, "Type technique");
     \u0275\u0275domElementEnd();
-    \u0275\u0275domElementStart(41, "dd")(42, "span", 103);
+    \u0275\u0275domElementStart(41, "dd")(42, "span", 104);
     \u0275\u0275text(43);
     \u0275\u0275domElementEnd()()();
-    \u0275\u0275domElementStart(44, "div", 101)(45, "dt");
+    \u0275\u0275domElementStart(44, "div", 102)(45, "dt");
     \u0275\u0275text(46, "Date de cr\xE9ation");
     \u0275\u0275domElementEnd();
     \u0275\u0275domElementStart(47, "dd");
     \u0275\u0275text(48);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275conditionalCreate(49, SyncDashboardComponent_Conditional_101_Conditional_49_Template, 5, 1, "div", 101);
-    \u0275\u0275conditionalCreate(50, SyncDashboardComponent_Conditional_101_Conditional_50_Template, 6, 3, "div", 101);
+    \u0275\u0275conditionalCreate(49, SyncDashboardComponent_Conditional_105_Conditional_49_Template, 5, 1, "div", 102);
+    \u0275\u0275conditionalCreate(50, SyncDashboardComponent_Conditional_105_Conditional_50_Template, 6, 3, "div", 102);
     \u0275\u0275domElementEnd()();
-    \u0275\u0275conditionalCreate(51, SyncDashboardComponent_Conditional_101_Conditional_51_Template, 7, 1, "section", 98);
-    \u0275\u0275conditionalCreate(52, SyncDashboardComponent_Conditional_101_Conditional_52_Template, 5, 1, "div", 104);
-    \u0275\u0275domElementStart(53, "section", 98)(54, "h3", 99)(55, "span", 3);
+    \u0275\u0275conditionalCreate(51, SyncDashboardComponent_Conditional_105_Conditional_51_Template, 7, 1, "section", 99);
+    \u0275\u0275conditionalCreate(52, SyncDashboardComponent_Conditional_105_Conditional_52_Template, 5, 1, "div", 105);
+    \u0275\u0275domElementStart(53, "section", 99)(54, "h3", 100)(55, "span", 3);
     \u0275\u0275text(56, "data_object");
     \u0275\u0275domElementEnd();
     \u0275\u0275text(57, " Donn\xE9es transmises au Hub ");
     \u0275\u0275domElementEnd();
-    \u0275\u0275conditionalCreate(58, SyncDashboardComponent_Conditional_101_Conditional_58_Template, 4, 0, "div", 105)(59, SyncDashboardComponent_Conditional_101_Conditional_59_Template, 2, 0, "p", 81)(60, SyncDashboardComponent_Conditional_101_Conditional_60_Template, 8, 1)(61, SyncDashboardComponent_Conditional_101_Conditional_61_Template, 2, 1, "pre", 106);
+    \u0275\u0275conditionalCreate(58, SyncDashboardComponent_Conditional_105_Conditional_58_Template, 4, 0, "div", 106)(59, SyncDashboardComponent_Conditional_105_Conditional_59_Template, 2, 0, "p", 82)(60, SyncDashboardComponent_Conditional_105_Conditional_60_Template, 8, 1)(61, SyncDashboardComponent_Conditional_105_Conditional_61_Template, 2, 1, "pre", 107);
     \u0275\u0275domElementEnd()()();
   }
   if (rf & 2) {
@@ -958,6 +963,8 @@ var SyncDashboardComponent = class _SyncDashboardComponent {
     this.dispatching = false;
     this.retrying = false;
     this.snapshotting = false;
+    this.snapshottingHourly = false;
+    this.forcingFailed = false;
     this.clearingFailed = false;
     this.testingHub = false;
     this.hubTest = null;
@@ -1055,6 +1062,7 @@ var SyncDashboardComponent = class _SyncDashboardComponent {
       }
     });
   }
+  /** Bouton "Snapshot complet" : renvoie tout l'historique (pas de fenêtre de 2 ans). */
   forceSnapshot() {
     this.snapshotting = true;
     this.syncService.forceSnapshot().subscribe({
@@ -1067,6 +1075,20 @@ var SyncDashboardComponent = class _SyncDashboardComponent {
       }
     });
   }
+  /** Bouton "Snapshot horaire" : déclenche tout de suite le même snapshot incrémental que le job
+   *  planifié, au lieu d'attendre jusqu'à une heure pour vérifier l'effet d'un changement. */
+  triggerHourlySnapshot() {
+    this.snapshottingHourly = true;
+    this.syncService.triggerHourlySnapshot().subscribe({
+      next: () => {
+        this.snapshottingHourly = false;
+        setTimeout(() => this.loadAll(), 800);
+      },
+      error: () => {
+        this.snapshottingHourly = false;
+      }
+    });
+  }
   forceDispatch() {
     this.dispatching = true;
     this.syncService.forceDispatch().subscribe({
@@ -1076,6 +1098,30 @@ var SyncDashboardComponent = class _SyncDashboardComponent {
       },
       error: () => {
         this.dispatching = false;
+      }
+    });
+  }
+  /** Bouton "Forcer envoi" : remet en attente tout ce qui a échoué PUIS déclenche l'envoi tout de
+   *  suite, au lieu d'attendre le prochain passage planifié (30s) — un vrai "renvoyer maintenant
+   *  tout ce qui a échoué", distinct du bouton "Snapshot complet" qui reconstruit un nouveau
+   *  snapshot plutôt que de rejouer des événements déjà en échec. */
+  forceFailedRetry() {
+    this.forcingFailed = true;
+    this.syncService.retryAll().subscribe({
+      next: () => {
+        this.syncService.forceDispatch().subscribe({
+          next: () => {
+            this.forcingFailed = false;
+            setTimeout(() => this.loadAll(), 500);
+          },
+          error: () => {
+            this.forcingFailed = false;
+            this.loadAll();
+          }
+        });
+      },
+      error: () => {
+        this.forcingFailed = false;
       }
     });
   }
@@ -1206,7 +1252,7 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
     };
   }
   static {
-    this.\u0275cmp = /* @__PURE__ */ \u0275\u0275defineComponent({ type: _SyncDashboardComponent, selectors: [["app-sync-dashboard"]], decls: 102, vars: 28, consts: [[1, "sync-dash"], [1, "dash-header"], [1, "dash-title"], [1, "material-icons"], [1, "dash-sub"], [1, "header-actions"], [1, "btn-action", "btn-hub-test", 3, "click", "disabled"], ["title", "Envoie l'\xE9tat complet du syst\xE8me au Hub, sans limite d'historique (factures, avoirs, bons de commande...) \u2014 \xE0 utiliser pour rattraper des documents rest\xE9s bloqu\xE9s", 1, "btn-action", "btn-snapshot", 3, "click", "disabled"], [1, "btn-action", "btn-dispatch", 3, "click", "disabled"], [1, "btn-action", "btn-refresh", 3, "click", "disabled"], [1, "kpi-row"], [1, "kpi", "kpi-pending"], [1, "kpi-icon"], [1, "kpi-body"], [1, "kpi-val"], [1, "kpi-lbl"], [1, "kpi", "kpi-sent"], [1, "kpi", "kpi-failed"], [1, "kpi-failed-actions"], [1, "kpi", "kpi-total"], [1, "progress-band"], [1, "hub-test-result", 3, "hub-ok", "hub-fail"], [1, "module-stats-row"], [1, "events-section"], [1, "events-toolbar"], [1, "tabs"], [1, "tab-btn", 3, "active"], [1, "status-filters"], [1, "filter-btn", 3, "active", "class"], [1, "table-wrap"], [1, "events-table"], [1, "pagination"], [1, "btn-retry-all", 3, "click", "disabled"], ["title", "Supprime d\xE9finitivement ces \xE9v\xE9nements \u2014 ils ne remonteront plus jamais au Hub", 1, "btn-clear-failed", 3, "click", "disabled"], [1, "progress-meta"], [1, "progress-label"], [1, "progress-pct"], [1, "progress-detail"], [1, "pd-chip", "pd-sent"], [1, "pd-chip", "pd-pending"], [1, "pd-chip", "pd-failed"], [1, "pd-chip", "pd-batch"], [1, "pd-chip", "pd-time"], [1, "progress-bar-wrap"], [1, "progress-bar"], [1, "hub-test-result"], [1, "hub-test-body"], [1, "hub-test-url"], [1, "hub-test-url", 2, "opacity", "0.6"], [1, "hub-test-latency"], [1, "hub-test-error"], ["title", "Fermer", 1, "btn-icon", 3, "click"], [1, "module-card", 3, "active"], [1, "module-card", 3, "click"], [1, "mc-header"], [1, "material-icons", "mc-icon"], [1, "mc-label"], [1, "mc-badges"], [1, "mc-badge", "b-pending"], [1, "mc-badge", "b-failed"], [1, "mc-badge", "b-ok"], [1, "material-icons", 2, "font-size", "12px"], [1, "tab-btn", 3, "click"], [1, "tab-badge", "b-pending"], [1, "tab-badge", "b-failed"], [1, "filter-btn", 3, "click"], [1, "skel-row"], ["colspan", "9"], [1, "skel-line"], ["colspan", "9", 1, "empty-row"], [1, "event-row", "clickable-row", 3, "row-failed", "row-selected"], [1, "event-row", "clickable-row", 3, "click"], [1, "cell-id"], [1, "cell-label"], [3, "class"], [1, "cell-ref"], [1, "ref-chip"], [1, "badge"], [1, "cell-date"], [1, "cell-retries"], [1, "retry-count", 3, "high"], [1, "text-muted"], [1, "cell-error"], [1, "error-msg", 3, "title"], [1, "cell-action"], [1, "btn-retry-one", 3, "disabled"], [1, "retry-count"], [1, "btn-retry-one", 3, "click", "disabled"], [1, "page-btn", 3, "click", "disabled"], [1, "page-info"], [1, "detail-overlay", 3, "click"], [1, "detail-drawer"], [1, "detail-header"], [1, "detail-title-row"], [1, "detail-module-chip"], [1, "detail-event-label"], [1, "btn-close-detail", 3, "click"], [1, "detail-body"], [1, "detail-section"], [1, "section-title"], [1, "detail-dl"], [1, "dl-row"], [1, "mono-chip"], [1, "mono-chip", "small"], [1, "detail-actions"], [1, "payload-loading"], [1, "payload-raw"], [1, "section-title", "error-title"], [1, "error-block"], [1, "material-icons", "spinning"], [1, "payload-kv"], [1, "kv-row"], [1, "raw-json-details"], [1, "kv-key"], [1, "kv-val"], [1, "kv-nested"]], template: function SyncDashboardComponent_Template(rf, ctx) {
+    this.\u0275cmp = /* @__PURE__ */ \u0275\u0275defineComponent({ type: _SyncDashboardComponent, selectors: [["app-sync-dashboard"]], decls: 106, vars: 32, consts: [[1, "sync-dash"], [1, "dash-header"], [1, "dash-title"], [1, "material-icons"], [1, "dash-sub"], [1, "header-actions"], [1, "btn-action", "btn-hub-test", 3, "click", "disabled"], ["title", "Envoie l'\xE9tat complet du syst\xE8me au Hub, sans limite d'historique (factures, avoirs, bons de commande...) \u2014 \xE0 utiliser pour rattraper des documents rest\xE9s bloqu\xE9s", 1, "btn-action", "btn-snapshot", 3, "click", "disabled"], ["title", "D\xE9clenche tout de suite le m\xEAme snapshot incr\xE9mental que le job planifi\xE9 (seulement ce qui a chang\xE9 depuis le dernier envoi), sans attendre le prochain passage horaire", 1, "btn-action", "btn-snapshot-hourly", 3, "click", "disabled"], ["title", "Renvoie tout de suite tous les \xE9v\xE9nements en \xE9chec, au lieu d'attendre une nouvelle tentative automatique", 1, "btn-action", "btn-dispatch", 3, "click", "disabled"], [1, "btn-action", "btn-refresh", 3, "click", "disabled"], [1, "kpi-row"], [1, "kpi", "kpi-pending"], [1, "kpi-icon"], [1, "kpi-body"], [1, "kpi-val"], [1, "kpi-lbl"], [1, "kpi", "kpi-sent"], [1, "kpi", "kpi-failed"], [1, "kpi-failed-actions"], [1, "kpi", "kpi-total"], [1, "progress-band"], [1, "hub-test-result", 3, "hub-ok", "hub-fail"], [1, "module-stats-row"], [1, "events-section"], [1, "events-toolbar"], [1, "tabs"], [1, "tab-btn", 3, "active"], [1, "status-filters"], [1, "filter-btn", 3, "active", "class"], [1, "table-wrap"], [1, "events-table"], [1, "pagination"], [1, "btn-retry-all", 3, "click", "disabled"], ["title", "Supprime d\xE9finitivement ces \xE9v\xE9nements \u2014 ils ne remonteront plus jamais au Hub", 1, "btn-clear-failed", 3, "click", "disabled"], [1, "progress-meta"], [1, "progress-label"], [1, "progress-pct"], [1, "progress-detail"], [1, "pd-chip", "pd-sent"], [1, "pd-chip", "pd-pending"], [1, "pd-chip", "pd-failed"], [1, "pd-chip", "pd-batch"], [1, "pd-chip", "pd-time"], [1, "progress-bar-wrap"], [1, "progress-bar"], [1, "hub-test-result"], [1, "hub-test-body"], [1, "hub-test-url"], [1, "hub-test-url", 2, "opacity", "0.6"], [1, "hub-test-latency"], [1, "hub-test-error"], ["title", "Fermer", 1, "btn-icon", 3, "click"], [1, "module-card", 3, "active"], [1, "module-card", 3, "click"], [1, "mc-header"], [1, "material-icons", "mc-icon"], [1, "mc-label"], [1, "mc-badges"], [1, "mc-badge", "b-pending"], [1, "mc-badge", "b-failed"], [1, "mc-badge", "b-ok"], [1, "material-icons", 2, "font-size", "12px"], [1, "tab-btn", 3, "click"], [1, "tab-badge", "b-pending"], [1, "tab-badge", "b-failed"], [1, "filter-btn", 3, "click"], [1, "skel-row"], ["colspan", "9"], [1, "skel-line"], ["colspan", "9", 1, "empty-row"], [1, "event-row", "clickable-row", 3, "row-failed", "row-selected"], [1, "event-row", "clickable-row", 3, "click"], [1, "cell-id"], [1, "cell-label"], [3, "class"], [1, "cell-ref"], [1, "ref-chip"], [1, "badge"], [1, "cell-date"], [1, "cell-retries"], [1, "retry-count", 3, "high"], [1, "text-muted"], [1, "cell-error"], [1, "error-msg", 3, "title"], [1, "cell-action"], [1, "btn-retry-one", 3, "disabled"], [1, "retry-count"], [1, "btn-retry-one", 3, "click", "disabled"], [1, "page-btn", 3, "click", "disabled"], [1, "page-info"], [1, "detail-overlay", 3, "click"], [1, "detail-drawer"], [1, "detail-header"], [1, "detail-title-row"], [1, "detail-module-chip"], [1, "detail-event-label"], [1, "btn-close-detail", 3, "click"], [1, "detail-body"], [1, "detail-section"], [1, "section-title"], [1, "detail-dl"], [1, "dl-row"], [1, "mono-chip"], [1, "mono-chip", "small"], [1, "detail-actions"], [1, "payload-loading"], [1, "payload-raw"], [1, "section-title", "error-title"], [1, "error-block"], [1, "btn-action", "btn-dispatch", 3, "click", "disabled"], [1, "material-icons", "spinning"], [1, "payload-kv"], [1, "kv-row"], [1, "raw-json-details"], [1, "kv-key"], [1, "kv-val"], [1, "kv-nested"]], template: function SyncDashboardComponent_Template(rf, ctx) {
       if (rf & 1) {
         \u0275\u0275domElementStart(0, "div", 0)(1, "div", 1)(2, "div")(3, "h1", 2)(4, "span", 3);
         \u0275\u0275text(5, "hub");
@@ -1236,101 +1282,110 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(18, "button", 8);
         \u0275\u0275domListener("click", function SyncDashboardComponent_Template_button_click_18_listener() {
-          return ctx.forceDispatch();
+          return ctx.triggerHourlySnapshot();
         });
         \u0275\u0275domElementStart(19, "span", 3);
-        \u0275\u0275text(20, "send");
+        \u0275\u0275text(20, "schedule_send");
         \u0275\u0275domElementEnd();
         \u0275\u0275text(21);
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(22, "button", 9);
         \u0275\u0275domListener("click", function SyncDashboardComponent_Template_button_click_22_listener() {
-          return ctx.loadAll();
+          return ctx.forceFailedRetry();
         });
         \u0275\u0275domElementStart(23, "span", 3);
-        \u0275\u0275text(24, "refresh");
+        \u0275\u0275text(24, "send");
         \u0275\u0275domElementEnd();
-        \u0275\u0275text(25, " Rafra\xEEchir ");
+        \u0275\u0275text(25);
+        \u0275\u0275domElementEnd();
+        \u0275\u0275domElementStart(26, "button", 10);
+        \u0275\u0275domListener("click", function SyncDashboardComponent_Template_button_click_26_listener() {
+          return ctx.loadAll();
+        });
+        \u0275\u0275domElementStart(27, "span", 3);
+        \u0275\u0275text(28, "refresh");
+        \u0275\u0275domElementEnd();
+        \u0275\u0275text(29, " Rafra\xEEchir ");
         \u0275\u0275domElementEnd()()();
-        \u0275\u0275domElementStart(26, "div", 10)(27, "div", 11)(28, "div", 12)(29, "span", 3);
-        \u0275\u0275text(30, "schedule");
+        \u0275\u0275domElementStart(30, "div", 11)(31, "div", 12)(32, "div", 13)(33, "span", 3);
+        \u0275\u0275text(34, "schedule");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(31, "div", 13)(32, "span", 14);
-        \u0275\u0275text(33);
+        \u0275\u0275domElementStart(35, "div", 14)(36, "span", 15);
+        \u0275\u0275text(37);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(34, "span", 15);
-        \u0275\u0275text(35, "En attente d'envoi");
+        \u0275\u0275domElementStart(38, "span", 16);
+        \u0275\u0275text(39, "En attente d'envoi");
         \u0275\u0275domElementEnd()()();
-        \u0275\u0275domElementStart(36, "div", 16)(37, "div", 12)(38, "span", 3);
-        \u0275\u0275text(39, "check_circle");
+        \u0275\u0275domElementStart(40, "div", 17)(41, "div", 13)(42, "span", 3);
+        \u0275\u0275text(43, "check_circle");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(40, "div", 13)(41, "span", 14);
-        \u0275\u0275text(42);
+        \u0275\u0275domElementStart(44, "div", 14)(45, "span", 15);
+        \u0275\u0275text(46);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(43, "span", 15);
-        \u0275\u0275text(44, "Envoy\xE9s au Hub");
+        \u0275\u0275domElementStart(47, "span", 16);
+        \u0275\u0275text(48, "Envoy\xE9s au Hub");
         \u0275\u0275domElementEnd()()();
-        \u0275\u0275domElementStart(45, "div", 17)(46, "div", 12)(47, "span", 3);
-        \u0275\u0275text(48, "error");
+        \u0275\u0275domElementStart(49, "div", 18)(50, "div", 13)(51, "span", 3);
+        \u0275\u0275text(52, "error");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(49, "div", 13)(50, "span", 14);
-        \u0275\u0275text(51);
+        \u0275\u0275domElementStart(53, "div", 14)(54, "span", 15);
+        \u0275\u0275text(55);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(52, "span", 15);
-        \u0275\u0275text(53, "\xC9checs d'envoi");
+        \u0275\u0275domElementStart(56, "span", 16);
+        \u0275\u0275text(57, "\xC9checs d'envoi");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275conditionalCreate(54, SyncDashboardComponent_Conditional_54_Template, 9, 4, "div", 18);
+        \u0275\u0275conditionalCreate(58, SyncDashboardComponent_Conditional_58_Template, 9, 4, "div", 19);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(55, "div", 19)(56, "div", 12)(57, "span", 3);
-        \u0275\u0275text(58, "swap_horiz");
+        \u0275\u0275domElementStart(59, "div", 20)(60, "div", 13)(61, "span", 3);
+        \u0275\u0275text(62, "swap_horiz");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(59, "div", 13)(60, "span", 14);
-        \u0275\u0275text(61);
+        \u0275\u0275domElementStart(63, "div", 14)(64, "span", 15);
+        \u0275\u0275text(65);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(62, "span", 15);
-        \u0275\u0275text(63, "Total op\xE9rations");
+        \u0275\u0275domElementStart(66, "span", 16);
+        \u0275\u0275text(67, "Total op\xE9rations");
         \u0275\u0275domElementEnd()()()();
-        \u0275\u0275conditionalCreate(64, SyncDashboardComponent_Conditional_64_Template, 23, 12, "div", 20);
-        \u0275\u0275conditionalCreate(65, SyncDashboardComponent_Conditional_65_Template, 15, 11, "div", 21);
-        \u0275\u0275conditionalCreate(66, SyncDashboardComponent_Conditional_66_Template, 3, 0, "div", 22);
-        \u0275\u0275domElementStart(67, "div", 23)(68, "div", 24)(69, "div", 25);
-        \u0275\u0275repeaterCreate(70, SyncDashboardComponent_For_71_Template, 6, 6, "button", 26, _forTrack0);
+        \u0275\u0275conditionalCreate(68, SyncDashboardComponent_Conditional_68_Template, 23, 12, "div", 21);
+        \u0275\u0275conditionalCreate(69, SyncDashboardComponent_Conditional_69_Template, 15, 11, "div", 22);
+        \u0275\u0275conditionalCreate(70, SyncDashboardComponent_Conditional_70_Template, 3, 0, "div", 23);
+        \u0275\u0275domElementStart(71, "div", 24)(72, "div", 25)(73, "div", 26);
+        \u0275\u0275repeaterCreate(74, SyncDashboardComponent_For_75_Template, 6, 6, "button", 27, _forTrack0);
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(72, "div", 27);
-        \u0275\u0275repeaterCreate(73, SyncDashboardComponent_For_74_Template, 2, 5, "button", 28, _forTrack1);
+        \u0275\u0275domElementStart(76, "div", 28);
+        \u0275\u0275repeaterCreate(77, SyncDashboardComponent_For_78_Template, 2, 5, "button", 29, _forTrack1);
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(75, "div", 29)(76, "table", 30)(77, "thead")(78, "tr")(79, "th");
-        \u0275\u0275text(80, "#");
-        \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(81, "th");
-        \u0275\u0275text(82, "Op\xE9ration");
-        \u0275\u0275domElementEnd();
-        \u0275\u0275domElementStart(83, "th");
-        \u0275\u0275text(84, "R\xE9f. entit\xE9");
+        \u0275\u0275domElementStart(79, "div", 30)(80, "table", 31)(81, "thead")(82, "tr")(83, "th");
+        \u0275\u0275text(84, "#");
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(85, "th");
-        \u0275\u0275text(86, "Statut");
+        \u0275\u0275text(86, "Op\xE9ration");
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(87, "th");
-        \u0275\u0275text(88, "Date op\xE9ration");
+        \u0275\u0275text(88, "R\xE9f. entit\xE9");
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(89, "th");
-        \u0275\u0275text(90, "Derni\xE8re tentative");
+        \u0275\u0275text(90, "Statut");
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(91, "th");
-        \u0275\u0275text(92, "Tentatives");
+        \u0275\u0275text(92, "Date op\xE9ration");
         \u0275\u0275domElementEnd();
         \u0275\u0275domElementStart(93, "th");
-        \u0275\u0275text(94, "Erreur");
+        \u0275\u0275text(94, "Derni\xE8re tentative");
         \u0275\u0275domElementEnd();
-        \u0275\u0275domElement(95, "th");
+        \u0275\u0275domElementStart(95, "th");
+        \u0275\u0275text(96, "Tentatives");
+        \u0275\u0275domElementEnd();
+        \u0275\u0275domElementStart(97, "th");
+        \u0275\u0275text(98, "Erreur");
+        \u0275\u0275domElementEnd();
+        \u0275\u0275domElement(99, "th");
         \u0275\u0275domElementEnd()();
-        \u0275\u0275domElementStart(96, "tbody");
-        \u0275\u0275conditionalCreate(97, SyncDashboardComponent_Conditional_97_Template, 2, 1)(98, SyncDashboardComponent_Conditional_98_Template, 5, 0, "tr")(99, SyncDashboardComponent_Conditional_99_Template, 2, 0);
+        \u0275\u0275domElementStart(100, "tbody");
+        \u0275\u0275conditionalCreate(101, SyncDashboardComponent_Conditional_101_Template, 2, 1)(102, SyncDashboardComponent_Conditional_102_Template, 5, 0, "tr")(103, SyncDashboardComponent_Conditional_103_Template, 2, 0);
         \u0275\u0275domElementEnd()()();
-        \u0275\u0275conditionalCreate(100, SyncDashboardComponent_Conditional_100_Template, 9, 5, "div", 31);
+        \u0275\u0275conditionalCreate(104, SyncDashboardComponent_Conditional_104_Template, 9, 5, "div", 32);
         \u0275\u0275domElementEnd()();
-        \u0275\u0275conditionalCreate(101, SyncDashboardComponent_Conditional_101_Template, 62, 15);
+        \u0275\u0275conditionalCreate(105, SyncDashboardComponent_Conditional_105_Template, 62, 15);
       }
       if (rf & 2) {
         \u0275\u0275advance(10);
@@ -1344,13 +1399,19 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
         \u0275\u0275advance();
         \u0275\u0275classProp("spinning", ctx.snapshotting);
         \u0275\u0275advance(2);
-        \u0275\u0275textInterpolate1(" ", ctx.snapshotting ? "Snapshot..." : "Envoyer snapshot", " ");
+        \u0275\u0275textInterpolate1(" ", ctx.snapshotting ? "Snapshot..." : "Snapshot complet", " ");
         \u0275\u0275advance();
-        \u0275\u0275domProperty("disabled", ctx.dispatching);
+        \u0275\u0275domProperty("disabled", ctx.snapshottingHourly);
         \u0275\u0275advance();
-        \u0275\u0275classProp("spinning", ctx.dispatching);
+        \u0275\u0275classProp("spinning", ctx.snapshottingHourly);
         \u0275\u0275advance(2);
-        \u0275\u0275textInterpolate1(" ", ctx.dispatching ? "Envoi..." : "Forcer envoi", " ");
+        \u0275\u0275textInterpolate1(" ", ctx.snapshottingHourly ? "Snapshot..." : "Snapshot horaire", " ");
+        \u0275\u0275advance();
+        \u0275\u0275domProperty("disabled", ctx.forcingFailed);
+        \u0275\u0275advance();
+        \u0275\u0275classProp("spinning", ctx.forcingFailed);
+        \u0275\u0275advance(2);
+        \u0275\u0275textInterpolate1(" ", ctx.forcingFailed ? "Envoi..." : "Forcer envoi", " ");
         \u0275\u0275advance();
         \u0275\u0275domProperty("disabled", ctx.loading);
         \u0275\u0275advance();
@@ -1364,25 +1425,25 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
         \u0275\u0275advance(6);
         \u0275\u0275textInterpolate((ctx.summary == null ? null : ctx.summary.failed) ?? "\u2014");
         \u0275\u0275advance(3);
-        \u0275\u0275conditional(((ctx.summary == null ? null : ctx.summary.failed) ?? 0) > 0 ? 54 : -1);
+        \u0275\u0275conditional(((ctx.summary == null ? null : ctx.summary.failed) ?? 0) > 0 ? 58 : -1);
         \u0275\u0275advance(7);
         \u0275\u0275textInterpolate((ctx.summary == null ? null : ctx.summary.total) ?? "\u2014");
         \u0275\u0275advance(3);
-        \u0275\u0275conditional(ctx.progress ? 64 : -1);
+        \u0275\u0275conditional(ctx.progress ? 68 : -1);
         \u0275\u0275advance();
-        \u0275\u0275conditional(ctx.hubTest ? 65 : -1);
+        \u0275\u0275conditional(ctx.hubTest ? 69 : -1);
         \u0275\u0275advance();
-        \u0275\u0275conditional(ctx.summary ? 66 : -1);
+        \u0275\u0275conditional(ctx.summary ? 70 : -1);
         \u0275\u0275advance(4);
         \u0275\u0275repeater(ctx.tabs);
         \u0275\u0275advance(3);
         \u0275\u0275repeater(ctx.statusFilters);
         \u0275\u0275advance(24);
-        \u0275\u0275conditional(ctx.loading ? 97 : ctx.events.length === 0 ? 98 : 99);
+        \u0275\u0275conditional(ctx.loading ? 101 : ctx.events.length === 0 ? 102 : 103);
         \u0275\u0275advance(3);
-        \u0275\u0275conditional(ctx.totalPages > 1 ? 100 : -1);
+        \u0275\u0275conditional(ctx.totalPages > 1 ? 104 : -1);
         \u0275\u0275advance();
-        \u0275\u0275conditional(ctx.detailEvent ? 101 : -1);
+        \u0275\u0275conditional(ctx.detailEvent ? 105 : -1);
       }
     }, dependencies: [CommonModule, JsonPipe], styles: ['@charset "UTF-8";\n\n\n.sync-dash[_ngcontent-%COMP%] {\n  padding: 28px 32px;\n  max-width: 1400px;\n  margin: 0 auto;\n}\n.dash-header[_ngcontent-%COMP%] {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  margin-bottom: 28px;\n}\n.dash-title[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 22px;\n  font-weight: 700;\n  margin: 0;\n  color: var(--text-primary);\n}\n.dash-title[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: #7C3AED;\n  font-size: 26px;\n}\n.dash-sub[_ngcontent-%COMP%] {\n  margin: 4px 0 0;\n  color: var(--text-muted);\n  font-size: 13px;\n}\n.header-actions[_ngcontent-%COMP%] {\n  display: flex;\n  gap: 10px;\n}\n.btn-action[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 8px 16px;\n  border-radius: 8px;\n  font-size: 13px;\n  font-weight: 500;\n  cursor: pointer;\n  border: none;\n  transition: 0.15s;\n}\n.btn-action[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 17px;\n}\n.btn-action[_ngcontent-%COMP%]:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.btn-snapshot[_ngcontent-%COMP%] {\n  background: #0891B2;\n  color: white;\n}\n.btn-snapshot[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: #0E7490;\n}\n.btn-dispatch[_ngcontent-%COMP%] {\n  background: #7C3AED;\n  color: white;\n}\n.btn-dispatch[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: #6D28D9;\n}\n.btn-refresh[_ngcontent-%COMP%] {\n  background: var(--bg-surface);\n  border: 1px solid var(--border);\n  color: var(--text-primary);\n}\n.btn-refresh[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: var(--bg-hover);\n}\n.kpi-row[_ngcontent-%COMP%] {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 14px;\n  margin-bottom: 20px;\n}\n.kpi[_ngcontent-%COMP%] {\n  background: var(--bg-surface);\n  border: 1px solid var(--border);\n  border-radius: 10px;\n  padding: 16px 18px;\n  display: flex;\n  align-items: center;\n  gap: 14px;\n  position: relative;\n}\n.kpi[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%] {\n  width: 40px;\n  height: 40px;\n  border-radius: 10px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-shrink: 0;\n}\n.kpi[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 22px;\n}\n.kpi[_ngcontent-%COMP%]   .kpi-val[_ngcontent-%COMP%] {\n  font-size: 28px;\n  font-weight: 700;\n  display: block;\n}\n.kpi[_ngcontent-%COMP%]   .kpi-lbl[_ngcontent-%COMP%] {\n  font-size: 12px;\n  color: var(--text-muted);\n  display: block;\n}\n.kpi-pending[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%] {\n  background: var(--warning-bg);\n}\n.kpi-pending[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: var(--warning);\n}\n.kpi-sent[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%] {\n  background: var(--success-bg);\n}\n.kpi-sent[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: var(--success);\n}\n.kpi-failed[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n}\n.kpi-failed[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: var(--danger);\n}\n.kpi-total[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%] {\n  background: #EDE9FE;\n}\n.kpi-total[_ngcontent-%COMP%]   .kpi-icon[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: #7C3AED;\n}\n.kpi-failed-alert[_ngcontent-%COMP%] {\n  border-color: var(--danger);\n  background: var(--danger-bg);\n}\n.kpi-failed-alert[_ngcontent-%COMP%]   .kpi-val[_ngcontent-%COMP%] {\n  color: var(--danger);\n}\n.kpi-failed-actions[_ngcontent-%COMP%] {\n  position: absolute;\n  right: 12px;\n  bottom: 12px;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n}\n.btn-retry-all[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  background: var(--danger);\n  color: white;\n  border: none;\n  cursor: pointer;\n  font-size: 12px;\n  transition: 0.15s;\n}\n.btn-retry-all[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 14px;\n}\n.btn-retry-all[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: #b91c1c;\n}\n.btn-retry-all[_ngcontent-%COMP%]:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.btn-clear-failed[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  padding: 4px 10px;\n  border-radius: 6px;\n  background: transparent;\n  color: var(--danger);\n  border: 1px solid var(--danger);\n  cursor: pointer;\n  font-size: 12px;\n  transition: 0.15s;\n}\n.btn-clear-failed[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 14px;\n}\n.btn-clear-failed[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: var(--danger);\n  color: white;\n}\n.btn-clear-failed[_ngcontent-%COMP%]:disabled {\n  opacity: 0.6;\n  cursor: not-allowed;\n}\n.module-stats-row[_ngcontent-%COMP%] {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 12px;\n  margin-bottom: 24px;\n}\n.module-card[_ngcontent-%COMP%] {\n  background: var(--bg-surface);\n  border: 2px solid var(--border);\n  border-radius: 10px;\n  padding: 14px 16px;\n  cursor: pointer;\n  transition: 0.15s;\n}\n.module-card[_ngcontent-%COMP%]:hover {\n  border-color: #7C3AED;\n}\n.module-card.active[_ngcontent-%COMP%] {\n  border-color: #7C3AED;\n  background: #F5F3FF;\n}\n.module-card[_ngcontent-%COMP%]   .mc-header[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 8px;\n}\n.module-card[_ngcontent-%COMP%]   .mc-header[_ngcontent-%COMP%]   .mc-icon[_ngcontent-%COMP%] {\n  font-size: 20px;\n  color: #7C3AED;\n}\n.module-card[_ngcontent-%COMP%]   .mc-header[_ngcontent-%COMP%]   .mc-label[_ngcontent-%COMP%] {\n  font-size: 13px;\n  font-weight: 600;\n  color: var(--text-primary);\n}\n.module-card[_ngcontent-%COMP%]   .mc-badges[_ngcontent-%COMP%] {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n.mc-badge[_ngcontent-%COMP%] {\n  font-size: 11px;\n  padding: 2px 8px;\n  border-radius: 20px;\n  font-weight: 500;\n}\n.mc-badge.b-pending[_ngcontent-%COMP%] {\n  background: var(--warning-bg);\n  color: var(--warning);\n}\n.mc-badge.b-failed[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n}\n.mc-badge.b-ok[_ngcontent-%COMP%] {\n  background: var(--success-bg);\n  color: var(--success);\n  display: flex;\n  align-items: center;\n  gap: 2px;\n}\n.events-section[_ngcontent-%COMP%] {\n  background: var(--bg-surface);\n  border: 1px solid var(--border);\n  border-radius: 12px;\n  overflow: hidden;\n}\n.events-toolbar[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 12px 16px;\n  border-bottom: 1px solid var(--border);\n  background: var(--bg-page);\n  flex-wrap: wrap;\n  gap: 10px;\n}\n.tabs[_ngcontent-%COMP%] {\n  display: flex;\n  gap: 4px;\n}\n.tab-btn[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 6px 14px;\n  border-radius: 7px;\n  border: 1px solid transparent;\n  background: transparent;\n  cursor: pointer;\n  font-size: 13px;\n  color: var(--text-secondary);\n  transition: 0.15s;\n}\n.tab-btn[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 16px;\n}\n.tab-btn[_ngcontent-%COMP%]:hover {\n  background: var(--bg-hover);\n}\n.tab-btn.active[_ngcontent-%COMP%] {\n  background: #EDE9FE;\n  color: #7C3AED;\n  border-color: #C4B5FD;\n  font-weight: 600;\n}\n.tab-badge[_ngcontent-%COMP%] {\n  font-size: 10px;\n  padding: 1px 6px;\n  border-radius: 10px;\n  font-weight: 700;\n}\n.tab-badge.b-pending[_ngcontent-%COMP%] {\n  background: var(--warning-bg);\n  color: var(--warning);\n}\n.tab-badge.b-failed[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n}\n.status-filters[_ngcontent-%COMP%] {\n  display: flex;\n  gap: 6px;\n}\n.filter-btn[_ngcontent-%COMP%] {\n  padding: 5px 12px;\n  border-radius: 20px;\n  font-size: 12px;\n  font-weight: 500;\n  border: 1px solid var(--border);\n  background: transparent;\n  color: var(--text-secondary);\n  cursor: pointer;\n  transition: 0.15s;\n}\n.filter-btn[_ngcontent-%COMP%]:hover {\n  background: var(--bg-hover);\n}\n.filter-btn.active[_ngcontent-%COMP%] {\n  background: var(--primary);\n  color: white;\n  border-color: var(--primary);\n}\n.filter-btn.filter-btn-pending.active[_ngcontent-%COMP%] {\n  background: var(--warning);\n  border-color: var(--warning);\n}\n.filter-btn.filter-btn-sent.active[_ngcontent-%COMP%] {\n  background: var(--success);\n  border-color: var(--success);\n}\n.filter-btn.filter-btn-failed.active[_ngcontent-%COMP%] {\n  background: var(--danger);\n  border-color: var(--danger);\n}\n.table-wrap[_ngcontent-%COMP%] {\n  overflow-x: auto;\n}\n.events-table[_ngcontent-%COMP%] {\n  width: 100%;\n  border-collapse: collapse;\n}\n.events-table[_ngcontent-%COMP%]   th[_ngcontent-%COMP%] {\n  padding: 10px 14px;\n  text-align: left;\n  font-size: 11.5px;\n  font-weight: 600;\n  text-transform: uppercase;\n  letter-spacing: 0.5px;\n  color: var(--text-muted);\n  border-bottom: 1px solid var(--border);\n  white-space: nowrap;\n}\n.events-table[_ngcontent-%COMP%]   td[_ngcontent-%COMP%] {\n  padding: 10px 14px;\n  font-size: 13px;\n  border-bottom: 1px solid var(--border-light, var(--border));\n  color: var(--text-primary);\n}\n.events-table[_ngcontent-%COMP%]   tbody[_ngcontent-%COMP%]   tr[_ngcontent-%COMP%] {\n  transition: background 0.1s;\n}\n.events-table[_ngcontent-%COMP%]   tbody[_ngcontent-%COMP%]   tr[_ngcontent-%COMP%]:hover {\n  background: var(--bg-hover);\n}\n.events-table[_ngcontent-%COMP%]   tbody[_ngcontent-%COMP%]   tr.row-failed[_ngcontent-%COMP%] {\n  background: rgba(220, 38, 38, 0.04);\n}\n.events-table[_ngcontent-%COMP%]   tbody[_ngcontent-%COMP%]   tr[_ngcontent-%COMP%]:last-child   td[_ngcontent-%COMP%] {\n  border-bottom: none;\n}\n.cell-id[_ngcontent-%COMP%] {\n  color: var(--text-muted);\n  font-size: 12px;\n  width: 50px;\n}\n.cell-label[_ngcontent-%COMP%] {\n  font-weight: 500;\n}\n.cell-date[_ngcontent-%COMP%] {\n  color: var(--text-secondary);\n  font-size: 12px;\n  white-space: nowrap;\n}\n.cell-retries[_ngcontent-%COMP%] {\n  text-align: center;\n}\n.cell-action[_ngcontent-%COMP%] {\n  width: 48px;\n  text-align: center;\n}\n.cell-error[_ngcontent-%COMP%] {\n  max-width: 200px;\n}\n.cell-ref[_ngcontent-%COMP%] {\n  white-space: nowrap;\n}\n.ref-chip[_ngcontent-%COMP%] {\n  background: var(--bg-page);\n  border: 1px solid var(--border);\n  border-radius: 5px;\n  padding: 2px 8px;\n  font-size: 12px;\n  font-family: monospace;\n  color: var(--text-secondary);\n}\n.retry-count[_ngcontent-%COMP%] {\n  display: inline-block;\n  background: var(--warning-bg);\n  color: var(--warning);\n  border-radius: 12px;\n  padding: 1px 7px;\n  font-size: 12px;\n  font-weight: 600;\n}\n.retry-count.high[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n}\n.error-msg[_ngcontent-%COMP%] {\n  color: var(--danger);\n  font-size: 12px;\n  cursor: help;\n}\n.text-muted[_ngcontent-%COMP%] {\n  color: var(--text-muted);\n  font-size: 12px;\n}\n.badge[_ngcontent-%COMP%] {\n  display: inline-flex;\n  align-items: center;\n  padding: 3px 10px;\n  border-radius: 12px;\n  font-size: 11.5px;\n  font-weight: 600;\n  white-space: nowrap;\n}\n.badge-pending[_ngcontent-%COMP%] {\n  background: var(--warning-bg);\n  color: var(--warning);\n}\n.badge-sent[_ngcontent-%COMP%] {\n  background: var(--success-bg);\n  color: var(--success);\n}\n.badge-failed[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n}\n.btn-retry-one[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n  border: 1px solid transparent;\n  border-radius: 6px;\n  width: 30px;\n  height: 30px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  transition: 0.15s;\n}\n.btn-retry-one[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 16px;\n}\n.btn-retry-one[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: var(--danger);\n  color: white;\n}\n.btn-retry-one[_ngcontent-%COMP%]:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n.skel-row[_ngcontent-%COMP%]   .skel-line[_ngcontent-%COMP%] {\n  height: 20px;\n  background: var(--border);\n  border-radius: 4px;\n  animation: _ngcontent-%COMP%_pulse 1.4s ease-in-out infinite;\n}\n@keyframes _ngcontent-%COMP%_pulse {\n  0%, 100% {\n    opacity: 1;\n  }\n  50% {\n    opacity: 0.45;\n  }\n}\n.empty-row[_ngcontent-%COMP%] {\n  text-align: center;\n  padding: 48px 0 !important;\n  color: var(--text-muted);\n  font-size: 14px;\n}\n.empty-row[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  display: block;\n  font-size: 40px;\n  margin-bottom: 10px;\n}\n.pagination[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 12px;\n  padding: 14px 16px;\n  border-top: 1px solid var(--border);\n}\n.page-btn[_ngcontent-%COMP%] {\n  width: 32px;\n  height: 32px;\n  border-radius: 6px;\n  background: var(--bg-surface);\n  border: 1px solid var(--border);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  transition: 0.15s;\n}\n.page-btn[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 18px;\n}\n.page-btn[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: #EDE9FE;\n  color: #7C3AED;\n  border-color: #C4B5FD;\n}\n.page-btn[_ngcontent-%COMP%]:disabled {\n  opacity: 0.4;\n  cursor: not-allowed;\n}\n.page-info[_ngcontent-%COMP%] {\n  font-size: 13px;\n  color: var(--text-muted);\n}\n.spinning[_ngcontent-%COMP%] {\n  animation: _ngcontent-%COMP%_spin 0.9s linear infinite;\n}\n@keyframes _ngcontent-%COMP%_spin {\n  to {\n    transform: rotate(360deg);\n  }\n}\n.clickable-row[_ngcontent-%COMP%] {\n  cursor: pointer;\n}\n.row-selected[_ngcontent-%COMP%]   td[_ngcontent-%COMP%] {\n  background: rgba(124, 58, 237, 0.06) !important;\n}\n.detail-overlay[_ngcontent-%COMP%] {\n  position: fixed;\n  inset: 0;\n  background: rgba(0, 0, 0, 0.35);\n  z-index: 200;\n  animation: _ngcontent-%COMP%_fadeIn 0.15s ease;\n}\n.detail-drawer[_ngcontent-%COMP%] {\n  position: fixed;\n  top: 50px;\n  right: 0;\n  bottom: 0;\n  width: 520px;\n  max-width: 90vw;\n  background: var(--bg-surface);\n  border-left: 1px solid var(--border);\n  z-index: 201;\n  display: flex;\n  flex-direction: column;\n  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);\n  animation: _ngcontent-%COMP%_slideIn 0.2s ease;\n}\n@keyframes _ngcontent-%COMP%_slideIn {\n  from {\n    transform: translateX(100%);\n    opacity: 0;\n  }\n  to {\n    transform: translateX(0);\n    opacity: 1;\n  }\n}\n@keyframes _ngcontent-%COMP%_fadeIn {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.detail-header[_ngcontent-%COMP%] {\n  padding: 18px 20px 14px;\n  border-bottom: 1px solid var(--border);\n  position: relative;\n}\n.detail-title-row[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-bottom: 8px;\n}\n.detail-module-chip[_ngcontent-%COMP%] {\n  font-size: 11px;\n  font-weight: 700;\n  background: #EDE9FE;\n  color: #7C3AED;\n  padding: 2px 9px;\n  border-radius: 12px;\n  letter-spacing: 0.5px;\n}\n.detail-event-label[_ngcontent-%COMP%] {\n  font-size: 16px;\n  font-weight: 700;\n  color: var(--text-primary);\n  margin: 0;\n  padding-right: 32px;\n}\n.btn-close-detail[_ngcontent-%COMP%] {\n  position: absolute;\n  top: 14px;\n  right: 16px;\n  background: var(--bg-hover);\n  border: 1px solid var(--border);\n  border-radius: 6px;\n  width: 30px;\n  height: 30px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  color: var(--text-muted);\n  transition: 0.12s;\n}\n.btn-close-detail[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 18px;\n}\n.btn-close-detail[_ngcontent-%COMP%]:hover {\n  background: var(--border);\n  color: var(--text-primary);\n}\n.detail-body[_ngcontent-%COMP%] {\n  flex: 1;\n  overflow-y: auto;\n  padding: 0 0 24px;\n}\n.detail-section[_ngcontent-%COMP%] {\n  padding: 18px 20px;\n  border-bottom: 1px solid var(--border);\n}\n.detail-section[_ngcontent-%COMP%]:last-child {\n  border-bottom: none;\n}\n.section-title[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  font-size: 12px;\n  font-weight: 700;\n  text-transform: uppercase;\n  letter-spacing: 0.6px;\n  color: var(--text-muted);\n  margin: 0 0 14px;\n}\n.section-title[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 16px;\n}\n.error-title[_ngcontent-%COMP%] {\n  color: var(--danger);\n}\n.detail-dl[_ngcontent-%COMP%] {\n  margin: 0;\n}\n.dl-row[_ngcontent-%COMP%] {\n  display: grid;\n  grid-template-columns: 160px 1fr;\n  align-items: baseline;\n  gap: 8px;\n  padding: 6px 0;\n  border-bottom: 1px solid var(--border-light, rgba(0, 0, 0, 0.05));\n}\n.dl-row[_ngcontent-%COMP%]:last-child {\n  border-bottom: none;\n}\n.dl-row[_ngcontent-%COMP%]   dt[_ngcontent-%COMP%] {\n  font-size: 12px;\n  color: var(--text-muted);\n  font-weight: 500;\n}\n.dl-row[_ngcontent-%COMP%]   dd[_ngcontent-%COMP%] {\n  font-size: 13px;\n  color: var(--text-primary);\n  margin: 0;\n}\n.mono-chip[_ngcontent-%COMP%] {\n  background: var(--bg-page);\n  border: 1px solid var(--border);\n  border-radius: 4px;\n  padding: 2px 8px;\n  font-size: 12px;\n  font-family: monospace;\n  color: var(--text-secondary);\n}\n.mono-chip.small[_ngcontent-%COMP%] {\n  font-size: 11px;\n}\n.error-block[_ngcontent-%COMP%] {\n  background: var(--danger-bg);\n  color: var(--danger);\n  border-radius: 8px;\n  padding: 12px 14px;\n  font-size: 13px;\n  font-family: monospace;\n  white-space: pre-wrap;\n  word-break: break-all;\n  border: 1px solid rgba(220, 38, 38, 0.2);\n}\n.detail-actions[_ngcontent-%COMP%] {\n  padding: 0 20px 18px;\n}\n.payload-loading[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  color: var(--text-muted);\n  font-size: 13px;\n}\n.payload-loading[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 18px;\n}\n.payload-kv[_ngcontent-%COMP%] {\n  background: var(--bg-page);\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  overflow: hidden;\n  margin-bottom: 10px;\n}\n.kv-row[_ngcontent-%COMP%] {\n  display: grid;\n  grid-template-columns: 160px 1fr;\n  gap: 10px;\n  padding: 7px 12px;\n  border-bottom: 1px solid var(--border-light, rgba(0, 0, 0, 0.05));\n  font-size: 13px;\n}\n.kv-row[_ngcontent-%COMP%]:last-child {\n  border-bottom: none;\n}\n.kv-row[_ngcontent-%COMP%]:nth-child(even) {\n  background: rgba(0, 0, 0, 0.02);\n}\n.kv-key[_ngcontent-%COMP%] {\n  font-family: monospace;\n  font-size: 12px;\n  color: #7C3AED;\n  font-weight: 600;\n  word-break: break-all;\n}\n.kv-val[_ngcontent-%COMP%] {\n  color: var(--text-primary);\n  word-break: break-all;\n}\n.kv-nested[_ngcontent-%COMP%] {\n  font-family: monospace;\n  font-size: 11px;\n  color: var(--text-secondary);\n  white-space: pre-wrap;\n}\n.raw-json-details[_ngcontent-%COMP%]   summary[_ngcontent-%COMP%] {\n  cursor: pointer;\n  font-size: 12px;\n  color: var(--text-muted);\n  -webkit-user-select: none;\n  user-select: none;\n}\n.raw-json-details[_ngcontent-%COMP%]   summary[_ngcontent-%COMP%]:hover {\n  color: #7C3AED;\n}\n.payload-raw[_ngcontent-%COMP%] {\n  background: #1e1e2e;\n  color: #cdd6f4;\n  border-radius: 8px;\n  padding: 14px 16px;\n  font-size: 12px;\n  font-family:\n    "Fira Code",\n    "Courier New",\n    monospace;\n  overflow-x: auto;\n  white-space: pre;\n  margin-top: 8px;\n  line-height: 1.6;\n  border: 1px solid var(--border);\n  max-height: 400px;\n  overflow-y: auto;\n}\n.btn-hub-test[_ngcontent-%COMP%] {\n  background: #059669;\n  color: white;\n}\n.btn-hub-test[_ngcontent-%COMP%]:hover:not(:disabled) {\n  background: #047857;\n}\n.progress-band[_ngcontent-%COMP%] {\n  background: var(--bg-surface);\n  border: 1px solid var(--border);\n  border-radius: 12px;\n  padding: 14px 18px;\n  margin-bottom: 20px;\n}\n.progress-meta[_ngcontent-%COMP%] {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  margin-bottom: 10px;\n}\n.progress-label[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  font-weight: 600;\n  color: var(--text-primary);\n}\n.progress-label[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 17px;\n  color: #7C3AED;\n}\n.progress-pct[_ngcontent-%COMP%] {\n  margin-left: auto;\n  font-size: 20px;\n  font-weight: 700;\n  color: #7C3AED;\n}\n.progress-detail[_ngcontent-%COMP%] {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n.pd-chip[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n  padding: 3px 10px;\n  border-radius: 20px;\n  font-size: 12px;\n  font-weight: 500;\n}\n.pd-chip[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 13px;\n}\n.pd-sent[_ngcontent-%COMP%] {\n  background: #ECFDF5;\n  color: #065F46;\n}\n.pd-pending[_ngcontent-%COMP%] {\n  background: #FFF7ED;\n  color: #92400E;\n}\n.pd-failed[_ngcontent-%COMP%] {\n  background: #FEF2F2;\n  color: #7F1D1D;\n}\n.pd-batch[_ngcontent-%COMP%] {\n  background: #EFF6FF;\n  color: #1E40AF;\n}\n.pd-time[_ngcontent-%COMP%] {\n  background: var(--bg-hover);\n  color: var(--text-muted);\n}\n.progress-bar-wrap[_ngcontent-%COMP%] {\n  height: 8px;\n  background: var(--bg-hover);\n  border-radius: 6px;\n  overflow: hidden;\n}\n.progress-bar[_ngcontent-%COMP%] {\n  height: 100%;\n  background: #7C3AED;\n  border-radius: 6px;\n  transition: width 0.5s ease;\n}\n.progress-bar.bar-full[_ngcontent-%COMP%] {\n  background: #10B981;\n}\n.progress-bar.bar-warn[_ngcontent-%COMP%] {\n  background: #F59E0B;\n}\n.hub-test-result[_ngcontent-%COMP%] {\n  display: flex;\n  align-items: flex-start;\n  gap: 12px;\n  padding: 12px 16px;\n  border-radius: 10px;\n  margin-bottom: 20px;\n  font-size: 13px;\n}\n.hub-test-result[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  font-size: 20px;\n  flex-shrink: 0;\n  margin-top: 2px;\n}\n.hub-test-result.hub-ok[_ngcontent-%COMP%] {\n  background: #ECFDF5;\n  border: 1px solid #6EE7B7;\n  color: #065F46;\n}\n.hub-test-result.hub-ok[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: #10B981;\n}\n.hub-test-result.hub-fail[_ngcontent-%COMP%] {\n  background: #FEF2F2;\n  border: 1px solid #FCA5A5;\n  color: #7F1D1D;\n}\n.hub-test-result.hub-fail[_ngcontent-%COMP%]   .material-icons[_ngcontent-%COMP%] {\n  color: #EF4444;\n}\n.hub-test-body[_ngcontent-%COMP%] {\n  flex: 1;\n  display: flex;\n  flex-direction: column;\n  gap: 3px;\n}\n.hub-test-body[_ngcontent-%COMP%]   strong[_ngcontent-%COMP%] {\n  font-weight: 600;\n}\n.hub-test-url[_ngcontent-%COMP%] {\n  font-family: monospace;\n  font-size: 12px;\n  opacity: 0.8;\n}\n.hub-test-latency[_ngcontent-%COMP%] {\n  font-size: 12px;\n  font-weight: 600;\n  color: #059669;\n}\n.hub-test-error[_ngcontent-%COMP%] {\n  font-size: 12px;\n  word-break: break-word;\n}\n.dark[_nghost-%COMP%]   .module-card.active[_ngcontent-%COMP%], .dark   [_nghost-%COMP%]   .module-card.active[_ngcontent-%COMP%] {\n  background: rgba(124, 58, 237, 0.15);\n}\n.dark[_nghost-%COMP%]   .tab-btn.active[_ngcontent-%COMP%], .dark   [_nghost-%COMP%]   .tab-btn.active[_ngcontent-%COMP%] {\n  background: rgba(124, 58, 237, 0.2);\n}\n.dark[_nghost-%COMP%]   .kv-row[_ngcontent-%COMP%]:nth-child(even), .dark   [_nghost-%COMP%]   .kv-row[_ngcontent-%COMP%]:nth-child(even) {\n  background: rgba(255, 255, 255, 0.03);\n}\n.dark[_nghost-%COMP%]   .dl-row[_ngcontent-%COMP%], .dark   [_nghost-%COMP%]   .dl-row[_ngcontent-%COMP%] {\n  border-color: rgba(255, 255, 255, 0.06);\n}\n.mod-chip[_ngcontent-%COMP%] {\n  display: inline-block;\n  margin-left: 6px;\n  padding: 1px 7px;\n  border-radius: 10px;\n  font-size: 10px;\n  font-weight: 700;\n  text-transform: uppercase;\n  letter-spacing: 0.04em;\n  vertical-align: middle;\n  opacity: 0.85;\n}\n.mod-chip.mod-VENTES[_ngcontent-%COMP%] {\n  background: #EEF2FF;\n  color: #4338CA;\n}\n.mod-chip.mod-ACHATS[_ngcontent-%COMP%] {\n  background: #FFF7ED;\n  color: #C2410C;\n}\n.mod-chip.mod-COMPTABILITE[_ngcontent-%COMP%] {\n  background: #F0FDF4;\n  color: #15803D;\n}\n.mod-chip.mod-STOCK[_ngcontent-%COMP%] {\n  background: #EFF6FF;\n  color: #1D4ED8;\n}\n.mod-chip.mod-CAISSES[_ngcontent-%COMP%] {\n  background: #FDF4FF;\n  color: #7E22CE;\n}\n.mod-chip.mod-REFERENTIELS[_ngcontent-%COMP%] {\n  background: #F0F9FF;\n  color: #0369A1;\n}\n/*# sourceMappingURL=sync-dashboard.component.css.map */'] });
   }
@@ -1409,11 +1470,17 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
       <button class="btn-action btn-snapshot" (click)="forceSnapshot()" [disabled]="snapshotting"
               title="Envoie l'\xE9tat complet du syst\xE8me au Hub, sans limite d'historique (factures, avoirs, bons de commande...) \u2014 \xE0 utiliser pour rattraper des documents rest\xE9s bloqu\xE9s">
         <span class="material-icons" [class.spinning]="snapshotting">cloud_upload</span>
-        {{ snapshotting ? 'Snapshot...' : 'Envoyer snapshot' }}
+        {{ snapshotting ? 'Snapshot...' : 'Snapshot complet' }}
       </button>
-      <button class="btn-action btn-dispatch" (click)="forceDispatch()" [disabled]="dispatching">
-        <span class="material-icons" [class.spinning]="dispatching">send</span>
-        {{ dispatching ? 'Envoi...' : 'Forcer envoi' }}
+      <button class="btn-action btn-snapshot-hourly" (click)="triggerHourlySnapshot()" [disabled]="snapshottingHourly"
+              title="D\xE9clenche tout de suite le m\xEAme snapshot incr\xE9mental que le job planifi\xE9 (seulement ce qui a chang\xE9 depuis le dernier envoi), sans attendre le prochain passage horaire">
+        <span class="material-icons" [class.spinning]="snapshottingHourly">schedule_send</span>
+        {{ snapshottingHourly ? 'Snapshot...' : 'Snapshot horaire' }}
+      </button>
+      <button class="btn-action btn-dispatch" (click)="forceFailedRetry()" [disabled]="forcingFailed"
+              title="Renvoie tout de suite tous les \xE9v\xE9nements en \xE9chec, au lieu d'attendre une nouvelle tentative automatique">
+        <span class="material-icons" [class.spinning]="forcingFailed">send</span>
+        {{ forcingFailed ? 'Envoi...' : 'Forcer envoi' }}
       </button>
       <button class="btn-action btn-refresh" (click)="loadAll()" [disabled]="loading">
         <span class="material-icons" [class.spinning]="loading">refresh</span>
@@ -1840,4 +1907,4 @@ Ces op\xE9rations ne seront jamais renvoy\xE9es au Hub. \xC0 utiliser uniquement
 export {
   SyncDashboardComponent
 };
-//# sourceMappingURL=chunk-3FEABOBX.js.map
+//# sourceMappingURL=chunk-OEKPIQKF.js.map

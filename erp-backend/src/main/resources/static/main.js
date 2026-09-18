@@ -4570,7 +4570,7 @@ var routes = [
   },
   {
     path: "sync",
-    loadChildren: () => import("./chunk-6NJEVJC4.js").then((m) => m.syncRoutes),
+    loadChildren: () => import("./chunk-2RS3NXF2.js").then((m) => m.syncRoutes),
     canActivate: [licenseGuard, authGuard]
   },
   {

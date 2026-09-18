@@ -212,14 +212,30 @@ public class SyncStatusController {
         ));
     }
 
-    /** Snapshot complet (pas de fenêtre de 2 ans sur les factures) — contrairement au snapshot
-     *  horaire qui reste fenêtré pour rester léger, "Forcer envoi" doit rattraper tout l'historique
-     *  qu'un événement temps réel en échec aurait laissé bloqué indéfiniment. */
+    /** Snapshot complet (pas de fenêtre de 2 ans sur les factures, tout l'historique renvoyé) —
+     *  bouton "Snapshot complet" côté UI. À distinguer de /snapshot/hourly (incrémental, ce que le
+     *  job planifié envoie normalement chaque heure) et de /retry (qui ne fait que rejouer les
+     *  événements déjà en échec, sans reconstruire de snapshot). */
     @PostMapping("/snapshot/force")
     public ResponseEntity<Map<String, String>> forceSnapshot() {
         try {
             snapshotService.buildAndPublish(true);
             return ResponseEntity.ok(Map.of("status", "ok", "message", "Snapshot complet envoyé dans l'outbox"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
+    /** Déclenche immédiatement le même snapshot incrémental que le job planifié (SnapshotScheduler),
+     *  sans attendre le prochain passage horaire — utile pour vérifier tout de suite l'effet d'un
+     *  changement plutôt que d'attendre jusqu'à une heure. Contrairement à /snapshot/force, reste
+     *  fenêtré/incrémental (ne renvoie que ce qui a changé depuis le dernier snapshot réussi). */
+    @PostMapping("/snapshot/hourly")
+    public ResponseEntity<Map<String, String>> triggerHourlySnapshot() {
+        try {
+            snapshotService.buildAndPublish(false);
+            return ResponseEntity.ok(Map.of("status", "ok", "message", "Snapshot incrémental envoyé dans l'outbox"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("status", "error", "message", e.getMessage()));

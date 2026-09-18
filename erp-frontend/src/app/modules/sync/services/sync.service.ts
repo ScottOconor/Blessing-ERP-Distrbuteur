@@ -106,6 +106,12 @@ export class SyncService {
     return this.http.post<{ status: string; message: string }>(`${this.base}/snapshot/force`, {});
   }
 
+  /** Déclenche tout de suite le même snapshot incrémental que le job planifié, sans attendre le
+   *  prochain passage horaire. */
+  triggerHourlySnapshot(): Observable<{ status: string; message: string }> {
+    return this.http.post<{ status: string; message: string }>(`${this.base}/snapshot/hourly`, {});
+  }
+
   testHub(): Observable<HubTestResult> {
     return this.http.get<HubTestResult>(`${this.base}/test-hub`);
   }
