@@ -4,9 +4,11 @@ import com.erp.auth.filter.JwtAuthFilter;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.config.permission.PermissionFilter;
 import com.erp.license.LicenseEnforcementFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,6 +20,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -26,6 +29,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -38,6 +42,7 @@ public class SecurityConfig {
     private final InterAgencyApiKeyFilter    interAgencyApiKeyFilter;
     private final PermissionFilter           permissionFilter;
     private final LicenseEnforcementFilter   licenseEnforcementFilter;
+    private final ObjectMapper               objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -83,6 +88,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+            // Sans entry point explicite, Spring Security n'a aucune stratégie enregistrée pour les
+            // requêtes /api/** non authentifiées (JWT absent, expiré, ou signature invalide après un
+            // changement de secret) et retombe sur AccessDeniedHandlerImpl (403) au lieu d'un 401 —
+            // or le frontend ne déclenche la déconnexion + redirection vers /login QUE sur 401
+            // (httpErrorInterceptor). Un token invalide obtenait donc un 403 muet, jamais nettoyé du
+            // localStorage, et tout ce qui l'utilisait en arrière-plan (rafraîchissement du dashboard,
+            // bandeau licence...) le renvoyait indéfiniment en boucle serrée — observé en prod
+            // (erp.log.txt du 2026-09-18 : des dizaines de "JWT signature does not match" par seconde,
+            // en continu, jamais interrompues faute de déconnexion côté client).
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(jsonAuthenticationEntryPoint()))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(interAgencyApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -90,6 +105,18 @@ public class SecurityConfig {
             .addFilterAfter(licenseEnforcementFilter, PermissionFilter.class);
 
         return http.build();
+    }
+
+    /** Renvoie 401 (pas 403) pour toute requête /api/** sans authentification valide — voir le
+     *  commentaire sur .exceptionHandling() ci-dessus pour l'incident que ça corrige. */
+    @Bean
+    public AuthenticationEntryPoint jsonAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            objectMapper.writeValue(response.getWriter(), Map.of("error", "Authentification requise"));
+        };
     }
 
     @Bean
