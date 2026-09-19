@@ -56,4 +56,27 @@ public class JsonArrayStreamer {
             gen.writeEndArray();
         }
     }
+
+    /** Variante où la conversion se fait par lot (ex. précalcul de maps de résolution pour tout le lot). */
+    public <E, T> void streamByIdsInChunks(OutputStream out, List<Long> ids, Function<List<Long>, List<E>> reload,
+                                           Function<E, Long> idOf, Function<List<E>, List<T>> toDtos) throws IOException {
+        em.clear();
+        try (JsonGenerator gen = objectMapper.getFactory().createGenerator(out)) {
+            gen.writeStartArray();
+            for (int i = 0; i < ids.size(); i += DEFAULT_CHUNK_SIZE) {
+                List<Long> chunk = ids.subList(i, Math.min(i + DEFAULT_CHUNK_SIZE, ids.size()));
+                Map<Long, E> byId = new HashMap<>();
+                for (E e : reload.apply(chunk)) byId.putIfAbsent(idOf.apply(e), e);
+                List<E> ordered = new java.util.ArrayList<>(chunk.size());
+                for (Long id : chunk) {
+                    E e = byId.get(id);
+                    if (e != null) ordered.add(e);
+                }
+                for (T dto : toDtos.apply(ordered)) objectMapper.writeValue(gen, dto);
+                gen.flush();
+                em.clear();
+            }
+            gen.writeEndArray();
+        }
+    }
 }
