@@ -52,6 +52,7 @@ public class AccountingService {
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
+    private final jakarta.persistence.EntityManager em;
 
     // ===================== ACCOUNTS =====================
 
@@ -748,61 +749,63 @@ public class AccountingService {
             new Sort.Order(Sort.Direction.DESC, "name").nullsLast()
         );
 
-        List<Long> restrictIds = null;
-        if (effectiveLimit != null && effectiveLimit > 0) {
-            // Requête légère (sans fetch de "lines") pour ne récupérer QUE les ids des <limit>
-            // écritures les plus récentes. Appliquer directement une Pageable sur la requête qui
-            // fetch la collection "lines" ne fonctionnerait pas : Hibernate ignore alors le LIMIT
-            // SQL (HHH000104) et charge tout l'historique en mémoire avant de tronquer — aucun
-            // gain réel sur la charge DB, exactement le problème qu'on cherche à éviter ici.
-            restrictIds = moveRepo.findAll(filterSpec, PageRequest.of(0, effectiveLimit, sort))
-                    .map(AccountMove::getId)
-                    .getContent();
-            if (restrictIds.isEmpty()) return List.of();
+        // 1) Ids seuls (triés) de toutes les écritures à remonter : requête sans fetch de "lines"
+        // (Hibernate ignorerait sinon le LIMIT SQL, HHH000104).
+        List<Long> allIds = (effectiveLimit != null && effectiveLimit > 0)
+                ? moveRepo.findAll(filterSpec, PageRequest.of(0, effectiveLimit, sort))
+                        .map(AccountMove::getId).getContent()
+                : moveRepo.findAll(filterSpec, sort).stream()
+                        .map(AccountMove::getId).collect(Collectors.toList());
+        if (allIds.isEmpty()) return List.of();
+        em.clear();
+
+        // 2) Détail chargé par lots de JOURNAL_ENTRIES_CHUNK_SIZE écritures, converti en DTO puis
+        // détaché du contexte de persistance. Avant ce correctif, un seul findAll(spec) avec 6
+        // fetch-joins chargeait TOUTES les écritures de la plage (produit cartésien lignes x
+        // jointures dans le ResultSet JDBC + entités Hibernate) : GET /api/accounting/moves sur
+        // 3 semaines (2026-08-31 -> 2026-09-19) provoquait un OutOfMemoryError reproductible,
+        // avant ET après redémarrage (erp.log.txt du 2026-09-19, 16:11 et 16:28). Le pic mémoire
+        // est maintenant borné par la taille d'un lot, plus par celle de la période.
+        List<AccountMoveDTO> result = new ArrayList<>(allIds.size());
+        for (int i = 0; i < allIds.size(); i += JOURNAL_ENTRIES_CHUNK_SIZE) {
+            final List<Long> chunk = allIds.subList(i, Math.min(i + JOURNAL_ENTRIES_CHUNK_SIZE, allIds.size()));
+            Specification<AccountMove> spec = (root, query, cb) -> {
+                query.distinct(true);
+                root.fetch("journal", JoinType.LEFT);
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("partner", JoinType.LEFT);
+                Fetch<AccountMove, AccountMoveLine> linesFetch = root.fetch("lines", JoinType.LEFT);
+                linesFetch.fetch("account", JoinType.LEFT);
+                linesFetch.fetch("partner", JoinType.LEFT);
+                linesFetch.fetch("journal", JoinType.LEFT);
+                linesFetch.fetch("company", JoinType.LEFT);
+                linesFetch.fetch("analyticAccount", JoinType.LEFT);
+                return root.get("id").in(chunk);
+            };
+            Map<Long, AccountMove> byId = moveRepo.findAll(spec).stream()
+                    .collect(Collectors.toMap(AccountMove::getId, m -> m, (a, b) -> a));
+
+            List<Long> lineIds = byId.values().stream()
+                    .flatMap(m -> m.getLines().stream())
+                    .map(AccountMoveLine::getId)
+                    .collect(Collectors.toList());
+            MoveListCache cache = new MoveListCache();
+            if (!lineIds.isEmpty()) {
+                cache.distributionsByLineId = batchedByLineIds(lineIds, analyticDistributionItemRepo::findByMoveLineIdIn).stream()
+                        .collect(Collectors.groupingBy(d -> d.getMoveLine().getId()));
+                cache.analyticLinesByLineId = batchedByLineIds(lineIds, analyticLineRepo::findByMoveLineIdIn).stream()
+                        .collect(Collectors.groupingBy(l -> l.getMoveLine().getId()));
+            }
+            for (Long id : chunk) {
+                AccountMove m = byId.get(id);
+                if (m != null) result.add(toMoveDTO(m, cache));
+            }
+            em.clear();
         }
-
-        final List<Long> ids = restrictIds;
-        // Sans ces fetch, chaque écriture retriggerait des requêtes séparées pour son
-        // journal/société/partenaire et pour chaque ligne (compte, partenaire, journal, société,
-        // compte analytique) — un simple écran "Écritures comptables" avec beaucoup de données
-        // pouvait ainsi prendre plusieurs dizaines de secondes à charger (N+1, un seul niveau
-        // "collection" fetché ici pour éviter le MultipleBagFetchException de Hibernate ; les
-        // ventilations/lignes analytiques par ligne sont chargées en masse séparément ci-dessous).
-        Specification<AccountMove> spec = (root, query, cb) -> {
-            query.distinct(true);
-            root.fetch("journal", JoinType.LEFT);
-            root.fetch("company", JoinType.LEFT);
-            root.fetch("partner", JoinType.LEFT);
-            Fetch<AccountMove, AccountMoveLine> linesFetch = root.fetch("lines", JoinType.LEFT);
-            linesFetch.fetch("account", JoinType.LEFT);
-            linesFetch.fetch("partner", JoinType.LEFT);
-            linesFetch.fetch("journal", JoinType.LEFT);
-            linesFetch.fetch("company", JoinType.LEFT);
-            linesFetch.fetch("analyticAccount", JoinType.LEFT);
-            Predicate base = filterSpec.toPredicate(root, query, cb);
-            return ids != null ? cb.and(base, root.get("id").in(ids)) : base;
-        };
-
-        List<AccountMove> moves = moveRepo.findAll(spec, sort);
-        if (moves.isEmpty()) return List.of();
-
-        List<Long> lineIds = moves.stream()
-                .flatMap(m -> m.getLines().stream())
-                .map(AccountMoveLine::getId)
-                .collect(Collectors.toList());
-
-        MoveListCache cache = new MoveListCache();
-        if (!lineIds.isEmpty()) {
-            cache.distributionsByLineId = batchedByLineIdsArray(lineIds, analyticDistributionItemRepo::findByMoveLineIdInArray).stream()
-                    .collect(Collectors.groupingBy(d -> d.getMoveLine().getId()));
-            cache.analyticLinesByLineId = batchedByLineIdsArray(lineIds, analyticLineRepo::findByMoveLineIdInArray).stream()
-                    .collect(Collectors.groupingBy(l -> l.getMoveLine().getId()));
-        }
-
-        return moves.stream()
-                .map(m -> toMoveDTO(m, cache))
-                .collect(Collectors.toList());
+        return result;
     }
+
+    private static final int JOURNAL_ENTRIES_CHUNK_SIZE = 200;
 
     /** PostgreSQL refuse toute requête préparée au-delà de 65 535 paramètres (SQLSTATE 08P01) —
      *  un `IN (:lineIds)` passé tel quel explose dès qu'un filtre par plage de dates large remonte
