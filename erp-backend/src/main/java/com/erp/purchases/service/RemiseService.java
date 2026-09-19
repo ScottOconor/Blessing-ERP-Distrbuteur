@@ -44,6 +44,7 @@ public class RemiseService {
 
     private final RemiseRepository remiseRepo;
     private final RemisePaiementRepository paiementRepo;
+    private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
     private final PartnerRepository partnerRepo;
     private final ProductCategoryRepository categoryRepo;
     private final PurchaseInvoiceRepository purchaseInvoiceRepo;
@@ -143,6 +144,14 @@ public class RemiseService {
     }
 
     // ======================== REMISE PAIEMENTS ========================
+
+    @Transactional(readOnly = true)
+    public void streamAllPaiements(Long companyId, String typeRemise, java.io.OutputStream out) throws java.io.IOException {
+        List<Long> ids = paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId).stream()
+                .filter(p -> typeRemise == null || typeRemise.equals(p.getTypeRemise()))
+                .map(p -> p.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, paiementRepo::findAllById, p -> p.getId(), this::toPaiementDTO);
+    }
 
     @Transactional(readOnly = true)
     public List<RemisePaiementDTO> getAllPaiements(Long companyId, String typeRemise) {

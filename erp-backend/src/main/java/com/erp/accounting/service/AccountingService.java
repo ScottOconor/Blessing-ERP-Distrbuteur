@@ -53,6 +53,7 @@ public class AccountingService {
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
     private final jakarta.persistence.EntityManager em;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // ===================== ACCOUNTS =====================
 
@@ -727,6 +728,38 @@ public class AccountingService {
     public List<AccountMoveDTO> getJournalEntries(Long companyId, Long journalId,
                                                    LocalDate dateFrom, LocalDate dateTo,
                                                    String state, Integer limit) {
+        List<AccountMoveDTO> result = new ArrayList<>();
+        forEachJournalEntry(companyId, journalId, dateFrom, dateTo, state, limit, result::add);
+        return result;
+    }
+
+    /** Même résultat que getJournalEntries, écrit en JSON au fil de l'eau : la liste complète des
+     *  DTO n'est jamais retenue en mémoire (OutOfMemoryError sur GET /api/accounting/moves,
+     *  erp.log.txt du 2026-09-19). */
+    @Transactional(readOnly = true)
+    public void streamJournalEntries(Long companyId, Long journalId, LocalDate dateFrom, LocalDate dateTo,
+                                     String state, Integer limit, java.io.OutputStream out) throws java.io.IOException {
+        try (com.fasterxml.jackson.core.JsonGenerator gen = objectMapper.getFactory().createGenerator(out)) {
+            gen.writeStartArray();
+            try {
+                forEachJournalEntry(companyId, journalId, dateFrom, dateTo, state, limit, dto -> {
+                    try {
+                        objectMapper.writeValue(gen, dto);
+                    } catch (java.io.IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                });
+            } catch (java.io.UncheckedIOException e) {
+                throw e.getCause();
+            }
+            gen.writeEndArray();
+        }
+    }
+
+    private void forEachJournalEntry(Long companyId, Long journalId,
+                                     LocalDate dateFrom, LocalDate dateTo,
+                                     String state, Integer limit,
+                                     java.util.function.Consumer<AccountMoveDTO> sink) {
         Integer effectiveLimit = limit;
         if ((effectiveLimit == null || effectiveLimit <= 0) && dateFrom == null && dateTo == null) {
             effectiveLimit = MAX_JOURNAL_ENTRIES_WITHOUT_FILTER;
@@ -756,7 +789,7 @@ public class AccountingService {
                         .map(AccountMove::getId).getContent()
                 : moveRepo.findAll(filterSpec, sort).stream()
                         .map(AccountMove::getId).collect(Collectors.toList());
-        if (allIds.isEmpty()) return List.of();
+        if (allIds.isEmpty()) return;
         em.clear();
 
         // 2) Détail chargé par lots de JOURNAL_ENTRIES_CHUNK_SIZE écritures, converti en DTO puis
@@ -766,7 +799,6 @@ public class AccountingService {
         // 3 semaines (2026-08-31 -> 2026-09-19) provoquait un OutOfMemoryError reproductible,
         // avant ET après redémarrage (erp.log.txt du 2026-09-19, 16:11 et 16:28). Le pic mémoire
         // est maintenant borné par la taille d'un lot, plus par celle de la période.
-        List<AccountMoveDTO> result = new ArrayList<>(allIds.size());
         for (int i = 0; i < allIds.size(); i += JOURNAL_ENTRIES_CHUNK_SIZE) {
             final List<Long> chunk = allIds.subList(i, Math.min(i + JOURNAL_ENTRIES_CHUNK_SIZE, allIds.size()));
             Specification<AccountMove> spec = (root, query, cb) -> {
@@ -798,11 +830,10 @@ public class AccountingService {
             }
             for (Long id : chunk) {
                 AccountMove m = byId.get(id);
-                if (m != null) result.add(toMoveDTO(m, cache));
+                if (m != null) sink.accept(toMoveDTO(m, cache));
             }
             em.clear();
         }
-        return result;
     }
 
     private static final int JOURNAL_ENTRIES_CHUNK_SIZE = 200;

@@ -5,7 +5,9 @@ import com.erp.sales.dto.RistournePaiementDTO;
 import com.erp.sales.service.RistourneService;
 import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -48,10 +50,11 @@ public class RistourneController {
     // ===== Règlements ristournes =====
 
     @GetMapping("/paiements")
-    public ResponseEntity<List<RistournePaiementDTO>> getAllPaiements(
+    public ResponseEntity<StreamingResponseBody> getAllPaiements(
             @RequestParam Long companyId,
             @RequestParam(required = false) String type) {
-        return ResponseEntity.ok(service.getAllPaiements(companyId, type));
+        StreamingResponseBody body = out -> service.streamAllPaiements(companyId, type, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/paiements/{id}")

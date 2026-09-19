@@ -5,7 +5,9 @@ import com.erp.accounting.service.AccountingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -79,14 +81,15 @@ public class AccountController {
     // ===================== MOVES =====================
 
     @GetMapping("/moves")
-    public ResponseEntity<List<AccountMoveDTO>> getMoves(
+    public ResponseEntity<StreamingResponseBody> getMoves(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "journalId", required = false) Long journalId,
             @RequestParam(name = "dateFrom", required = false) LocalDate dateFrom,
             @RequestParam(name = "dateTo",   required = false) LocalDate dateTo,
             @RequestParam(name = "state",    required = false) String state,
             @RequestParam(name = "pageSize", required = false) Integer pageSize) {
-        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, dateFrom, dateTo, state, pageSize));
+        StreamingResponseBody body = out -> accountingService.streamJournalEntries(companyId, journalId, dateFrom, dateTo, state, pageSize, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/moves/{id}")
@@ -133,12 +136,13 @@ public class AccountController {
     }
 
     @GetMapping("/journals/{id}/moves")
-    public ResponseEntity<List<AccountMoveDTO>> getMovesForJournal(
+    public ResponseEntity<StreamingResponseBody> getMovesForJournal(
             @PathVariable("id") Long journalId,
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "dateFrom", required = false) LocalDate dateFrom,
             @RequestParam(name = "dateTo",   required = false) LocalDate dateTo) {
-        return ResponseEntity.ok(accountingService.getJournalEntries(companyId, journalId, dateFrom, dateTo, null));
+        StreamingResponseBody body = out -> accountingService.streamJournalEntries(companyId, journalId, dateFrom, dateTo, null, null, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     // ===================== SOLDES JOURNALIERS =====================

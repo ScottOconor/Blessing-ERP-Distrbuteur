@@ -4,7 +4,9 @@ import com.erp.purchases.dto.RemiseDTO;
 import com.erp.purchases.dto.RemisePaiementDTO;
 import com.erp.purchases.service.RemiseService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -46,10 +48,11 @@ public class RemiseController {
     // ===== Règlements remises =====
 
     @GetMapping("/paiements")
-    public ResponseEntity<List<RemisePaiementDTO>> getAllPaiements(
+    public ResponseEntity<StreamingResponseBody> getAllPaiements(
             @RequestParam Long companyId,
             @RequestParam(required = false) String type) {
-        return ResponseEntity.ok(service.getAllPaiements(companyId, type));
+        StreamingResponseBody body = out -> service.streamAllPaiements(companyId, type, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/paiements/{id}")

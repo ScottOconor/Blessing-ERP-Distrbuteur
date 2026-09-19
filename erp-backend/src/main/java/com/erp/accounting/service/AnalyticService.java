@@ -28,6 +28,7 @@ public class AnalyticService {
 
     private final AnalyticAccountRepository analyticAccountRepo;
     private final AnalyticLineRepository analyticLineRepo;
+    private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
     private final CompanyRepository companyRepo;
     private final AccountMoveRepository moveRepo;
     private final AccountMoveLineRepository moveLineRepo;
@@ -107,6 +108,13 @@ public class AnalyticService {
     }
 
     // ===================== LIGNES ANALYTIQUES =====================
+
+    @Transactional(readOnly = true)
+    public void streamLines(Long companyId, Long analyticAccountId, LocalDate from, LocalDate to, java.io.OutputStream out) throws java.io.IOException {
+        List<Long> ids = analyticLineRepo.findByFilters(companyId, analyticAccountId, from, to).stream()
+                .map(l -> l.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, analyticLineRepo::findAllById, l -> l.getId(), this::toLineDTO);
+    }
 
     @Transactional(readOnly = true)
     public List<AnalyticLineDTO> getLines(Long companyId, Long analyticAccountId, LocalDate from, LocalDate to) {

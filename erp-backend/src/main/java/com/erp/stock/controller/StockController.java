@@ -10,7 +10,9 @@ import com.erp.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -219,11 +221,12 @@ public class StockController {
 
     // ---- Pickings (Réceptions / Livraisons / Transferts) ----
     @GetMapping("/pickings")
-    public ResponseEntity<List<StockPickingDTO>> getPickings(
+    public ResponseEntity<StreamingResponseBody> getPickings(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "type", required = false) String type) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getPickings(companyId, type));
+        StreamingResponseBody body = out -> stockService.streamPickings(companyId, type, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/pickings/{id}")
@@ -253,16 +256,18 @@ public class StockController {
 
     // Shortcuts par type
     @GetMapping("/receptions")
-    public ResponseEntity<List<StockPickingDTO>> getReceptions(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<StreamingResponseBody> getReceptions(@RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getPickings(companyId, "incoming"));
+        StreamingResponseBody body = out -> stockService.streamPickings(companyId, "incoming", out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     /** Entrées Dépôt Achat en attente de réception physique (état confirmed) */
     @GetMapping("/receptions/pending")
-    public ResponseEntity<List<StockPickingDTO>> getPendingReceptions(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<StreamingResponseBody> getPendingReceptions(@RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getPendingReceptions(companyId));
+        StreamingResponseBody body = out -> stockService.streamPendingReceptions(companyId, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     /** Obtenir le bordereau de réception pour un picking */
@@ -311,15 +316,17 @@ public class StockController {
     }
 
     @GetMapping("/livraisons")
-    public ResponseEntity<List<StockPickingDTO>> getLivraisons(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<StreamingResponseBody> getLivraisons(@RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getPickings(companyId, "outgoing"));
+        StreamingResponseBody body = out -> stockService.streamPickings(companyId, "outgoing", out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/transferts")
-    public ResponseEntity<List<StockPickingDTO>> getTransferts(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<StreamingResponseBody> getTransferts(@RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getPickings(companyId, "internal"));
+        StreamingResponseBody body = out -> stockService.streamPickings(companyId, "internal", out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     /** Réceptions inter-dépôts en attente de validation */
@@ -379,9 +386,10 @@ public class StockController {
 
     // ---- Ajustements de stock ----
     @GetMapping("/adjustments")
-    public ResponseEntity<List<StockAdjustmentDTO>> getAdjustments(@RequestParam("companyId") Long companyId) {
+    public ResponseEntity<StreamingResponseBody> getAdjustments(@RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getAdjustments(companyId));
+        StreamingResponseBody body = out -> stockService.streamAdjustments(companyId, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @PostMapping("/adjustments")
@@ -396,12 +404,13 @@ public class StockController {
 
     // ---- Trous & Casses ----
     @GetMapping("/casses")
-    public ResponseEntity<List<StockLossDTO>> getStockLosses(
+    public ResponseEntity<StreamingResponseBody> getStockLosses(
             @RequestParam("companyId") Long companyId,
             @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
             @RequestParam(value = "dateTo", required = false) LocalDate dateTo) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getStockLosses(companyId, dateFrom, dateTo));
+        StreamingResponseBody body = out -> stockService.streamStockLosses(companyId, dateFrom, dateTo, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @PostMapping("/casses")
@@ -531,10 +540,11 @@ public class StockController {
     // ---- Expéditions inter-agences (agences distantes via API) ----
 
     @GetMapping("/inter-company/expeditions")
-    public ResponseEntity<List<StockPickingDTO>> getInterCompanyExpeditions(
+    public ResponseEntity<StreamingResponseBody> getInterCompanyExpeditions(
             @RequestParam("companyId") Long companyId) {
         tenantGuard.check(companyId);
-        return ResponseEntity.ok(stockService.getInterCompanyExpeditions(companyId));
+        StreamingResponseBody body = out -> stockService.streamInterCompanyExpeditions(companyId, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/inter-company/expeditions/{id}")

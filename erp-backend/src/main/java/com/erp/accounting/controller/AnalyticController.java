@@ -5,7 +5,9 @@ import com.erp.accounting.dto.AnalyticLineDTO;
 import com.erp.accounting.service.AnalyticService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -50,12 +52,13 @@ public class AnalyticController {
     // ===== LIGNES ANALYTIQUES =====
 
     @GetMapping("/lines")
-    public ResponseEntity<List<AnalyticLineDTO>> getLines(
+    public ResponseEntity<StreamingResponseBody> getLines(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "analyticAccountId", required = false) Long analyticAccountId,
             @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(analyticService.getLines(companyId, analyticAccountId, from, to));
+        StreamingResponseBody body = out -> analyticService.streamLines(companyId, analyticAccountId, from, to, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     // ===== RECALCUL =====

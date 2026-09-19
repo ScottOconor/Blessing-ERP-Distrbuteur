@@ -42,6 +42,7 @@ public class RistourneService {
 
     private final RistourneRepository ristourneRepo;
     private final RistournePaiementRepository paiementRepo;
+    private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
     private final PartnerRepository partnerRepo;
     private final ProductCategoryRepository categoryRepo;
     private final PrecompteRepository precompteRepo;
@@ -168,6 +169,15 @@ public class RistourneService {
     @Transactional(readOnly = true)
     public List<RistournePaiementDTO> getAllPaiements(Long companyId) {
         return getAllPaiements(companyId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public void streamAllPaiements(Long companyId, String type, java.io.OutputStream out) throws java.io.IOException {
+        List<com.erp.sales.entity.RistournePaiement> list = (type != null && !type.isBlank())
+                ? paiementRepo.findByCompanyIdAndTypeRistourneOrderByCreatedAtDesc(companyId, type)
+                : paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        List<Long> ids = list.stream().map(p -> p.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, paiementRepo::findAllById, p -> p.getId(), this::toPaiementDTO);
     }
 
     @Transactional(readOnly = true)

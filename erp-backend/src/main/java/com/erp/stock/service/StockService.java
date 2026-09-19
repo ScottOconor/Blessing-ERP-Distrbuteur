@@ -51,6 +51,7 @@ public class StockService {
     private final ProductCategoryRepository categoryRepo;
     private final UnitOfMeasureRepository uomRepo;
     private final ProductRepository productRepo;
+    private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
     private final WarehouseRepository warehouseRepo;
     private final StockLocationRepository locationRepo;
     private final StockPickingTypeRepository pickingTypeRepo;
@@ -1471,6 +1472,48 @@ public class StockService {
         // milliers de bons, ça multipliait le nombre de requêtes par un facteur à deux chiffres.
         PickingDtoCaches caches = new PickingDtoCaches();
         return pickings.stream().map(p -> toPickingDTO(p, false, caches)).collect(Collectors.toList());
+    }
+
+    // ===== Variantes streaming (mémoire bornée, cf. JsonArrayStreamer) =====
+
+    private void streamPickingEntities(List<StockPicking> pickings, java.io.OutputStream out) throws java.io.IOException {
+        List<Long> ids = pickings.stream().map(StockPicking::getId).collect(Collectors.toList());
+        PickingDtoCaches caches = new PickingDtoCaches();
+        jsonArrayStreamer.streamByIds(out, ids, pickingRepo::findAllById, StockPicking::getId,
+                p -> toPickingDTO(p, false, caches));
+    }
+
+    @Transactional(readOnly = true)
+    public void streamPickings(Long companyId, String typeCode, java.io.OutputStream out) throws java.io.IOException {
+        streamPickingEntities(typeCode != null
+                ? pickingRepo.findByCompanyAndType(companyId, typeCode)
+                : pickingRepo.findByCompanyIdOrderByCreatedAtDesc(companyId), out);
+    }
+
+    @Transactional(readOnly = true)
+    public void streamPendingReceptions(Long companyId, java.io.OutputStream out) throws java.io.IOException {
+        streamPickingEntities(pickingRepo.findByCompanyIdAndPickingTypeCodeAndState(companyId, "incoming", "confirmed"), out);
+    }
+
+    @Transactional(readOnly = true)
+    public void streamInterCompanyExpeditions(Long companyId, java.io.OutputStream out) throws java.io.IOException {
+        streamPickingEntities(pickingRepo.findInterCompanyByCompany(companyId), out);
+    }
+
+    @Transactional(readOnly = true)
+    public void streamAdjustments(Long companyId, java.io.OutputStream out) throws java.io.IOException {
+        List<Long> ids = adjustmentRepo.findByCompanyIdOrderByCreatedAtDesc(companyId).stream()
+                .map(a -> a.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, adjustmentRepo::findAllById, a -> a.getId(), this::toAdjustmentDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public void streamStockLosses(Long companyId, LocalDate dateFrom, LocalDate dateTo, java.io.OutputStream out) throws java.io.IOException {
+        List<StockLoss> losses = (dateFrom != null && dateTo != null)
+                ? stockLossRepo.findByCompanyIdAndDateBetweenOrderByDateAsc(companyId, dateFrom, dateTo)
+                : stockLossRepo.findByCompanyIdOrderByDateDesc(companyId);
+        List<Long> ids = losses.stream().map(l -> l.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, stockLossRepo::findAllById, l -> l.getId(), this::toStockLossDTO);
     }
 
     @Transactional(readOnly = true)
