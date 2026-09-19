@@ -5,6 +5,7 @@ import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.config.permission.PermissionFilter;
 import com.erp.license.LicenseEnforcementFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,6 +51,15 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
+                // Le dispatch ASYNC final (fin d'un StreamingResponseBody, ex. GET /api/purchases/orders)
+                // rejoue AuthorizationFilter sur un thread Tomcat du pool dont le SecurityContext est
+                // vide (JwtAuthFilter, OncePerRequestFilter, ne rejoue pas sur ASYNC) : utilisateur
+                // anonyme -> AccessDeniedException alors que la réponse est déjà entièrement envoyée
+                // ("Unable to handle the Spring Security Exception because the response is already
+                // committed", constaté en continu, cf. erp.log.txt du 2026-09-19). Ces dispatchs ne
+                // surviennent qu'après un dispatch REQUEST initial déjà autorisé : les laisser passer
+                // n'ouvre aucune route non authentifiée.
+                .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
                 // Uniquement GET : ces deux routes servent le logo AVANT connexion (écran de login).
