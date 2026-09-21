@@ -89,6 +89,10 @@ public class LicenseService {
     @Getter private volatile String cachedContactPhone;
     @Getter private volatile String cachedMessage;
 
+    /** Dernier échec de contact avec le Hub (null si le dernier appel a réussi) — sert de motif
+     *  affiché quand la machine reste non activée faute d'avoir pu joindre le Hub. */
+    private volatile String hubUnreachableMessage;
+
     /** Résultat de la lecture locale : les claims, qu'elles proviennent d'un token encore valide
      *  ou d'un token expiré (jjwt fournit quand même les claims dans ce dernier cas). */
     private record LicenseClaims(Claims claims) {}
@@ -252,10 +256,27 @@ public class LicenseService {
         try {
             restTemplate.postForEntity(hubConfigService.getHubUrl() + "/api/hub/license/request", new HttpEntity<>(body, headers), Map.class);
         } catch (org.springframework.web.client.RestClientResponseException e) {
-            // Le Hub a explicitement refusé (ex: ce build est déjà lié à une autre machine) —
-            // ne jamais masquer ça derrière un simple PENDING : on met à jour l'état mis en cache
-            // (lu par self-status juste après par le contrôleur) avec le vrai motif du refus.
-            applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH, extractMessage(e));
+            int code = e.getStatusCode().value();
+            String hubMessage = extractMessage(e);
+            if (code == 409) {
+                // 409 = refus explicite du Hub : ce build précis est déjà lié à une autre machine.
+                // Seul cas qui justifie réellement un blocage.
+                applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH, hubMessage);
+            } else {
+                // Toute autre erreur n'est PAS une preuve de clonage : on reste en NOT_ACTIVATED
+                // avec le vrai motif, pour que l'utilisateur sache quoi corriger.
+                log.warn("Demande d'activation refusée par le Hub (HTTP {}) : {}", code, hubMessage);
+                applyResult(LicenseStatus.NOT_ACTIVATED, code >= 500
+                        ? "Le Hub a rencontré une erreur interne (HTTP " + code + "). Réessayez dans quelques minutes ; "
+                          + "si le problème persiste, contactez le support avec ce code."
+                        : hubMessage);
+            }
+            return;
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.warn("Hub injoignable pour la demande d'activation ({}) : {}", hubConfigService.getHubUrl(), e.getMessage());
+            applyResult(LicenseStatus.NOT_ACTIVATED,
+                    "Impossible de joindre le Hub à l'adresse " + hubConfigService.getHubUrl() + ". "
+                    + "Vérifiez la connexion internet de cette machine et l'adresse du Hub (Config > Agences distantes).");
             return;
         }
 
@@ -304,6 +325,7 @@ public class LicenseService {
             @SuppressWarnings("unchecked")
             Map<String, Object> resp = restTemplate.getForObject(url, Map.class);
             if (resp == null) { evaluateCurrentStatus(); return; }
+            hubUnreachableMessage = null;
 
             String remoteStatus = (String) resp.get("status");
             String jwt = (String) resp.get("jwt");
@@ -325,6 +347,8 @@ public class LicenseService {
             if (resp.get("contactPhone") != null) cachedContactPhone = (String) resp.get("contactPhone");
         } catch (Exception e) {
             log.warn("Hub injoignable pour la vérification de licence ({}) — repli sur l'état local.", e.getMessage());
+            hubUnreachableMessage = "Impossible de joindre le Hub (" + hubBaseUrl + ") pour vérifier la licence. "
+                    + "Vérifiez la connexion internet de cette machine et l'adresse du Hub (Config > Agences distantes).";
         }
         evaluateCurrentStatus(freshFromHub);
     }
@@ -360,7 +384,8 @@ public class LicenseService {
                 parsed = loadAndVerifyLocalFile();
             } catch (LicenseInvalidException e) {
                 log.warn("Fichier de licence invalide : {}", e.getMessage());
-                applyResult(LicenseStatus.INVALID, "Fichier de licence invalide : " + e.getMessage());
+                applyResult(LicenseStatus.INVALID, "Le fichier de licence de cette machine est invalide (" + e.getMessage() + "). "
+                        + "Supprimez-le puis redemandez l'activation, ou contactez le support.");
                 return LicenseStatus.INVALID;
             }
         }
@@ -372,7 +397,7 @@ public class LicenseService {
                 applyResult(LicenseStatus.PENDING, null);
                 return LicenseStatus.PENDING;
             }
-            applyResult(LicenseStatus.NOT_ACTIVATED, null);
+            applyResult(LicenseStatus.NOT_ACTIVATED, hubUnreachableMessage);
             return LicenseStatus.NOT_ACTIVATED;
         }
 
@@ -394,7 +419,9 @@ public class LicenseService {
                 || (mismatchResult.available < 3 && mismatchResult.mismatches > 0);
 
         if (rejected) {
-            applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH, "Empreinte machine non reconnue.");
+            applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH,
+                    "Cette licence a été émise pour une autre machine : " + describeMismatches(fpClaim, current)
+                    + ". Si le matériel a réellement changé, contactez le support pour faire réémettre la licence.");
             return LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH;
         }
 
@@ -413,6 +440,16 @@ public class LicenseService {
 
         applyResult(LicenseStatus.ACTIVE, null);
         return LicenseStatus.ACTIVE;
+    }
+
+    /** Noms lisibles des composants d'empreinte qui diffèrent de ceux enregistrés à l'émission. */
+    private String describeMismatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
+        if (fpClaim == null) return "empreinte absente du fichier de licence";
+        java.util.List<String> diff = new java.util.ArrayList<>();
+        if (fpClaim.get("mac") != null && !fpClaim.get("mac").equals(current.macHash())) diff.add("carte réseau (MAC)");
+        if (fpClaim.get("disk") != null && !fpClaim.get("disk").equals(current.diskHash())) diff.add("disque");
+        if (fpClaim.get("board") != null && !fpClaim.get("board").equals(current.boardHash())) diff.add("carte mère");
+        return diff.isEmpty() ? "empreinte différente" : "différence détectée sur : " + String.join(", ", diff);
     }
 
     private void applyResult(LicenseStatus status, String message) {
@@ -494,7 +531,8 @@ public class LicenseService {
         String kid = (String) header.get("kid");
         PublicKey key = kid != null ? publicKeysByKid.get(kid) : null;
         if (key == null) {
-            throw new LicenseInvalidException("clé de signature inconnue (kid=" + kid + ")");
+            throw new LicenseInvalidException("clé de signature inconnue (kid=" + kid + ") : la clé publique du Hub est absente de cette machine, "
+                    + "vérifiez que le Hub est joignable ou que ce JAR correspond à ce Hub");
         }
 
         try {

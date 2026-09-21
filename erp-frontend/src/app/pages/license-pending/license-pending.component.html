@@ -22,6 +22,9 @@
           <input type="tel" name="contactPhone" [(ngModel)]="contactPhone" />
         </label>
 
+        @if (status?.message) {
+          <div class="error">{{ status?.message }}</div>
+        }
         @if (errorMessage) {
           <div class="error">{{ errorMessage }}</div>
         }
