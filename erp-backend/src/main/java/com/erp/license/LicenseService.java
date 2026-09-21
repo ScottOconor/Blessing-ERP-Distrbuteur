@@ -103,6 +103,15 @@ public class LicenseService {
 
     @PostConstruct
     public void loadPublicKeys() {
+        try {
+            Files.createDirectories(Path.of(licenseFilePath).toAbsolutePath().getParent());
+            Files.createDirectories(Path.of(publicKeysDir));
+        } catch (Exception e) {
+            log.error("Impossible de créer le dossier de licence : {}", e.getMessage());
+        }
+        log.info("Licensing : fichier de licence = {} | clés publiques = {} | Hub = {} | spokeId = {}",
+                Path.of(licenseFilePath).toAbsolutePath(), Path.of(publicKeysDir).toAbsolutePath(),
+                hubConfigService.getHubUrl(), spokeId);
         fetchHubPublicKeyIfNeeded();
         loadFromClasspath();
         loadFromExternalDir();
