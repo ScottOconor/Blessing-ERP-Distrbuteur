@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.HWDiskStore;
 import oshi.hardware.HardwareAbstractionLayer;
-import oshi.hardware.NetworkIF;
 
 import org.springframework.stereotype.Service;
 
@@ -15,17 +14,19 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Calcule l'empreinte matérielle de la machine (MAC de l'interface réseau principale, numéro de
- * série du disque système, numéro de série de la carte mère), chacun haché en SHA-256
- * séparément — jamais combinés en un seul hash — pour permettre une tolérance de mismatch au
- * niveau composant (cf. LicenseService).
+ * Calcule l'empreinte matérielle de la machine (numéro de série du disque système, numéro de
+ * série de la carte mère), chacun haché en SHA-256 séparément — jamais combinés en un seul hash —
+ * pour permettre une tolérance de mismatch au niveau composant (cf. LicenseService).
+ *
+ * L'adresse MAC en a volontairement été retirée (2026-09-22) : elle change dès qu'un poste bascule
+ * du wifi à l'ethernet (interface réseau principale différente), ce qui déclenchait un blocage de
+ * licence à chaque changement de connexion — un poste devait rester en permanence sur la même
+ * interface réseau pour ne pas se faire bloquer, inutilisable en pratique. Disque + carte mère
+ * suffisent à identifier une machine physique de façon stable.
  */
 @Service
 @Slf4j
 public class FingerprintService {
-
-    /** Interfaces virtuelles à exclure — même liste que SyncDispatcherScheduler.detectSpokeApiUrl. */
-    private static final String[] VIRTUAL_IF_PREFIXES = {"docker", "br-", "veth", "virbr", "tun", "tap", "lo"};
 
     /** Valeurs placeholder connues des constructeurs — un composant portant l'une de ces valeurs
      *  est considéré comme "non lisible" (hash null), pas hashé tel quel (sinon toutes les VM avec
@@ -36,10 +37,9 @@ public class FingerprintService {
             "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff"
     );
 
-    public record Fingerprint(String macHash, String diskHash, String boardHash) {
+    public record Fingerprint(String diskHash, String boardHash) {
         public int availableCount() {
             int n = 0;
-            if (macHash != null) n++;
             if (diskHash != null) n++;
             if (boardHash != null) n++;
             return n;
@@ -50,50 +50,10 @@ public class FingerprintService {
         SystemInfo si = new SystemInfo();
         HardwareAbstractionLayer hal = si.getHardware();
 
-        String mac = readPrimaryMac(hal);
         String disk = readDiskSerial(hal);
         String board = readBoardSerial(hal);
 
-        return new Fingerprint(hashOrNull(mac), hashOrNull(disk), hashOrNull(board));
-    }
-
-    private String readPrimaryMac(HardwareAbstractionLayer hal) {
-        try {
-            List<NetworkIF> nets = hal.getNetworkIFs();
-            for (NetworkIF net : nets) {
-                String name = net.getName() != null ? net.getName().toLowerCase(Locale.ROOT) : "";
-                boolean virtualByName = false;
-                for (String prefix : VIRTUAL_IF_PREFIXES) {
-                    if (name.startsWith(prefix)) { virtualByName = true; break; }
-                }
-                if (virtualByName) continue;
-
-                // Les préfixes ci-dessus sont surtout pertinents sous Linux. Sous Windows, les
-                // adaptateurs virtuels (VPN, Hyper-V, VMware, loopback) portent des noms totalement
-                // différents et ne matcheraient aucun préfixe — on s'appuie donc en complément sur
-                // l'API réseau native de la JVM, cross-platform par construction.
-                if (isLoopbackOrVirtual(net)) continue;
-
-                String mac = net.getMacaddr();
-                if (mac != null && !mac.isBlank() && !"00:00:00:00:00:00".equalsIgnoreCase(mac)) {
-                    return mac.trim();
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Lecture MAC impossible : {}", e.getMessage());
-        }
-        return null;
-    }
-
-    private boolean isLoopbackOrVirtual(NetworkIF net) {
-        try {
-            java.net.NetworkInterface nic = net.queryNetworkInterface();
-            return nic != null && (nic.isLoopback() || nic.isVirtual());
-        } catch (Exception e) {
-            // Certaines plateformes lèvent une exception sur ces appels — on se rabat sur le
-            // filtre par nom déjà appliqué plutôt que d'exclure une interface valide par erreur.
-            return false;
-        }
+        return new Fingerprint(hashOrNull(disk), hashOrNull(board));
     }
 
     private String readDiskSerial(HardwareAbstractionLayer hal) {

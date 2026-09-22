@@ -248,7 +248,6 @@ public class LicenseService {
         }
         FingerprintService.Fingerprint fp = fingerprintService.compute();
         Map<String, Object> fingerprint = new HashMap<>();
-        fingerprint.put("mac", fp.macHash());
         fingerprint.put("disk", fp.diskHash());
         fingerprint.put("board", fp.boardHash());
 
@@ -327,7 +326,6 @@ public class LicenseService {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(hubBaseUrl + "/api/hub/license/status")
                     .queryParam("spokeId", spokeId);
             if (buildIdentityService.getBuildId() != null) builder.queryParam("buildId", buildIdentityService.getBuildId());
-            if (fp.macHash() != null) builder.queryParam("mac", fp.macHash());
             if (fp.diskHash() != null) builder.queryParam("disk", fp.diskHash());
             if (fp.boardHash() != null) builder.queryParam("board", fp.boardHash());
             String url = builder.toUriString();
@@ -413,19 +411,18 @@ public class LicenseService {
         Claims claims = parsed.get().claims();
         cachedExpiresAt = claims.getExpiration() != null ? claims.getExpiration().toInstant().toString() : null;
 
-        // Comparaison d'empreinte — le MAC est l'identifiant le plus volatil (carte réseau
-        // virtuelle réattribuée, changement de carte physique...) : une dérive MAC seule est
-        // tolérée. Le disque et la carte mère sont des identifiants forts qui ne dérivent
-        // normalement jamais sur une même machine — un mismatch sur L'UN OU L'AUTRE (même seul)
-        // n'est PAS toléré, sinon un clonage de VM qui régénère uniquement le MAC (le cas le plus
-        // fréquent) passerait la vérification sans jamais être détecté.
+        // Comparaison d'empreinte — disque et carte mère sont des identifiants forts qui ne
+        // dérivent normalement jamais sur une même machine : un mismatch sur L'UN OU L'AUTRE
+        // n'est jamais toléré, sinon un clonage de VM qui régénère un seul composant passerait la
+        // vérification sans jamais être détecté. Le MAC n'en fait plus partie (retiré le
+        // 2026-09-22) : il change dès qu'un poste bascule du wifi à l'ethernet, ce qui bloquait la
+        // licence à chaque changement de connexion réseau — voir FingerprintService.
         @SuppressWarnings("unchecked")
         Map<String, Object> fpClaim = claims.get("fp", Map.class);
         FingerprintService.Fingerprint current = fingerprintService.compute();
         FingerprintMismatch mismatchResult = compareFingerprint(fpClaim, current);
 
-        boolean rejected = mismatchResult.diskMismatch || mismatchResult.boardMismatch
-                || (mismatchResult.available < 3 && mismatchResult.mismatches > 0);
+        boolean rejected = mismatchResult.diskMismatch || mismatchResult.boardMismatch;
 
         if (rejected) {
             applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH,
@@ -455,7 +452,6 @@ public class LicenseService {
     private String describeMismatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
         if (fpClaim == null) return "empreinte absente du fichier de licence";
         java.util.List<String> diff = new java.util.ArrayList<>();
-        if (fpClaim.get("mac") != null && !fpClaim.get("mac").equals(current.macHash())) diff.add("carte réseau (MAC)");
         if (fpClaim.get("disk") != null && !fpClaim.get("disk").equals(current.diskHash())) diff.add("disque");
         if (fpClaim.get("board") != null && !fpClaim.get("board").equals(current.boardHash())) diff.add("carte mère");
         return diff.isEmpty() ? "empreinte différente" : "différence détectée sur : " + String.join(", ", diff);
@@ -477,14 +473,9 @@ public class LicenseService {
         FingerprintMismatch r = new FingerprintMismatch();
         if (fpClaim == null) return r;
 
-        String issuedMac   = (String) fpClaim.get("mac");
         String issuedDisk  = (String) fpClaim.get("disk");
         String issuedBoard = (String) fpClaim.get("board");
 
-        if (issuedMac != null) {
-            r.available++;
-            if (!issuedMac.equals(current.macHash())) r.mismatches++;
-        }
         if (issuedDisk != null) {
             r.available++;
             if (!issuedDisk.equals(current.diskHash())) { r.mismatches++; r.diskMismatch = true; }
