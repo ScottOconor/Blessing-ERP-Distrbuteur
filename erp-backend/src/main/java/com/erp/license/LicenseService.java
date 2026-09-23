@@ -284,6 +284,7 @@ public class LicenseService {
         Map<String, Object> fingerprint = new HashMap<>();
         fingerprint.put("disk", fp.diskHash());
         fingerprint.put("board", fp.boardHash());
+        fingerprint.put("uuid", fp.uuidHash());
 
         Map<String, Object> body = new HashMap<>();
         body.put("spokeId", spokeId);
@@ -363,6 +364,7 @@ public class LicenseService {
             String disk = diskMatchingLocalLicense(fp);
             if (disk != null) builder.queryParam("disk", disk);
             if (fp.boardHash() != null) builder.queryParam("board", fp.boardHash());
+            if (fp.uuidHash() != null) builder.queryParam("uuid", fp.uuidHash());
             String url = builder.toUriString();
             @SuppressWarnings("unchecked")
             Map<String, Object> resp = restTemplate.getForObject(url, Map.class);
@@ -449,34 +451,28 @@ public class LicenseService {
         Claims claims = parsed.get().claims();
         cachedExpiresAt = claims.getExpiration() != null ? claims.getExpiration().toInstant().toString() : null;
 
-        // Comparaison d'empreinte — disque et carte mère sont des identifiants forts qui ne
-        // dérivent normalement jamais sur une même machine : un mismatch sur L'UN OU L'AUTRE
-        // n'est jamais toléré, sinon un clonage de VM qui régénère un seul composant passerait la
-        // vérification sans jamais être détecté. Le MAC n'en fait plus partie (retiré le
-        // 2026-09-22) : il change dès qu'un poste bascule du wifi à l'ethernet, ce qui bloquait la
-        // licence à chaque changement de connexion réseau — voir FingerprintService.
+        // Seul l'UUID matériel (SMBIOS, gravé dans le firmware, stable et toujours lu sous la même
+        // forme) bloque : lu ET différent de celui de la licence = autre machine. Disque et carte
+        // mère ne bloquent jamais — leur numéro de série peut ressortir sous une autre forme ou être
+        // illisible sur une machine inchangée ("disque ne correspond pas" sur des licences non
+        // expirées) ; un changement est seulement signalé sur le Hub (écran Licences), qui reçoit
+        // l'empreinte à chaque vérification. Licence émise avant l'UUID : le Hub y rattache l'UUID
+        // de la machine au prochain contact et renvoie une licence re-signée.
         @SuppressWarnings("unchecked")
         Map<String, Object> fpClaim = claims.get("fp", Map.class);
         FingerprintService.Fingerprint current = fingerprintService.compute();
-        FingerprintMismatch mismatchResult = compareFingerprint(fpClaim, current);
+        Object issuedUuid = fpClaim != null ? fpClaim.get("uuid") : null;
 
-        // Seule une carte mère lue ET différente (sans disque concordant pour la rattraper) prouve
-        // une autre machine. Le disque seul ne bloque jamais : son numéro de série peut ressortir
-        // sous une autre forme sur la même machine, et sur beaucoup de postes la carte mère est
-        // illisible ("indisponible" côté Hub) — le disque était alors l'unique critère et
-        // bloquait des licences non expirées ("disque ne correspond pas"). La licence locale
-        // signée fait foi jusqu'à sa date de fin ; la révocation reste pilotée par le Hub.
-        boolean rejected = mismatchResult.boardMismatch && !diskMatches(fpClaim, current);
-        if (!rejected && mismatchResult.diskMismatch) {
-            log.warn("Licence : numéro de série disque différent de celui de l'émission, carte mère "
-                    + "concordante ou illisible — licence maintenue active.");
-        }
-
-        if (rejected) {
+        if (issuedUuid != null && current.uuidHash() != null && !issuedUuid.equals(current.uuidHash())) {
             applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH,
-                    "Cette licence a été émise pour une autre machine : " + describeMismatches(fpClaim, current)
-                    + ". Si le matériel a réellement changé, contactez le support pour faire réémettre la licence.");
+                    "Cette licence a été émise pour une autre machine (identifiant matériel UUID différent). "
+                    + "Si la carte mère a été remplacée, contactez le support pour faire réémettre la licence.");
             return LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH;
+        }
+        FingerprintMismatch mismatchResult = compareFingerprint(fpClaim, current);
+        if (mismatchResult.diskMismatch || mismatchResult.boardMismatch) {
+            log.warn("Licence : disque/carte mère différents de l'émission (UUID concordant ou non vérifiable) "
+                    + "— licence maintenue active, changement signalé au Hub.");
         }
 
         if ("EXPIRED".equals(remoteStatus)) {
@@ -496,16 +492,6 @@ public class LicenseService {
         return LicenseStatus.ACTIVE;
     }
 
-    /** Noms lisibles des composants d'empreinte qui diffèrent de ceux enregistrés à l'émission. */
-    private String describeMismatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
-        if (fpClaim == null) return "empreinte absente du fichier de licence";
-        FingerprintMismatch m = compareFingerprint(fpClaim, current);
-        java.util.List<String> diff = new java.util.ArrayList<>();
-        if (m.diskMismatch) diff.add("disque");
-        if (m.boardMismatch) diff.add("carte mère");
-        return diff.isEmpty() ? "empreinte différente" : "différence détectée sur : " + String.join(", ", diff);
-    }
-
     /** Disque à présenter au Hub : celui enregistré dans la licence locale s'il est bien présent
      *  sur cette machine (même s'il n'est plus le premier énuméré), sinon le disque principal. Sans
      *  ça, le Hub ne reconnaissait plus la machine dès que l'ordre des disques changeait et ne
@@ -517,12 +503,7 @@ public class LicenseService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> fpClaim = local.get().claims().get("fp", Map.class);
                 Object issuedDisk = fpClaim != null ? fpClaim.get("disk") : null;
-                // Carte mère illisible (cas fréquent : "indisponible" côté Hub) : le disque est le
-                // seul identifiant, et la licence locale signée fait foi — on présente le disque
-                // qu'elle porte pour que le Hub continue d'envoyer prolongations/réémissions.
-                if (issuedDisk != null && (fp.allDiskHashes().contains(issuedDisk) || fp.boardHash() == null)) {
-                    return (String) issuedDisk;
-                }
+                if (issuedDisk != null && fp.allDiskHashes().contains(issuedDisk)) return (String) issuedDisk;
             }
         } catch (Exception ignored) {
             // fichier local absent/illisible : on retombe sur le disque principal
@@ -535,11 +516,6 @@ public class LicenseService {
         cachedMessage = message;
         if (cachedContactEmail == null || cachedContactEmail.isBlank()) cachedContactEmail = fallbackContactEmail;
         if (cachedContactPhone == null || cachedContactPhone.isBlank()) cachedContactPhone = fallbackContactPhone;
-    }
-
-    private static boolean diskMatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
-        Object issuedDisk = fpClaim != null ? fpClaim.get("disk") : null;
-        return issuedDisk != null && current.allDiskHashes().contains(issuedDisk);
     }
 
     private static final class FingerprintMismatch {

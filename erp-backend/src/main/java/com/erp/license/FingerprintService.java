@@ -38,16 +38,23 @@ public class FingerprintService {
             "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff"
     );
 
+    /** UUID SMBIOS connus pour être partagés par des lots entiers de cartes mères. */
+    private static final Set<String> GENERIC_UUIDS = Set.of(
+            "03000200-0400-0500-0006-000700080009",
+            "00020003-0004-0005-0006-000700080009"
+    );
+
     /** @param diskHash      disque "principal" — celui envoyé au Hub à la demande d'activation
      *  @param allDiskHashes hashes de TOUS les disques lisibles de la machine : la vérification
      *                       locale accepte n'importe lequel (cf. LicenseService#compareFingerprint),
      *                       l'ordre d'énumération OSHI n'étant pas garanti stable (clé USB branchée,
      *                       disque externe, réordonnancement du contrôleur au redémarrage). */
-    public record Fingerprint(String diskHash, String boardHash, Set<String> allDiskHashes) {
+    public record Fingerprint(String diskHash, String boardHash, String uuidHash, Set<String> allDiskHashes) {
         public int availableCount() {
             int n = 0;
             if (diskHash != null) n++;
             if (boardHash != null) n++;
+            if (uuidHash != null) n++;
             return n;
         }
     }
@@ -61,18 +68,41 @@ public class FingerprintService {
 
     public Fingerprint compute() {
         Fingerprint c = cached;
-        if (c != null && c.availableCount() == 2) return c;
+        if (c != null && c.availableCount() == 3) return c;
 
         SystemInfo si = new SystemInfo();
         HardwareAbstractionLayer hal = si.getHardware();
 
         String disk = readDiskSerial(hal);
         String board = readBoardSerial(hal);
-        Fingerprint fresh = new Fingerprint(hashOrNull(disk), hashOrNull(board), readAllDiskHashes(hal));
+        Fingerprint fresh = new Fingerprint(hashOrNull(disk), hashOrNull(board), readUuidHash(hal), readAllDiskHashes(hal));
 
-        // Ne jamais remplacer une lecture plus complète par une moins complète (lecture ratée).
-        if (c == null || fresh.availableCount() >= c.availableCount()) cached = fresh;
+        // Une valeur déjà lue n'est jamais remplacée : on ne fait que compléter les composants
+        // qui manquaient (lecture ratée précédente). Le matériel ne change pas en cours d'exécution.
+        cached = c == null ? fresh : new Fingerprint(
+                c.diskHash() != null ? c.diskHash() : fresh.diskHash(),
+                c.boardHash() != null ? c.boardHash() : fresh.boardHash(),
+                c.uuidHash() != null ? c.uuidHash() : fresh.uuidHash(),
+                !c.allDiskHashes().isEmpty() ? c.allDiskHashes() : fresh.allDiskHashes());
         return cached;
+    }
+
+    /** UUID matériel SMBIOS : écrit dans le firmware par le fabricant, identique après
+     *  réinstallation de Windows, changement de disque ou de réseau, et toujours restitué sous la
+     *  même forme — c'est le SEUL composant dont une différence bloque l'appli (cf. LicenseService).
+     *  Les UUID génériques de certaines cartes bas de gamme (partagés par tout un lot) sont
+     *  considérés comme illisibles. Normalisé en minuscules avant hachage. */
+    private String readUuidHash(HardwareAbstractionLayer hal) {
+        try {
+            String uuid = hal.getComputerSystem().getHardwareUUID();
+            if (uuid == null) return null;
+            String normalized = uuid.trim().toLowerCase(Locale.ROOT);
+            if (PLACEHOLDER_VALUES.contains(normalized) || GENERIC_UUIDS.contains(normalized)) return null;
+            return sha256(normalized);
+        } catch (Exception e) {
+            log.warn("Lecture de l'UUID matériel impossible : {}", e.getMessage());
+            return null;
+        }
     }
 
     private Set<String> readAllDiskHashes(HardwareAbstractionLayer hal) {
