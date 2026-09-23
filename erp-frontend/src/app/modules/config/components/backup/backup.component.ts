@@ -191,10 +191,9 @@ export class BackupComponent {
 
   private clearMsgs(): void { this.successMsg = ''; this.errorMsg = ''; }
 
-  /** Priorité à err.error.message (forme envoyée par LicenseEnforcementFilter en cas de licence
-   *  bloquée/expirée), puis err.error.error (forme des contrôleurs de ce fichier) — sans ce
-   *  premier cas, un blocage de licence retombait sur err.message, le texte brut Angular
-   *  ("Http failure response for ... : 403 OK"), illisible pour l'utilisateur. Les requêtes en
+  /** Priorité à err.error.message, puis err.error.error (forme des contrôleurs de ce fichier),
+   *  plutôt que err.message, le texte brut Angular ("Http failure response for ... : 403 OK"),
+   *  illisible pour l'utilisateur. Les requêtes en
    *  responseType:'text' reçoivent err.error comme une chaîne brute (pas un objet parsé) même
    *  pour une erreur JSON — on tente donc un JSON.parse avant de retomber sur la chaîne telle quelle. */
   private formatError(e: any, fallback: string): string {

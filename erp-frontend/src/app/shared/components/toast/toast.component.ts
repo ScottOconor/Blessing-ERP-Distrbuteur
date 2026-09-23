@@ -18,7 +18,7 @@ import { NotificationService } from '../../../core/services/notification.service
   `,
   styles: [`
     .toast-stack {
-      position: fixed; top: calc(16px + var(--license-banner-offset, 0px)); right: 16px; z-index: 100000;
+      position: fixed; top: 16px; right: 16px; z-index: 100000;
       display: flex; flex-direction: column; gap: 8px; max-width: 380px;
     }
     .toast {

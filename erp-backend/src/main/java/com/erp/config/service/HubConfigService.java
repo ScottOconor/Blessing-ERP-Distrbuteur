@@ -10,9 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Adresse du Hub (IP ou nom de domaine), éditable depuis l'écran de configuration de
- * l'application — pas un fichier à modifier à la main. Utilisée pour l'activation et la
- * vérification de licence, ainsi que pour le helpdesk. Le spoke est toujours l'initiateur de
- * ces appels (jamais le Hub vers le spoke) : aucune adresse publique/port-forwarding n'est
+ * l'application — pas un fichier à modifier à la main. Utilisée pour le helpdesk. Le
+ * spoke est toujours l'initiateur de ces appels (jamais le Hub vers le spoke) : aucune adresse publique/port-forwarding n'est
  * requise côté spoke pour que cela fonctionne, même derrière un NAT/box.
  */
 @Service

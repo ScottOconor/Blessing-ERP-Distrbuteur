@@ -10,8 +10,7 @@ import { NotificationService } from '../services/notification.service';
  * - 401 en cours de session (compte désactivé pendant que le JWT est encore valide côté
  *   navigateur — avant, l'utilisateur restait "connecté" jusqu'à expiration du JWT).
  * - 403 de PermissionFilter (corps {error, required} — bascule fail-closed backend : toute
- *   route non déclarée est refusée. Distinct des 403 de licence, gérés par licenseInterceptor,
- *   dont le corps porte toujours `status`).
+ *   route non déclarée est refusée).
  * - 409 (verrou optimiste / conflit d'intégrité — GlobalExceptionHandler, corps {message}).
  * Rethrow systématique : les gestionnaires d'erreur locaux (err?.error?.message) continuent
  * de s'exécuter normalement, ce toast est additif.

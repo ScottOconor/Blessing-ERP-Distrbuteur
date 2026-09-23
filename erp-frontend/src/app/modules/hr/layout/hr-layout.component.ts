@@ -59,7 +59,7 @@ import { AppBrandingService } from '../../../core/services/app-branding.service'
       display: flex; align-items: center; gap: 0; height: 50px;
       background: var(--navbar-bg); color: white; padding: 0 14px; flex-shrink: 0;
       box-shadow: 0 1px 0 var(--navbar-border), 0 2px 10px rgba(0,0,0,0.22);
-      position: sticky; top: var(--license-banner-offset, 0px); z-index: 50;
+      position: sticky; top: 0; z-index: 50;
     }
 
     .hr-brand {

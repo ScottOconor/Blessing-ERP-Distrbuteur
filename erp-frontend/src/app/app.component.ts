@@ -3,7 +3,6 @@ import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AppBrandingService } from './core/services/app-branding.service';
 import { AuthService } from './core/auth/auth.service';
-import { LicenseReadonlyBannerComponent } from './shared/components/license-readonly-banner/license-readonly-banner.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;  // 30 minutes d'inactivité → déconnexion
@@ -18,7 +17,7 @@ const SKIP_TYPES = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'f
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, LicenseReadonlyBannerComponent, ToastComponent],
+  imports: [RouterOutlet, CommonModule, ToastComponent],
   template: `
     @if (showIdleWarning) {
       <div class="idle-warning">
@@ -27,7 +26,6 @@ const SKIP_TYPES = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'f
         <button (click)="onActivity()">Rester connecté</button>
       </div>
     }
-    <app-license-readonly-banner></app-license-readonly-banner>
     <app-toast></app-toast>
     <router-outlet></router-outlet>
   `,

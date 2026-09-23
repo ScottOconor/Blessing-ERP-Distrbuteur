@@ -30,13 +30,7 @@ public class PermissionFilter extends OncePerRequestFilter {
     // n'y a donc pas d'Authentication à vérifier ici. Le reste de /api/sync/** (SyncStatusController,
     // tableau de bord admin) N'EST PLUS bypassé : il passe par le contrôle de permission normal.
     private static final String[] BYPASS_PREFIXES = {
-        // /api/license/ : déjà permitAll dans SecurityConfig (activation avant authentification
-        // possible) — mais un utilisateur déjà authentifié envoie quand même son JWT sur ces
-        // routes (ex. le bandeau de licence appelle self-status en continu), et PermissionFilter
-        // s'exécute alors même sans règle dédiée : sans ce bypass, la bascule fail-closed
-        // renverrait un 403 {error,...} que licenseInterceptor (qui attend {status,...}) ne
-        // reconnaît pas, cassant silencieusement l'affichage du bandeau de licence.
-        "/api/auth/", "/api/health", "/api/inter-agency/", "/actuator/", "/api/sync/helpdesk/", "/api/license/"
+        "/api/auth/", "/api/health", "/api/inter-agency/", "/actuator/", "/api/sync/helpdesk/"
     };
 
     // Lecture seule du nom/logo société : GET UNIQUEMENT, jamais PUT/POST (création, mise à jour,

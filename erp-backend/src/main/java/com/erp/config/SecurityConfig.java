@@ -3,7 +3,6 @@ package com.erp.config;
 import com.erp.auth.filter.JwtAuthFilter;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.config.permission.PermissionFilter;
-import com.erp.license.LicenseEnforcementFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +41,6 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl     userDetailsService;
     private final InterAgencyApiKeyFilter    interAgencyApiKeyFilter;
     private final PermissionFilter           permissionFilter;
-    private final LicenseEnforcementFilter   licenseEnforcementFilter;
     private final ObjectMapper               objectMapper;
 
     @Bean
@@ -88,7 +86,6 @@ public class SecurityConfig {
                 // Le reste de /api/sync/** (SyncStatusController, tableau de bord admin) exige
                 // désormais une authentification + permission (CONFIG.AUDIT), voir PermissionService.
                 .requestMatchers("/api/sync/helpdesk/**").permitAll()
-                .requestMatchers("/api/license/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/*.js", "/*.css", "/*.ico", "/*.png", "/*.svg").permitAll()
                 .requestMatchers("/", "/index.html").permitAll()
@@ -103,16 +100,15 @@ public class SecurityConfig {
             // changement de secret) et retombe sur AccessDeniedHandlerImpl (403) au lieu d'un 401 —
             // or le frontend ne déclenche la déconnexion + redirection vers /login QUE sur 401
             // (httpErrorInterceptor). Un token invalide obtenait donc un 403 muet, jamais nettoyé du
-            // localStorage, et tout ce qui l'utilisait en arrière-plan (rafraîchissement du dashboard,
-            // bandeau licence...) le renvoyait indéfiniment en boucle serrée — observé en prod
+            // localStorage, et tout ce qui l'utilisait en arrière-plan (rafraîchissement du dashboard...)
+            // le renvoyait indéfiniment en boucle serrée — observé en prod
             // (erp.log.txt du 2026-09-18 : des dizaines de "JWT signature does not match" par seconde,
             // en continu, jamais interrompues faute de déconnexion côté client).
             .exceptionHandling(ex -> ex.authenticationEntryPoint(jsonAuthenticationEntryPoint()))
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(interAgencyApiKeyFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(permissionFilter, JwtAuthFilter.class)
-            .addFilterAfter(licenseEnforcementFilter, PermissionFilter.class);
+            .addFilterAfter(permissionFilter, JwtAuthFilter.class);
 
         return http.build();
     }

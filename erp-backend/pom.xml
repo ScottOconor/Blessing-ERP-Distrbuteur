@@ -110,13 +110,6 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
-        <!-- OSHI - lecture des identifiants matériels pour l'empreinte machine (licensing) -->
-        <dependency>
-            <groupId>com.github.oshi</groupId>
-            <artifactId>oshi-core</artifactId>
-            <version>6.6.5</version>
-        </dependency>
-
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -131,58 +124,7 @@
     </dependencies>
 
     <build>
-        <!-- license/build-id.txt seul est filtré (token ${uuid} remplacé) — le reste des ressources
-             (statiques Angular, clés .pem) ne doit jamais passer par le filtrage texte, sous peine
-             de corrompre des fichiers binaires. -->
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>false</filtering>
-                <excludes>
-                    <exclude>license/build-id.txt</exclude>
-                </excludes>
-            </resource>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>license/build-id.txt</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.4.0</version>
-                <executions>
-                    <!-- @buildTimestamp@ (précision milliseconde) + @buildHostname@ — combinés,
-                         identifient ce build de façon quasi unique. C'est ce qui lie un JAR précis
-                         à la première machine où il obtient une licence (cf. com.erp.license). -->
-                    <execution>
-                        <id>generate-build-timestamp</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>timestamp-property</goal>
-                        </goals>
-                        <configuration>
-                            <name>buildTimestamp</name>
-                            <pattern>yyyyMMddHHmmssSSS</pattern>
-                            <locale>fr_FR</locale>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>generate-build-hostname</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>hostname</goal>
-                        </goals>
-                        <configuration>
-                            <hostnameProperty>buildHostname</hostnameProperty>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
