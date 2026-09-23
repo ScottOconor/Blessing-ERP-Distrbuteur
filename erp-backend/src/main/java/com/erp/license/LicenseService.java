@@ -109,6 +109,7 @@ public class LicenseService {
         } catch (Exception e) {
             log.error("Impossible de créer le dossier de licence : {}", e.getMessage());
         }
+        migrateLegacyLicenseFileIfNeeded();
         log.info("Licensing : fichier de licence = {} | clés publiques = {} | Hub = {} | spokeId = {}",
                 Path.of(licenseFilePath).toAbsolutePath(), Path.of(publicKeysDir).toAbsolutePath(),
                 hubConfigService.getHubUrl(), spokeId);
@@ -118,6 +119,39 @@ public class LicenseService {
         if (publicKeysByKid.isEmpty()) {
             log.warn("Aucune clé publique de licensing disponible (classpath ni {}) "
                     + "— toute licence sera considérée invalide.", publicKeysDir);
+        }
+    }
+
+    /**
+     * license.file.path est désormais namespacé par spokeId (${user.home}/.kira/license/{spokeId}/
+     * license.lic, cf. application.properties, 2026-09-22 — évite qu'un poste faisant tourner
+     * plusieurs jars de spokes différents ne partage/écrase un seul fichier). Un poste déjà activé
+     * AVANT ce changement a son fichier à l'ANCIEN chemin partagé (${user.home}/.kira/license/
+     * license.lic) : au premier démarrage avec le nouveau jar, le nouveau chemin est vide, donc
+     * hors ligne (pas de réseau pour redemander/récupérer la licence auprès du Hub), l'appli se
+     * retrouvait bloquée en NOT_ACTIVATED alors qu'une licence valide existe juste à côté. On migre
+     * le fichier (et son cache de statut distant) une seule fois, silencieusement, avant toute
+     * évaluation — jamais destructif : ne touche à rien si le nouveau chemin a déjà un fichier. */
+    private void migrateLegacyLicenseFileIfNeeded() {
+        try {
+            Path target = Path.of(licenseFilePath).toAbsolutePath();
+            if (Files.exists(target)) return;
+
+            Path legacy = Path.of(System.getProperty("user.home"), ".kira", "license", "license.lic").toAbsolutePath();
+            if (legacy.equals(target) || !Files.exists(legacy)) return;
+
+            Files.createDirectories(target.getParent());
+            Files.copy(legacy, target, StandardCopyOption.COPY_ATTRIBUTES);
+            log.info("Licensing : fichier de licence migré de l'ancien emplacement partagé ({}) vers {}", legacy, target);
+
+            Path legacyStatus = legacy.resolveSibling(legacy.getFileName() + ".remote-status");
+            if (Files.exists(legacyStatus)) {
+                Files.copy(legacyStatus, remoteStatusCachePath(), StandardCopyOption.COPY_ATTRIBUTES);
+            }
+        } catch (Exception e) {
+            // Best-effort : en cas d'échec, l'app retombe simplement sur NOT_ACTIVATED comme avant
+            // ce correctif — pas pire qu'avant, jamais bloquant pour le démarrage.
+            log.warn("Migration du fichier de licence legacy impossible : {}", e.getMessage());
         }
     }
 
