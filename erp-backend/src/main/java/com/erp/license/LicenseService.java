@@ -460,11 +460,17 @@ public class LicenseService {
         FingerprintService.Fingerprint current = fingerprintService.compute();
         FingerprintMismatch mismatchResult = compareFingerprint(fpClaim, current);
 
-        // Bloque seulement si AUCUN composant lisible ne correspond : un seul composant qui
-        // concorde (typiquement la carte mère) suffit à reconnaître la machine. Exiger les deux
-        // bloquait des postes jamais modifiés dès que le numéro de série du disque ressortait
-        // sous une autre forme ("disque ne correspond pas") — voir FingerprintService.
-        boolean rejected = mismatchResult.available > 0 && mismatchResult.mismatches == mismatchResult.available;
+        // Seule une carte mère lue ET différente (sans disque concordant pour la rattraper) prouve
+        // une autre machine. Le disque seul ne bloque jamais : son numéro de série peut ressortir
+        // sous une autre forme sur la même machine, et sur beaucoup de postes la carte mère est
+        // illisible ("indisponible" côté Hub) — le disque était alors l'unique critère et
+        // bloquait des licences non expirées ("disque ne correspond pas"). La licence locale
+        // signée fait foi jusqu'à sa date de fin ; la révocation reste pilotée par le Hub.
+        boolean rejected = mismatchResult.boardMismatch && !diskMatches(fpClaim, current);
+        if (!rejected && mismatchResult.diskMismatch) {
+            log.warn("Licence : numéro de série disque différent de celui de l'émission, carte mère "
+                    + "concordante ou illisible — licence maintenue active.");
+        }
 
         if (rejected) {
             applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH,
@@ -511,7 +517,12 @@ public class LicenseService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> fpClaim = local.get().claims().get("fp", Map.class);
                 Object issuedDisk = fpClaim != null ? fpClaim.get("disk") : null;
-                if (issuedDisk != null && fp.allDiskHashes().contains(issuedDisk)) return (String) issuedDisk;
+                // Carte mère illisible (cas fréquent : "indisponible" côté Hub) : le disque est le
+                // seul identifiant, et la licence locale signée fait foi — on présente le disque
+                // qu'elle porte pour que le Hub continue d'envoyer prolongations/réémissions.
+                if (issuedDisk != null && (fp.allDiskHashes().contains(issuedDisk) || fp.boardHash() == null)) {
+                    return (String) issuedDisk;
+                }
             }
         } catch (Exception ignored) {
             // fichier local absent/illisible : on retombe sur le disque principal
@@ -524,6 +535,11 @@ public class LicenseService {
         cachedMessage = message;
         if (cachedContactEmail == null || cachedContactEmail.isBlank()) cachedContactEmail = fallbackContactEmail;
         if (cachedContactPhone == null || cachedContactPhone.isBlank()) cachedContactPhone = fallbackContactPhone;
+    }
+
+    private static boolean diskMatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
+        Object issuedDisk = fpClaim != null ? fpClaim.get("disk") : null;
+        return issuedDisk != null && current.allDiskHashes().contains(issuedDisk);
     }
 
     private static final class FingerprintMismatch {
