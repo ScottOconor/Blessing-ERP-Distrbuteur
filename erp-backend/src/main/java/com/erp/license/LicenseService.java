@@ -360,7 +360,8 @@ public class LicenseService {
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(hubBaseUrl + "/api/hub/license/status")
                     .queryParam("spokeId", spokeId);
             if (buildIdentityService.getBuildId() != null) builder.queryParam("buildId", buildIdentityService.getBuildId());
-            if (fp.diskHash() != null) builder.queryParam("disk", fp.diskHash());
+            String disk = diskMatchingLocalLicense(fp);
+            if (disk != null) builder.queryParam("disk", disk);
             if (fp.boardHash() != null) builder.queryParam("board", fp.boardHash());
             String url = builder.toUriString();
             @SuppressWarnings("unchecked")
@@ -379,10 +380,13 @@ public class LicenseService {
                 // alors même que la licence est active côté Hub).
                 try {
                     freshFromHub = parseAndVerify(jwt);
+                    // N'écrase le fichier local (source de vérité hors ligne) qu'avec un JWT
+                    // vérifié : sinon un JWT illisible reçu une fois remplaçait une licence valide,
+                    // et l'appli passait en INVALID au prochain recheck sans réseau.
+                    persistLicenseFile(jwt);
                 } catch (LicenseInvalidException e) {
-                    log.warn("JWT reçu du Hub invalide, ignoré : {}", e.getMessage());
+                    log.warn("JWT reçu du Hub invalide, ignoré (fichier local conservé) : {}", e.getMessage());
                 }
-                persistLicenseFile(jwt);
             }
             if (resp.get("contactEmail") != null) cachedContactEmail = (String) resp.get("contactEmail");
             if (resp.get("contactPhone") != null) cachedContactPhone = (String) resp.get("contactPhone");
@@ -456,7 +460,11 @@ public class LicenseService {
         FingerprintService.Fingerprint current = fingerprintService.compute();
         FingerprintMismatch mismatchResult = compareFingerprint(fpClaim, current);
 
-        boolean rejected = mismatchResult.diskMismatch || mismatchResult.boardMismatch;
+        // Bloque seulement si AUCUN composant lisible ne correspond : un seul composant qui
+        // concorde (typiquement la carte mère) suffit à reconnaître la machine. Exiger les deux
+        // bloquait des postes jamais modifiés dès que le numéro de série du disque ressortait
+        // sous une autre forme ("disque ne correspond pas") — voir FingerprintService.
+        boolean rejected = mismatchResult.available > 0 && mismatchResult.mismatches == mismatchResult.available;
 
         if (rejected) {
             applyResult(LicenseStatus.BLOCKED_FINGERPRINT_MISMATCH,
@@ -485,10 +493,30 @@ public class LicenseService {
     /** Noms lisibles des composants d'empreinte qui diffèrent de ceux enregistrés à l'émission. */
     private String describeMismatches(Map<String, Object> fpClaim, FingerprintService.Fingerprint current) {
         if (fpClaim == null) return "empreinte absente du fichier de licence";
+        FingerprintMismatch m = compareFingerprint(fpClaim, current);
         java.util.List<String> diff = new java.util.ArrayList<>();
-        if (fpClaim.get("disk") != null && !fpClaim.get("disk").equals(current.diskHash())) diff.add("disque");
-        if (fpClaim.get("board") != null && !fpClaim.get("board").equals(current.boardHash())) diff.add("carte mère");
+        if (m.diskMismatch) diff.add("disque");
+        if (m.boardMismatch) diff.add("carte mère");
         return diff.isEmpty() ? "empreinte différente" : "différence détectée sur : " + String.join(", ", diff);
+    }
+
+    /** Disque à présenter au Hub : celui enregistré dans la licence locale s'il est bien présent
+     *  sur cette machine (même s'il n'est plus le premier énuméré), sinon le disque principal. Sans
+     *  ça, le Hub ne reconnaissait plus la machine dès que l'ordre des disques changeait et ne
+     *  renvoyait plus le JWT — une prolongation/réémission décidée sur le Hub n'arrivait jamais. */
+    private String diskMatchingLocalLicense(FingerprintService.Fingerprint fp) {
+        try {
+            Optional<LicenseClaims> local = loadAndVerifyLocalFile();
+            if (local.isPresent()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> fpClaim = local.get().claims().get("fp", Map.class);
+                Object issuedDisk = fpClaim != null ? fpClaim.get("disk") : null;
+                if (issuedDisk != null && fp.allDiskHashes().contains(issuedDisk)) return (String) issuedDisk;
+            }
+        } catch (Exception ignored) {
+            // fichier local absent/illisible : on retombe sur le disque principal
+        }
+        return fp.diskHash();
     }
 
     private void applyResult(LicenseStatus status, String message) {
@@ -510,11 +538,15 @@ public class LicenseService {
         String issuedDisk  = (String) fpClaim.get("disk");
         String issuedBoard = (String) fpClaim.get("board");
 
-        if (issuedDisk != null) {
+        // Un composant qu'on n'arrive pas à relire (null) n'est PAS la preuve d'une autre machine
+        // — seule une valeur lue ET différente l'est. Avant, une lecture ratée ponctuelle (timeout
+        // WMI) bloquait une machine parfaitement licenciée. Le disque est cherché parmi tous les
+        // disques de la machine, l'ordre d'énumération n'étant pas stable.
+        if (issuedDisk != null && !current.allDiskHashes().isEmpty()) {
             r.available++;
-            if (!issuedDisk.equals(current.diskHash())) { r.mismatches++; r.diskMismatch = true; }
+            if (!current.allDiskHashes().contains(issuedDisk)) { r.mismatches++; r.diskMismatch = true; }
         }
-        if (issuedBoard != null) {
+        if (issuedBoard != null && current.boardHash() != null) {
             r.available++;
             if (!issuedBoard.equals(current.boardHash())) { r.mismatches++; r.boardMismatch = true; }
         }

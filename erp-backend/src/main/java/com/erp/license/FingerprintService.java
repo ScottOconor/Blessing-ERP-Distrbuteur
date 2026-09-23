@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -37,7 +38,12 @@ public class FingerprintService {
             "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff"
     );
 
-    public record Fingerprint(String diskHash, String boardHash) {
+    /** @param diskHash      disque "principal" — celui envoyé au Hub à la demande d'activation
+     *  @param allDiskHashes hashes de TOUS les disques lisibles de la machine : la vérification
+     *                       locale accepte n'importe lequel (cf. LicenseService#compareFingerprint),
+     *                       l'ordre d'énumération OSHI n'étant pas garanti stable (clé USB branchée,
+     *                       disque externe, réordonnancement du contrôleur au redémarrage). */
+    public record Fingerprint(String diskHash, String boardHash, Set<String> allDiskHashes) {
         public int availableCount() {
             int n = 0;
             if (diskHash != null) n++;
@@ -46,14 +52,42 @@ public class FingerprintService {
         }
     }
 
+    /** Dernière empreinte lue — le matériel ne change pas pendant la vie du process. Relire à
+     *  chaque recheck (toutes les 30 min, et à chaque poll de l'écran de blocage) exposait l'appli
+     *  aux lectures ratées ponctuelles (timeout WMI sous Windows quand la machine est chargée) :
+     *  une lecture nulle était alors prise pour une "autre machine" et bloquait l'appli au bout de
+     *  quelques heures d'utilisation. On ne relit que tant qu'un composant manque. */
+    private volatile Fingerprint cached;
+
     public Fingerprint compute() {
+        Fingerprint c = cached;
+        if (c != null && c.availableCount() == 2) return c;
+
         SystemInfo si = new SystemInfo();
         HardwareAbstractionLayer hal = si.getHardware();
 
         String disk = readDiskSerial(hal);
         String board = readBoardSerial(hal);
+        Fingerprint fresh = new Fingerprint(hashOrNull(disk), hashOrNull(board), readAllDiskHashes(hal));
 
-        return new Fingerprint(hashOrNull(disk), hashOrNull(board));
+        // Ne jamais remplacer une lecture plus complète par une moins complète (lecture ratée).
+        if (c == null || fresh.availableCount() >= c.availableCount()) cached = fresh;
+        return cached;
+    }
+
+    private Set<String> readAllDiskHashes(HardwareAbstractionLayer hal) {
+        Set<String> hashes = new LinkedHashSet<>();
+        try {
+            for (HWDiskStore d : hal.getDiskStores()) {
+                for (String v : serialVariants(d.getSerial())) {
+                    String h = hashOrNull(v);
+                    if (h != null) hashes.add(h);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Énumération des disques impossible : {}", e.getMessage());
+        }
+        return Set.copyOf(hashes);
     }
 
     private String readDiskSerial(HardwareAbstractionLayer hal) {
@@ -78,6 +112,52 @@ public class FingerprintService {
             log.warn("Lecture numéro de série carte mère impossible : {}", e.getMessage());
             return null;
         }
+    }
+
+    /** Sous Windows, le même disque peut remonter son numéro de série sous plusieurs formes selon
+     *  la classe WMI interrogée, le compte qui lance l'appli (service vs session) ou la version de
+     *  Windows : en clair, encodé en hexadécimal, ou avec les caractères inversés deux à deux. Une
+     *  licence émise avec une forme devait rester reconnue quand l'autre ressort — sinon "disque
+     *  ne correspond pas" sur une machine qui n'a jamais changé de disque. */
+    static Set<String> serialVariants(String raw) {
+        Set<String> out = new LinkedHashSet<>();
+        if (raw == null || raw.isBlank()) return out;
+        String plain = raw.trim();
+        out.add(plain);
+        String decoded = hexDecode(plain);
+        if (decoded != null) { out.add(decoded); out.add(swapPairs(decoded).trim()); }
+        String swapped = swapPairs(plain).trim();
+        out.add(swapped);
+        out.add(hexEncode(plain));
+        out.add(hexEncode(swapped));
+        out.remove("");
+        return out;
+    }
+
+    private static String hexDecode(String s) {
+        if (s.length() < 2 || s.length() % 2 != 0 || !s.matches("[0-9A-Fa-f]+")) return null;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i += 2) {
+            int c = Integer.parseInt(s.substring(i, i + 2), 16);
+            if (c < 0x20 || c > 0x7e) return null; // pas du texte : ce n'était pas de l'hexa encodé
+            sb.append((char) c);
+        }
+        String r = sb.toString().trim();
+        return r.isEmpty() ? null : r;
+    }
+
+    private static String swapPairs(String s) {
+        StringBuilder sb = new StringBuilder(s.length());
+        int i = 0;
+        for (; i + 1 < s.length(); i += 2) sb.append(s.charAt(i + 1)).append(s.charAt(i));
+        if (i < s.length()) sb.append(s.charAt(i));
+        return sb.toString();
+    }
+
+    private static String hexEncode(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : s.getBytes(StandardCharsets.UTF_8)) sb.append(String.format("%02x", b));
+        return sb.toString();
     }
 
     private String hashOrNull(String raw) {
