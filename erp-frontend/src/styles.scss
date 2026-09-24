@@ -113,7 +113,7 @@
 
   --text-primary:   #E2E8F0;
   --text-secondary: #94A3B8;
-  --text-muted:     #64748B;
+  --text-muted:     #8391A5;
   --text-inverse:   #0F172A;
 
   --border:         #2D3748;
@@ -1713,4 +1713,26 @@ tr.detail-row td:first-child {
 
 tr.detail-row {
   background: var(--bg-surface);
+}
+
+
+/* Consistent dark surfaces for native controls and floating panels. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Shared dialogs and edit panels used across sales, purchases and credits. */
+  .modal-content, .modal-box, .dialog-content, .popup-card, .confirm-dialog,
+  .suggest-list, .suggestions-panel, .ac-dropdown, .autocomplete-dropdown, .dropdown-menu {
+    background: var(--bg-surface) !important; color: var(--text-primary); border-color: var(--border);
+  }
+  .modal-header, .modal-footer, .dialog-header, .dialog-footer { border-color: var(--border-light); }
+  .modal-title, .modal-body, .dialog-content, .popup-card { color: var(--text-primary); }
+  .form-hint, .help-text, .field-hint, .empty-state, .no-results { color: var(--text-secondary); }
+  select option { background: var(--bg-surface); color: var(--text-primary); }
+  .ac-item, .suggest-item, .dropdown-item { color: var(--text-primary); }
+  .ac-item:hover, .dropdown-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .prices-table td, .lines-table td, .payments-table td { color: var(--text-primary); border-color: var(--border-light); }
+  .prices-table tr.editing td, .add-form-row { background: var(--bg-elevated); color: var(--text-primary); }
+  .std-price-badge, .rabais-badge { background: var(--bg-elevated); color: var(--text-secondary); }
+  .di-input.di-filled { background: var(--success-bg); color: var(--success); }
 }

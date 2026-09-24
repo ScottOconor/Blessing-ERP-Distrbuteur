@@ -98,7 +98,7 @@ $accent: #00A09D;
 .meta-section {
   background: var(--bg-surface); border-radius: 12px; padding: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
   .full-width { grid-column: 1 / -1; }
 }
 
@@ -336,3 +336,25 @@ td .form-control {
   padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
 }
 
+
+
+/* Responsive transaction layout */
+.pur-form-page { width: min(100%, 1480px); box-sizing: border-box; padding: clamp(16px, 2vw, 28px); }
+.meta-section { border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); }
+.form-control { min-height: 42px; background: var(--bg-surface); color: var(--text-primary); }
+textarea.form-control { min-height: 58px; }
+.lines-table-wrap { max-width: 100%; }
+.lines-table { min-width: 1040px; color: var(--text-primary); }
+.lines-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg-elevated); }
+.lines-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--bg-elevated) 62%, var(--bg-surface)); }
+.lines-table tbody tr:hover td { background: var(--bg-active); }
+
+@media (max-width: 1200px) { .meta-section { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .meta-section { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .pur-form-page { padding: 14px; }
+  .meta-section { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .so-header, .form-header { align-items: flex-start; }
+  .header-actions { width: 100%; }
+  .totals-box { width: 100%; min-width: 0; }
+}
