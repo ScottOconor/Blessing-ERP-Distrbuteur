@@ -235,6 +235,13 @@ public class PurchaseService {
             throw new IllegalStateException("Cette commande ne peut pas être confirmée");
         }
 
+        order.getLines().removeIf(line -> isEmptyDocumentLine(
+                line.getProductId(), line.getProductCode(), line.getDescription(), line.getPrixUnitaire()));
+        if (order.getLines().isEmpty()) {
+            throw new IllegalStateException("Ajoutez au moins un article avant de confirmer");
+        }
+        computeOrderTotals(order);
+
         // Créer directement la facture fournisseur en brouillon
         PurchaseInvoice invoice = createInvoiceFromOrder(order);
         order.setInvoiceId(invoice.getId());

@@ -123,19 +123,30 @@ export class OrderFormComponent implements OnInit {
     });
   }
 
+  private isEmptyLine(line: PurchaseOrderLine): boolean {
+    return !line.productId
+      && !(line.productCode ?? '').trim()
+      && !(line.description ?? '').trim()
+      && (line.prixUnitaire ?? 0) === 0;
+  }
+
+  private removeEmptyLines(): void {
+    this.order.lines = (this.order.lines ?? []).filter(line => !this.isEmptyLine(line));
+  }
+
   loadOrder(id: number): void {
     this.loading = true;
     this.purchaseService.getOrder(id).subscribe({
       next: data => {
-        this.order = data;
+        this.order = { ...data, lines: (data.lines ?? []).filter(line => !this.isEmptyLine(line)) };
         this.order.lines.forEach(l => {
           l.consigne = CONSIGNE_CODES.has((l.productCode ?? '').trim().toUpperCase());
         });
         this.supplierSearch = data.partnerName || '';
-        this.lineSearches = data.lines.map(l =>
+        this.lineSearches = this.order.lines.map(l =>
           l.productCode ? `[${l.productCode}] ${l.description}` : l.description
         );
-        this.lineSearchResults = data.lines.map(() => []);
+        this.lineSearchResults = this.order.lines.map(() => []);
         this.loading = false;
         if (data.partnerId) this.loadSupplierPrecompteRate(data.partnerId);
         if (data.invoiceId) {
@@ -360,8 +371,10 @@ export class OrderFormComponent implements OnInit {
   // ===== SAVE =====
 
   saveOrder(): void {
+    this.removeEmptyLines();
+    this.computeTotals();
     if (!this.order.partnerId) { this.errorMsg = 'Sélectionnez un fournisseur'; return; }
-    if (this.order.lines.length === 0) { this.errorMsg = 'Ajoutez au moins une ligne'; return; }
+    if (this.order.lines.length === 0) { this.errorMsg = 'Ajoutez au moins un article'; return; }
 
     this.saving = true;
     this.errorMsg = '';
@@ -377,6 +390,8 @@ export class OrderFormComponent implements OnInit {
           this.router.navigate(['/purchases/orders', saved.id]);
         } else {
           this.order = saved;
+          this.lineSearches = saved.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
+          this.lineSearchResults = saved.lines.map(() => []);
           this.successMsg = 'Commande sauvegardée';
           setTimeout(() => this.successMsg = '', 4000);
         }

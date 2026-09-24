@@ -270,6 +270,12 @@ public class SalesService {
             throw new IllegalStateException("Ce bon ne peut pas être confirmé");
         }
 
+        order.getLines().removeIf(line -> isEmptyDocumentLine(
+                line.getProductId(), line.getProductCode(), line.getDescription(), line.getPrixUnitaire()));
+        if (order.getLines().isEmpty()) {
+            throw new IllegalStateException("Ajoutez au moins un article avant de confirmer");
+        }
+
         order.setState("confirmed");
         orderRepo.save(order);
 

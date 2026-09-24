@@ -287,18 +287,29 @@ export class OrderFormComponent implements OnInit {
     });
   }
 
+  private isEmptyLine(line: SalesOrderLine): boolean {
+    return !line.productId
+      && !(line.productCode ?? '').trim()
+      && !(line.description ?? '').trim()
+      && (line.prixUnitaire ?? 0) === 0;
+  }
+
+  private removeEmptyLines(): void {
+    this.order.lines = (this.order.lines ?? []).filter(line => !this.isEmptyLine(line));
+  }
+
   loadOrder(id: number): void {
     this.loading = true;
     this.salesService.getOrder(id).subscribe({
       next: (data) => {
-        this.order = data;
+        this.order = { ...data, lines: (data.lines ?? []).filter(line => !this.isEmptyLine(line)) };
         this.clientSearch = data.partnerName || '';
         if (data.partnerId) this.onClientChange(data.partnerId);
-        this.lineSearches = data.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
-        this.lineStockQty = data.lines.map(() => 0);
-        this.lineSearchResults = data.lines.map(() => []);
-        this.lineUomNames = data.lines.map(() => '');
-        this.lineCategoryNames = data.lines.map(() => '');
+        this.lineSearches = this.order.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
+        this.lineStockQty = this.order.lines.map(() => 0);
+        this.lineSearchResults = this.order.lines.map(() => []);
+        this.lineUomNames = this.order.lines.map(() => '');
+        this.lineCategoryNames = this.order.lines.map(() => '');
         this.loading = false;
         if (data.warehouseId) {
           this.loadProductsForWarehouse(data.warehouseId);
@@ -670,6 +681,8 @@ export class OrderFormComponent implements OnInit {
   // ─── Sauvegarde ───────────────────────────────────────────────────────────
 
   save(): void {
+    this.removeEmptyLines();
+    this.computeTotals();
     const missing: string[] = [];
     if (!this.order.partnerId) missing.push('Client');
     if (!this.order.journalId) missing.push('Journal');
@@ -740,6 +753,9 @@ export class OrderFormComponent implements OnInit {
 
   confirm(): void {
     if (!this.orderId) return;
+    this.removeEmptyLines();
+    this.computeTotals();
+    if (this.order.lines.length === 0) { this.errorMsg = 'Ajoutez au moins un article avant de confirmer'; return; }
 
     // Les bons eLeader importés ne passent pas par la vérification déconsigne
     if (this.order.eleaderReference) {
