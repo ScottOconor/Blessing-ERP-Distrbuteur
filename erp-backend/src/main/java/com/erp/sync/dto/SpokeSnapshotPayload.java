@@ -69,6 +69,7 @@ public class SpokeSnapshotPayload {
     BigDecimal ristournesCollecteMoisCourant;
     BigDecimal ristournesCollecteMoisPasse;
     BigDecimal ristournesCollecteJournee;
+    BigDecimal ristournesCollecteTrimestre;
     BigDecimal ristournesPaiementTotal;
     BigDecimal ristournesPaiementPaye;
     BigDecimal ristournesPaiementResteAPayer;
@@ -90,6 +91,7 @@ public class SpokeSnapshotPayload {
     BigDecimal remisesCollecteMoisCourant;
     BigDecimal remisesCollecteMoisPasse;
     BigDecimal remisesCollecteJournee;
+    BigDecimal remisesCollecteTrimestre;
     BigDecimal remisesPaiementTotal;
     BigDecimal remisesPaiementPaye;
     BigDecimal remisesPaiementResteAPayer;

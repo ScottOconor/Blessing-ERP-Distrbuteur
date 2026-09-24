@@ -213,6 +213,7 @@ public class SnapshotService {
         BigDecimal ristCollecteMoisEnCours = orZ(ristournePaiementRepo.sumByPeriod(cid, monthStart, today));
         BigDecimal ristCollecteMoisPasse   = orZ(ristournePaiementRepo.sumByPeriod(cid, prevMonthStart, prevMonthEnd));
         BigDecimal ristCollecteJournee     = orZ(ristournePaiementRepo.sumByPeriod(cid, today, today));
+        BigDecimal ristCollecteTrimestre     = orZ(ristournePaiementRepo.sumByPeriod(cid, qCurStart, today));
         BigDecimal ristPaiementTotal       = orZ(ristournePaiementRepo.sumByPeriod(cid, qPrevStart, qPrevEnd));
         BigDecimal ristPaiementPaye        = orZ(ristournePaiementRepo.sumByStatesAndPeriod(cid, PAYEE_STATES, qPrevStart, qPrevEnd));
         BigDecimal ristPaiementReste       = ristPaiementTotal.subtract(ristPaiementPaye);
@@ -221,6 +222,7 @@ public class SnapshotService {
         BigDecimal remCollecteMoisEnCours = orZ(remisePaiementRepo.sumByPeriod(cid, monthStart, today));
         BigDecimal remCollecteMoisPasse   = orZ(remisePaiementRepo.sumByPeriod(cid, prevMonthStart, prevMonthEnd));
         BigDecimal remCollecteJournee     = orZ(remisePaiementRepo.sumByPeriod(cid, today, today));
+        BigDecimal remCollecteTrimestre     = orZ(remisePaiementRepo.sumByPeriod(cid, qCurStart, today));
         BigDecimal remPaiementTotal       = orZ(remisePaiementRepo.sumByPeriod(cid, qPrevStart, qPrevEnd));
         BigDecimal remPaiementPaye        = orZ(remisePaiementRepo.sumByStatesAndPeriod(cid, PAYEE_STATES, qPrevStart, qPrevEnd));
         BigDecimal remPaiementReste       = remPaiementTotal.subtract(remPaiementPaye);
@@ -662,6 +664,7 @@ public class SnapshotService {
                 .ristournesCollecteMoisCourant(ristCollecteMoisEnCours)
                 .ristournesCollecteMoisPasse(ristCollecteMoisPasse)
                 .ristournesCollecteJournee(ristCollecteJournee)
+                .ristournesCollecteTrimestre(ristCollecteTrimestre)
                 .ristournesPaiementTotal(ristPaiementTotal)
                 .ristournesPaiementPaye(ristPaiementPaye)
                 .ristournesPaiementResteAPayer(ristPaiementReste)
@@ -679,6 +682,7 @@ public class SnapshotService {
                 .remisesCollecteMoisCourant(remCollecteMoisEnCours)
                 .remisesCollecteMoisPasse(remCollecteMoisPasse)
                 .remisesCollecteJournee(remCollecteJournee)
+                .remisesCollecteTrimestre(remCollecteTrimestre)
                 .remisesPaiementTotal(remPaiementTotal)
                 .remisesPaiementPaye(remPaiementPaye)
                 .remisesPaiementResteAPayer(remPaiementReste)
