@@ -331,9 +331,9 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
 
     /** Solde créditeur net comptes 701* sur une période → CA comptable */
     @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '701%' AND l.company.id = :cid " +
+           "WHERE l.account.code IN ('701100', '443100', '441200') AND l.company.id = :cid " +
            "AND l.move.state = 'posted' AND l.date BETWEEN :from AND :to")
-    BigDecimal soldeComptes701(@Param("cid") Long companyId,
+    BigDecimal soldeComptesCA(@Param("cid") Long companyId,
                                @Param("from") LocalDate from,
                                @Param("to") LocalDate to);
 
@@ -386,9 +386,17 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
 
     /** CA du jour (comptes 701*) */
     @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '701%' AND l.company.id = :cid " +
+           "WHERE l.account.code IN ('701100', '443100', '441200') AND l.company.id = :cid " +
            "AND l.move.state = 'posted' AND l.date = :date")
-    BigDecimal soldeComptes701Jour(@Param("cid") Long companyId, @Param("date") LocalDate date);
+    BigDecimal soldeComptesCAJour(@Param("cid") Long companyId, @Param("date") LocalDate date);
+
+    /** Achats : solde débiteur net des comptes 601100 (marchandises) + 445200 (TVA déductible) + 442100 (PSA achats). */
+    @Query("SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.code IN ('601100', '445200', '442100') AND l.company.id = :cid " +
+           "AND l.move.state = 'posted' AND l.date BETWEEN :from AND :to")
+    BigDecimal soldeComptesAchats(@Param("cid") Long companyId,
+                                  @Param("from") LocalDate from,
+                                  @Param("to") LocalDate to);
 
     /** Créances par tiers : solde net débiteur (on nous doit) — clients ET fournisseurs */
     @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +

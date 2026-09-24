@@ -146,11 +146,12 @@ public class SnapshotService {
         LocalDate qPrevStart = LocalDate.of(yPrev, (qPrev - 1) * 3 + 1, 1);
         LocalDate qPrevEnd   = qPrevStart.plusMonths(3).minusDays(1);
 
-        BigDecimal caComptesTotal  = orZ(moveLineRepo.soldeComptes701(cid, yearStart, today));
-        BigDecimal caComptesMois   = orZ(moveLineRepo.soldeComptes701(cid, monthStart, today));
+        // CA lu en comptabilité : 701100 (ventes) + 443100 (TVA facturée) + 441200 (PSA ventes).
+        BigDecimal caComptesTotal  = orZ(moveLineRepo.soldeComptesCA(cid, yearStart, today));
+        BigDecimal caComptesMois   = orZ(moveLineRepo.soldeComptesCA(cid, monthStart, today));
         BigDecimal caVentesTotal   = orZ(salesInvoiceRepo.sumCaVentesTotal(cid));
-        BigDecimal caVentesJour    = orZ(moveLineRepo.soldeComptes701Jour(cid, today));
-        BigDecimal caVentesHier    = orZ(moveLineRepo.soldeComptes701Jour(cid, hier));
+        BigDecimal caVentesJour    = orZ(moveLineRepo.soldeComptesCAJour(cid, today));
+        BigDecimal caVentesHier    = orZ(moveLineRepo.soldeComptesCAJour(cid, hier));
         BigDecimal caVentesMois    = orZ(salesInvoiceRepo.sumCaVentesMois(cid, today.getYear(), today.getMonthValue()));
         BigDecimal caVentesMoisDernier = orZ(salesInvoiceRepo.sumCaVentesMois(
                 cid, prevMonthStart.getYear(), prevMonthStart.getMonthValue()));
@@ -162,8 +163,9 @@ public class SnapshotService {
                 ? caVentesMois.subtract(caVentesMoisDernier).divide(caVentesMoisDernier, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                 : (caVentesMois.compareTo(BigDecimal.ZERO) != 0 ? BigDecimal.valueOf(100) : BigDecimal.ZERO);
 
-        BigDecimal achatsTotal    = orZ(purchaseInvoiceRepo.sumAchatsTotal(cid));
-        BigDecimal achatsMois     = orZ(purchaseInvoiceRepo.sumAchatsMois(cid, today.getYear(), today.getMonthValue()));
+        // Achats lus en comptabilité, symétrique du CA : 601100 + 445200 (TVA) + 442100 (PSA), exercice en cours.
+        BigDecimal achatsTotal    = orZ(moveLineRepo.soldeComptesAchats(cid, yearStart, today));
+        BigDecimal achatsMois     = orZ(moveLineRepo.soldeComptesAchats(cid, monthStart, today));
         long       countAchats    = purchaseInvoiceRepo.countFacturesAchats(cid);
 
         // Total : même calcul que l'écran "Suivi Tiers" déjà utilisé et vérifié en local
