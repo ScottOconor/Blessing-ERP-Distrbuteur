@@ -145,17 +145,16 @@ public class EnlevementService {
         for (PurchaseInvoice inv : invoices) {
             Long pid = inv.getPartner().getId();
             partnerNames.putIfAbsent(pid, inv.getPartner().getName());
-            accumulateLines(inv.getLines(), pid, enlevByCategory,
+            accumulateCostLines(inv.getLines(), enlevByCategory,
                     data.computeIfAbsent(pid, k -> new LinkedHashMap<>()));
             // Lignes par article individuel
             for (PurchaseInvoiceLine line : inv.getLines()) {
                 if (line.isConsigne() || line.getCategoryId() == null) continue;
                 Enlevement enlev = enlevByCategory.get(line.getCategoryId());
                 if (enlev == null) continue;
-                BigDecimal rate = enlevementClientRepo
-                        .findByEnlevementIdAndPartnerId(enlev.getId(), pid)
-                        .map(com.erp.common.entity.EnlevementClient::getMontant)
-                        .orElse(enlev.getMontantFixe());
+                BigDecimal rate = enlev.getCoutEnlevement() != null
+                        ? enlev.getCoutEnlevement() : BigDecimal.ZERO;
+                if (rate.compareTo(BigDecimal.ZERO) <= 0) continue;
                 BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
                 if (qty.compareTo(BigDecimal.ZERO) <= 0) continue;
                 articleData.computeIfAbsent(pid, k -> new java.util.ArrayList<>())
@@ -184,9 +183,8 @@ public class EnlevementService {
         Map<Long, Enlevement> enlevByCategory = buildEnlevByCategory(inv.getCompany().getId());
         if (enlevByCategory.isEmpty()) return Collections.emptyList();
 
-        Long pid = inv.getPartner().getId();
         Map<String, BigDecimal[]> catMap = new LinkedHashMap<>();
-        accumulateLines(inv.getLines(), pid, enlevByCategory, catMap);
+        accumulateCostLines(inv.getLines(), enlevByCategory, catMap);
 
         return catMap.entrySet().stream()
                 .map(e -> EnlevementRapportDTO.Line.builder()
@@ -255,8 +253,7 @@ public class EnlevementService {
                 .collect(Collectors.toMap(e -> e.getCategory().getId(), e -> e));
     }
 
-    private void accumulateLines(List<PurchaseInvoiceLine> lines,
-                                  Long partnerId,
+    private void accumulateCostLines(List<PurchaseInvoiceLine> lines,
                                   Map<Long, Enlevement> enlevByCategory,
                                   Map<String, BigDecimal[]> catMap) {
         for (PurchaseInvoiceLine line : lines) {
@@ -264,10 +261,9 @@ public class EnlevementService {
             Enlevement enlev = enlevByCategory.get(line.getCategoryId());
             if (enlev == null) continue;
 
-            BigDecimal rate = enlevementClientRepo
-                    .findByEnlevementIdAndPartnerId(enlev.getId(), partnerId)
-                    .map(EnlevementClient::getMontant)
-                    .orElse(enlev.getMontantFixe());
+            BigDecimal rate = enlev.getCoutEnlevement() != null
+                    ? enlev.getCoutEnlevement() : BigDecimal.ZERO;
+            if (rate.compareTo(BigDecimal.ZERO) <= 0) continue;
 
             String catName = enlev.getCategory().getName();
             BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
