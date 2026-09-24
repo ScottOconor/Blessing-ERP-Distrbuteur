@@ -149,11 +149,6 @@ export class PrecompteConfigComponent implements OnInit {
     });
   }
 
-  /** TTC = HT × (1 + 19,25%), pour vérifier le calcul appliqué en facturation */
-  ttc(montantHT: number | null | undefined): number {
-    return (montantHT ?? 0) * 1.1925;
-  }
-
   openNewEnl(): void {
     this.editingEnl = null;
     this.enlForm = this.emptyEnl();

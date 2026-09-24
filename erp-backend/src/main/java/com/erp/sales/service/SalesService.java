@@ -1954,10 +1954,11 @@ public class SalesService {
                     .categoryId(ol.getCategoryId())
                     .quantity(ol.getQuantity())
                     .build();
-            BigDecimal enl = computeFraisEnlevement(null, tempLine, partnerId, companyId);
+            BigDecimal enlTTC = computeFraisEnlevement(null, tempLine, partnerId, companyId);
 
             BigDecimal tva = ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO;
-            BigDecimal enlTVA = enl.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            BigDecimal enlHT = computeFraisEnlevementHT(enlTTC, tva);
+            BigDecimal enlTVA = enlTTC.subtract(enlHT);
             // Prix TTC unitaire = HT × (1 + TVA% + Précompte%), arrondi à l'entier
             BigDecimal pcRateFromOrder = isConsigne ? ZERO : tauxPrecompte;
             BigDecimal puttc = (ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO)
@@ -2002,7 +2003,7 @@ public class SalesService {
                     .montantTVA(ol.getMontantTVA() != null ? ol.getMontantTVA() : ZERO)
                     .montantTTC(montantTTC)
                     .precompte(pc)
-                    .fraisEnlevement(enl)
+                    .fraisEnlevement(enlHT)
                     .fraisEnlevementTVA(enlTVA)
                     .prixUnitaireTTC(puttc)
                     .guinessTaxe(guinessTaxe)
@@ -2936,13 +2937,12 @@ public class SalesService {
                 line.setPrecompte(ZERO);
             }
 
-            // Frais d'enlèvement HT (only on non-consigne lines with a category), TVA calculée dessus
+            // Le tarif d'enlèvement saisi est TTC : extraire la TVA sans augmenter le montant facturé.
             BigDecimal tva = line.getTauxTVA() != null ? line.getTauxTVA() : ZERO;
-            BigDecimal fraisEnlevHT = computeFraisEnlevement(req, line, partnerId, companyId);
+            BigDecimal fraisEnlevTTC = computeFraisEnlevement(req, line, partnerId, companyId);
+            BigDecimal fraisEnlevHT = computeFraisEnlevementHT(fraisEnlevTTC, tva);
             line.setFraisEnlevement(fraisEnlevHT);
-            line.setFraisEnlevementTVA(fraisEnlevHT
-                    .multiply(tva)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+            line.setFraisEnlevementTVA(fraisEnlevTTC.subtract(fraisEnlevHT));
 
             // Prix TTC unitaire = HT × (1 + TVA% + Précompte%), arrondi à l'entier
             BigDecimal pcRateForLine = (line.isConsigne() || excludePrecompteLine) ? ZERO : tauxPrecompte;
@@ -3014,7 +3014,7 @@ public class SalesService {
      * Calcule les frais d'enlèvement HT d'une ligne selon la logique Odoo :
      * - Si un tarif client spécifique existe → il REMPLACE le tarif de base (pas d'addition)
      * - Sinon → tarif de base (montantFixe) pour la catégorie
-     * - montantFixe est HT par unité ; la TVA est calculée séparément lors de la facturation
+     * - montantFixe et les tarifs client sont TTC par unité ; la TVA est extraite lors de la facturation
      */
     private BigDecimal computeFraisEnlevement(SalesInvoiceRequest.LineRequest req,
                                                SalesInvoiceLine line,
@@ -3046,6 +3046,16 @@ public class SalesService {
                 .map(e -> (e.getMontantFixe() != null ? e.getMontantFixe() : ZERO)
                         .multiply(qty).setScale(2, RoundingMode.HALF_UP))
                 .orElse(ZERO);
+    }
+
+    /** Extrait le montant HT d'un tarif TTC au taux de TVA de la ligne, sans changer son total TTC. */
+    private BigDecimal computeFraisEnlevementHT(BigDecimal montantTTC, BigDecimal tauxTVA) {
+        BigDecimal ttc = montantTTC != null ? montantTTC : ZERO;
+        BigDecimal taux = tauxTVA != null ? tauxTVA : ZERO;
+        if (taux.compareTo(ZERO) <= 0) return ttc.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal coefficient = BigDecimal.ONE.add(
+                taux.divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP));
+        return ttc.divide(coefficient, 2, RoundingMode.HALF_UP);
     }
 
     private void computeLineTotals(SalesOrderLine line) {

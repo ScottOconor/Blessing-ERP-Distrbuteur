@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public class FraisEnlevementSummaryDTO {
     private LocalDate dateFrom;
     private LocalDate dateTo;
-    private BigDecimal collecte;        // sum(qty * montantFixe/override) — facturé au client
-    private BigDecimal cout;            // sum(qty * coutEnlevement) — charge interne
-    private BigDecimal net;             // collecte - cout
+    private BigDecimal collecte;        // sum(qty * tarif TTC) — facturé au client
+    private BigDecimal cout;            // sum(qty * coût TTC) — charge interne
+    private BigDecimal net;             // collecte TTC - coût TTC
 }

@@ -98,9 +98,8 @@
           <thead>
             <tr>
               <th>Catégorie</th>
-              <th class="text-right">Montant HT (FCFA)</th>
-              <th class="text-right">Montant TTC (FCFA)</th>
-              <th class="text-right">Coût HT (FCFA)</th>
+              <th class="text-right">Tarif TTC / unité</th>
+              <th class="text-right">Coût TTC / unité</th>
               <th>Suppléments clients</th>
               <th></th>
             </tr>
@@ -109,9 +108,8 @@
             @for (e of enlevements; track e.id) {
               <tr>
                 <td class="font-bold">{{ e.categoryName }}</td>
-                <td class="text-right font-mono">{{ e.montantFixe | number:'1.2-2' }}</td>
-                <td class="text-right font-mono text-muted">{{ ttc(e.montantFixe) | number:'1.0-0' }}</td>
-                <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.2-2' }}</td>
+                <td class="text-right font-mono">{{ e.montantFixe | number:'1.0-0' }} FCFA</td>
+                <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
                 <td>
                   @if (e.clients && e.clients.length > 0) {
                     <span class="clients-count">{{ e.clients.length }} supplément(s) client</span>
@@ -261,15 +259,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Montant facturé HT / unité (FCFA) <span class="req">*</span></label>
+            <label>Tarif d'enlèvement TTC / unité (FCFA) <span class="req">*</span></label>
             <input type="number" step="0.01" class="form-control" [(ngModel)]="enlForm.montantFixe" min="0" />
           </div>
           <div class="form-group">
-            <label>≈ Montant TTC / unité (FCFA)</label>
-            <input type="text" class="form-control" [value]="ttc(enlForm.montantFixe) | number:'1.0-0'" disabled />
-          </div>
-          <div class="form-group">
-            <label>Coût d'enlèvement HT / unité (FCFA)</label>
+            <label>Coût d'enlèvement TTC / unité (FCFA)</label>
             <input type="number" class="form-control" [(ngModel)]="enlForm.coutEnlevement" min="0" step="0.01" />
           </div>
         </div>
@@ -343,7 +337,7 @@
       </div>
       <div style="overflow-x:auto;max-height:50vh">
         <table class="cfg-table">
-          <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant TTC</th><th class="text-right">Coût HT</th><th>Résolu</th></tr></thead>
+          <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant TTC</th><th class="text-right">Coût TTC</th><th>Résolu</th></tr></thead>
           <tbody>
             @for (row of importEnlRows; track $index; let i = $index) {
               <tr>

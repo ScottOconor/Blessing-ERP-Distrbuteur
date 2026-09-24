@@ -140,11 +140,6 @@ export class EnlevementListComponent implements OnInit {
 
   categoryName(id: number): string { return this.categories.find(c => c.id === id)?.name ?? ''; }
 
-  /** TTC = HT × (1 + 19,25%), pour vérifier le calcul appliqué en facturation */
-  ttc(montantHT: number | null | undefined): number {
-    return (montantHT ?? 0) * 1.1925;
-  }
-
   private emptyForm(): EnlevementConfig {
     return { categoryId: 0, montantFixe: 0, coutEnlevement: 0, companyId: this.companyId, active: true, clients: [] };
   }

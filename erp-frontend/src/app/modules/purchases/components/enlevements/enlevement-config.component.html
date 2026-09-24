@@ -27,8 +27,8 @@
         <thead>
           <tr>
             <th>Catégorie d'article</th>
-            <th class="text-right">Montant fixe HT / U.</th>
-            <th class="text-right">Coût interne HT / U.</th>
+            <th class="text-right">Tarif fixe TTC / U.</th>
+            <th class="text-right">Coût interne TTC / U.</th>
             <th>Tarifs fournisseurs</th>
             <th style="width: 100px"></th>
           </tr>
@@ -103,11 +103,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Montant fixe HT / unité <span class="req">*</span></label>
+            <label>Tarif fixe TTC / unité <span class="req">*</span></label>
             <input type="number" class="form-control" [(ngModel)]="form.montantFixe" min="0">
           </div>
           <div class="form-group">
-            <label>Coût interne HT / unité</label>
+            <label>Coût interne TTC / unité</label>
             <input type="number" class="form-control" [(ngModel)]="form.coutEnlevement" min="0">
           </div>
         </div>
