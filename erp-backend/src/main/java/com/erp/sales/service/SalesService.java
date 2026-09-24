@@ -1954,11 +1954,10 @@ public class SalesService {
                     .categoryId(ol.getCategoryId())
                     .quantity(ol.getQuantity())
                     .build();
-            BigDecimal enlTTC = computeFraisEnlevement(null, tempLine, partnerId, companyId);
+            BigDecimal enlHT = computeFraisEnlevement(null, tempLine, partnerId, companyId);
 
             BigDecimal tva = ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO;
-            BigDecimal enlHT = computeFraisEnlevementHT(enlTTC, tva);
-            BigDecimal enlTVA = enlTTC.subtract(enlHT);
+            BigDecimal enlTVA = enlHT.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             // Prix TTC unitaire = HT × (1 + TVA% + Précompte%), arrondi à l'entier
             BigDecimal pcRateFromOrder = isConsigne ? ZERO : tauxPrecompte;
             BigDecimal puttc = (ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO)
@@ -2937,12 +2936,13 @@ public class SalesService {
                 line.setPrecompte(ZERO);
             }
 
-            // Le tarif d'enlèvement saisi est TTC : extraire la TVA sans augmenter le montant facturé.
+            // Le tarif fixe d'enlèvement est HT ; sa TVA s'ajoute une seule fois au TTC.
             BigDecimal tva = line.getTauxTVA() != null ? line.getTauxTVA() : ZERO;
-            BigDecimal fraisEnlevTTC = computeFraisEnlevement(req, line, partnerId, companyId);
-            BigDecimal fraisEnlevHT = computeFraisEnlevementHT(fraisEnlevTTC, tva);
+            BigDecimal fraisEnlevHT = computeFraisEnlevement(req, line, partnerId, companyId);
             line.setFraisEnlevement(fraisEnlevHT);
-            line.setFraisEnlevementTVA(fraisEnlevTTC.subtract(fraisEnlevHT));
+            line.setFraisEnlevementTVA(fraisEnlevHT
+                    .multiply(tva)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
 
             // Prix TTC unitaire = HT × (1 + TVA% + Précompte%), arrondi à l'entier
             BigDecimal pcRateForLine = (line.isConsigne() || excludePrecompteLine) ? ZERO : tauxPrecompte;
@@ -3014,7 +3014,7 @@ public class SalesService {
      * Calcule les frais d'enlèvement HT d'une ligne selon la logique Odoo :
      * - Si un tarif client spécifique existe → il REMPLACE le tarif de base (pas d'addition)
      * - Sinon → tarif de base (montantFixe) pour la catégorie
-     * - montantFixe et les tarifs client sont TTC par unité ; la TVA est extraite lors de la facturation
+     * - montantFixe et les tarifs client sont HT par unité ; la TVA est ajoutée lors de la facturation
      */
     private BigDecimal computeFraisEnlevement(SalesInvoiceRequest.LineRequest req,
                                                SalesInvoiceLine line,
@@ -3046,16 +3046,6 @@ public class SalesService {
                 .map(e -> (e.getMontantFixe() != null ? e.getMontantFixe() : ZERO)
                         .multiply(qty).setScale(2, RoundingMode.HALF_UP))
                 .orElse(ZERO);
-    }
-
-    /** Extrait le montant HT d'un tarif TTC au taux de TVA de la ligne, sans changer son total TTC. */
-    private BigDecimal computeFraisEnlevementHT(BigDecimal montantTTC, BigDecimal tauxTVA) {
-        BigDecimal ttc = montantTTC != null ? montantTTC : ZERO;
-        BigDecimal taux = tauxTVA != null ? tauxTVA : ZERO;
-        if (taux.compareTo(ZERO) <= 0) return ttc.setScale(2, RoundingMode.HALF_UP);
-        BigDecimal coefficient = BigDecimal.ONE.add(
-                taux.divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP));
-        return ttc.divide(coefficient, 2, RoundingMode.HALF_UP);
     }
 
     private void computeLineTotals(SalesOrderLine line) {

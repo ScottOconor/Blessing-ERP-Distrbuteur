@@ -49,8 +49,9 @@
           <thead>
             <tr>
               <th>Catégorie d'article</th>
-              <th class="text-right">Tarif fixe TTC / U.</th>
-              <th class="text-right">Coût interne TTC / U.</th>
+              <th class="text-right">Montant fixe HT / U.</th>
+              <th class="text-right">Montant fixe TTC / U.</th>
+              <th class="text-right">Coût importé / U.</th>
               <th>Tarifs spécifiques</th>
               <th style="width:90px"></th>
             </tr>
@@ -62,6 +63,7 @@
                 <td class="text-right">
                   <span class="amount-pill">{{ e.montantFixe | number:'1.0-0' }} FCFA</span>
                 </td>
+                <td class="text-right font-mono">{{ ttc(e.montantFixe) | number:'1.0-0' }} FCFA</td>
                 <td class="text-right text-muted font-mono">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
                 <td>
                   @if (e.clients && e.clients.length > 0) {
@@ -231,14 +233,18 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Tarif fixe TTC / unité <span class="req">*</span></label>
+            <label>Montant fixe HT / unité <span class="req">*</span></label>
             <div class="input-suffix">
               <input type="number" step="0.01" class="form-control" [(ngModel)]="form.montantFixe" min="0">
               <span class="suffix">FCFA</span>
             </div>
           </div>
           <div class="form-group">
-            <label>Coût interne TTC / unité</label>
+            <label>Montant fixe TTC / unité (calculé)</label>
+            <div class="input-suffix"><input type="text" class="form-control" [value]="ttc(form.montantFixe) | number:'1.0-0'" readonly><span class="suffix">FCFA</span></div>
+          </div>
+          <div class="form-group">
+            <label>Coût importé / unité (valeur du modèle)</label>
             <div class="input-suffix">
               <input type="number" class="form-control" [(ngModel)]="form.coutEnlevement" min="0">
               <span class="suffix">FCFA</span>

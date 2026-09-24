@@ -27,8 +27,9 @@
         <thead>
           <tr>
             <th>Catégorie d'article</th>
-            <th class="text-right">Tarif fixe TTC / U.</th>
-            <th class="text-right">Coût interne TTC / U.</th>
+            <th class="text-right">Montant fixe HT / U.</th>
+            <th class="text-right">Montant fixe TTC / U.</th>
+            <th class="text-right">Coût importé / U.</th>
             <th>Tarifs fournisseurs</th>
             <th style="width: 100px"></th>
           </tr>
@@ -38,6 +39,7 @@
             <tr>
               <td class="font-bold">{{ e.categoryName }}</td>
               <td class="text-right font-mono">{{ e.montantFixe | number:'1.0-0' }} FCFA</td>
+              <td class="text-right font-mono">{{ ttc(e.montantFixe) | number:'1.0-0' }} FCFA</td>
               <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
               <td>
                 @if (e.clients && e.clients.length > 0) {
@@ -103,11 +105,11 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Tarif fixe TTC / unité <span class="req">*</span></label>
+            <label>Montant fixe HT / unité <span class="req">*</span></label>
             <input type="number" class="form-control" [(ngModel)]="form.montantFixe" min="0">
           </div>
           <div class="form-group">
-            <label>Coût interne TTC / unité</label>
+            <label>Coût importé / unité (valeur du modèle)</label>
             <input type="number" class="form-control" [(ngModel)]="form.coutEnlevement" min="0">
           </div>
         </div>

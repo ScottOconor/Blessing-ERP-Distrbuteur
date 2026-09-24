@@ -389,6 +389,8 @@ export class PrecompteConfigComponent implements OnInit {
     return { partnerId: 0, typePrecompte: 'sale', tauxPrecompte: 2, companyId: this.companyId };
   }
 
+  ttc(montantHT: number | null | undefined): number { return (montantHT ?? 0) * 1.1925; }
+
   private emptyEnl(): Enlevement {
     return { categoryId: 0, montantFixe: 0, coutEnlevement: 0, companyId: this.companyId, clients: [] };
   }

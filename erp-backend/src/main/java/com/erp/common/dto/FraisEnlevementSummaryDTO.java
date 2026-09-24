@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public class FraisEnlevementSummaryDTO {
     private LocalDate dateFrom;
     private LocalDate dateTo;
-    private BigDecimal collecte;        // sum(qty * tarif TTC) — facturé au client
-    private BigDecimal cout;            // sum(qty * coût TTC) — charge interne
-    private BigDecimal net;             // collecte TTC - coût TTC
+    private BigDecimal collecte;        // montant HT facturé + TVA calculée côté vente
+    private BigDecimal cout;            // sum(qty * coût importé du modèle), utilisé tel quel
+    private BigDecimal net;             // collecte facturée - coût importé
 }
