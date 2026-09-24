@@ -471,6 +471,10 @@ public class PurchaseService {
 
         boolean isAvoir = "credit_note".equals(invoice.getType());
 
+        // Nettoyer les anciennes lignes placeholders avant la validation.
+        invoice.getLines().removeIf(line -> isEmptyDocumentLine(
+                line.getProductCode(), line.getDescription(), line.getPrixUnitaire()));
+
         // Validation des champs obligatoires
         List<String> missing = new ArrayList<>();
         if (invoice.getPartner() == null) missing.add("Fournisseur");
@@ -1880,6 +1884,7 @@ public class PurchaseService {
                 : ZERO;
 
         for (PurchaseOrderLine ol : order.getLines()) {
+            if (isEmptyDocumentLine(ol.getProductId(), ol.getProductCode(), ol.getDescription(), ol.getPrixUnitaire())) continue;
             boolean isConsigne = ConsigneCodes.isConsigne(ol.getProductCode(), companyId);
             BigDecimal qty = ol.getQuantity() != null ? ol.getQuantity() : ZERO;
             BigDecimal pu  = ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO;
@@ -1944,6 +1949,16 @@ public class PurchaseService {
         return invoiceRepo.save(invoice);
     }
 
+    private boolean isEmptyDocumentLine(String productCode, String description, BigDecimal unitPrice) {
+        return (productCode == null || productCode.isBlank())
+                && (description == null || description.isBlank())
+                && (unitPrice == null || unitPrice.compareTo(ZERO) == 0);
+    }
+
+    private boolean isEmptyDocumentLine(Long productId, String productCode, String description, BigDecimal unitPrice) {
+        return productId == null && isEmptyDocumentLine(productCode, description, unitPrice);
+    }
+
     private void buildInvoiceLines(PurchaseInvoice invoice, List<PurchaseInvoiceRequest.LineRequest> reqs) {
         if (reqs == null) return;
         Long partnerId = invoice.getPartner() != null ? invoice.getPartner().getId() : null;
@@ -1955,6 +1970,7 @@ public class PurchaseService {
                 : ZERO;
 
         for (PurchaseInvoiceRequest.LineRequest req : reqs) {
+            if (req == null || isEmptyDocumentLine(req.getProductCode(), req.getDescription(), req.getPrixUnitaire())) continue;
             boolean isConsigne = ConsigneCodes.isConsigne(req.getProductCode(), companyId);
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : ZERO;
             // Le prix net (article) envoyé par le client fait foi pour le calcul du Net HT — jamais écrasé.
@@ -2590,6 +2606,7 @@ public class PurchaseService {
         if (reqs == null) return;
         Long companyId = order.getCompany() != null ? order.getCompany().getId() : null;
         for (PurchaseOrderRequest.LineRequest req : reqs) {
+            if (req == null || isEmptyDocumentLine(req.getProductId(), req.getProductCode(), req.getDescription(), req.getPrixUnitaire())) continue;
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : ZERO;
             BigDecimal pu  = req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO;
             BigDecimal tva = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;

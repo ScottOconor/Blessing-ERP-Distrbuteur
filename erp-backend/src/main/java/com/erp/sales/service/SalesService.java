@@ -685,6 +685,10 @@ public class SalesService {
 
         boolean isAvoir = "credit_note".equals(invoice.getType());
 
+        // Nettoyer les anciennes lignes placeholders avant la validation.
+        invoice.getLines().removeIf(line -> isEmptyDocumentLine(
+                line.getProductId(), line.getProductCode(), line.getDescription(), line.getPrixUnitaire()));
+
         // Validation des champs obligatoires
         List<String> missing = new ArrayList<>();
         if (invoice.getPartner() == null) missing.add("Client");
@@ -1936,10 +1940,8 @@ public class SalesService {
 
         List<SalesInvoiceLine> invoiceLines = new java.util.ArrayList<>();
         for (SalesOrderLine ol : order.getLines()) {
-            // Ignorer les lignes sans produit (lignes vides ajoutées dans le formulaire)
-            if (ol.getProductId() == null && (ol.getProductCode() == null || ol.getProductCode().isBlank())) {
-                continue;
-            }
+            // Ignorer les placeholders provenant d'anciens bons enregistrés.
+            if (isEmptyDocumentLine(ol.getProductId(), ol.getProductCode(), ol.getDescription(), ol.getPrixUnitaire())) continue;
             boolean isConsigne = ConsigneCodes.isConsigne(ol.getProductCode(), companyId);
             BigDecimal ht = ol.getMontantHT() != null ? ol.getMontantHT() : ZERO;
             BigDecimal pc = ZERO;
@@ -2845,10 +2847,18 @@ public class SalesService {
         log.info("Écriture de variation de stock STK/{} créée (coût total: {})", invoice.getName(), totalCost);
     }
 
+    private boolean isEmptyDocumentLine(Long productId, String productCode, String description, BigDecimal unitPrice) {
+        return productId == null
+                && (productCode == null || productCode.isBlank())
+                && (description == null || description.isBlank())
+                && (unitPrice == null || unitPrice.compareTo(ZERO) == 0);
+    }
+
     private void buildOrderLines(SalesOrder order, List<SalesOrderRequest.LineRequest> lineRequests) {
         if (lineRequests == null) return;
         Long companyId = order.getCompany() != null ? order.getCompany().getId() : null;
         for (SalesOrderRequest.LineRequest req : lineRequests) {
+            if (req == null || isEmptyDocumentLine(req.getProductId(), req.getProductCode(), req.getDescription(), req.getPrixUnitaire())) continue;
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : BigDecimal.ONE;
             BigDecimal rabaisUnit = req.getRabaisUnitaire() != null ? req.getRabaisUnitaire() : ZERO;
 
@@ -2898,6 +2908,16 @@ public class SalesService {
                 : ZERO;
 
         for (SalesInvoiceRequest.LineRequest req : lineRequests) {
+            // Les formulaires transmettent parfois leur ligne de saisie vide
+            // (article, code et désignation absents, prix nul). Ne pas la
+            // convertir en ligne d'une quantité par défaut égale à 1.
+            if (req == null) continue;
+            boolean hasDescription = req.getDescription() != null && !req.getDescription().isBlank();
+            boolean hasProductCode = req.getProductCode() != null && !req.getProductCode().isBlank();
+            boolean hasPrice = req.getPrixUnitaire() != null
+                    && req.getPrixUnitaire().compareTo(ZERO) != 0;
+            if (req.getProductId() == null && !hasProductCode && !hasDescription && !hasPrice) continue;
+
             // Résoudre le productId depuis le code si non fourni
             Long resolvedProductId = req.getProductId() != null ? req.getProductId()
                     : (req.getProductCode() != null && companyId != null
