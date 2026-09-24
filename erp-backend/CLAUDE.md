@@ -15,7 +15,7 @@ This is a Spring Boot 3.2 / Java 17 monolith for **Blessing ERP Distributeurs**,
 
 ### Package-by-feature layout
 
-Code is organized under `com.erp.<module>`, each module following `controller/dto/entity/repository/service`: `accounting`, `sales`, `purchases`, `stock`, `hr`, `caisse`, `config`, `common`, `sync`, `auth`, `license`, `helpdesk`, `eleader`, `audit`. Cross-module orchestration usually goes through the service layer (e.g. `RemiseService`/`RistourneService` calling into `PurchaseService`/`SalesService` to post the settlement as a real invoice).
+Code is organized under `com.erp.<module>`, each module following `controller/dto/entity/repository/service`: `accounting`, `sales`, `purchases`, `stock`, `hr`, `caisse`, `config`, `common`, `sync`, `auth`, `helpdesk`, `eleader`, `audit`. Cross-module orchestration usually goes through the service layer (e.g. `RemiseService`/`RistourneService` calling into `PurchaseService`/`SalesService` to post the settlement as a real invoice).
 
 ### Multi-tenancy
 
@@ -23,7 +23,7 @@ Code is organized under `com.erp.<module>`, each module following `controller/dt
 
 ### Security filter chain
 
-Defined in `SecurityConfig`, filters run in this order: `InterAgencyApiKeyFilter` → `JwtAuthFilter` → `PermissionFilter` → `LicenseEnforcementFilter`. Auth is stateless JWT (`JwtService`, secret auto-generated and persisted on first boot). RBAC is enforced by `PermissionFilter` against a static allow-list in `PermissionService.RULES` mapping HTTP method + URL pattern to `MODULE.RESOURCE.ACTION` triples — this table is the authoritative permission taxonomy for the whole app.
+Defined in `SecurityConfig`, filters run in this order: `InterAgencyApiKeyFilter` → `JwtAuthFilter` → `PermissionFilter`. Auth is stateless JWT (`JwtService`, secret auto-generated and persisted on first boot). RBAC is enforced by `PermissionFilter` against a static allow-list in `PermissionService.RULES` mapping HTTP method + URL pattern to `MODULE.RESOURCE.ACTION` triples — this table is the authoritative permission taxonomy for the whole app.
 
 ### OHADA accounting core
 
@@ -32,10 +32,6 @@ Defined in `SecurityConfig`, filters run in this order: `InterAgencyApiKeyFilter
 ### Hub & Spoke sync (`com.erp.sync`)
 
 This instance is a **spoke** (one distributor agency). Domain writes are queued as `OutboxEvent` rows (transactional outbox pattern); `SyncDispatcherScheduler` publishes them to a central Hub over RabbitMQ every 30s, and `SnapshotScheduler`/`SnapshotService` push a full hourly snapshot. This is separate from **inter-agency** access: `RemoteAgency` + `InterAgencyErpController` + `InterAgencyApiKeyFilter` let one distributor instance query another's data directly over HTTP with an API key, bypassing the Hub.
-
-### Licensing (`com.erp.license`)
-
-On-prem license file signed by the Hub's RSA key, tied to a hardware fingerprint via OSHI (`FingerprintService`, `BuildIdentityService`) and the Maven-generated build timestamp/hostname (see `pom.xml`'s `build-helper-maven-plugin` executions). Enforced per-request by `LicenseEnforcementFilter`; `LicenseService` periodically rechecks against the Hub and never overwrites an already-fetched Hub public key.
 
 ### Domain patterns worth knowing before touching pricing/settlements
 

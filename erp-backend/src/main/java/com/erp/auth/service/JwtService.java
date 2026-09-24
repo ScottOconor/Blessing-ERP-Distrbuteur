@@ -32,7 +32,7 @@ public class JwtService {
     @Value("${jwt.secret:}")
     private String configuredSecret;
 
-    @Value("${jwt.secret-path:${user.home}/.kira/license/jwt-secret.key}")
+    @Value("${jwt.secret-path:${user.home}/.kira/jwt-secret.key}")
     private String secretPath;
 
     @Value("${jwt.expiration}")

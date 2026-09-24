@@ -184,7 +184,7 @@ export class ConfigService {
     return this.http.post<{ apiKey: string }>(`${this.api}/inter-agency-key/regenerate`, {});
   }
 
-  // ── URL du Hub (licensing, helpdesk) ───────────────────────────────
+  // ── URL du Hub (helpdesk) ──────────────────────────────────────────
   getHubUrl(): Observable<{ hubUrl: string }> {
     return this.http.get<{ hubUrl: string }>(`${this.api}/hub-url`);
   }

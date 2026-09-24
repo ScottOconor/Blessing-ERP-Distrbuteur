@@ -26,7 +26,7 @@ export class GroupsComponent implements OnInit {
   keyVisible = false;
   regenerating = false;
 
-  /** Adresse du Hub (licensing, helpdesk) — éditable ici, pas dans un fichier de config. */
+  /** Adresse du Hub (helpdesk) — éditable ici, pas dans un fichier de config. */
   hubUrl = '';
   savingHubUrl = false;
 
