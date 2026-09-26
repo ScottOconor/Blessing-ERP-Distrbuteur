@@ -11,7 +11,7 @@ import java.util.List;
  * Snapshot complet de l'état du spoke — envoyé toutes les heures vers le Hub.
  * Reproduit les données nécessaires au dashboard centralisation_distributeurs.
  */
-@Data @Builder
+@Data @Builder(toBuilder = true)
 public class SpokeSnapshotPayload {
 
     String        spokeId;

@@ -79,29 +79,24 @@ public class SyncEventPublisher {
         java.util.List<SpokeSnapshotPayload> parts = new java.util.ArrayList<>();
         ObjectMapper mapper = this.objectMapper;
 
-        // Helper pour cloner les scalaires et initialiser listes vides
-        java.util.function.Supplier<SpokeSnapshotPayload.SpokeSnapshotPayloadBuilder> baseBuilder = () -> SpokeSnapshotPayload.builder()
-                .spokeId(snapshot.getSpokeId()).spokeName(snapshot.getSpokeName()).snapshotAt(snapshot.getSnapshotAt())
-                .caComptesTotal(snapshot.getCaComptesTotal()).caComptesMoisCourant(snapshot.getCaComptesMoisCourant())
-                .caVentesTotal(snapshot.getCaVentesTotal()).caVentesJour(snapshot.getCaVentesJour()).caVentesHier(snapshot.getCaVentesHier())
-                .caVentesMoisCourant(snapshot.getCaVentesMoisCourant()).caVentesMoisDernier(snapshot.getCaVentesMoisDernier())
-                .evolutionCaJour(snapshot.getEvolutionCaJour()).evolutionCaMois(snapshot.getEvolutionCaMois())
-                .achatsTotal(snapshot.getAchatsTotal()).achatsMoisCourant(snapshot.getAchatsMoisCourant()).countFacturesAchats(snapshot.getCountFacturesAchats())
-                .creancesTotal(snapshot.getCreancesTotal()).creancesJour(snapshot.getCreancesJour()).creancesMois(snapshot.getCreancesMois())
-                .dettesTotal(snapshot.getDettesTotal()).dettesJour(snapshot.getDettesJour()).dettesMois(snapshot.getDettesMois())
-                .ristournesTotalTotal(snapshot.getRistournesTotalTotal()).ristournesTotalMois(snapshot.getRistournesTotalMois()).ristournesTotalAnnee(snapshot.getRistournesTotalAnnee())
-                .ristournesPayeesTotal(snapshot.getRistournesPayeesTotal()).ristournesPayeesMois(snapshot.getRistournesPayeesMois()).ristournesPayeesAnnee(snapshot.getRistournesPayeesAnnee())
-                .ristournesNonPayeesTotal(snapshot.getRistournesNonPayeesTotal()).ristournesNonPayeesMois(snapshot.getRistournesNonPayeesMois()).ristournesNonPayeesAnnee(snapshot.getRistournesNonPayeesAnnee())
-                .countRistournes(snapshot.getCountRistournes())
-                .remisesTotalTotal(snapshot.getRemisesTotalTotal()).remisesTotalMois(snapshot.getRemisesTotalMois()).remisesTotalAnnee(snapshot.getRemisesTotalAnnee())
-                .remisesPayeesTotal(snapshot.getRemisesPayeesTotal()).remisesPayeesMois(snapshot.getRemisesPayeesMois()).remisesPayeesAnnee(snapshot.getRemisesPayeesAnnee())
-                .remisesNonPayeesTotal(snapshot.getRemisesNonPayeesTotal()).remisesNonPayeesMois(snapshot.getRemisesNonPayeesMois()).remisesNonPayeesAnnee(snapshot.getRemisesNonPayeesAnnee())
-                .countRemises(snapshot.getCountRemises())
-                .fraisEnlevementsTotal(snapshot.getFraisEnlevementsTotal()).fraisEnlevementsMois(snapshot.getFraisEnlevementsMois()).countEnlevements(snapshot.getCountEnlevements())
-                .caissesTotalSolde(snapshot.getCaissesTotalSolde()).caissesTotalEntrees(snapshot.getCaissesTotalEntrees()).caissesTotalSorties(snapshot.getCaissesTotalSorties())
-                .valeurStockProduits(snapshot.getValeurStockProduits()).valeurStockEmballages(snapshot.getValeurStockEmballages()).valeurStockTotal(snapshot.getValeurStockTotal())
-                .totalReferences(snapshot.getTotalReferences()).margeVentesTotal(snapshot.getMargeVentesTotal()).margeVentesJour(snapshot.getMargeVentesJour()).margeVentesMois(snapshot.getMargeVentesMois()).totalCoutVentes(snapshot.getTotalCoutVentes())
-                .nbFacturesJour(snapshot.getNbFacturesJour()).nbFacturesMois(snapshot.getNbFacturesMois()).nbClients(snapshot.getNbClients()).nbSpokes(snapshot.getNbSpokes());
+        // Base de chaque partie = copie INTÉGRALE du snapshot (toBuilder) : tous les indicateurs
+        // scalaires et les petites listes affichées telles quelles par le Hub (caisses,
+        // caissesActuelles, topStock, ventes du jour) sont présents dans chaque partie, et seules
+        // les grosses listes découpables repartent vides. Avant : une liste blanche recopiée champ
+        // par champ, qui avait oublié les détails ristournes/remises (collecte, paiement) et frais
+        // d'enlèvement (année/mois/trimestre) ainsi que les caisses — le Hub, qui relit chaque
+        // partie, les recevait à null et les écrasait à 0 à chaque snapshot.
+        java.util.function.Supplier<SpokeSnapshotPayload.SpokeSnapshotPayloadBuilder> baseBuilder = () -> snapshot.toBuilder()
+                .partners(new java.util.ArrayList<>())
+                .products(new java.util.ArrayList<>())
+                .accounts(new java.util.ArrayList<>())
+                .saleInvoices(new java.util.ArrayList<>())
+                .purchaseInvoices(new java.util.ArrayList<>())
+                .accountMoveLines(new java.util.ArrayList<>())
+                .salesOrders(new java.util.ArrayList<>())
+                .purchaseOrders(new java.util.ArrayList<>())
+                .ristournePaiements(new java.util.ArrayList<>())
+                .remisePaiements(new java.util.ArrayList<>());
 
         // Order of list fields to pack (largest/most numerous first by empirical knowledge)
         java.util.List<java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>>> listGetters =
@@ -110,13 +105,11 @@ public class SyncEventPublisher {
                 ACCOUNT_MOVE_LINES,
                 PRODUCTS,
                 PARTNERS,
-                TOP_STOCK,
                 SALES_ORDERS,
                 PURCHASE_INVOICES,
                 PURCHASE_ORDERS,
                 RISTOURNE_PAIEMENTS,
                 REMISE_PAIEMENTS,
-                VENTES_JOUR_PAR_ENTREPOT,
                 ACCOUNTS
             );
 
@@ -128,21 +121,6 @@ public class SyncEventPublisher {
         }
 
         SpokeSnapshotPayload.SpokeSnapshotPayloadBuilder current = baseBuilder.get();
-        // initialize empty lists
-        current.caisses(new java.util.ArrayList<>());
-        current.caissesActuelles(new java.util.ArrayList<>());
-        current.topStock(new java.util.ArrayList<>());
-        current.partners(new java.util.ArrayList<>());
-        current.products(new java.util.ArrayList<>());
-        current.accounts(new java.util.ArrayList<>());
-        current.ristournePaiements(new java.util.ArrayList<>());
-        current.remisePaiements(new java.util.ArrayList<>());
-        current.saleInvoices(new java.util.ArrayList<>());
-        current.ventesJourParEntrepot(new java.util.ArrayList<>());
-        current.purchaseInvoices(new java.util.ArrayList<>());
-        current.accountMoveLines(new java.util.ArrayList<>());
-        current.salesOrders(new java.util.ArrayList<>());
-        current.purchaseOrders(new java.util.ArrayList<>());
 
         while (true) {
             // Try to find next item from any iterator
@@ -170,21 +148,6 @@ public class SyncEventPublisher {
                 parts.add(current.build());
                 // start new part and re-add the item
                 current = baseBuilder.get();
-                // re-init lists
-                current.caisses(new java.util.ArrayList<>());
-                current.caissesActuelles(new java.util.ArrayList<>());
-                current.topStock(new java.util.ArrayList<>());
-                current.partners(new java.util.ArrayList<>());
-                current.products(new java.util.ArrayList<>());
-                current.accounts(new java.util.ArrayList<>());
-                current.ristournePaiements(new java.util.ArrayList<>());
-                current.remisePaiements(new java.util.ArrayList<>());
-                current.saleInvoices(new java.util.ArrayList<>());
-                current.ventesJourParEntrepot(new java.util.ArrayList<>());
-                current.purchaseInvoices(new java.util.ArrayList<>());
-                current.accountMoveLines(new java.util.ArrayList<>());
-                current.salesOrders(new java.util.ArrayList<>());
-                current.purchaseOrders(new java.util.ArrayList<>());
                 // add the item to new part
                 addItemToBuilder(current, sourceKey, nextItem);
                 // Edge case: single item is larger than maxBytes — accept it (can't split further)
@@ -198,13 +161,10 @@ public class SyncEventPublisher {
 
         // finalize last part
         SpokeSnapshotPayload last = current.build();
-        // If last part is empty and there are already parts, skip adding an empty final part
-        boolean empty = mapper.writeValueAsBytes(last).length == 0 || (
-                (last.getSaleInvoices() == null || last.getSaleInvoices().isEmpty())
-                        && (last.getAccountMoveLines() == null || last.getAccountMoveLines().isEmpty())
-                        && (last.getProducts() == null || last.getProducts().isEmpty())
-                        && (last.getPartners() == null || last.getPartners().isEmpty())
-        );
+        // Ne jeter la dernière partie que si elle ne porte AUCUN élément découpé. Avant, elle était
+        // jetée dès qu'elle n'avait ni factures, ni lignes comptables, ni articles, ni tiers — or
+        // la fin du découpage (commandes, ristournes/remises, comptes) atterrit justement là.
+        boolean empty = listGetters.stream().allMatch(g -> { var l = g.apply(last); return l == null || l.isEmpty(); });
         if (!empty || parts.isEmpty()) parts.add(last);
 
         return parts;
