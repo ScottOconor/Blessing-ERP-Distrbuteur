@@ -102,9 +102,9 @@ export class RistourneListComponent implements OnInit {
   collapseAll(): void { this.expandedClients.clear(); }
 
   readonly TYPE_OPTS = [
-    { value: '', label: 'Autre (HT × 1.1925)' },
+    { value: '', label: 'Autre (TTC = HT, montant saisi déjà TTC)' },
     { value: 'brasserie', label: 'Brasserie (HT × (1 + précompte% + 19.25%))' },
-    { value: 'guinness',  label: 'Guinness (HT × 1.1925 — sans précompte)' }
+    { value: 'guinness',  label: 'Guinness (TTC = HT, montant saisi déjà TTC)' }
   ];
 
   readonly QUARTERS = [
