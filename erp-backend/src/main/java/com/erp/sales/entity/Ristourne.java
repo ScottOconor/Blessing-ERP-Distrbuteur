@@ -35,7 +35,7 @@ public class Ristourne {
     /**
      * Type de calcul ristourne TTC :
      * brasserie  : montantFixe * (1 + tauxPrecompte/100 + 0.1925)
-     * guinness   : montantFixe * (1 + 0.1925)  (pas de précompte)
+     * guinness   : montantFixe (TTC = HT, aucune TVA ajoutée)
      */
     @Column(name = "type_ristourne")
     private String typeRistourne;  // "brasserie" | "guinness" | null (HT brut)

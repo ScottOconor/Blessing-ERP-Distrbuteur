@@ -3229,11 +3229,9 @@ public class SalesService {
             BigDecimal pcRate = tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(TAUX_TVA);
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
-        } else if ("guinness".equals(type)) {
-            // guinness: pas de précompte mais TVA s'applique
-            return montantHT.multiply(BigDecimal.ONE.add(TAUX_TVA)).setScale(2, RoundingMode.HALF_UP);
         }
-        return montantHT.multiply(BigDecimal.ONE.add(TAUX_TVA)).setScale(2, RoundingMode.HALF_UP);
+        // guinness et autres : TTC = HT, le montant fixe saisi est déjà le TTC (aucune TVA ajoutée)
+        return montantHT.setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal getPartnerSalePrecompteTaux(Long partnerId, Long companyId) {

@@ -71,10 +71,11 @@ class RistourneServiceTest {
         when(ristourneRepo.findByPartnerIdAndCompanyIdAndActiveTrue(10L, 1L))
                 .thenReturn(List.of(brasserieRistourne, guinnessRistourne));
 
-        // On traite une ligne de catégorie 2 (guinness) : pas de précompte, juste TVA 19.25%.
+        // On traite une ligne de catégorie 2 (guinness) : TOTAL TTC = TOTAL HT, le montant saisi
+        // est déjà le TTC — aucune TVA/précompte à ajouter par-dessus.
         BigDecimal result = ristourneService.computeRistourneTTC(new BigDecimal("1000"), 10L, 1L, 2L);
 
-        assertThat(result).isEqualByComparingTo("1192.50");
+        assertThat(result).isEqualByComparingTo("1000.00");
     }
 
     @Test

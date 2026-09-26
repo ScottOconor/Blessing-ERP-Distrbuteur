@@ -359,8 +359,9 @@ public class RistourneService {
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                // guinness et autres : pas de précompte mais TVA 19.25%
-                montantTTC = montantTotal.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+                // guinness et autres : le montant fixe saisi est déjà le TTC (TOTAL TTC = TOTAL HT),
+                // aucune TVA/précompte à ajouter par-dessus.
+                montantTTC = montantTotal;
             }
 
             // Pour les avoirs : les montants sont négatifs (annulation de ristourne)
@@ -521,7 +522,9 @@ public class RistourneService {
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                montantTTC = montantTotal.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+                // guinness et autres : le montant fixe saisi est déjà le TTC (TOTAL TTC = TOTAL HT),
+                // aucune TVA/précompte à ajouter par-dessus.
+                montantTTC = montantTotal;
             }
 
             lines.add(RistournePaiementLine.builder()
@@ -580,7 +583,8 @@ public class RistourneService {
     /**
      * Calcule le montant TTC de ristourne à partir du type et du tauxPrecompte du client.
      * brasserie : montantHT × (1 + tauxPrecompte/100 + 0.1925)
-     * guinness  : montantHT × (1 + 0.1925) — pas de précompte mais TVA s'applique
+     * guinness  : montantTTC = montantHT — le montant saisi est déjà TTC, aucune TVA/précompte
+     *             à ajouter par-dessus.
      */
     public BigDecimal computeRistourneTTC(BigDecimal montantHT, Long partnerId, Long companyId, Long categoryId) {
         Partner partner = partnerRepo.findById(partnerId).orElse(null);
@@ -617,10 +621,10 @@ public class RistourneService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         } else if ("guinness".equals(type)) {
-            // guinness : pas de précompte mais TVA 19.25%
-            return montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+            // guinness : TOTAL TTC = TOTAL HT, le montant saisi est déjà le TTC.
+            return montantHT.setScale(2, RoundingMode.HALF_UP);
         }
-        return montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+        return montantHT.setScale(2, RoundingMode.HALF_UP);
     }
 
     // ======================== RÈGLEMENTS GROUPÉS ========================
@@ -810,7 +814,8 @@ public class RistourneService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         }
-        return montantFixe.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+        // guinness et autres : TOTAL TTC = TOTAL HT, le montant fixe saisi est déjà le TTC.
+        return montantFixe.setScale(2, RoundingMode.HALF_UP);
     }
 
     private RistournePaiementDTO toPaiementDTO(RistournePaiement p) {

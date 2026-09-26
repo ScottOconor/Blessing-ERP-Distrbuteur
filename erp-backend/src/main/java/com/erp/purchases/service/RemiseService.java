@@ -348,15 +348,15 @@ public class RemiseService {
 
             BigDecimal montantUnit = r.getMontantFixe();
             BigDecimal montantHT = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP);
-            // brasserie : HT × (1 + tauxPrécompte/100 + 0.1925) ; guinness et autres : HT × (1 + 0.1925)
+            // brasserie : HT × (1 + tauxPrécompte/100 + 0.1925) ; guinness et autres : TTC = HT
+            // (montant fixe saisi déjà TTC, aucune TVA/précompte à ajouter par-dessus).
             BigDecimal montantTTC;
             if ("brasserie".equals(r.getTypeRemise())) {
                 BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                // guinness et autres : pas de précompte mais TVA 19.25%
-                montantTTC = montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+                montantTTC = montantHT;
             }
 
             BigDecimal sign = isAvoir ? BigDecimal.ONE.negate() : BigDecimal.ONE;
@@ -506,8 +506,8 @@ public class RemiseService {
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
                 montantTTC = montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
             } else {
-                montantTTC = montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925)))
-                        .setScale(2, RoundingMode.HALF_UP);
+                // guinness et autres : TTC = HT, le montant fixe saisi est déjà le TTC.
+                montantTTC = montantHT;
             }
             lines.add(RemisePaiementLine.builder()
                     .category(r.getCategory())
@@ -788,7 +788,8 @@ public class RemiseService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         }
-        return montantFixe.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
+        // guinness et autres : TOTAL TTC = TOTAL HT, le montant fixe saisi est déjà le TTC.
+        return montantFixe.setScale(2, RoundingMode.HALF_UP);
     }
 
     private RemisePaiementDTO toPaiementDTO(RemisePaiement p) {
