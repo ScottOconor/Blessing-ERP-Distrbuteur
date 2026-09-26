@@ -46,6 +46,9 @@ export interface UserInfo {
   roleLabel?: string;
   active: boolean;
   mustChangePassword?: boolean;
+  /** Caisse rattachée (optionnel). */
+  caisseId?: number | null;
+  caisseName?: string;
 }
 
 export interface CreateUserRequest {
@@ -54,6 +57,8 @@ export interface CreateUserRequest {
   fullName?: string;
   password: string;
   roleId: number;
+  /** Caisse à laquelle rattacher l'utilisateur (vide = aucune). */
+  caisseId?: number | null;
 }
 
 export interface RemoteAgency {
@@ -98,10 +103,10 @@ export const RESOURCES: Record<string, string[]> = {
   ACHATS:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'PAIEMENTS', 'REMISES', 'ENLEVEMENTS'],
   STOCK:        ['PRODUITS', 'MOUVEMENTS', 'INVENTAIRE', 'CASSES'],
   COMPTABILITE: ['JOURNAUX', 'ECRITURES', 'RAPPORTS'],
-  CAISSE:       ['CAISSES'],
+  CAISSE:       ['CAISSES', 'SESSIONS', 'OPERATIONS', 'COUPURES', 'RAPPORTS'],
   RH:           ['EMPLOYES', 'CONTRATS', 'BULLETINS', 'CONFIG_PAIE', 'CONGES'],
   HELPDESK:     ['TICKETS'],
-  CONFIG:       ['UTILISATEURS', 'ROLES', 'ENTREPRISES', 'AUDIT', 'MODULES']
+  CONFIG:       ['ENTREPRISES', 'AGENCES', 'UTILISATEURS', 'ROLES', 'AUDIT', 'EXPORT', 'MODULES']
 };
 
 export const MODULE_LABELS: Record<string, string> = {
@@ -117,6 +122,8 @@ export const RESOURCE_LABELS: Record<string, string> = {
   PRODUITS: 'Produits', MOUVEMENTS: 'Mouvements de stock', INVENTAIRE: 'Inventaire', CASSES: 'Trous & Casses',
   JOURNAUX: 'Journaux', ECRITURES: 'Écritures comptables', RAPPORTS: 'Rapports', PRECOMPTES: 'Précomptes',
   CAISSES: 'Caisses', TICKETS: 'Tickets support',
+  SESSIONS: 'Sessions (ouverture / clôture)', OPERATIONS: 'Entrées & sorties', COUPURES: 'Coupures',
+  AGENCES: 'Agences distantes', EXPORT: 'Exportation des données',
   EMPLOYES: 'Employés', CONTRATS: 'Contrats', BULLETINS: 'Bulletins de paie', CONFIG_PAIE: 'Configuration paie', CONGES: 'Congés',
   UTILISATEURS: 'Utilisateurs', ROLES: 'Rôles', ENTREPRISES: 'Entreprises', AUDIT: "Journal d'audit",
   MODULES: 'Applications (installer/désinstaller)'

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ConfigService, UserInfo, RoleInfo, CreateUserRequest, SYSTEM_ROLE_CODES } from '../../services/config.service';
+import { CaisseService, CaisseDTO } from '../../../caisses/services/caisse.service';
 
 @Component({
   selector: 'app-config-users',
@@ -26,9 +27,13 @@ export class UsersComponent implements OnInit {
 
   readonly SYSTEM_ROLE_CODES = SYSTEM_ROLE_CODES;
 
-  constructor(private configService: ConfigService, public authService: AuthService) {}
+  caisses: CaisseDTO[] = [];
+
+  constructor(private configService: ConfigService, public authService: AuthService,
+              private caisseService: CaisseService) {}
 
   ngOnInit(): void {
+    this.caisseService.getCaisses(this.authService.getCompanyId()).subscribe({ next: c => this.caisses = c, error: () => {} });
     this.loadRoles();
     this.loadUsers();
   }
@@ -58,7 +63,8 @@ export class UsersComponent implements OnInit {
     this.form = {
       fullName: u.fullName,
       email: u.email,
-      roleId: u.roleId
+      roleId: u.roleId,
+      caisseId: u.caisseId ?? null
     };
     this.showModal = true;
   }

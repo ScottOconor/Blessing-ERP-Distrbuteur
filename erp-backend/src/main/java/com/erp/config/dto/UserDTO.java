@@ -13,4 +13,7 @@ public class UserDTO {
     private String  roleLabel;
     private boolean active;
     private boolean mustChangePassword;
+    /** Caisse rattachée (optionnel). */
+    private Long    caisseId;
+    private String  caisseName;
 }

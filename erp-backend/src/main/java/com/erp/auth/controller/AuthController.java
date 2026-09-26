@@ -30,6 +30,7 @@ public class AuthController {
     private final JwtService               jwtService;
     private final UserDetailsServiceImpl   userDetailsService;
     private final RolePermissionRepository rolePermissionRepository;
+    private final com.erp.caisse.repository.CaisseRepository caisseRepository;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
@@ -63,6 +64,10 @@ public class AuthController {
                 .roleLabel(user.getRole() != null ? user.getRole().getLabel() : null)
                 .mustChangePassword(user.isMustChangePassword())
                 .permissions(perms)
+                .caisseId(user.getCaisseId())
+                .caisseName(user.getCaisseId() != null
+                        ? caisseRepository.findById(user.getCaisseId()).map(c -> c.getName()).orElse(null)
+                        : null)
                 .build();
 
         log.info("Connexion réussie : {} [{}]", user.getUsername(), roleCode);

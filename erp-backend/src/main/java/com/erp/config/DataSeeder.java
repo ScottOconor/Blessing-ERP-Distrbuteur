@@ -35,6 +35,8 @@ public class DataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         migrateRolePermissionsSchema();
+        migrateCaissePermissions();
+        migrateAgencesPermissions();
         seedRoles();
         seedSuperAdmin();
         assignDefaultCompanyToOrphanUsers();
@@ -103,6 +105,56 @@ public class DataSeeder implements ApplicationRunner {
             END $$
             """);
         log.info("Migration role_permissions schema OK");
+    }
+
+    /**
+     * Le module Caisse est désormais découpé en CAISSES (paramétrage), SESSIONS,
+     * OPERATIONS, COUPURES et RAPPORTS : chaque rôle ayant CAISSE/CAISSES garde les mêmes actions
+     * sur les nouvelles ressources. Migration unique.
+     */
+    private void migrateCaissePermissions() {
+        Boolean tableExists = jdbc.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'role_permissions')",
+            Boolean.class);
+        if (!Boolean.TRUE.equals(tableExists)) return;
+        Integer existing = jdbc.queryForObject("""
+            SELECT COUNT(*) FROM role_permissions
+            WHERE module = 'CAISSE' AND resource IN ('SESSIONS','OPERATIONS','COUPURES','RAPPORTS')
+            """, Integer.class);
+        if (existing != null && existing > 0) return;
+        int inserted = jdbc.update("""
+            INSERT INTO role_permissions (role_id, module, resource, action)
+            SELECT p.role_id, 'CAISSE', r.res, p.action
+            FROM role_permissions p
+            CROSS JOIN (VALUES ('SESSIONS'), ('OPERATIONS'), ('COUPURES'), ('RAPPORTS')) AS r(res)
+            WHERE p.module = 'CAISSE' AND p.resource = 'CAISSES'
+            ON CONFLICT DO NOTHING
+            """);
+        if (inserted > 0) log.info("Migration droits Caisse : {} droit(s) SESSIONS/OPERATIONS/COUPURES/RAPPORTS ajouté(s)", inserted);
+    }
+
+    /**
+     * Les agences distantes, la clé inter-agences et l'URL du Hub ont désormais leur propre droit
+     * CONFIG/AGENCES (auparavant sous ENTREPRISES) : chaque rôle ayant CONFIG/ENTREPRISES garde
+     * les mêmes actions sur AGENCES. Migration unique.
+     */
+    private void migrateAgencesPermissions() {
+        Boolean tableExists = jdbc.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'role_permissions')",
+            Boolean.class);
+        if (!Boolean.TRUE.equals(tableExists)) return;
+        Integer existing = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM role_permissions WHERE module = 'CONFIG' AND resource = 'AGENCES'",
+            Integer.class);
+        if (existing != null && existing > 0) return;
+        int inserted = jdbc.update("""
+            INSERT INTO role_permissions (role_id, module, resource, action)
+            SELECT p.role_id, 'CONFIG', 'AGENCES', p.action
+            FROM role_permissions p
+            WHERE p.module = 'CONFIG' AND p.resource = 'ENTREPRISES'
+            ON CONFLICT DO NOTHING
+            """);
+        if (inserted > 0) log.info("Migration droits Configuration : {} droit(s) AGENCES ajouté(s)", inserted);
     }
 
     private void cleanLegacyUsers() {

@@ -44,4 +44,8 @@ public class User {
     @Builder.Default
     @Column(nullable = false, columnDefinition = "boolean not null default false")
     private boolean mustChangePassword = false;
+
+    /** Caisse à laquelle l'utilisateur est rattaché (optionnel). */
+    @Column(name = "caisse_id")
+    private Long caisseId;
 }

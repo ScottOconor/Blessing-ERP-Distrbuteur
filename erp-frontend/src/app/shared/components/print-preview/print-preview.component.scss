@@ -7,7 +7,7 @@
 }
 
 .pp-modal {
-  background: var(--bg-surface); border-radius: 10px; width: 100%; max-width: 860px;
+  background: var(--bg-surface); border-radius: 10px; width: 100%; max-width: min(1040px, 98vw);
   display: flex; flex-direction: column; max-height: calc(100vh - 40px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
@@ -49,35 +49,38 @@
 // ─── Preview area ─────────────────────────────────────────────────────────────
 
 .pp-body {
-  flex: 1; overflow-y: auto; background: var(--bg-elevated);
-  padding: 32px 24px; display: flex; justify-content: center; align-items: flex-start;
+  flex: 1; overflow: auto; background: var(--bg-elevated);
+  padding: 24px; display: flex; justify-content: flex-start; align-items: flex-start;
   min-height: 420px;
-  &.ticket-mode { align-items: flex-start; padding-top: 24px; }
+  &.ticket-mode { padding-top: 24px; }
+  @media (max-width: 640px) { padding: 12px; }
 }
 
+// La page imite le papier : taille réelle (lisible) et toujours blanche avec du texte foncé,
+// même en mode sombre — sinon les couleurs du thème rendaient le document illisible.
 .preview-page {
-  background: var(--bg-surface); box-shadow: 0 4px 24px rgba(0,0,0,0.22);
-  transform-origin: top center;
+  margin: 0 auto; flex-shrink: 0;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+  --accent: #059669; --accent-light: #D1FAE5; --success: #16A34A; --danger: #DC2626;
+  --bg-surface: #FFFFFF; --bg-elevated: #F8FAFC; --bg-hover: #F1F5F9;
+  --text-primary: #0F172A; --text-secondary: #475569; --text-muted: #64748B;
+  --border: #E2E8F0; --border-light: #F1F5F9;
+  background: #FFFFFF; color: #0F172A;
 
-  &.page-a4 {
-    width: 210mm; min-height: 297mm;
-    transform: scale(0.6);
-    // Compensate for scale: element layout stays 210mm×297mm, visual is 126mm×178mm
-    // Remove unused vertical space (height × negative-scale-diff)
-    margin-top: -59mm;
-    margin-bottom: calc(297mm * (0.6 - 1)); // ≈ -119mm
-  }
-  &.page-a5 {
-    width: 148mm; min-height: 210mm;
-    transform: scale(0.72);
-    margin-top: -29mm;
-    margin-bottom: calc(210mm * (0.72 - 1)); // ≈ -59mm
-  }
-  &.page-ticket {
-    width: 80mm; min-height: 120mm;
-    transform: scale(0.9);
-    margin-bottom: calc(120mm * (0.9 - 1)); // ≈ -12mm
-  }
+  &.page-a4 { width: 210mm; min-height: 297mm; }
+  &.page-a5 { width: 148mm; min-height: 210mm; }
+  &.page-ticket { width: 80mm; min-height: 120mm; zoom: 1.25; }
+}
+
+// A5 : même contenu que l'A4 sur une page plus petite — marges et polices réduites.
+.page-a5 {
+  .inv-doc { padding: 8mm; font-size: 7.5pt; }
+  table.inv-lines { font-size: 7pt; thead th { font-size: 6.5pt; padding: 3px 3px; } tbody td { padding: 2px 3px; } }
+  .inv-co-name { font-size: 12pt; }
+  .inv-doctype { font-size: 14pt; }
+  .inv-meta-val { font-size: 10pt; }
+  .inv-trow { font-size: 7.5pt; }
+  .inv-totals { width: 60mm; }
 }
 
 // ─── Invoice template styles ─────────────────────────────────────────────────

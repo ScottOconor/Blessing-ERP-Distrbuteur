@@ -14,6 +14,10 @@ public class AuthResponse {
     private String  roleLabel;
     private boolean mustChangePassword;
 
+    /** Caisse à laquelle l'utilisateur est rattaché (null = aucune). */
+    private Long    caisseId;
+    private String  caisseName;
+
     /** Permissions effectives de l'utilisateur */
     private List<PermissionInfo> permissions;
 

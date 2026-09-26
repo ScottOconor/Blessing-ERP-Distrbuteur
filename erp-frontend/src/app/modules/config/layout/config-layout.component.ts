@@ -17,19 +17,22 @@ export class ConfigLayoutComponent {
   constructor(public authService: AuthService, public router: Router, public themeService: ThemeService) {}
 
   get navItems() {
-    const items: { label: string; icon: string; route: string; adminOnly?: boolean; visible?: boolean }[] = [
-      { label: 'Mon entreprise',        icon: 'business',             route: '/config/company',         adminOnly: true },
-      { label: 'Agences distantes',    icon: 'share',                route: '/config/remote-agencies', adminOnly: true },
-      { label: 'Utilisateurs',         icon: 'manage_accounts',      route: '/config/users',           adminOnly: true },
-      { label: 'Rôles',                icon: 'admin_panel_settings', route: '/config/roles',           adminOnly: true },
+    const can = (res: string) => this.authService.hasPermission('CONFIG', res, 'VIEW');
+    // Utilisateurs, rôles et sauvegarde restent réservés aux administrateurs côté serveur.
+    const admin = this.authService.canManageUsers();
+    const items: { label: string; icon: string; route: string; visible?: boolean }[] = [
+      { label: 'Mon entreprise',        icon: 'business',             route: '/config/company',         visible: can('ENTREPRISES') },
+      { label: 'Agences distantes',    icon: 'share',                route: '/config/remote-agencies', visible: can('AGENCES') },
+      { label: 'Utilisateurs',         icon: 'manage_accounts',      route: '/config/users',           visible: admin },
+      { label: 'Rôles',                icon: 'admin_panel_settings', route: '/config/roles',           visible: admin },
       { label: 'Clôture d\'exercice',  icon: 'lock_clock',           route: '/config/fiscal-closure',
         visible: this.authService.hasPermission('COMPTABILITE', 'ECRITURES', 'VIEW') },
       { label: 'Changer mot de passe', icon: 'lock_reset',           route: '/config/change-password' },
-      { label: 'Supervision',          icon: 'manage_search',        route: '/config/supervision',     adminOnly: true },
-      { label: 'Sauvegarde & Restore', icon: 'backup',               route: '/config/backup',          adminOnly: true },
-      { label: 'Exportation',          icon: 'file_download',        route: '/config/export',          adminOnly: true },
+      { label: 'Supervision',          icon: 'manage_search',        route: '/config/supervision',     visible: can('AUDIT') },
+      { label: 'Sauvegarde & Restore', icon: 'backup',               route: '/config/backup',          visible: admin },
+      { label: 'Exportation',          icon: 'file_download',        route: '/config/export',          visible: can('EXPORT') },
     ];
-    return items.filter(i => (i.visible ?? true) && (!i.adminOnly || this.authService.canManageUsers()));
+    return items.filter(i => i.visible ?? true);
   }
 
   isActive(route: string): boolean {

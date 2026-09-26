@@ -183,8 +183,26 @@ public class PermissionService {
         new PermissionRule("POST",   "/api/accounting/fiscal-closure/execute", "COMPTABILITE","ECRITURES","EDIT"),
 
         // ── CAISSE ────────────────────────────────────────────────────────
-        new PermissionRule("GET",    "/api/caisses",                 "CAISSE","CAISSES","VIEW"),
-        new PermissionRule("GET",    "/api/caisses/**",              "CAISSE","CAISSES","VIEW"),
+        // Ressources : CAISSES (paramétrage), SESSIONS (ouverture/clôture/comptage),
+        // OPERATIONS (entrées/sorties), COUPURES, RAPPORTS. "A|B" = l'un des droits suffit.
+        // Règles spécifiques d'abord : la première règle qui correspond s'applique.
+        new PermissionRule("GET",    "/api/caisses/denominations",   "CAISSE","SESSIONS|COUPURES","VIEW"),
+        new PermissionRule("POST",   "/api/caisses/denominations",   "CAISSE","COUPURES","CREATE"),
+        new PermissionRule("POST",   "/api/caisses/denominations/**","CAISSE","COUPURES","CREATE"),
+        new PermissionRule("PUT",    "/api/caisses/denominations/**","CAISSE","COUPURES","EDIT"),
+        new PermissionRule("DELETE", "/api/caisses/denominations/**","CAISSE","COUPURES","DELETE"),
+        new PermissionRule("GET",    "/api/caisses/operations",      "CAISSE","OPERATIONS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/*/operations",    "CAISSE","OPERATIONS","VIEW"),
+        new PermissionRule("POST",   "/api/caisses/operations",      "CAISSE","OPERATIONS","CREATE"),
+        new PermissionRule("POST",   "/api/caisses/*/ouvrir",        "CAISSE","SESSIONS","CREATE"),
+        new PermissionRule("PUT",    "/api/caisses/*/cloturer",      "CAISSE","SESSIONS","EDIT"),
+        new PermissionRule("POST",   "/api/caisses/*/rouvrir",       "CAISSE","SESSIONS","EDIT"),
+        new PermissionRule("GET",    "/api/caisses/*/sessions",      "CAISSE","SESSIONS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/sessions/**",     "CAISSE","SESSIONS|RAPPORTS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/rapport-consolide","CAISSE","RAPPORTS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/*/brouillard",    "CAISSE","RAPPORTS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses",                 "CAISSE","CAISSES|SESSIONS|OPERATIONS|RAPPORTS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/**",              "CAISSE","CAISSES|SESSIONS|OPERATIONS|RAPPORTS","VIEW"),
         new PermissionRule("POST",   "/api/caisses",                 "CAISSE","CAISSES","CREATE"),
         new PermissionRule("PUT",    "/api/caisses/**",              "CAISSE","CAISSES","EDIT"),
         new PermissionRule("DELETE", "/api/caisses/**",              "CAISSE","CAISSES","DELETE"),
@@ -305,15 +323,15 @@ public class PermissionService {
         new PermissionRule("POST",   "/api/config/companies",        "CONFIG","ENTREPRISES","CREATE"),
         new PermissionRule("PUT",    "/api/config/companies/**",     "CONFIG","ENTREPRISES","EDIT"),
         new PermissionRule("POST",   "/api/config/companies/**",     "CONFIG","ENTREPRISES","EDIT"),
-        // Clé API inter-agences et URL du Hub — infrastructure sensible, même resource ENTREPRISES.
-        new PermissionRule("GET",    "/api/config/inter-agency-key", "CONFIG","ENTREPRISES","VIEW"),
-        new PermissionRule("POST",   "/api/config/inter-agency-key/**", "CONFIG","ENTREPRISES","EDIT"),
-        new PermissionRule("GET",    "/api/config/hub-url",          "CONFIG","ENTREPRISES","VIEW"),
-        new PermissionRule("PUT",    "/api/config/hub-url",          "CONFIG","ENTREPRISES","EDIT"),
-        new PermissionRule("GET",    "/api/config/remote-agencies/**",   "CONFIG","ENTREPRISES","VIEW"),
-        new PermissionRule("POST",   "/api/config/remote-agencies/**",   "CONFIG","ENTREPRISES","EDIT"),
-        new PermissionRule("PUT",    "/api/config/remote-agencies/**",   "CONFIG","ENTREPRISES","EDIT"),
-        new PermissionRule("DELETE", "/api/config/remote-agencies/**",   "CONFIG","ENTREPRISES","EDIT"),
+        // Clé API inter-agences, URL du Hub et agences distantes — droit AGENCES dédié.
+        new PermissionRule("GET",    "/api/config/inter-agency-key", "CONFIG","AGENCES","VIEW"),
+        new PermissionRule("POST",   "/api/config/inter-agency-key/**", "CONFIG","AGENCES","EDIT"),
+        new PermissionRule("GET",    "/api/config/hub-url",          "CONFIG","AGENCES","VIEW"),
+        new PermissionRule("PUT",    "/api/config/hub-url",          "CONFIG","AGENCES","EDIT"),
+        new PermissionRule("GET",    "/api/config/remote-agencies/**",   "CONFIG","AGENCES","VIEW"),
+        new PermissionRule("POST",   "/api/config/remote-agencies/**",   "CONFIG","AGENCES","EDIT"),
+        new PermissionRule("PUT",    "/api/config/remote-agencies/**",   "CONFIG","AGENCES","EDIT"),
+        new PermissionRule("DELETE", "/api/config/remote-agencies/**",   "CONFIG","AGENCES","DELETE"),
         // GET /api/config/modules (lecture de l'état d'installation, écran d'accueil + garde de
         // route) est géré à part par PermissionFilter.EXACT_SELF_SERVICE_BYPASS — tout utilisateur
         // authentifié y a accès sans règle ici, depuis le passage de PermissionFilter en
@@ -360,7 +378,54 @@ public class PermissionService {
     }
 
     public boolean hasPermission(Authentication auth, PermissionRule rule) {
-        String required = "PERM_" + rule.module() + "_" + rule.resource() + "_" + rule.action();
-        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(required));
+        List<String> required = new java.util.ArrayList<>();
+        for (String res : rule.resource().split("\\|")) {
+            required.add("PERM_" + rule.module() + "_" + res + "_" + rule.action());
+        }
+        return hasAny(auth, required);
+    }
+
+    private static boolean hasAny(Authentication auth, List<String> authorities) {
+        return !authorities.isEmpty() && auth.getAuthorities().stream()
+                .anyMatch(a -> authorities.contains(a.getAuthority()));
+    }
+
+    /**
+     * Les modules Caisse et Configuration sont indépendants : leurs écrans réutilisent des
+     * endpoints d'autres modules (ventes, stock, journaux, caisses...), mais quand la requête vient
+     * de leur écran (en-tête X-Erp-Context: CAISSE ou CONFIG), les droits du module lui-même
+     * suffisent — un caissier n'a besoin d'aucun droit Ventes ou Comptabilité.
+     */
+    public boolean hasContextEquivalent(Authentication auth, PermissionRule rule, String uri, String context) {
+        if (context == null) return false;
+        return switch (context.toUpperCase()) {
+            case "CAISSE" -> hasAny(auth, caisseEquivalents(rule, uri));
+            case "CONFIG" -> hasAny(auth, configEquivalents(rule));
+            default       -> false;
+        };
+    }
+
+    private static List<String> caisseEquivalents(PermissionRule rule, String uri) {
+        if (!"VIEW".equals(rule.action())) return List.of();
+        return switch (rule.module() + "_" + rule.resource()) {
+            // comptes et tiers pour saisir une entrée/sortie
+            case "COMPTABILITE_ECRITURES" -> List.of("PERM_CAISSE_OPERATIONS_VIEW", "PERM_CAISSE_OPERATIONS_CREATE");
+            // journal et vendeur rattachés à une caisse
+            case "COMPTABILITE_JOURNAUX", "VENTES_VENDEURS" -> List.of("PERM_CAISSE_CAISSES_VIEW");
+            case "COMPTABILITE_RAPPORTS" -> uri.startsWith("/api/reports/suivi-tiers")
+                    ? List.of("PERM_CAISSE_RAPPORTS_VIEW") : List.of();
+            default -> List.of();
+        };
+    }
+    private static List<String> configEquivalents(PermissionRule rule) {
+        if (!"VIEW".equals(rule.action())) return List.of();
+        return switch (rule.module()) {
+            // Fiche utilisateur : liste des rôles et caisses à rattacher
+            case "CAISSE" -> List.of("PERM_CONFIG_UTILISATEURS_VIEW");
+            case "CONFIG" -> "ROLES".equals(rule.resource()) ? List.of("PERM_CONFIG_UTILISATEURS_VIEW") : List.of();
+            // Exportation : lecture des données de tous les modules
+            case "VENTES", "ACHATS", "STOCK", "COMPTABILITE" -> List.of("PERM_CONFIG_EXPORT_VIEW");
+            default -> List.of();
+        };
     }
 }

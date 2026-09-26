@@ -63,6 +63,7 @@ import java.util.stream.Stream;
 public class SalesService {
 
     private final com.erp.stock.service.ProductValuationService productValuationService;
+    private final com.erp.auth.repository.UserRepository userRepository;
     private final SalesOrderRepository orderRepo;
     private final SalesInvoiceRepository invoiceRepo;
     private final InvoicePaymentRepository paymentRepo;
@@ -3611,6 +3612,11 @@ public class SalesService {
                 .ristourneDetails(buildRistourneDetails(invoice))
                 .payments(payments).createdAt(invoice.getCreatedAt())
                 .createdBy(invoice.getCreatedBy())
+                .createdByName(invoice.getCreatedBy() != null
+                        ? userRepository.findByUsername(invoice.getCreatedBy())
+                                .map(u -> u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : u.getUsername())
+                                .orElse(invoice.getCreatedBy())
+                        : null)
                 .updatedBy(invoice.getUpdatedBy())
                 .updatedAt(invoice.getUpdatedAt())
                 .build();

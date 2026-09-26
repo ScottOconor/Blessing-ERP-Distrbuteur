@@ -9,4 +9,6 @@ public class CreateUserRequest {
     private String  fullName;
     private String  password;
     private Long    roleId;
+    /** Caisse à laquelle rattacher l'utilisateur (null = aucune). */
+    private Long    caisseId;
 }

@@ -38,7 +38,7 @@
 
     <!-- ── Preview area ── -->
     <div class="pp-body" [class.ticket-mode]="format === 'ticket'">
-      <div class="preview-page" [class.page-a4]="format==='a4'" [class.page-a5]="format==='a5'" [class.page-ticket]="format==='ticket' || docType==='bon' && format==='a4'">
+      <div class="preview-page" [class.page-a4]="format==='a4'" [class.page-a5]="format==='a5'" [class.page-ticket]="format==='ticket'">
 
         <!-- ═══════════════ INVOICE A4 / A5 ═══════════════ -->
         @if ((docType === 'invoice' || docType === 'avoir') && format !== 'ticket') {
@@ -80,8 +80,9 @@
                 <tr>
                   <th>Code</th><th class="tdesc">Désignation</th>
                   <th class="tr">Qté</th><th class="tr">P.U.HT</th>
-                  <th class="tr">P.U.TTC</th><th class="tr">Rabais HT/u</th>
-                  <th class="tr">Rabais TTC/u</th><th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
+                  <th class="tr">P.U.TTC</th>
+                  @if (salesHasRabais) { <th class="tr">Rabais HT/u</th><th class="tr">Rabais TTC/u</th> }
+                  <th class="tr">Mnt HT</th><th class="tr">Mnt TTC</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,42 +93,44 @@
                     <td class="tr">{{ fmt(l.quantity) }}</td>
                     <td class="tr">{{ fmt(l.prixUnitaire) }}</td>
                     <td class="tr tbold-teal">{{ fmt(l.prixUnitaireTTC ?? 0) }}</td>
-                    <td class="tr trabais">{{ (l.rabaisUnitaire ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaire)) : '—' }}</td>
-                    <td class="tr trabais-ttc">{{ (l.rabaisUnitaireTTC ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaireTTC)) : '—' }}</td>
+                    @if (salesHasRabais) {
+                      <td class="tr trabais">{{ (l.rabaisUnitaire ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaire)) : '—' }}</td>
+                      <td class="tr trabais-ttc">{{ (l.rabaisUnitaireTTC ?? 0) > 0 ? ('–' + fmt(l.rabaisUnitaireTTC)) : '—' }}</td>
+                    }
                     <td class="tr">{{ fmt(l.montantHT) }}</td>
                     <td class="tr tbold">{{ fmt(l.montantTTC) }}</td>
                   </tr>
                 }
                 @if (consigneLines.length) {
-                  <tr class="inv-section-hdr"><td colspan="9">CONSIGNES</td></tr>
+                  <tr class="inv-section-hdr"><td [attr.colspan]="salesHasRabais ? 9 : 7">CONSIGNES</td></tr>
                   @for (l of consigneLines; track $index) {
                     <tr class="inv-consigne">
                       <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
                       <td class="tr">{{ fmt(l.quantity) }}</td>
-                      <td colspan="4"></td><td></td>
+                      <td [attr.colspan]="salesHasRabais ? 4 : 2"></td><td></td>
                       <td class="tr">{{ fmt(l.montantTTC) }}</td>
                     </tr>
                   }
                 }
                 @if (deconsigneLines.length) {
-                  <tr class="inv-section-hdr inv-decons-hdr"><td colspan="9">DÉCONSIGNES</td></tr>
+                  <tr class="inv-section-hdr inv-decons-hdr"><td [attr.colspan]="salesHasRabais ? 9 : 7">DÉCONSIGNES</td></tr>
                   @for (l of deconsigneLines; track $index) {
                     <tr class="inv-consigne">
                       <td>{{ l.productCode }}</td><td class="tdesc">{{ l.description }}</td>
                       <td class="tr">{{ fmt(l.quantity) }}</td>
-                      <td colspan="4"></td><td></td>
+                      <td [attr.colspan]="salesHasRabais ? 4 : 2"></td><td></td>
                       <td class="tr">{{ fmt(l.montantTTC) }}</td>
                     </tr>
                   }
                 }
                 @if (invoice?.ristourneDetails?.length) {
-                  <tr class="inv-section-hdr"><td colspan="9">RISTOURNES (à récupérer séparément)</td></tr>
+                  <tr class="inv-section-hdr"><td [attr.colspan]="salesHasRabais ? 9 : 7">RISTOURNES (à récupérer séparément)</td></tr>
                   @for (r of invoice?.ristourneDetails; track $index) {
                     <tr class="inv-rst">
                       <td colspan="2">{{ r.categoryName }}</td>
                       <td class="tr">{{ fmt(r.quantite) }}</td>
                       <td class="tr">{{ fmt(r.montantUnitaire) }}</td>
-                      <td></td><td></td><td></td>
+                      <td></td>@if (salesHasRabais) { <td></td><td></td> }
                       <td class="tr">{{ fmt(r.montantTotal) }}</td>
                       <td class="tr">{{ fmt(r.montantTotal) }}</td>
                     </tr>
@@ -205,12 +208,15 @@
             <div class="tkt-sep"></div>
             <div class="tkt-row"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
             <div class="tkt-row"><span>Client</span><span>{{ invoice?.partnerName }}</span></div>
+            @if (invoice?.createdBy) {
+              <div class="tkt-row"><span>Agent</span><span>{{ invoice!.createdByName || invoice!.createdBy }}</span></div>
+            }
             @if (invoice?.notes) {
               <div class="tkt-row"><span>Notes</span><span>{{ invoice!.notes }}</span></div>
             }
             <div class="tkt-sep"></div>
             @for (l of salesLines; track $index) {
-              <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
+              <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
               <div class="tkt-prod-row">
                 <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaireTTC ?? l.prixUnitaire) }}</span>
                 <span class="tbold">{{ fmt(l.montantTTC) }} F</span>
@@ -219,14 +225,14 @@
             @if (consigneLines.length) {
               <div class="tkt-sep-label">— Consignes —</div>
               @for (l of consigneLines; track $index) {
-                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
+                <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
                 <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>{{ fmt(l.montantTTC) }} F</span></div>
               }
             }
             @if (deconsigneLines.length) {
               <div class="tkt-sep-label">— Déconsignes —</div>
               @for (l of deconsigneLines; track $index) {
-                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
+                <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
                 <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>-{{ fmt(l.montantTTC) }} F</span></div>
               }
             }
@@ -279,21 +285,12 @@
             }
             <div class="tkt-sep"></div>
             <div class="tkt-lettres">{{ montantEnLettres(invoice?.netAPayer ?? invoice?.totalTTC) }}</div>
-            <div class="tkt-thanks">Merci de votre confiance !</div>
-            @if (invoice?.createdBy) {
-              <div class="tkt-row sm"><span>Agent</span><span>{{ invoice!.createdBy }}</span></div>
-            }
             <div class="tkt-sep"></div>
-            <div class="tkt-sig-box">
-              <div class="tkt-sig-lbl">Signature du livreur</div>
-              <div class="tkt-sig-name">Nom : ___________________________</div>
-              <div class="tkt-sig-area"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:600">
+              <span>Caissier</span><span>Client</span>
             </div>
-            <div class="tkt-sig-box" style="margin-top:3mm">
-              <div class="tkt-sig-lbl">Cachet &amp; signature client</div>
-              <div class="tkt-sig-name">Nom : ___________________________</div>
-              <div class="tkt-sig-area"></div>
-            </div>
+            <div style="height:14mm"></div>
+            <div class="tkt-thanks">Merci de votre confiance !</div>
           </div>
         }
 

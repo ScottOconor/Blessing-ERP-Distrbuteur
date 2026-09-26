@@ -37,6 +37,7 @@ public class ConfigService {
     private final RoleRepository            roleRepository;
     private final RolePermissionRepository  permissionRepository;
     private final UserRepository            userRepository;
+    private final com.erp.caisse.repository.CaisseRepository caisseRepository;
     private final PasswordEncoder           passwordEncoder;
     private final OhadaDataInitializer      companyInitializer;
     private final TenantGuard               tenantGuard;
@@ -198,7 +199,8 @@ public class ConfigService {
                 .username(req.getUsername()).email(req.getEmail())
                 .fullName(req.getFullName())
                 .password(passwordEncoder.encode(req.getPassword()))
-                .role(role).company(company).active(true).mustChangePassword(true).build();
+                .role(role).company(company).active(true).mustChangePassword(true)
+                .caisseId(requireCaisse(req.getCaisseId())).build();
         return toUserDTO(userRepository.save(user));
     }
 
@@ -214,7 +216,15 @@ public class ConfigService {
         if (req.getRoleId() != null)
             user.setRole(roleRepository.findById(req.getRoleId())
                     .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable")));
+        user.setCaisseId(requireCaisse(req.getCaisseId()));
         return toUserDTO(userRepository.save(user));
+    }
+
+    /** Vérifie que la caisse choisie existe (null = aucune caisse). */
+    private Long requireCaisse(Long caisseId) {
+        if (caisseId != null && !caisseRepository.existsById(caisseId))
+            throw new IllegalArgumentException("Caisse introuvable");
+        return caisseId;
     }
 
     @Transactional
@@ -314,6 +324,10 @@ public class ConfigService {
                 .roleId(u.getRole()   != null ? u.getRole().getId()    : null)
                 .roleCode(u.getRole() != null ? u.getRole().getCode()  : null)
                 .roleLabel(u.getRole()!= null ? u.getRole().getLabel() : null)
+                .caisseId(u.getCaisseId())
+                .caisseName(u.getCaisseId() != null
+                        ? caisseRepository.findById(u.getCaisseId()).map(c -> c.getName()).orElse(null)
+                        : null)
                 .build();
     }
 

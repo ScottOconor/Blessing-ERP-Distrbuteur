@@ -77,6 +77,8 @@ public class SalesInvoiceDTO {
     private List<InvoicePaymentDTO> payments;
     private LocalDateTime createdAt;
     private String createdBy;
+    /** Nom complet de l'agent ayant créé la facture */
+    private String createdByName;
     private String updatedBy;
     private LocalDateTime updatedAt;
 

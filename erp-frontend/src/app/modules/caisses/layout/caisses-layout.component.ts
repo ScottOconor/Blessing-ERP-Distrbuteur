@@ -36,45 +36,41 @@ export class CaissesLayoutComponent implements OnInit {
     this.navItems = this.buildNavItems();
   }
 
-  private can(action: string): boolean {
-    return this.authService.hasPermission('CAISSE', 'CAISSES', action);
+  private can(resource: string, action = 'VIEW'): boolean {
+    return this.authService.hasPermission('CAISSE', resource, action);
   }
 
   private buildNavItems(): any[] {
-    const canView   = this.can('VIEW');
-    const canCreate = this.can('CREATE');
     const items: any[] = [];
 
-    if (canView) items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/caisses/dashboard' });
+    if (this.can('CAISSES') || this.can('SESSIONS') || this.can('OPERATIONS') || this.can('RAPPORTS'))
+      items.push({ id: 'dashboard', label: 'Tableau de bord', icon: 'dashboard', route: '/caisses/dashboard' });
 
-    if (canCreate) items.push({
-      id: 'entrees', label: 'Entrées', icon: 'add_circle',
-      children: [
-        { label: 'Nouvelle entrée',        icon: 'add_circle_outline', route: '/caisses/entrees/new' },
-        { label: 'Historique des entrées', icon: 'history',            route: '/caisses/entrees' }
-      ]
-    });
+    const opCreate = this.can('OPERATIONS', 'CREATE');
+    const opView   = this.can('OPERATIONS');
+    for (const [id, label, icon, sing] of [
+      ['entrees', 'Entrées', 'add_circle', 'entrée'],
+      ['sorties', 'Sorties', 'remove_circle', 'sortie']
+    ]) {
+      const children: any[] = [];
+      if (opCreate) children.push({ label: `Nouvelle ${sing}`, icon: `${icon}_outline`, route: `/caisses/${id}/new` });
+      if (opView)   children.push({ label: `Historique des ${id}`, icon: 'history', route: `/caisses/${id}` });
+      if (children.length) items.push({ id, label, icon, children });
+    }
 
-    if (canCreate) items.push({
-      id: 'sorties', label: 'Sorties', icon: 'remove_circle',
-      children: [
-        { label: 'Nouvelle sortie',        icon: 'remove_circle_outline', route: '/caisses/sorties/new' },
-        { label: 'Historique des sorties', icon: 'history',               route: '/caisses/sorties' }
-      ]
-    });
+    if (this.can('CAISSES'))  items.push({ id: 'gestion',     label: 'Gestion des caisses', icon: 'point_of_sale', route: '/caisses/gestion' });
+    if (this.can('RAPPORTS')) items.push({ id: 'brouillard',  label: 'Brouillard',          icon: 'receipt_long',  route: '/caisses/brouillard' });
+    if (this.can('RAPPORTS')) items.push({ id: 'suivi-tiers', label: 'Dettes & Créances',   icon: 'swap_horiz',    route: '/caisses/suivi-tiers' });
 
-    if (canView) items.push({ id: 'gestion',     label: 'Gestion des caisses', icon: 'point_of_sale', route: '/caisses/gestion' });
-    if (canView) items.push({ id: 'brouillard',  label: 'Brouillard',          icon: 'receipt_long',  route: '/caisses/brouillard' });
-    if (canView) items.push({ id: 'suivi-tiers', label: 'Dettes & Créances',   icon: 'swap_horiz',    route: '/caisses/suivi-tiers' });
-
-    if (canView) items.push({
+    if (this.can('RAPPORTS')) items.push({
       id: 'rapports', label: 'Rapports', icon: 'summarize',
       children: [
         { label: 'Rapport consolidé', icon: 'bar_chart', route: '/caisses/rapport-consolide' }
       ]
     });
 
-    if (canCreate) items.push({ id: 'coupures', label: 'Coupures', icon: 'payments', route: '/caisses/coupures' });
+    if (this.can('COUPURES') || this.can('COUPURES', 'EDIT'))
+      items.push({ id: 'coupures', label: 'Coupures', icon: 'payments', route: '/caisses/coupures' });
 
     return items;
   }

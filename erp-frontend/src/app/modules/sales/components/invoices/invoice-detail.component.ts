@@ -410,6 +410,12 @@ export class InvoiceDetailComponent implements OnInit {
    * Droit d'annuler une facture de vente (VENTES/FACTURES/CANCEL). Sans ce droit,
    * l'utilisateur doit passer par l'extourne. Les rôles privilégiés l'ont toujours.
    */
+  /** Colonnes rabais affichées seulement si le client a un rabais sur au moins une ligne. */
+  get hasRabais(): boolean {
+    return (this.invoice?.totalRabais ?? 0) > 0
+      || (this.invoice?.lines ?? []).some(l => (l.rabaisUnitaire ?? 0) > 0);
+  }
+
   get canCancelInvoice(): boolean {
     return this.authService.hasPermission('VENTES', 'FACTURES', 'CANCEL');
   }

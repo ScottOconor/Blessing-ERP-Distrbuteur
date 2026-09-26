@@ -222,13 +222,17 @@
             <th class="text-right">Qté</th>
             <th class="text-right">Prix U. HT</th>
             <th class="text-right">Prix U. TTC</th>
-            <th class="text-right" style="color:#e65100">Rabais/u HT</th>
-            <th class="text-right" style="color:#c0392b">Rabais/u TTC</th>
+            @if (hasRabais) {
+              <th class="text-right" style="color:#e65100">Rabais/u HT</th>
+              <th class="text-right" style="color:#c0392b">Rabais/u TTC</th>
+            }
             <th class="text-right">Taxe(s)</th>
             <th class="text-right">Total HT</th>
             <th class="text-right">Total TTC</th>
-            <th class="text-right" style="color:#e65100">Rabais HT</th>
-            <th class="text-right" style="color:#c0392b">Rabais TTC</th>
+            @if (hasRabais) {
+              <th class="text-right" style="color:#e65100">Rabais HT</th>
+              <th class="text-right" style="color:#c0392b">Rabais TTC</th>
+            }
             <th class="text-right col-enl">Frais Enlèv.</th>
           </tr>
         </thead>
@@ -240,6 +244,7 @@
               <td class="text-right">{{ line.quantity | number:'1.0-2' }}</td>
               <td class="text-right">{{ line.prixUnitaire | number:'1.2-2' }}</td>
               <td class="text-right">{{ (line.prixUnitaireTTC ?? 0) | number:'1.0-0' }}</td>
+              @if (hasRabais) {
               <td class="text-right" style="color:#e65100;font-weight:500">
                 @if ((line.rabaisUnitaire ?? 0) > 0) {
                   – {{ line.rabaisUnitaire | number:'1.0-0' }}
@@ -250,6 +255,7 @@
                   – {{ line.rabaisUnitaireTTC | number:'1.0-0' }}
                 } @else { — }
               </td>
+              }
               <td class="text-right">
                 @if ((line.guinessTaxe ?? 0) > 0) {
                   <span class="taxe-tag taxe-tva">TVA {{ line.tauxTVA || 0 }}%</span>
@@ -260,6 +266,7 @@
               </td>
               <td class="text-right">{{ line.montantHT | number:'1.2-2' }}</td>
               <td class="text-right font-bold">{{ line.montantTTC | number:'1.0-0' }}</td>
+              @if (hasRabais) {
               <td class="text-right" style="color:#e65100;font-weight:500">
                 @if ((line.totalRabaisLigne ?? 0) > 0) {
                   – {{ line.totalRabaisLigne | number:'1.0-0' }}
@@ -270,6 +277,7 @@
                   – {{ line.totalRabaisLigneTTC | number:'1.0-0' }}
                 } @else { — }
               </td>
+              }
               <td class="text-right col-enl">{{ ((line.fraisEnlevement ?? 0) + (line.fraisEnlevementTVA ?? 0)) | number:'1.0-0' }}</td>
             </tr>
           }

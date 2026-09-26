@@ -61,6 +61,10 @@ export class PrintPreviewComponent {
   get client(): string { return this.invoice?.partnerName ?? this.picking?.partnerName ?? this.purchaseInvoice?.partnerName ?? this.purchaseOrder?.partnerName ?? this.salesOrder?.partnerName ?? ''; }
   get allLines(): SalesInvoiceLine[]  { return this.invoice?.lines ?? []; }
   /** Lignes normales : non-consigne ET quantité positive */
+  /** Colonnes rabais affichées seulement si le client a un rabais sur au moins une ligne. */
+  get salesHasRabais(): boolean {
+    return (this.invoice?.totalRabais ?? 0) > 0 || this.salesLines.some(l => (l.rabaisUnitaire ?? 0) > 0);
+  }
   get salesLines(): SalesInvoiceLine[] { return this.allLines.filter(l => !this.isConsigneLine(l) && (l.quantity ?? 0) >= 0); }
   /** Consignes livrées : consigne ET quantité positive */
   get consigneLines(): SalesInvoiceLine[] { return this.allLines.filter(l => this.isConsigneLine(l) && (l.quantity ?? 0) >= 0); }
@@ -256,6 +260,7 @@ export class PrintPreviewComponent {
   private buildInvoiceBody(compact = false): string {
     const inv = this.invoice!;
     const title = this.docType === 'avoir' ? 'AVOIR' : 'FACTURE';
+    const hasRabais = this.salesHasRabais;
     const linesHtml = this.salesLines.map(l => `
       <tr>
         <td>${this.h(l.productCode)}</td>
@@ -263,47 +268,46 @@ export class PrintPreviewComponent {
         <td class="r">${this.fmt(l.quantity)}</td>
         <td class="r">${this.fmt(l.prixUnitaire)}</td>
         <td class="r bold-teal">${this.fmt(l.prixUnitaireTTC ?? 0)}</td>
-        <td class="r rabais">${(l.rabaisUnitaire ?? 0) > 0 ? '–' + this.fmt(l.rabaisUnitaire) : '—'}</td>
-        <td class="r rabais-ttc">${(l.rabaisUnitaireTTC ?? 0) > 0 ? '–' + this.fmt(l.rabaisUnitaireTTC) : '—'}</td>
+        ${hasRabais ? `<td class="r rabais">${(l.rabaisUnitaire ?? 0) > 0 ? '–' + this.fmt(l.rabaisUnitaire) : '—'}</td>
+        <td class="r rabais-ttc">${(l.rabaisUnitaireTTC ?? 0) > 0 ? '–' + this.fmt(l.rabaisUnitaireTTC) : '—'}</td>` : ''}
         <td class="r">${this.fmt(l.montantHT)}</td>
         <td class="r bold">${this.fmt(l.montantTTC)}</td>
       </tr>`).join('');
 
     const consigneHtml = this.consigneLines.length ? `
-      <tr class="consigne-header"><td colspan="9">CONSIGNES</td></tr>
+      <tr class="consigne-header"><td colspan="${hasRabais ? 9 : 7}">CONSIGNES</td></tr>
       ${this.consigneLines.map(l => `
         <tr class="consigne-row">
           <td>${this.h(l.productCode)}</td>
           <td class="desc">${this.h(l.description)}</td>
           <td class="r">${this.fmt(l.quantity)}</td>
-          <td colspan="4"></td>
+          <td colspan="${hasRabais ? 4 : 2}"></td>
           <td></td>
           <td class="r">${this.fmt(l.montantTTC)}</td>
         </tr>`).join('')}` : '';
 
     const deconsigneHtml = this.deconsigneLines.length ? `
-      <tr class="deconsigne-header"><td colspan="9">DÉCONSIGNES</td></tr>
+      <tr class="deconsigne-header"><td colspan="${hasRabais ? 9 : 7}">DÉCONSIGNES</td></tr>
       ${this.deconsigneLines.map(l => `
         <tr class="consigne-row">
           <td>${this.h(l.productCode)}</td>
           <td class="desc">${this.h(l.description)}</td>
           <td class="r">${this.fmt(Math.abs(l.quantity ?? 0))}</td>
-          <td colspan="4"></td>
+          <td colspan="${hasRabais ? 4 : 2}"></td>
           <td></td>
           <td class="r">${this.fmt(l.montantTTC)}</td>
         </tr>`).join('')}` : '';
 
     // Ristournes : affichées à titre informatif seulement, NON déduites du total
     const ristourneHtml = inv.ristourneDetails?.length ? `
-      <tr class="section-header"><td colspan="9">RISTOURNES (à récupérer séparément)</td></tr>
+      <tr class="section-header"><td colspan="${hasRabais ? 9 : 7}">RISTOURNES (à récupérer séparément)</td></tr>
       ${inv.ristourneDetails.map(r => `
         <tr class="ristourne-row">
           <td colspan="2">${this.h(r.categoryName)}</td>
           <td class="r">${this.fmt(r.quantite)}</td>
           <td class="r">${this.fmt(r.montantUnitaire)}</td>
           <td></td>
-          <td></td>
-          <td></td>
+          ${hasRabais ? '<td></td><td></td>' : ''}
           <td class="r">${this.fmt(r.montantTotal)}</td>
           <td class="r">${this.fmt(r.montantTotal)}</td>
         </tr>`).join('')}` : '';
@@ -341,7 +345,7 @@ export class PrintPreviewComponent {
       <tr>
         <th>Code</th><th class="desc">Désignation</th>
         <th class="r">Qté</th><th class="r">P.U.HT</th>
-        <th class="r">P.U.TTC</th><th class="r">Rabais HT/u</th><th class="r">Rabais TTC/u</th>
+        <th class="r">P.U.TTC</th>${hasRabais ? '<th class="r">Rabais HT/u</th><th class="r">Rabais TTC/u</th>' : ''}
         <th class="r">Mnt HT</th><th class="r">Mnt TTC</th>
       </tr>
     </thead>
@@ -405,7 +409,7 @@ export class PrintPreviewComponent {
 
     const linesHtml = this.salesLines.map(l => `
       <tr>
-        <td class="tname">${this.h(l.productCode || l.description)}</td>
+        <td class="tname">${this.h(l.description || l.productCode)}</td>
         <td class="r">${this.fmt(l.quantity)}×${this.fmt(l.prixUnitaireTTC ?? l.prixUnitaire)}</td>
         <td class="r">${this.fmt(l.montantTTC)}</td>
       </tr>`).join('');
@@ -413,7 +417,7 @@ export class PrintPreviewComponent {
     const consignesHtml = this.consigneLines.length ? `
       <tr class="sep"><td colspan="3">— Consignes —</td></tr>
       ${this.consigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
+        <tr><td class="tname">${this.h(l.description || l.productCode)}</td>
             <td class="r">${this.fmt(l.quantity)}</td>
             <td class="r">${this.fmt(l.montantTTC)}</td>
         </tr>`).join('')}` : '';
@@ -421,7 +425,7 @@ export class PrintPreviewComponent {
     const deconsignesHtml = this.deconsigneLines.length ? `
       <tr class="sep"><td colspan="3">— Déconsignes —</td></tr>
       ${this.deconsigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
+        <tr><td class="tname">${this.h(l.description || l.productCode)}</td>
             <td class="r">${this.fmt(Math.abs(l.quantity ?? 0))}</td>
             <td class="r">-${this.fmt(Math.abs(l.montantTTC ?? 0))}</td>
         </tr>`).join('')}` : '';
@@ -434,6 +438,7 @@ export class PrintPreviewComponent {
   <div class="t-ref">${this.h(inv.name)}</div>
   <div class="t-line"><span>Date</span><span>${this.fmtDate(inv.date)}</span></div>
   <div class="t-line"><span>Client</span><span>${this.h(inv.partnerName)}</span></div>
+  ${inv.createdBy ? `<div class="t-line"><span>Agent</span><span>${this.h(inv.createdByName || inv.createdBy)}</span></div>` : ''}
   ${inv.notes ? `<div class="t-line"><span>Réf. client</span><span>${this.h(inv.notes)}</span></div>` : ''}
   <div class="t-sep"></div>
   <table class="t-lines">
@@ -463,20 +468,10 @@ export class PrintPreviewComponent {
   ${(inv.montantDu ?? 0) > 0.01 ? `<div class="t-line small"><span>Reste dû</span><span>${this.fmt(inv.montantDu)} F</span></div>` : ''}
   <div class="t-sep"></div>
   <div class="t-lettres">${this.montantEnLettres(netAPayer)}</div>
-  <div class="t-thanks">Merci de votre confiance !</div>
-  ${inv.createdBy ? `<div class="t-line small"><span>Agent</span><span>${this.h(inv.createdBy)}</span></div>` : ''}
   <div class="t-sep"></div>
-  <div class="t-sig-box">
-    <div class="t-sig-lbl">Signature du livreur</div>
-    <div class="t-sig-name">Nom : ___________________________</div>
-    <div class="t-sig-area"></div>
-  </div>
-  <div class="t-sig-gap"></div>
-  <div class="t-sig-box">
-    <div class="t-sig-lbl">Cachet &amp; signature client</div>
-    <div class="t-sig-name">Nom : ___________________________</div>
-    <div class="t-sig-area"></div>
-  </div>
+  <div style="display:flex;justify-content:space-between;font-weight:bold"><span>Caissier</span><span>Client</span></div>
+  <div style="height:14mm"></div>
+  <div class="t-thanks">Merci de votre confiance !</div>
 </div>`;
   }
 
@@ -624,7 +619,7 @@ export class PrintPreviewComponent {
     const netAPayer = inv.netAPayer ?? inv.totalTTC ?? 0;
     const linesHtml = this.purchaseInvoiceLines.map(l => `
       <tr>
-        <td class="tname">${this.h(l.productCode || l.description)}</td>
+        <td class="tname">${this.h(l.description || l.productCode)}</td>
         <td class="r">${this.fmt(l.quantity)}×${this.fmt(l.prixUnitaire)}</td>
         <td class="r">${this.fmt(l.montantTTC)}</td>
       </tr>`).join('');

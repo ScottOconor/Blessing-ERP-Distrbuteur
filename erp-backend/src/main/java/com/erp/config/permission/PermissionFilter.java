@@ -89,7 +89,8 @@ public class PermissionFilter extends OncePerRequestFilter {
         // Fail-closed : une route authentifiée sans règle correspondante est refusée par défaut
         // (auparavant fail-open — tout endpoint oublié dans PermissionService.RULES était
         // accessible à n'importe quel utilisateur authentifié).
-        if (rule == null || !permissionService.hasPermission(auth, rule)) {
+        if (rule == null || (!permissionService.hasPermission(auth, rule)
+                && !permissionService.hasContextEquivalent(auth, rule, uri, req.getHeader("X-Erp-Context")))) {
             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
             res.setContentType(MediaType.APPLICATION_JSON_VALUE);
             res.setCharacterEncoding("UTF-8");
