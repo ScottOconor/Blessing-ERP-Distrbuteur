@@ -6,7 +6,7 @@ import { RistourneService, Ristourne, RistournePaiement, RistournePaiementLine, 
 import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 const RST_HEADERS = ['Client', "Catégorie d'article", 'Type de ristourne', 'Montant de la ristourne', "Montant de l'enlèvement HT", 'Ristourne TTC', 'Actif'];
@@ -75,6 +75,8 @@ export class RistourneListComponent implements OnInit {
 
   // Clients accordéon (config tab)
   expandedClients = new Set<number>();
+  /** Ristournes cochées pour l'export Excel. */
+  sel = new RowSelection<Ristourne>();
 
   get clientGroups(): { partnerId: number; partnerName: string; items: Ristourne[]; nbBrasserie: number; nbGuinness: number; nbAutre: number }[] {
     const map = new Map<number, { partnerName: string; items: Ristourne[] }>();
@@ -526,6 +528,19 @@ export class RistourneListComponent implements OnInit {
 
   closeImportModal(): void { this.showImportModal = false; this.importRows = []; }
 
+  /**
+   * Exporte les ristournes cochées (ou toutes) au format du modèle d'import. La clé de mise à
+   * jour est le couple client + catégorie : réimporter le fichier modifié met à jour ces lignes.
+   */
+  exportExcel(): void {
+    const typeLabel = (t?: string) => t === 'brasserie' ? 'Brasserie' : t === 'guinness' ? 'Guinness' : '';
+    const rows = this.sel.rowsToExport(this.ristournes, this.ristournes).map(r => [
+      r.partnerName, r.categoryName, typeLabel(r.typeRistourne), r.montantFixe,
+      r.montantEnlevementHT ?? 0, r.montantTTCUnitaire, yesNo(r.active !== false)
+    ]);
+    exportRowsToExcel(RST_HEADERS, rows, 'export_ristournes');
+  }
+
   private norm(s: string): string {
     return (s || '').trim().toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -560,7 +575,9 @@ export class RistourneListComponent implements OnInit {
         categoryName:  String(row["Catégorie d'article"] || ''),
         typeRistourne: this.normalizeType(String(row['Type de ristourne'] || '')),
         montantFixe:   parseFloat(row['Montant de la ristourne']) || 0,
-        montantEnlevementHT: parseFloat(row["Montant de l'enlèvement HT"]) || 0
+        // Colonne absente (ancien modèle) → undefined : le serveur garde la valeur existante.
+        montantEnlevementHT: "Montant de l'enlèvement HT" in row ? (parseFloat(row["Montant de l'enlèvement HT"]) || 0) : undefined,
+        active: String(row['Actif'] ?? '').trim().toLowerCase() !== 'non'
       }))
       .filter(r => r.clientName);
 
@@ -568,9 +585,10 @@ export class RistourneListComponent implements OnInit {
       next: saved => {
         this.importLoading = false;
         this.closeImportModal();
+        this.sel.clear();
         this.loadRistournes();
         const skipped = rows.length - saved.length;
-        const msg = [`Import terminé : ${saved.length} ristourne(s) sauvegardée(s)`];
+        const msg = [`Import terminé : ${saved.length} ristourne(s) créée(s) ou mise(s) à jour (clé client + catégorie)`];
         if (skipped > 0) msg.push(`${skipped} ligne(s) ignorée(s) (client ou catégorie introuvable)`);
         alert(msg.join('\n'));
       },

@@ -8,7 +8,7 @@ import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/serv
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, yesNo, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Prix de vente', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
 const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '700', '500', 'Bières', '1000', 'Caisse', 'Non', 'Non'];
@@ -62,6 +62,8 @@ export class ProductListComponent implements OnInit {
   importRows: Record<string, any>[] = [];
   importLoading = false;
   private mainLocationId: number | null = null;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<Product>();
 
   // === Tarifs clients (section dans le modal article) ===
   showTarifsSection = false;
@@ -416,6 +418,31 @@ export class ProductListComponent implements OnInit {
     }
   }
 
+  /** Exporte les lignes cochées (ou toutes les lignes affichées) au format du modèle d'import. */
+  exportExcel(): void {
+    const headers = [ID_HEADER, ...(this.serviceMode ? SERVICE_HEADERS : PRODUCT_HEADERS)];
+    const rows = this.sel.rowsToExport(this.products, this.filtered).map(p => this.serviceMode
+      ? [p.id, p.name, p.defaultCode, p.salePrice, p.standardPrice, p.categoryName, p.uomName, yesNo(p.exemptTva), yesNo(p.exemptTvaAchat)]
+      : [p.id, p.name, p.defaultCode, p.salePrice, p.standardPrice, p.categoryName, p.qtyOnHand ?? 0, p.uomName, yesNo(p.exemptTva), yesNo(p.exemptTvaAchat)]);
+    exportRowsToExcel(headers, rows, this.serviceMode ? 'export_services' : 'export_articles');
+  }
+
+  /** Article existant correspondant à une ligne importée : ID, puis référence, puis nom (+ catégorie). */
+  private findExistingProduct(row: Record<string, any>, name: string, code: string | undefined, categoryId: number | undefined): Product | undefined {
+    const type = this.serviceMode ? 'service' : 'product';
+    const id = rowId(row);
+    if (id) {
+      const byId = this.products.find(p => p.id === id);
+      if (byId) return byId;
+    }
+    if (code) {
+      const byCode = this.products.find(p => sameText(p.defaultCode, code));
+      if (byCode) return byCode;
+    }
+    return this.products.find(p => p.type === type && sameText(p.name, name)
+      && (categoryId === undefined || p.categoryId === categoryId));
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -462,7 +489,7 @@ export class ProductListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let done = 0, errors = 0;
+    let created = 0, updated = 0, errors = 0;
     const stockAdjustments: StockAdjustmentRequest[] = [];
 
     for (const row of this.importRows) {
@@ -485,12 +512,28 @@ export class ProductListComponent implements OnInit {
         exemptTvaAchat: this.parseBoolCell(row['Exempté TVA achat']),
         companyId: this.companyId
       };
+      const existing = this.findExistingProduct(row, name, dto.defaultCode, dto.categoryId);
       try {
-        const created = await this.stockService.createProduct(dto).toPromise();
-        done++;
-        if (qty > 0 && created?.id && this.mainLocationId) {
+        if (existing?.id) {
+          // Mise à jour : on repart de l'article existant pour ne perdre aucun champ absent du
+          // fichier. La quantité en stock n'est PAS réappliquée (elle ne bouge que par les
+          // mouvements/inventaires) — sinon réimporter un export créerait des ajustements.
+          await this.stockService.updateProduct(existing.id, {
+            ...existing, ...dto,
+            type: existing.type,
+            categoryId: dto.categoryId ?? existing.categoryId,
+            defaultCode: dto.defaultCode ?? existing.defaultCode,
+            unitOfMeasureId: dto.unitOfMeasureId ?? existing.unitOfMeasureId,
+            active: true
+          }).toPromise();
+          updated++;
+          continue;
+        }
+        const newProduct = await this.stockService.createProduct(dto).toPromise();
+        created++;
+        if (qty > 0 && newProduct?.id && this.mainLocationId) {
           stockAdjustments.push({
-            productId: created.id,
+            productId: newProduct.id,
             locationId: this.mainLocationId,
             newQty: qty,
             notes: 'Stock initial — import',
@@ -508,8 +551,9 @@ export class ProductListComponent implements OnInit {
 
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.load();
-    this.showSuccessMsg(`Import terminé : ${done} créé(s)${stockAdjustments.length > 0 ? ', ' + stockAdjustments.length + ' stock(s) initialisé(s)' : ''}, ${errors} erreur(s)`);
+    this.showSuccessMsg(`Import terminé : ${created} créé(s), ${updated} mis à jour${stockAdjustments.length > 0 ? ', ' + stockAdjustments.length + ' stock(s) initialisé(s)' : ''}, ${errors} erreur(s)`);
   }
 
   showSuccessMsg(msg: string): void {

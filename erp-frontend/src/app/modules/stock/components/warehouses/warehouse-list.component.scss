@@ -88,3 +88,5 @@
 .alert { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 12px;
   &.alert-danger { background: var(--danger-bg); color: var(--danger); }
 }
+
+.wh-check { width: 16px; height: 16px; margin-right: 10px; cursor: pointer; flex-shrink: 0; }

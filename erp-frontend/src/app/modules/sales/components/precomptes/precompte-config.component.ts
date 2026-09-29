@@ -6,7 +6,7 @@ import { PrecompteService, Precompte, Enlevement, EnlevementClient } from '../..
 import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 
@@ -47,6 +47,8 @@ export class PrecompteConfigComponent implements OnInit {
 
   // ===== Précomptes =====
   precomptes: Precompte[] = [];
+  /** Précomptes cochés pour l'export Excel. */
+  selPc = new RowSelection<Precompte>();
   clients: SalesClient[] = [];
   loadingPc = false;
   showPcModal = false;
@@ -63,6 +65,8 @@ export class PrecompteConfigComponent implements OnInit {
 
   // ===== Enlèvements =====
   enlevements: Enlevement[] = [];
+  /** Enlèvements cochés pour l'export Excel. */
+  selEnl = new RowSelection<Enlevement>();
   categories: ProductCategory[] = [];
   loadingEnl = false;
   showEnlModal = false;
@@ -211,6 +215,16 @@ export class PrecompteConfigComponent implements OnInit {
     });
   }
 
+  /**
+   * Exporte les précomptes cochés (ou tous) avec les colonnes du modèle serveur. Clé de mise à
+   * jour : partenaire + type — réimporter le fichier modifié met à jour ces précomptes.
+   */
+  exportPcExcel(): void {
+    const rows = this.selPc.rowsToExport(this.precomptes, this.precomptes)
+      .map(p => [p.partnerName, p.typePrecompte, p.tauxPrecompte]);
+    exportRowsToExcel(['partner_id', 'type_precompte', 'taux_precompte'], rows, 'export_precomptes');
+  }
+
   triggerPcImport(): void {
     this.importPcInput.nativeElement.value = '';
     this.importPcInput.nativeElement.click();
@@ -281,6 +295,14 @@ export class PrecompteConfigComponent implements OnInit {
   }
 
 
+  /** Exporte les enlèvements cochés (ou tous) au format du modèle d'import (clé : catégorie). */
+  exportEnlExcel(): void {
+    const rows = this.selEnl.rowsToExport(this.enlevements, this.enlevements).map(e => [
+      e.categoryName, e.montantFixe, e.coutEnlevement ?? 0, '', yesNo(e.active !== false), yesNo((e.clients?.length ?? 0) > 0)
+    ]);
+    exportRowsToExcel(ENL_HEADERS, rows, 'export_enlevements');
+  }
+
   triggerEnlImport(): void {
     this.importEnlInput.nativeElement.value = '';
     this.importEnlInput.nativeElement.click();
@@ -333,29 +355,33 @@ export class PrecompteConfigComponent implements OnInit {
 
   async confirmImportEnl(): Promise<void> {
     this.importEnlLoading = true;
-    let done = 0, noCat = 0, apiErr = 0;
+    let done = 0, updated = 0, noCat = 0, apiErr = 0;
     for (const row of this.importEnlRows) {
       const catName = String(row["Catégorie d'article"] || row['Catégorie'] || '').trim();
       const categoryId = await this.getOrCreateCategoryId(catName);
       if (!categoryId) { noCat++; continue; }
-      const montantRaw = row["Montant de l'enl\u00e8vement"] ?? row["Montant de l'enlevement"] ?? row["Montant de l'enlèvement"] ?? 0;
-      const coutRaw    = row["Cout enlevement"] ?? row["Co\u00fbt enl\u00e8vement"] ?? row["Coût enlèvement"] ?? 0;
+      const montantKey = ["Montant de l'enl\u00e8vement", "Montant de l'enlevement"].find(k => k in row);
+      const coutKey    = ["Cout enlevement", "Co\u00fbt enl\u00e8vement"].find(k => k in row);
+      // Existant (clé : catégorie) → mise à jour. Une colonne absente garde la valeur actuelle,
+      // et `clients` n'est PAS envoyé : les tarifs spécifiques par client sont conservés
+      // (envoyer une liste vide les supprimait tous).
+      const existing = this.enlevements.find(e => e.categoryId === categoryId);
       const dto: Enlevement = {
         categoryId,
-        montantFixe: parseFloat(String(montantRaw)) || 0,
-        coutEnlevement: parseFloat(String(coutRaw)) || 0,
-        companyId: this.companyId,
-        clients: []
+        montantFixe: montantKey ? (parseFloat(String(row[montantKey])) || 0) : (existing?.montantFixe ?? 0),
+        coutEnlevement: coutKey ? (parseFloat(String(row[coutKey])) || 0) : (existing?.coutEnlevement ?? 0),
+        companyId: this.companyId
       };
       try {
         await this.svc.saveEnlevement(dto).toPromise();
-        done++;
+        if (existing) updated++; else done++;
       } catch { apiErr++; }
     }
     this.importEnlLoading = false;
     this.closeImportEnlModal();
     this.loadEnlevements();
-    const msg = [`Import terminé : ${done} créé(s)`];
+    this.selEnl.clear();
+    const msg = [`Import terminé : ${done} créé(s), ${updated} mis à jour`];
     if (noCat > 0)  msg.push(`${noCat} catégorie(s) introuvable(s)`);
     if (apiErr > 0) msg.push(`${apiErr} erreur(s) serveur`);
     alert(msg.join('\n'));

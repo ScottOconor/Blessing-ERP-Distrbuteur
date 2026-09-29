@@ -6,6 +6,7 @@ import { RemiseService, Remise } from '../../services/remise.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 import { forkJoin } from 'rxjs';
 
 const SUP_HEADERS = ['Nom*', 'Référence', 'Téléphone', 'Email', 'Adresse'];
@@ -60,6 +61,8 @@ export class SupplierListComponent implements OnInit {
   showImportModal = false;
   importRows: Record<string, any>[] = [];
   importLoading = false;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<any>();
 
   constructor(
     private accountingService: AccountingService,
@@ -230,6 +233,21 @@ export class SupplierListComponent implements OnInit {
     downloadExcelTemplate(SUP_HEADERS, SUP_SAMPLE, 'modele_fournisseurs.xlsx');
   }
 
+  /** Exporte les fournisseurs cochés (ou la liste affichée) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.suppliers, this.filtered)
+      .map(s => [s.id, s.name, s.ref, s.phone, s.email, s.address]);
+    exportRowsToExcel([ID_HEADER, ...SUP_HEADERS], rows, 'export_fournisseurs');
+  }
+
+  /** Fournisseur existant correspondant à une ligne importée : ID, puis référence, puis nom. */
+  private findExistingSupplier(row: Record<string, any>, name: string, ref?: string): any {
+    const id = rowId(row);
+    return (id ? this.suppliers.find(s => s.id === id) : undefined)
+      ?? (ref ? this.suppliers.find(s => sameText(s.ref, ref)) : undefined)
+      ?? this.suppliers.find(s => sameText(s.name, name));
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -260,7 +278,7 @@ export class SupplierListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let done = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0;
     for (const row of this.importRows) {
       const dto = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
@@ -271,15 +289,22 @@ export class SupplierListComponent implements OnInit {
         type: 'supplier',
         companyId: this.companyId
       };
+      const existing = this.findExistingSupplier(row, dto.name, dto.ref);
       try {
-        await this.accountingService.createPartner(dto).toPromise();
-        done++;
+        if (existing?.id) {
+          await this.accountingService.updatePartner(existing.id, { ...existing, ...dto, type: existing.type }).toPromise();
+          updated++;
+        } else {
+          await this.accountingService.createPartner(dto).toPromise();
+          done++;
+        }
       } catch { errors++; }
     }
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.loadSuppliers();
-    this.successMsg = `Import terminé : ${done} créé(s), ${errors} erreur(s)`;
+    this.successMsg = `Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`;
     setTimeout(() => this.successMsg = '', 5000);
   }
 }

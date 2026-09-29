@@ -6,7 +6,7 @@ import { RemiseService, Remise, RemisePaiement, PartnerGroup, QuarterGroup } fro
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
 import { environment } from '../../../../../environments/environment';
 import { NotificationService } from '../../../../core/services/notification.service';
 
@@ -30,6 +30,8 @@ export class RemiseListComponent implements OnInit {
 
   // ===== Config tab =====
   remises: Remise[] = [];
+  /** Remises cochées pour l'export Excel. */
+  sel = new RowSelection<Remise>();
   suppliers: { id: number; name: string }[] = [];
   categories: ProductCategory[] = [];
   loadingRms = false;
@@ -420,6 +422,17 @@ export class RemiseListComponent implements OnInit {
     this.importRows = [];
   }
 
+  /**
+   * Exporte les remises cochées (ou toutes) au format du modèle d'import. Clé de mise à jour :
+   * fournisseur + catégorie — réimporter le fichier modifié met à jour ces remises.
+   */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.remises, this.remises).map(r => [
+      r.partnerName, r.categoryName, r.typeRemise || 'brasserie', r.montantFixe, yesNo(r.active !== false)
+    ]);
+    exportRowsToExcel(RMS_HEADERS, rows, 'export_remises');
+  }
+
   confirmImport(): void {
     const rows = this.importRows.map(row => ({
       supplierName: String(row['Fournisseur'] || '').trim(),
@@ -439,8 +452,9 @@ export class RemiseListComponent implements OnInit {
       next: (res) => {
         this.importLoading = false;
         this.closeImportModal();
+        this.sel.clear();
         this.loadRemises();
-        alert(`${res.imported} remise(s) importée(s) avec succès.`);
+        alert(`${res.imported} remise(s) créée(s) ou mise(s) à jour (clé fournisseur + catégorie).`);
       },
       error: () => { this.importLoading = false; alert('Erreur lors de l\'import.'); }
     });

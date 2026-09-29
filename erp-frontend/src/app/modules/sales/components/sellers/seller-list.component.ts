@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SalesService, Seller } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const SELLER_HEADERS = ['Nom*', 'Référence', 'Téléphone', 'Email'];
 const SELLER_SAMPLE  = ['Jean Dupont', 'VDR001', '+237 691000000', 'jean.dupont@exemple.cm'];
@@ -39,6 +39,8 @@ export class SellerListComponent implements OnInit {
   importRows: Record<string, any>[] = [];
   importLoading = false;
   importProgress: { done: number; total: number; errors: number; messages: string[] } | null = null;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<Seller>();
 
   constructor(
     private salesService: SalesService,
@@ -136,6 +138,13 @@ export class SellerListComponent implements OnInit {
     downloadExcelTemplate(SELLER_HEADERS, SELLER_SAMPLE, 'modele_vendeurs.xlsx');
   }
 
+  /** Exporte les vendeurs cochés (ou la liste affichée) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.sellers, this.filteredSellers)
+      .map(s => [s.id, s.name, s.ref, s.phone, s.email]);
+    exportRowsToExcel([ID_HEADER, ...SELLER_HEADERS], rows, 'export_vendeurs');
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -172,6 +181,7 @@ export class SellerListComponent implements OnInit {
     const companyId = this.authService.getCompanyId();
     this.importLoading = true;
     this.importProgress = { done: 0, total: this.importRows.length, errors: 0, messages: [] };
+    let updated = 0;
 
     for (const row of this.importRows) {
       const seller: Seller = {
@@ -181,7 +191,17 @@ export class SellerListComponent implements OnInit {
         email: String(row['Email'] || '').trim() || undefined,
         companyId
       };
+      // Vendeur existant : ID, puis référence, puis nom → mise à jour au lieu d'un doublon.
+      const id = rowId(row);
+      const existing = (id ? this.sellers.find(s => s.id === id) : undefined)
+        ?? (seller.ref ? this.sellers.find(s => sameText(s.ref, seller.ref)) : undefined)
+        ?? this.sellers.find(s => sameText(s.name, seller.name));
       try {
+        if (existing?.id) {
+          await this.salesService.updateSeller(existing.id, { ...existing, ...seller }).toPromise();
+          updated++;
+          continue;
+        }
         await this.salesService.createSeller(seller).toPromise();
         this.importProgress.done++;
       } catch (e: any) {
@@ -192,9 +212,10 @@ export class SellerListComponent implements OnInit {
 
     this.importLoading = false;
     this.showImportModal = false;
+    this.sel.clear();
     this.loadSellers();
     const p = this.importProgress;
-    this.showSuccess(`Import terminé : ${p.done} créé(s), ${p.errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${p.done} créé(s), ${updated} mis à jour, ${p.errors} erreur(s)`);
     this.importRows = [];
     this.importProgress = null;
   }

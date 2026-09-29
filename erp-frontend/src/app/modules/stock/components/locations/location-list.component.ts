@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { StockService, StockLocation, Warehouse } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const LOC_HEADERS = ['Nom*', 'Type (internal/view/supplier/customer/inventory/transit)', 'Emplacement Parent (nom)'];
 const LOC_SAMPLE  = ['Stockage Zone A', 'internal', 'WH/Stock'];
@@ -22,6 +22,8 @@ export class LocationListComponent implements OnInit {
   locations: StockLocation[] = [];
   warehouses: Warehouse[] = [];
   filtered: StockLocation[] = [];
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<StockLocation>();
   loading = false;
   saving = false;
   showModal = false;
@@ -125,6 +127,15 @@ export class LocationListComponent implements OnInit {
     downloadExcelTemplate(LOC_HEADERS, LOC_SAMPLE, 'modele_emplacements.xlsx');
   }
 
+  /** Exporte les emplacements cochés (ou la liste affichée) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.locations, this.filtered).map(l => {
+      const parent = l.parentId ? this.locations.find(p => p.id === l.parentId) : undefined;
+      return [l.id, l.name, l.usage, parent ? (parent.completeName || parent.name) : ''];
+    });
+    exportRowsToExcel([ID_HEADER, ...LOC_HEADERS], rows, 'export_emplacements');
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -159,7 +170,7 @@ export class LocationListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     this.importLoading = true;
     const cid = this.authService.getCompanyId();
-    let done = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0;
     const validUsages = ['internal', 'view', 'supplier', 'customer', 'inventory', 'transit'];
     for (const row of this.importRows) {
       const usageVal = String(row['Type (internal/view/supplier/customer/inventory/transit)'] || 'internal').trim();
@@ -170,14 +181,25 @@ export class LocationListComponent implements OnInit {
         active: true,
         companyId: cid
       };
+      // Existant : ID, puis même nom + type + parent → mise à jour au lieu d'un doublon.
+      const id = rowId(row);
+      const existing = (id ? this.locations.find(l => l.id === id) : undefined)
+        ?? this.locations.find(l => sameText(l.name, dto.name) && l.usage === dto.usage
+             && (l.parentId ?? undefined) === dto.parentId);
       try {
-        await this.stockService.createLocation(dto).toPromise();
-        done++;
+        if (existing?.id) {
+          await this.stockService.updateLocation(existing.id, { ...existing, ...dto, warehouseId: existing.warehouseId }).toPromise();
+          updated++;
+        } else {
+          await this.stockService.createLocation(dto).toPromise();
+          done++;
+        }
       } catch { errors++; }
     }
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.load();
-    this.showSuccess(`Import terminé : ${done} créé(s), ${errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`);
   }
 }

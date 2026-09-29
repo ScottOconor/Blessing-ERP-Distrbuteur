@@ -8,6 +8,7 @@ import com.erp.accounting.service.FiscalLockGuard;
 import com.erp.audit.service.AuditService;
 import com.erp.common.ConsigneCodes;
 import com.erp.common.service.TenantGuard;
+import com.erp.common.service.UsageGuard;
 import com.erp.sync.service.SyncEventPublisher;
 import com.erp.sync.entity.SyncEventType;
 import com.erp.common.entity.Company;
@@ -94,6 +95,7 @@ public class SalesService {
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
+    private final UsageGuard usageGuard;
     private final SellerRepository sellerRepo;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
@@ -1856,7 +1858,11 @@ public class SalesService {
     public void deleteClient(Long id) {
         Partner partner = partnerRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Client introuvable: " + id));
-        tenantGuard.check(partner.getCompany() != null ? partner.getCompany().getId() : null);
+        Long companyId = partner.getCompany() != null ? partner.getCompany().getId() : null;
+        tenantGuard.check(companyId);
+        if (companyId != null && partnerRepo.hasOperationalReferences(id, companyId)) {
+            throw new IllegalStateException("Impossible de supprimer ce client : il est déjà utilisé dans des ventes, achats, écritures comptables ou mouvements de stock.");
+        }
         partner.setActive(false);
         partnerRepo.save(partner);
     }
@@ -1906,6 +1912,7 @@ public class SalesService {
         Seller seller = sellerRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Vendeur introuvable: " + id));
         tenantGuard.check(seller.getCompany() != null ? seller.getCompany().getId() : null);
+        usageGuard.assertSellerUnused(id);
         seller.setActive(false);
         sellerRepo.save(seller);
     }

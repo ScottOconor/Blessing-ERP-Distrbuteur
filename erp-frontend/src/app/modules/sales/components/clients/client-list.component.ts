@@ -5,7 +5,7 @@ import { SalesService, SalesClient } from '../../services/sales.service';
 import { RistourneService, Ristourne } from '../../services/ristourne.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 import { forkJoin, of } from 'rxjs';
 
 const CLIENT_HEADERS = ['Nom*', 'Référence', 'Téléphone', 'Email', 'Adresse', 'Taux Précompte (%)', 'Limite Crédit (FCFA)', 'Code Compte Client'];
@@ -61,6 +61,8 @@ export class ClientListComponent implements OnInit {
   importRows: Record<string, any>[] = [];
   importLoading = false;
   importProgress: { done: number; total: number; errors: number; messages: string[] } | null = null;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<SalesClient>();
 
   constructor(
     private salesService: SalesService,
@@ -229,6 +231,22 @@ export class ClientListComponent implements OnInit {
     downloadExcelTemplate(CLIENT_HEADERS, CLIENT_SAMPLE, 'modele_clients.xlsx');
   }
 
+  /** Exporte les clients cochés (ou la liste affichée) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.clients, this.filteredClients).map(c => [
+      c.id, c.name, c.ref, c.phone, c.email, c.address, c.tauxPrecompte, c.creditLimit, c.receivableAccountCode
+    ]);
+    exportRowsToExcel([ID_HEADER, ...CLIENT_HEADERS], rows, 'export_clients');
+  }
+
+  /** Client existant correspondant à une ligne importée : ID, puis référence, puis nom. */
+  private findExistingClient(row: Record<string, any>, name: string, ref?: string): SalesClient | undefined {
+    const id = rowId(row);
+    return (id ? this.clients.find(c => c.id === id) : undefined)
+      ?? (ref ? this.clients.find(c => sameText(c.ref, ref)) : undefined)
+      ?? this.clients.find(c => sameText(c.name, name));
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -265,6 +283,7 @@ export class ClientListComponent implements OnInit {
     const companyId = this.authService.getCompanyId();
     this.importLoading = true;
     this.importProgress = { done: 0, total: this.importRows.length, errors: 0, messages: [] };
+    let updated = 0;
 
     for (const row of this.importRows) {
       const client: SalesClient = {
@@ -279,9 +298,16 @@ export class ClientListComponent implements OnInit {
         type: 'customer',
         companyId
       };
+      const existing = this.findExistingClient(row, client.name, client.ref);
       try {
-        await this.salesService.createClient(client).toPromise();
-        this.importProgress.done++;
+        if (existing?.id) {
+          // Mise à jour : on part du client existant (type, ristourne, Guinness... conservés).
+          await this.salesService.updateClient(existing.id, { ...existing, ...client, type: existing.type }).toPromise();
+          updated++;
+        } else {
+          await this.salesService.createClient(client).toPromise();
+          this.importProgress.done++;
+        }
       } catch (e: any) {
         this.importProgress.errors++;
         this.importProgress.messages.push(`"${client.name}" : ${e.error?.message || 'Erreur'}`);
@@ -290,9 +316,10 @@ export class ClientListComponent implements OnInit {
 
     this.importLoading = false;
     this.showImportModal = false;
+    this.sel.clear();
     this.loadClients();
     const p = this.importProgress;
-    this.showSuccess(`Import terminé : ${p.done} créé(s), ${p.errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${p.done} créé(s), ${updated} mis à jour, ${p.errors} erreur(s)`);
     this.importRows = [];
     this.importProgress = null;
   }

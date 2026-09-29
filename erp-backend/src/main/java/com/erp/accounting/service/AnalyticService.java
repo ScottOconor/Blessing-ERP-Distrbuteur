@@ -7,6 +7,7 @@ import com.erp.accounting.repository.*;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.common.service.TenantGuard;
+import com.erp.common.service.UsageGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class AnalyticService {
     private final AccountMoveRepository moveRepo;
     private final AccountMoveLineRepository moveLineRepo;
     private final TenantGuard tenantGuard;
+    private final UsageGuard usageGuard;
 
     // ===================== COMPTES ANALYTIQUES =====================
 
@@ -103,6 +105,7 @@ public class AnalyticService {
         AnalyticAccount account = analyticAccountRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Analytic account not found: " + id));
         tenantGuard.check(account.getCompany() != null ? account.getCompany().getId() : null);
+        usageGuard.assertAnalyticAccountUnused(id);
         account.setActive(false);
         analyticAccountRepo.save(account);
     }

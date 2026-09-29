@@ -14,6 +14,10 @@
         <span class="material-icons">download</span>
         {{ downloadingTemplate ? 'Téléchargement…' : 'Modèle Excel' }}
       </button>
+      <button class="btn-outline" (click)="exportExcel()" [disabled]="filteredAccounts.length === 0"
+              title="Exporter les comptes cochés (ou la liste affichée), les modifier puis les réimporter">
+        <span class="material-icons">file_download</span> Exporter {{ sel.count ? '(' + sel.count + ')' : 'tout' }}
+      </button>
       <label class="btn-import" [class.busy]="previewLoading">
         <span class="material-icons">upload_file</span>
         {{ previewLoading ? 'Lecture…' : 'Importer Excel' }}
@@ -111,6 +115,7 @@
               <table class="acc-table">
                 <thead>
                   <tr>
+                    <th class="col-check"><input type="checkbox" [checked]="sel.allSelected(group.accounts)" [indeterminate]="sel.someSelected(group.accounts)" (change)="sel.toggleAll(group.accounts)" title="Tout sélectionner" /></th>
                     <th>Code</th>
                     <th>Intitulé</th>
                     <th>Type</th>
@@ -122,6 +127,7 @@
                 <tbody>
                   @for (acc of group.accounts; track acc.id) {
                     <tr [class.row-deprecated]="acc.deprecated">
+                      <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(acc)" (change)="sel.toggle(acc)" /></td>
                       <td>
                         <span class="code-badge" [style.color]="group.color">{{ acc.code }}</span>
                       </td>
@@ -167,6 +173,7 @@
       <table class="acc-table">
         <thead>
           <tr>
+            <th class="col-check"><input type="checkbox" [checked]="sel.allSelected(filteredAccounts)" [indeterminate]="sel.someSelected(filteredAccounts)" (change)="sel.toggleAll(filteredAccounts)" title="Tout sélectionner" /></th>
             <th>Code</th>
             <th>Intitulé</th>
             <th>Type de compte</th>
@@ -179,6 +186,7 @@
         <tbody>
           @for (acc of filteredAccounts; track acc.id) {
             <tr [class.row-deprecated]="acc.deprecated">
+              <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(acc)" (change)="sel.toggle(acc)" /></td>
               <td><span class="code-badge">{{ acc.code }}</span></td>
               <td class="acc-name">{{ acc.name }}</td>
               <td class="muted acc-type">{{ getAccountTypeLabel(acc.accountType) }}</td>

@@ -5,7 +5,8 @@ import { AccountingService } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountAccount } from '../../../../core/models/account.model';
 import { ImportResult } from '../../../../core/models/import-result.model';
-import { parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
+import { accountImportType } from '../../../../core/utils/account-import-type';
 
 interface ClassGroup {
   cls: string;
@@ -45,6 +46,8 @@ export class ChartOfAccountsComponent implements OnInit {
   previewLoading = false;
   importResult: ImportResult | null = null;
   readonly PREVIEW_MAX = 200;
+  /** Comptes cochés pour l'export Excel. */
+  sel = new RowSelection<AccountAccount>();
 
   readonly CLASS_META: Record<string, { label: string; color: string }> = {
     '1': { label: 'Ressources durables',          color: '#7c3aed' },
@@ -242,6 +245,16 @@ export class ChartOfAccountsComponent implements OnInit {
     this.previewLoading = false;
   }
 
+  /**
+   * Exporte les comptes cochés (ou la liste filtrée) dans un format relu par l'import : la clé
+   * est le code du compte, réimporter le fichier modifié met donc à jour les intitulés/types.
+   */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.accounts, this.filteredAccounts)
+      .map(a => [a.code, a.name, accountImportType(a.accountType, a.internalType), yesNo(a.reconcile)]);
+    exportRowsToExcel(['Code', 'Intitulé', 'Type', 'Autoriser le lettrage'], rows, 'export_plan_comptable');
+  }
+
   confirmImport(): void {
     if (!this.pendingFile) return;
     this.showPreview = false;
@@ -254,6 +267,7 @@ export class ChartOfAccountsComponent implements OnInit {
         this.pendingFile  = null;
         this.importResult = res;
         this.showSuccess(`Import terminé — ${res.created} créés, ${res.updated} mis à jour, ${res.skipped ?? 0} ignorés`);
+        this.sel.clear();
         if (res.errors?.length > 0) this.showError(res.errors.slice(0, 3).join(' | '));
         this.loadAccounts();
       },

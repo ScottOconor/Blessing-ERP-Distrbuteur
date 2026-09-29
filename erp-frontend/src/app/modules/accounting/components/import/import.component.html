@@ -91,6 +91,54 @@
       }
     </div>
 
+    <!-- Export des données existantes (pour les modifier puis les réimporter) -->
+    @if (activeTabDef.exportDef; as def) {
+      <div class="export-block">
+        <div class="export-head">
+          <span class="material-icons">file_download</span>
+          <div>
+            <strong>Modifier des données existantes</strong>
+            <p>Cochez les lignes, exportez-les, modifiez le fichier puis réimportez-le ci-dessus : {{ def.keyHint }}, rien n'est dupliqué.</p>
+          </div>
+          @if (!exportLoaded) {
+            <button class="btn-template" (click)="loadExportItems()" [disabled]="exportLoading">
+              <span class="material-icons">list</span> {{ exportLoading ? 'Chargement…' : 'Afficher les données' }}
+            </button>
+          } @else {
+            <button class="btn-template" (click)="exportExcel()" [disabled]="filteredExportItems.length === 0">
+              <span class="material-icons">file_download</span>
+              Exporter {{ exportSel.count ? '(' + exportSel.count + ')' : 'tout' }}
+            </button>
+          }
+        </div>
+        @if (exportLoaded) {
+          <input class="export-search" placeholder="Filtrer par code ou nom…" [(ngModel)]="exportSearch" />
+          <div class="export-list">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" [checked]="exportSel.allSelected(filteredExportItems)" [indeterminate]="exportSel.someSelected(filteredExportItems)" (change)="exportSel.toggleAll(filteredExportItems)" title="Tout sélectionner" /></th>
+                  <th>Code / Réf.</th>
+                  <th>Nom</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of filteredExportItems; track $index) {
+                  <tr (click)="exportSel.toggle(item)">
+                    <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="exportSel.isSelected(item)" (change)="exportSel.toggle(item)" /></td>
+                    <td class="mono">{{ def.code(item) || '—' }}</td>
+                    <td>{{ def.label(item) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="3" class="empty">Aucune donnée</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
     <!-- Erreur -->
     @if (errorMsg) {
       <div class="alert alert-error">

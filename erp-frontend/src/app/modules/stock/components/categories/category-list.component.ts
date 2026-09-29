@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StockService, ProductCategory } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const CAT_HEADERS = ['Nom*', 'Code'];
 const CAT_SAMPLE  = ['Matériaux de construction', 'MAT'];
@@ -32,6 +32,8 @@ export class CategoryListComponent implements OnInit {
   showImportModal = false;
   importRows: Record<string, any>[] = [];
   importLoading = false;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<ProductCategory>();
 
   canCreate = false;
   canEdit   = false;
@@ -105,6 +107,12 @@ export class CategoryListComponent implements OnInit {
     downloadExcelTemplate(CAT_HEADERS, CAT_SAMPLE, 'modele_categories.xlsx');
   }
 
+  /** Exporte les lignes cochées (ou toutes) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.categories, this.categories).map(x => [x.id, x.name, x.code]);
+    exportRowsToExcel([ID_HEADER, ...CAT_HEADERS], rows, 'export_categories');
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -132,21 +140,31 @@ export class CategoryListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     this.importLoading = true;
     const cid = this.authService.getCompanyId();
-    let done = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0;
     for (const row of this.importRows) {
       const dto: ProductCategory = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
         code: String(row['Code'] || '').trim() || undefined,
         companyId: cid
       };
+      // Existant : ID puis nom → mise à jour (permet de renommer depuis un export).
+      const id = rowId(row);
+      const existing = (id ? this.categories.find(x => x.id === id) : undefined)
+        ?? this.categories.find(x => sameText(x.name, dto.name));
       try {
-        await this.stockService.createCategory(dto).toPromise();
-        done++;
+        if (existing?.id) {
+          await this.stockService.updateCategory(existing.id, { ...existing, ...dto }).toPromise();
+          updated++;
+        } else {
+          await this.stockService.createCategory(dto).toPromise();
+          done++;
+        }
       } catch { errors++; }
     }
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.load();
-    this.showSuccess(`Import terminé : ${done} créé(e)(s), ${errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${done} créé(e)(s), ${updated} mise(s) à jour, ${errors} erreur(s)`);
   }
 }

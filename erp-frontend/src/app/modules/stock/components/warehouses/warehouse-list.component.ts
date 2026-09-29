@@ -5,7 +5,7 @@ import { StockService, Warehouse, StockLocation } from '../../services/stock.ser
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AccountJournal } from '../../../../core/models/account.model';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const WH_HEADERS = ['Nom*', 'Code*'];
 const WH_SAMPLE  = ['Entrepôt Central', 'EC'];
@@ -39,6 +39,8 @@ export class WarehouseListComponent implements OnInit {
   showImportModal = false;
   importRows: Record<string, any>[] = [];
   importLoading = false;
+  /** Entrepôts cochés pour l'export Excel. */
+  sel = new RowSelection<Warehouse>();
 
   private companyId!: number;
   canCreate = false;
@@ -148,6 +150,12 @@ export class WarehouseListComponent implements OnInit {
     downloadExcelTemplate(WH_HEADERS, WH_SAMPLE, 'modele_entrepots.xlsx');
   }
 
+  /** Exporte les entrepôts cochés (ou tous) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.warehouses, this.warehouses).map(w => [w.id, w.name, w.code]);
+    exportRowsToExcel([ID_HEADER, ...WH_HEADERS], rows, 'export_entrepots');
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -174,7 +182,7 @@ export class WarehouseListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let done = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0;
     for (const row of this.importRows) {
       const dto = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
@@ -182,14 +190,24 @@ export class WarehouseListComponent implements OnInit {
         companyId: this.companyId,
         active: true
       } as Warehouse;
+      // Existant : ID puis code → mise à jour (le reste de la config de l'entrepôt est conservé).
+      const id = rowId(row);
+      const existing = (id ? this.warehouses.find(w => w.id === id) : undefined)
+        ?? this.warehouses.find(w => sameText(w.code, dto.code));
       try {
-        await this.stockService.createWarehouse(dto).toPromise();
-        done++;
+        if (existing?.id) {
+          await this.stockService.updateWarehouse(existing.id, { ...existing, name: dto.name, code: dto.code || existing.code }).toPromise();
+          updated++;
+        } else {
+          await this.stockService.createWarehouse(dto).toPromise();
+          done++;
+        }
       } catch { errors++; }
     }
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.load();
-    this.showSuccessMsg(`Import terminé : ${done} créé(s), ${errors} erreur(s)`);
+    this.showSuccessMsg(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`);
   }
 }

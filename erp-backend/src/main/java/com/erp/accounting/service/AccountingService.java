@@ -7,6 +7,7 @@ import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.audit.service.AuditService;
 import com.erp.common.service.TenantGuard;
+import com.erp.common.service.UsageGuard;
 import com.erp.sync.service.SyncEventPublisher;
 import com.erp.sync.entity.SyncEventType;
 import jakarta.persistence.EntityNotFoundException;
@@ -52,6 +53,7 @@ public class AccountingService {
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
+    private final UsageGuard usageGuard;
     private final jakarta.persistence.EntityManager em;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
@@ -117,6 +119,7 @@ public class AccountingService {
         AccountAccount account = accountRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Account not found: " + id));
         tenantGuard.check(account.getCompany() != null ? account.getCompany().getId() : null);
+        usageGuard.assertAccountUnused(id);
         account.setDeprecated(true);
         accountRepo.save(account);
         auditService.log("ACCOUNT_ACCOUNT", id, account.getName(), "DEPRECATED", "Compte désactivé",
@@ -202,6 +205,7 @@ public class AccountingService {
         AccountJournal journal = journalRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Journal not found: " + id));
         tenantGuard.check(journal.getCompany() != null ? journal.getCompany().getId() : null);
+        usageGuard.assertJournalUnused(id);
         Long companyId = journal.getCompany() != null ? journal.getCompany().getId() : null;
         String journalName = journal.getName();
         try {
@@ -918,7 +922,13 @@ public class AccountingService {
                 .orElse(Partner.builder().company(company).build());
         partner.setRef(ref);
         partner.setName(dto.getName().trim());
-        partner.setType(dto.getType());
+        // Tiers déjà existant sous l'autre rôle (client ↔ fournisseur) : il devient "both" au lieu
+        // de perdre son rôle précédent.
+        String oldType = partner.getType();
+        boolean otherRole = oldType != null && dto.getType() != null && !oldType.equals(dto.getType())
+                && java.util.Set.of("customer", "supplier").contains(oldType)
+                && java.util.Set.of("customer", "supplier").contains(dto.getType());
+        partner.setType(otherRole ? "both" : ("both".equals(oldType) ? oldType : dto.getType()));
         partner.setPhone(dto.getPhone());
         partner.setEmail(dto.getEmail());
         partner.setAddress(dto.getAddress());

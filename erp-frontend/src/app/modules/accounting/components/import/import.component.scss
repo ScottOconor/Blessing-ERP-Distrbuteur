@@ -302,3 +302,30 @@
     li { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px; }
   }
 }
+
+// ── Export des données existantes ───────────────────────────────────────────
+.export-block {
+  margin-top: 18px; border: 1px solid var(--border, #e2e8ef); border-radius: 10px; padding: 14px 16px;
+  background: var(--surface-2, #f9fafb);
+}
+.export-head {
+  display: flex; align-items: flex-start; gap: 12px;
+  > .material-icons { color: #017E84; margin-top: 2px; }
+  > div { flex: 1; min-width: 0; }
+  strong { font-size: 14px; }
+  p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-muted, #6c757d); }
+}
+.export-search {
+  width: 100%; margin: 12px 0 8px; padding: 7px 10px; border: 1px solid var(--border, #d0d7de);
+  border-radius: 6px; font-size: 13px; background: var(--surface, #fff); color: inherit;
+}
+.export-list {
+  max-height: 320px; overflow: auto; border: 1px solid var(--border, #e2e8ef); border-radius: 6px; background: var(--surface, #fff);
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { position: sticky; top: 0; background: var(--surface-2, #f4f6f8); text-align: left; padding: 7px 8px; font-weight: 600; z-index: 1; }
+  td { padding: 6px 8px; border-top: 1px solid var(--border, #eef1f4); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--hover, rgba(1, 126, 132, 0.06)); }
+  .mono { font-family: monospace; }
+  .empty { text-align: center; color: var(--text-muted, #6c757d); padding: 14px; }
+}

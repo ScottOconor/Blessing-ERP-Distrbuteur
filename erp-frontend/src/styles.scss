@@ -1736,3 +1736,8 @@ tr.detail-row {
   .std-price-badge, .rabais-badge { background: var(--bg-elevated); color: var(--text-secondary); }
   .di-input.di-filled { background: var(--success-bg); color: var(--success); }
 }
+
+// Colonne de sélection (export Excel des lignes cochées)
+th.col-check, td.col-check { width: 34px; text-align: center; padding-left: 8px; padding-right: 4px; }
+th.col-check input, td.col-check input { cursor: pointer; width: 15px; height: 15px; vertical-align: middle; }
+.import-hint { margin: 0 20px 10px; font-size: 12.5px; color: var(--text-muted, #6c757d); }

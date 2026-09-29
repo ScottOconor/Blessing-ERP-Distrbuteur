@@ -15,6 +15,7 @@ import com.erp.caisse.repository.*;
 import com.erp.audit.service.AuditService;
 import com.erp.common.entity.Company;
 import com.erp.common.service.TenantGuard;
+import com.erp.common.service.UsageGuard;
 import com.erp.sales.repository.SellerRepository;
 import com.erp.sync.entity.SyncEventType;
 import com.erp.sync.service.SyncEventPublisher;
@@ -48,6 +49,7 @@ public class CaisseService {
     private final SyncEventPublisher syncEventPublisher;
     private final AuditService auditService;
     private final TenantGuard tenantGuard;
+    private final UsageGuard usageGuard;
     private final UserRepository userRepository;
     private final SellerRepository sellerRepo;
 
@@ -130,6 +132,7 @@ public class CaisseService {
         Caisse caisse = caisseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + id));
         tenantGuard.check(caisse.getCompanyId());
+        usageGuard.assertCaisseUnused(id);
         caisse.setActive(false);
         caisseRepo.save(caisse);
     }

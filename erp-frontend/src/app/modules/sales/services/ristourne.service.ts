@@ -160,7 +160,7 @@ export class RistourneService {
   }
 
   importBatch(
-    rows: Array<{ clientName: string; categoryName: string; typeRistourne: string; montantFixe: number; montantEnlevementHT?: number }>,
+    rows: Array<{ clientName: string; categoryName: string; typeRistourne: string; montantFixe: number; montantEnlevementHT?: number; active?: boolean }>,
     companyId: number
   ): Observable<Ristourne[]> {
     return this.http.post<Ristourne[]>(

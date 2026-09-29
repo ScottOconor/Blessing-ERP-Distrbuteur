@@ -9,6 +9,10 @@
         <button class="btn-outline" (click)="downloadTemplate()">
           <span class="material-icons">download</span> Modèle Excel
         </button>
+        <button class="btn-outline" (click)="exportExcel()" [disabled]="categories.length === 0"
+                title="Exporter les lignes cochées (ou toute la liste affichée), les modifier puis les réimporter">
+          <span class="material-icons">file_download</span> Exporter {{ sel.count ? '(' + sel.count + ')' : 'tout' }}
+        </button>
         <button class="btn-import" (click)="triggerImport()" [disabled]="importLoading">
           <span class="material-icons">upload_file</span> {{ importLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
@@ -30,6 +34,7 @@
       <table class="cfg-table">
         <thead>
           <tr>
+            <th class="col-check"><input type="checkbox" [checked]="sel.allSelected(categories)" [indeterminate]="sel.someSelected(categories)" (change)="sel.toggleAll(categories)" title="Tout sélectionner" /></th>
             <th>Code</th>
             <th>Nom</th>
             <th></th>
@@ -38,6 +43,7 @@
         <tbody>
           @for (c of categories; track c.id) {
             <tr>
+              <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(c)" (change)="sel.toggle(c)" /></td>
               <td><span class="code-badge">{{ c.code || '—' }}</span></td>
               <td class="fw-500">{{ c.name }}</td>
               <td style="display:flex;gap:4px">
@@ -51,7 +57,7 @@
             </tr>
           }
           @if (categories.length === 0) {
-            <tr><td colspan="3" class="empty-state">Aucune catégorie — créez la première</td></tr>
+            <tr><td colspan="4" class="empty-state">Aucune catégorie — créez la première</td></tr>
           }
         </tbody>
       </table>
@@ -74,6 +80,7 @@
       <h3>Aperçu import catégories ({{ importRows.length }} ligne(s))</h3>
       <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
     </div>
+    <p class="import-hint">Une ligne qui correspond à une catégorie existante (ID ou nom) la met à jour, les autres sont créées.</p>
     <div style="overflow-x:auto;max-height:400px">
       <table class="cfg-table">
         <thead><tr><th>#</th><th>Nom</th><th>Code</th></tr></thead>

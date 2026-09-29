@@ -127,7 +127,8 @@ public class ImportService {
                     acc.setName(name);
                     acc.setAccountType(accountType);
                     acc.setInternalType(internalType);
-                    acc.setDeprecated(deprecated);
+                    // Statut "obsolète" d'un compte existant inchangé : réimporter un export ne
+                    // doit pas réactiver un compte désactivé volontairement dans l'appli.
                     acc.setReconcile(reconcile);
                     accountRepo.save(acc);
                     result.setUpdated(result.getUpdated() + 1);
@@ -253,6 +254,7 @@ public class ImportService {
             Integer colStreet  = findCol(headers, "street", "Rue", "Adresse");
             Integer colIsComp  = findCol(headers, "is_company", "Entreprise", "Est une société");
             Integer colType    = findCol(headers, "company_type", "Type");
+            Integer colId      = findCol(headers, "id", "ID");
 
             if (colName == null) {
                 result.addError("Colonne obligatoire manquante: 'name'");
@@ -275,25 +277,34 @@ public class ImportService {
                 String partnerType  = resolvePartnerType(isCompanyStr, typeStr);
 
                 ref = ref.trim();
-                Optional<Partner> existing = (ref.isEmpty()
-                        ? Optional.<Partner>empty()
-                        : partnerRepo.findFirstByRefIgnoreCaseAndCompanyId(ref, companyId))
+                // Priorité à la colonne "id" (fichier issu d'un export de l'appli) : permet de
+                // renommer un tiers ou changer sa référence sans créer de doublon.
+                final String fRef = ref;
+                Optional<Partner> existing = findById(row, colId, partnerRepo,
+                                p -> p.getCompany() != null && companyId.equals(p.getCompany().getId()))
+                        .or(() -> fRef.isEmpty()
+                                ? Optional.<Partner>empty()
+                                : partnerRepo.findFirstByRefIgnoreCaseAndCompanyId(fRef, companyId))
                         .or(() -> partnerRepo.findFirstByNameIgnoreCaseAndCompanyId(name.trim(), companyId));
 
                 if (existing.isPresent()) {
                     Partner p = existing.get();
                     p.setName(name);
+                    if (!ref.isEmpty())     p.setRef(ref);
                     if (!phone.isEmpty())   p.setPhone(phone);
                     if (!email.isEmpty())   p.setEmail(email);
                     if (!address.isEmpty()) p.setAddress(address);
-                    p.setType(partnerType);
+                    // Ne pas écraser client/fournisseur par "company"/"contact" (notion Odoo) :
+                    // le type d'un tiers existant ne change que si le fichier le précise explicitement.
+                    String explicitType = explicitPartnerType(typeStr);
+                    if (explicitType != null) p.setType(explicitType);
                     partnerRepo.save(p);
                     result.setUpdated(result.getUpdated() + 1);
                 } else {
                     Partner p = Partner.builder()
                             .name(name)
                             .ref(ref.isEmpty() ? null : ref)
-                            .type(partnerType)
+                            .type(explicitPartnerType(typeStr) != null ? explicitPartnerType(typeStr) : partnerType)
                             .phone(phone.isEmpty() ? null : phone)
                             .email(email.isEmpty() ? null : email)
                             .address(address.isEmpty() ? null : address)
@@ -391,6 +402,8 @@ public class ImportService {
             Integer colDefaultAcct = findCol(headers, "default_account_id", "default_account_id/code",
                                              "Compte par défaut", "Compte de contrepartie");
 
+            Integer colId          = findCol(headers, "id", "ID");
+
             if (colName == null || colCode == null) {
                 result.addError("Colonnes obligatoires manquantes: 'name' et 'code'");
                 return result;
@@ -400,10 +413,10 @@ public class ImportService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                String code = getString(row, colCode);
+                String code = getString(row, colCode).trim();
                 if (code.isEmpty()) continue;
 
-                String name = getString(row, colName);
+                String name = getString(row, colName).trim();
                 if (name.isEmpty()) {
                     result.addError("Ligne " + (i + 1) + " ignorée : nom manquant pour le code " + code);
                     result.setSkipped(result.getSkipped() + 1);
@@ -424,9 +437,12 @@ public class ImportService {
                     }
                 }
 
-                Optional<AccountJournal> existing = journalRepo.findFirstByCodeAndCompanyId(code, companyId);
+                Optional<AccountJournal> existing = findById(row, colId, journalRepo,
+                                j -> j.getCompany() != null && companyId.equals(j.getCompany().getId()))
+                        .or(() -> journalRepo.findFirstByCodeAndCompanyId(code, companyId));
                 if (existing.isPresent()) {
                     AccountJournal j = existing.get();
+                    j.setCode(code);
                     j.setName(name);
                     j.setType(type);
                     if (defaultAcct != null) {
@@ -470,6 +486,7 @@ public class ImportService {
             Integer colName   = findCol(headers, "name", "Nom", "Nom de l'entrepôt", "Warehouse Name");
             Integer colCode   = findCol(headers, "code", "Code", "Code abrégé", "Short Name");
             Integer colActive = findCol(headers, "active", "Actif", "Active");
+            Integer colId     = findCol(headers, "id", "ID");
 
             if (colName == null || colCode == null) {
                 result.addError("Colonnes obligatoires manquantes : 'name' et 'code'. Colonnes détectées : " + headers.keySet());
@@ -488,11 +505,15 @@ public class ImportService {
                 if (code.length() > 10) code = code.substring(0, 10);
 
                 String activeRaw = colActive != null ? getString(row, colActive) : "true";
-                boolean active = activeRaw.isEmpty() || "true".equalsIgnoreCase(activeRaw) || "1".equals(activeRaw);
+                boolean active = activeRaw.isEmpty() || parseBoolean(activeRaw.trim());
 
-                Optional<Warehouse> existing = warehouseRepo.findFirstByCodeAndCompanyId(code, companyId);
+                final String fCode = code;
+                Optional<Warehouse> existing = findById(row, colId, warehouseRepo,
+                                w -> companyId.equals(w.getCompanyId()))
+                        .or(() -> warehouseRepo.findFirstByCodeAndCompanyId(fCode, companyId));
                 if (existing.isPresent()) {
                     Warehouse w = existing.get();
+                    w.setCode(code);
                     w.setName(name);
                     w.setActive(active);
                     warehouseRepo.save(w);
@@ -588,9 +609,27 @@ public class ImportService {
         return "";
     }
 
+    /**
+     * Lit la colonne "id" (présente dans les fichiers exportés depuis l'appli) et charge
+     * l'enregistrement correspondant, uniquement s'il appartient à la société importée.
+     */
+    private <T> Optional<T> findById(Row row, Integer colId,
+                                     org.springframework.data.jpa.repository.JpaRepository<T, Long> repo,
+                                     java.util.function.Predicate<T> sameCompany) {
+        if (colId == null) return Optional.empty();
+        String raw = getString(row, colId).trim();
+        if (raw.isEmpty()) return Optional.empty();
+        try {
+            return repo.findById(Long.parseLong(raw)).filter(sameCompany);
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
     private boolean parseBoolean(String value) {
         return "true".equalsIgnoreCase(value) || "1".equals(value)
-                || "oui".equalsIgnoreCase(value) || "yes".equalsIgnoreCase(value);
+                || "oui".equalsIgnoreCase(value) || "yes".equalsIgnoreCase(value)
+                || "vrai".equalsIgnoreCase(value) || "x".equalsIgnoreCase(value);
     }
 
     /**
@@ -677,6 +716,17 @@ public class ImportService {
         if ("cash".equals(v) || "caisse".equals(v) || "espèces".equals(v) || "especes".equals(v)) return "cash";
         if ("bank".equals(v) || "banque".equals(v) || "banques".equals(v)) return "bank";
         return "general";
+    }
+
+    /** Type client/fournisseur explicitement indiqué dans la colonne Type, sinon null. */
+    private String explicitPartnerType(String typeStr) {
+        String v = typeStr == null ? "" : typeStr.trim().toLowerCase(Locale.ROOT);
+        return switch (v) {
+            case "customer", "client" -> "customer";
+            case "supplier", "fournisseur" -> "supplier";
+            case "both", "client et fournisseur", "les deux" -> "both";
+            default -> null;
+        };
     }
 
     private String resolvePartnerType(String isCompanyStr, String typeStr) {

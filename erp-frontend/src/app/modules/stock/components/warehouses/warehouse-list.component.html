@@ -9,6 +9,10 @@
         <button class="btn-secondary" (click)="downloadTemplate()" title="Télécharger le modèle Excel">
           <span class="material-icons">download</span> Modèle
         </button>
+        <button class="btn-secondary" (click)="exportExcel()"
+                title="Exporter les entrepôts cochés (ou tous), les modifier puis les réimporter">
+          <span class="material-icons">file_download</span> Exporter {{ sel.count ? '(' + sel.count + ')' : 'tout' }}
+        </button>
         <button class="btn-secondary" (click)="triggerImport()" [disabled]="importLoading" title="Importer depuis Excel">
           <span class="material-icons">upload_file</span> Importer
         </button>
@@ -36,6 +40,7 @@
       @for (wh of warehouses; track wh.id) {
         <div class="wh-card" [class.expanded]="selectedWarehouseId === wh.id">
           <div class="wh-header" (click)="selectWarehouse(wh.id!)">
+            <input type="checkbox" class="wh-check" [checked]="sel.isSelected(wh)" (click)="$event.stopPropagation()" (change)="sel.toggle(wh)" title="Sélectionner pour l'export" />
             <div class="wh-icon"><span class="material-icons">warehouse</span></div>
             <div class="wh-info">
               <div class="wh-name">
@@ -122,6 +127,7 @@
         <h2>Aperçu import entrepôts ({{ importRows.length }})</h2>
         <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
       </div>
+      <p class="import-hint">Une ligne qui correspond à un entrepôt existant (ID ou code) le met à jour, les autres sont créées.</p>
       <div style="overflow-x:auto;max-height:400px">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:#f4f6f8">

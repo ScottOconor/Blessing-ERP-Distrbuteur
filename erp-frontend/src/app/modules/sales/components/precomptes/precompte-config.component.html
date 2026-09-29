@@ -17,6 +17,10 @@
         <button class="btn-outline" (click)="downloadPcTemplate()">
           <span class="material-icons">download</span> Modèle Excel
         </button>
+        <button class="btn-outline" (click)="exportPcExcel()" [disabled]="precomptes.length === 0"
+                title="Exporter les précomptes cochés (ou tous), les modifier puis les réimporter">
+          <span class="material-icons">file_download</span> Exporter {{ selPc.count ? '(' + selPc.count + ')' : 'tout' }}
+        </button>
         <button class="btn-import" (click)="triggerPcImport()" [disabled]="importPcLoading">
           <span class="material-icons">upload_file</span> {{ importPcLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
@@ -26,6 +30,10 @@
           <span class="material-icons">download</span> Modèle Excel
         </button>
 
+        <button class="btn-outline" (click)="exportEnlExcel()" [disabled]="enlevements.length === 0"
+                title="Exporter les enlèvements cochés (ou tous), les modifier puis les réimporter">
+          <span class="material-icons">file_download</span> Exporter {{ selEnl.count ? '(' + selEnl.count + ')' : 'tout' }}
+        </button>
         <button class="btn-import" (click)="triggerEnlImport()" [disabled]="importEnlLoading">
           <span class="material-icons">upload_file</span> {{ importEnlLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
@@ -58,6 +66,7 @@
         <table class="data-table">
           <thead>
             <tr>
+              <th class="col-check"><input type="checkbox" [checked]="selPc.allSelected(precomptes)" [indeterminate]="selPc.someSelected(precomptes)" (change)="selPc.toggleAll(precomptes)" title="Tout sélectionner" /></th>
               <th>Partenaire</th>
               <th>Type</th>
               <th class="text-right">Taux (%)</th>
@@ -67,6 +76,7 @@
           <tbody>
             @for (p of precomptes; track p.id) {
               <tr>
+                <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="selPc.isSelected(p)" (change)="selPc.toggle(p)" /></td>
                 <td class="font-bold">{{ p.partnerName }}</td>
                 <td><span class="badge" [class.badge-sale]="p.typePrecompte === 'sale'" [class.badge-purchase]="p.typePrecompte === 'purchase'">{{ typeLabel(p.typePrecompte) }}</span></td>
                 <td class="text-right font-mono font-bold">{{ p.tauxPrecompte }}%</td>
@@ -97,6 +107,7 @@
         <table class="data-table">
           <thead>
             <tr>
+              <th class="col-check"><input type="checkbox" [checked]="selEnl.allSelected(enlevements)" [indeterminate]="selEnl.someSelected(enlevements)" (change)="selEnl.toggleAll(enlevements)" title="Tout sélectionner" /></th>
               <th>Catégorie</th>
               <th class="text-right">Montant HT / unité</th>
               <th class="text-right">Montant TTC / unité</th>
@@ -108,6 +119,7 @@
           <tbody>
             @for (e of enlevements; track e.id) {
               <tr>
+                <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="selEnl.isSelected(e)" (change)="selEnl.toggle(e)" /></td>
                 <td class="font-bold">{{ e.categoryName }}</td>
                 <td class="text-right font-mono">{{ e.montantFixe | number:'1.0-0' }} FCFA</td>
                 <td class="text-right font-mono">{{ ttc(e.montantFixe) | number:'1.0-0' }} FCFA</td>
@@ -159,6 +171,7 @@
         </div>
       </div>
 
+      <p class="import-hint">Une ligne dont le partenaire a déjà un précompte du même type le met à jour, les autres sont créées.</p>
       <div style="overflow-x:auto;max-height:50vh;padding:0 16px 16px 16px">
         <table class="cfg-table">
           <thead>
@@ -341,6 +354,7 @@
         </h2>
         <button class="btn-close" (click)="closeImportEnlModal()"><span class="material-icons">close</span></button>
       </div>
+      <p class="import-hint">Une ligne dont la catégorie a déjà un frais d'enlèvement le met à jour (les tarifs spécifiques par client sont conservés), les autres sont créées.</p>
       <div style="overflow-x:auto;max-height:50vh">
         <table class="cfg-table">
           <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant HT</th><th class="text-right">Coût importé (modèle)</th><th>Résolu</th></tr></thead>

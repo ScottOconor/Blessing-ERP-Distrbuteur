@@ -12,6 +12,10 @@
         <button class="btn-outline" (click)="downloadTemplate()">
           <span class="material-icons">download</span> Modèle Excel
         </button>
+        <button class="btn-outline" (click)="exportExcel()" [disabled]="filtered.length === 0"
+                title="Exporter les lignes cochées (ou toute la liste affichée), les modifier puis les réimporter">
+          <span class="material-icons">file_download</span> Exporter {{ sel.count ? '(' + sel.count + ')' : 'tout' }}
+        </button>
         <button class="btn-import" (click)="triggerImport()" [disabled]="importLoading">
           <span class="material-icons">upload_file</span> {{ importLoading ? 'Lecture...' : 'Importer Excel' }}
         </button>
@@ -80,6 +84,7 @@
       <table class="data-table">
         <thead>
           <tr>
+            <th class="col-check"><input type="checkbox" [checked]="sel.allSelected(filtered)" [indeterminate]="sel.someSelected(filtered)" (change)="sel.toggleAll(filtered)" title="Tout sélectionner" /></th>
             <th>Référence</th>
             <th>Nom</th>
             <th>Catégorie</th>
@@ -99,7 +104,7 @@
           @if (groupBy) {
             @for (row of groupedRows; track row.key) {
               <tr class="group-header-row" (click)="toggleGroup(row.key)">
-                <td class="group-header-cell" [attr.colspan]="serviceMode ? 8 : 11">
+                <td class="group-header-cell" [attr.colspan]="serviceMode ? 9 : 12">
                   <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
                   <span class="group-label">{{ row.label }}</span>
                   <span class="badge">{{ row.count }} article(s)</span>
@@ -108,6 +113,7 @@
               @if (isExpanded(row.key)) {
                 @for (p of getGroupItems(row.key); track p.id) {
                   <tr class="detail-row">
+                    <td class="col-check"><input type="checkbox" [checked]="sel.isSelected(p)" (change)="sel.toggle(p)" /></td>
                     <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
                     <td class="font-bold">{{ p.name }}</td>
                     <td class="text-muted">{{ p.categoryName || '—' }}</td>
@@ -150,6 +156,7 @@
           } @else {
             @for (p of filtered; track p.id) {
               <tr>
+                <td class="col-check"><input type="checkbox" [checked]="sel.isSelected(p)" (change)="sel.toggle(p)" /></td>
                 <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
                 <td class="font-bold">{{ p.name }}</td>
                 <td class="text-muted">{{ p.categoryName || '—' }}</td>
@@ -209,13 +216,15 @@
         <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span> Aperçu import articles ({{ importRows.length }} ligne(s))</h2>
         <button class="btn-close" (click)="closeImportModal()"><span class="material-icons">close</span></button>
       </div>
+      <p class="import-hint">Les lignes qui correspondent à un article existant (ID, référence ou nom) le mettent à jour, les autres sont créées. La quantité en stock ne s'applique qu'aux nouveaux articles.</p>
       <div style="overflow-x:auto;max-height:50vh">
         <table class="data-table">
-          <thead><tr><th>#</th><th>Nom</th><th>Référence interne</th><th>Catégorie</th><th class="text-right">Coût</th><th class="text-right">Prix vente</th><th>Unité</th></tr></thead>
+          <thead><tr><th>#</th><th>ID</th><th>Nom</th><th>Référence interne</th><th>Catégorie</th><th class="text-right">Coût</th><th class="text-right">Prix vente</th><th>Unité</th></tr></thead>
           <tbody>
             @for (row of importRows; track $index; let i = $index) {
               <tr>
                 <td class="text-muted">{{ i+1 }}</td>
+                <td class="text-muted">{{ row['ID'] || 'nouveau' }}</td>
                 <td class="font-bold">{{ row['Nom'] || row['Nom*'] }}</td>
                 <td class="font-mono">{{ row['Référence interne'] || row['Code (Référence)'] || '—' }}</td>
                 <td>{{ row["Catégorie d'article"] || row['Catégorie'] || '—' }}</td>

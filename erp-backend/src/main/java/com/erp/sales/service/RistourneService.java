@@ -136,10 +136,12 @@ public class RistourneService {
             entity.setPartner(partner);
             entity.setCategory(cat);
             entity.setMontantFixe(row.getMontantFixe() != null ? row.getMontantFixe() : BigDecimal.ZERO);
-            entity.setMontantEnlevementHT(row.getMontantEnlevementHT() != null ? row.getMontantEnlevementHT() : BigDecimal.ZERO);
+            // Colonne enlèvement absente du fichier (ancien modèle) : on garde la valeur existante.
+            if (row.getMontantEnlevementHT() != null) entity.setMontantEnlevementHT(row.getMontantEnlevementHT());
+            else if (entity.getMontantEnlevementHT() == null) entity.setMontantEnlevementHT(BigDecimal.ZERO);
             entity.setTypeRistourne(row.getTypeRistourne());
             entity.setCompanyId(companyId);
-            entity.setActive(true);
+            entity.setActive(row.getActive() == null || row.getActive());
             saved.add(toDTO(ristourneRepo.save(entity)));
         }
         return saved;

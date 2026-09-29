@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StockService, UnitOfMeasure } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
 const UOM_HEADERS = ['Nom*', 'Code'];
 const UOM_SAMPLE  = ['Kilogramme', 'kg'];
@@ -32,6 +32,8 @@ export class UnitOfMeasureListComponent implements OnInit {
   showImportModal = false;
   importRows: Record<string, any>[] = [];
   importLoading = false;
+  /** Lignes cochées pour l'export Excel. */
+  sel = new RowSelection<UnitOfMeasure>();
 
   canCreate = false;
   canEdit   = false;
@@ -104,6 +106,12 @@ export class UnitOfMeasureListComponent implements OnInit {
     downloadExcelTemplate(UOM_HEADERS, UOM_SAMPLE, 'modele_unites_de_mesure.xlsx');
   }
 
+  /** Exporte les lignes cochées (ou toutes) au format du modèle d'import. */
+  exportExcel(): void {
+    const rows = this.sel.rowsToExport(this.uoms, this.uoms).map(x => [x.id, x.name, x.code]);
+    exportRowsToExcel([ID_HEADER, ...UOM_HEADERS], rows, 'export_unites_de_mesure');
+  }
+
   triggerImport(): void {
     this.importInput.nativeElement.value = '';
     this.importInput.nativeElement.click();
@@ -131,21 +139,31 @@ export class UnitOfMeasureListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     this.importLoading = true;
     const cid = this.authService.getCompanyId();
-    let done = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0;
     for (const row of this.importRows) {
       const dto: UnitOfMeasure = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
         code: String(row['Code'] || '').trim() || undefined,
         companyId: cid
       };
+      // Existant : ID puis nom → mise à jour (permet de renommer depuis un export).
+      const id = rowId(row);
+      const existing = (id ? this.uoms.find(x => x.id === id) : undefined)
+        ?? this.uoms.find(x => sameText(x.name, dto.name));
       try {
-        await this.stockService.createUnitOfMeasure(dto).toPromise();
-        done++;
+        if (existing?.id) {
+          await this.stockService.updateUnitOfMeasure(existing.id, { ...existing, ...dto }).toPromise();
+          updated++;
+        } else {
+          await this.stockService.createUnitOfMeasure(dto).toPromise();
+          done++;
+        }
       } catch { errors++; }
     }
     this.importLoading = false;
     this.closeImportModal();
+    this.sel.clear();
     this.load();
-    this.showSuccess(`Import terminé : ${done} créée(s), ${errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${done} créée(s), ${updated} mise(s) à jour, ${errors} erreur(s)`);
   }
 }
