@@ -69,7 +69,7 @@ public class PrecompteController {
             }
 
             Object[][] examples = {
-                    {"BRASSERIES DU CAMEROUN", "sale",     "2"},
+                    {"BOISSONS DU CAMEROUN",   "sale",     "2"},
                     {"GUINNESS CAMEROUN",      "purchase", "5"},
                     {"SABC",                   "sale",     "2.5"},
             };

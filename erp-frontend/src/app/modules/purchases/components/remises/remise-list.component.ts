@@ -11,7 +11,7 @@ import { environment } from '../../../../../environments/environment';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 const RMS_HEADERS = ['Fournisseur', "Catégorie d'article", 'Type (brasserie/guinness)', 'Montant de la remise', 'Actif'];
-const RMS_SAMPLE  = ['Brasseries du Cameroun', 'Bières', 'brasserie', '500', 'Oui'];
+const RMS_SAMPLE  = ['Boissons du Cameroun', 'Bières', 'brasserie', '500', 'Oui'];
 
 @Component({
   selector: 'app-remise-list',
