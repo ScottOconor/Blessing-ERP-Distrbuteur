@@ -182,7 +182,7 @@ public class ImportService {
                 String code = getString(row, colCode);
                 if (code.isEmpty()) continue;
 
-                String name = getString(row, colName);
+                String name = getString(row, colName).trim();
                 if (name.isEmpty()) {
                     result.addError("Ligne " + (i + 1) + " ignorée : nom manquant");
                     result.setSkipped(result.getSkipped() + 1);
@@ -263,7 +263,7 @@ public class ImportService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                String name = getString(row, colName);
+                String name = getString(row, colName).trim();
                 if (name.isEmpty()) continue;
 
                 String ref          = (colRef    != null) ? getString(row, colRef)    : "";
@@ -274,9 +274,11 @@ public class ImportService {
                 String typeStr      = (colType   != null) ? getString(row, colType)   : "";
                 String partnerType  = resolvePartnerType(isCompanyStr, typeStr);
 
-                Optional<Partner> existing = ref.isEmpty()
-                        ? partnerRepo.findFirstByNameAndCompanyId(name, companyId)
-                        : partnerRepo.findFirstByRefAndCompanyId(ref, companyId);
+                ref = ref.trim();
+                Optional<Partner> existing = (ref.isEmpty()
+                        ? Optional.<Partner>empty()
+                        : partnerRepo.findFirstByRefIgnoreCaseAndCompanyId(ref, companyId))
+                        .or(() -> partnerRepo.findFirstByNameIgnoreCaseAndCompanyId(name.trim(), companyId));
 
                 if (existing.isPresent()) {
                     Partner p = existing.get();
@@ -335,7 +337,7 @@ public class ImportService {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                String code = getString(row, colCode);
+                String code = getString(row, colCode).trim().toUpperCase(Locale.ROOT);
                 if (code.isEmpty()) continue;
 
                 String name = getString(row, colName);

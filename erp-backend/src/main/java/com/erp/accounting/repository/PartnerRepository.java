@@ -2,6 +2,8 @@ package com.erp.accounting.repository;
 
 import com.erp.accounting.entity.Partner;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -26,6 +28,21 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     List<Partner> findByCompanyIdAndType(Long companyId, String type);
 
     java.util.Optional<Partner> findFirstByRefAndCompanyId(String ref, Long companyId);
+    java.util.Optional<Partner> findFirstByRefIgnoreCaseAndCompanyId(String ref, Long companyId);
+    java.util.Optional<Partner> findFirstByNameIgnoreCaseAndCompanyId(String name, Long companyId);
+
+    @Query(value = """
+        SELECT CASE WHEN
+            EXISTS (SELECT 1 FROM sales_orders WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM sales_invoices WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM purchase_orders WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM purchase_invoices WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM account_move_lines WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM stock_pickings WHERE partner_id = :partnerId AND company_id = :companyId)
+            OR EXISTS (SELECT 1 FROM stock_losses WHERE partner_id = :partnerId AND company_id = :companyId)
+        THEN true ELSE false END
+        """, nativeQuery = true)
+    boolean hasOperationalReferences(@Param("partnerId") Long partnerId, @Param("companyId") Long companyId);
     java.util.Optional<Partner> findFirstByNameAndCompanyId(String name, Long companyId);
     /** @deprecated */ @Deprecated java.util.Optional<Partner> findByRefAndCompanyId(String ref, Long companyId);
     /** @deprecated */ @Deprecated java.util.Optional<Partner> findByNameAndCompanyId(String name, Long companyId);

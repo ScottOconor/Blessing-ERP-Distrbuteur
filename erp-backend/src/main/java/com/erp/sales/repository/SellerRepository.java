@@ -12,4 +12,5 @@ public interface SellerRepository extends JpaRepository<Seller, Long> {
     List<Seller> findByCompanyId(Long companyId);
     List<Seller> findByCompanyIdAndActiveTrue(Long companyId);
     java.util.Optional<Seller> findFirstByNameIgnoreCaseAndCompanyId(String name, Long companyId);
+    java.util.Optional<Seller> findFirstByRefIgnoreCaseAndCompanyId(String ref, Long companyId);
 }

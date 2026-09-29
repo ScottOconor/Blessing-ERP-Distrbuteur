@@ -894,7 +894,11 @@ public class AccountingService {
     public void deletePartner(Long id) {
         Partner partner = partnerRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Partner not found: " + id));
-        tenantGuard.check(partner.getCompany() != null ? partner.getCompany().getId() : null);
+        Long companyId = partner.getCompany() != null ? partner.getCompany().getId() : null;
+        tenantGuard.check(companyId);
+        if (companyId != null && partnerRepo.hasOperationalReferences(id, companyId)) {
+            throw new IllegalStateException("Impossible de supprimer ce client/fournisseur : il est déjà utilisé dans des ventes, achats, écritures comptables ou mouvements de stock.");
+        }
         partner.setActive(false);
         partnerRepo.save(partner);
         auditService.log("PARTNER", id, partner.getName(), "DEACTIVATED", "Tiers désactivé",
@@ -906,19 +910,23 @@ public class AccountingService {
         Company company = companyRepo.findById(com.erp.auth.SecurityUtils.currentCompanyId())
                 .orElseThrow(() -> new EntityNotFoundException("Company not found"));
 
-        Partner partner = Partner.builder()
-                .ref(dto.getRef())
-                .name(dto.getName())
-                .type(dto.getType())
-                .phone(dto.getPhone())
-                .email(dto.getEmail())
-                .address(dto.getAddress())
-                .company(company)
-                .tauxPrecompte(dto.getTauxPrecompte())
-                .tauxRistourne(dto.getTauxRistourne())
-                .creditLimit(dto.getCreditLimit())
-                .receivableAccountCode(dto.getReceivableAccountCode())
-                .build();
+        String ref = dto.getRef() != null && !dto.getRef().isBlank() ? dto.getRef().trim() : null;
+        Partner partner = (ref != null
+                ? partnerRepo.findFirstByRefIgnoreCaseAndCompanyId(ref, company.getId())
+                        .or(() -> partnerRepo.findFirstByNameIgnoreCaseAndCompanyId(dto.getName().trim(), company.getId()))
+                : partnerRepo.findFirstByNameIgnoreCaseAndCompanyId(dto.getName().trim(), company.getId()))
+                .orElse(Partner.builder().company(company).build());
+        partner.setRef(ref);
+        partner.setName(dto.getName().trim());
+        partner.setType(dto.getType());
+        partner.setPhone(dto.getPhone());
+        partner.setEmail(dto.getEmail());
+        partner.setAddress(dto.getAddress());
+        partner.setTauxPrecompte(dto.getTauxPrecompte());
+        partner.setTauxRistourne(dto.getTauxRistourne());
+        partner.setCreditLimit(dto.getCreditLimit());
+        partner.setReceivableAccountCode(dto.getReceivableAccountCode());
+        partner.setActive(true);
 
         return toPartnerDTO(partnerRepo.save(partner));
     }

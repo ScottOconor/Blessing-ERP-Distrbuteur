@@ -442,7 +442,7 @@ public class ConfigExportService {
             String code = str(row, "code");
             String name = str(row, "name");
             if (code == null || name == null) continue;
-            AccountAccount a = accountRepo.findByCodeAndCompanyId(code, company.getId()).orElse(null);
+            AccountAccount a = accountRepo.findFirstByCodeAndCompanyId(code, company.getId()).orElse(null);
             if (a == null) a = AccountAccount.builder().code(code).company(company).build();
             a.setName(name);
             a.setAccountType(str(row, "accountType"));
@@ -462,7 +462,7 @@ public class ConfigExportService {
             String code = str(row, "code");
             String name = str(row, "name");
             if (code == null || name == null) continue;
-            AccountJournal j = journalRepo.findByCodeAndCompanyId(code, companyId).orElse(null);
+            AccountJournal j = journalRepo.findFirstByCodeAndCompanyId(code, companyId).orElse(null);
             if (j == null) j = AccountJournal.builder().code(code).company(company).build();
             j.setName(name);
             j.setType(str(row, "type"));
@@ -518,25 +518,29 @@ public class ConfigExportService {
         int count = 0;
         for (Map<String, Object> row : rows) {
             String code = str(row, "defaultCode");
+            if (code != null) code = code.trim();
             String name = str(row, "name");
             if (name == null) continue;
 
-            Product p = (code != null
-                    ? productRepo.findFirstByDefaultCodeAndCompanyId(code, companyId).orElse(null)
-                    : null);
+            String catName = str(row, "categoryName");
+            Long categoryId = catName != null ? catIds.get(catName.toLowerCase()) : null;
+            String type = str(row, "type") != null ? str(row, "type") : "product";
+            Product p = code != null && !code.isBlank()
+                    ? productRepo.findFirstByCompanyIdAndDefaultCodeIgnoreCase(companyId, code).orElse(null)
+                    : productRepo.findFirstByCompanyIdAndNameIgnoreCaseAndCategoryIdAndType(
+                            companyId, name.trim(), categoryId, type).orElse(null);
             if (p == null) {
                 p = Product.builder().companyId(companyId).build();
             }
             p.setDefaultCode(code);
             p.setName(name);
-            String catName = str(row, "categoryName");
-            if (catName != null) p.setCategoryId(catIds.get(catName.toLowerCase()));
+            if (catName != null) p.setCategoryId(categoryId);
             String uomName = str(row, "uomName");
             p.setUomName(uomName);
             p.setUnitOfMeasureId(uomName != null ? uomIds.get(uomName.toLowerCase()) : null);
             p.setStandardPrice(decimal(row, "standardPrice"));
             p.setSalePrice(decimal(row, "salePrice"));
-            p.setType(str(row, "type") != null ? str(row, "type") : "product");
+            p.setType(type);
             p.setStockAccountCode(str(row, "stockAccountCode"));
             p.setDescription(str(row, "description"));
             p.setExemptTva(bool(row, "exemptTva"));

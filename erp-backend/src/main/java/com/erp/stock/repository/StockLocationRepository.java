@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface StockLocationRepository extends JpaRepository<StockLocation, Long> {
+    java.util.Optional<StockLocation> findFirstByCompanyIdAndNameIgnoreCaseAndUsageAndParentIdAndWarehouseId(
+            Long companyId, String name, String usage, Long parentId, Long warehouseId);
     List<StockLocation> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
     List<StockLocation> findByWarehouseIdOrderByNameAsc(Long warehouseId);
     List<StockLocation> findByParentIdOrderByNameAsc(Long parentId);

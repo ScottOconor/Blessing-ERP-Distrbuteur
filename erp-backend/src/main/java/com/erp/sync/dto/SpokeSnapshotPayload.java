@@ -19,10 +19,14 @@ public class SpokeSnapshotPayload {
     LocalDateTime snapshotAt;
 
     // ── CA (Chiffre d'Affaires) ────────────────────────────────────────────
-    /** Solde créditeur net comptes 701* depuis le 1er janvier */
+    /** CA TTC : 701100 + 443100 + 441200 depuis le 1er janvier */
     BigDecimal caComptesTotal;
-    /** Idem mais uniquement les mouvements du mois courant */
+    /** Même calcul TTC, uniquement pour le mois courant */
     BigDecimal caComptesMoisCourant;
+    /** CA HT : solde créditeur net du seul compte 701100 */
+    BigDecimal caComptesHT;
+    BigDecimal caComptesHTMoisCourant;
+    BigDecimal caComptesHTJour;
     /** CA calculé depuis les factures ventes postées (total) */
     BigDecimal caVentesTotal;
     /** CA factures ventes du jour */
@@ -52,6 +56,8 @@ public class SpokeSnapshotPayload {
     BigDecimal dettesTotal;
     BigDecimal dettesJour;
     BigDecimal dettesMois;
+    BigDecimal dettesBrasseriesCameroun;
+    BigDecimal dettesGuinnessCameroun;
 
     // ── Ristournes (RemisePaiement typeRemise='brasserie') ────────────────
     BigDecimal ristournesTotalTotal;

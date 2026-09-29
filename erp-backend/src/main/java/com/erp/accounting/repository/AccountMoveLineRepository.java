@@ -337,6 +337,20 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
                                @Param("from") LocalDate from,
                                @Param("to") LocalDate to);
 
+    /** CA HT : solde créditeur net du seul compte 701100. */
+    @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.code = '701100' AND l.company.id = :cid " +
+           "AND l.move.state = 'posted' AND l.date BETWEEN :from AND :to")
+    BigDecimal soldeCompteCAHT(@Param("cid") Long companyId,
+                                @Param("from") LocalDate from,
+                                @Param("to") LocalDate to);
+
+    /** CA HT du jour : solde créditeur net du seul compte 701100. */
+    @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.code = '701100' AND l.company.id = :cid " +
+           "AND l.move.state = 'posted' AND l.date = :date")
+    BigDecimal soldeCompteCAHTJour(@Param("cid") Long companyId, @Param("date") LocalDate date);
+
     /** Débit et crédit des comptes 57* groupés par code+libellé (pour état des caisses : 571, 572...) */
     @Query("SELECT l.account.code, l.account.name, " +
            "COALESCE(SUM(l.debit), 0), COALESCE(SUM(l.credit), 0) " +
