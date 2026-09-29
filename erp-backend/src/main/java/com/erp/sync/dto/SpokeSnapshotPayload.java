@@ -162,6 +162,10 @@ public class SpokeSnapshotPayload {
     List<RistournePaiementItem> ristournePaiements;
     /** Tous les paiements de remises fournisseurs */
     List<RemisePaiementItem> remisePaiements;
+
+    /** Opérations de caisse (entrées/sorties) — rattrapage des événements CAISSE_OPERATION_* perdus
+     *  ou antérieurs au branchement au Hub. Mêmes champs que le payload de ces événements. */
+    List<CaisseOperationItem> caisseOperations;
     /** Factures de vente (postées, 2 dernières années — sans limite sur un snapshot forcé) */
     List<SaleInvoiceItem> saleInvoices;
     /** Ventes du jour ventilées par entrepôt — pour le dashboard hub (distributeurs) */
@@ -267,6 +271,21 @@ public class SpokeSnapshotPayload {
         BigDecimal totalAmount;
         java.time.LocalDate date;
         String     state;
+    }
+
+    @Data @Builder
+    public static class CaisseOperationItem {
+        Long       operationId;
+        Long       caisseId;
+        String     caisseName;
+        String     type;          // ENTREE | SORTIE
+        BigDecimal montant;
+        java.time.LocalDate date;
+        String     libelle;
+        String     reference;
+        String     tiersName;
+        Long       journalMoveId;
+        String     createdBy;
     }
 
     @Data @Builder

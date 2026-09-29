@@ -685,7 +685,22 @@ public class RemiseService {
             p.setDatePaiement(java.time.LocalDate.now());
             p.setGeneratedInvoiceId(invoice.getId());
             p.setGeneratedInvoiceName(invoice.getName());
-            paiementRepo.save(p);
+            RemisePaiement saved = paiementRepo.save(p);
+            // Règlement soldé : prévenir le Hub tout de suite (état « Réglé » + montant payé),
+            // sinon la centralisation l'affichait « Non payé » jusqu'au snapshot suivant.
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("id", saved.getId());
+            payload.put("name", saved.getName() != null ? saved.getName() : "");
+            payload.put("partnerName", saved.getPartner() != null ? saved.getPartner().getName() : "");
+            payload.put("typeRemise", saved.getTypeRemise() != null ? saved.getTypeRemise() : "");
+            payload.put("totalAmount", saved.getTotalAmount() != null ? saved.getTotalAmount() : java.math.BigDecimal.ZERO);
+            payload.put("montantPaye", saved.getTotalAmount() != null ? saved.getTotalAmount() : java.math.BigDecimal.ZERO);
+            payload.put("date", saved.getDate() != null ? saved.getDate().toString() : "");
+            payload.put("datePaiement", saved.getDatePaiement() != null ? saved.getDatePaiement().toString() : "");
+            payload.put("generatedInvoiceName", saved.getGeneratedInvoiceName() != null ? saved.getGeneratedInvoiceName() : "");
+            payload.put("state", saved.getState());
+            payload.put("companyId", saved.getCompanyId());
+            syncPublisher.publish(SyncEventType.REMISE_PAIEMENT_POSTED, "RMS_PAI_" + saved.getId(), payload);
         }
 
         return Map.of(

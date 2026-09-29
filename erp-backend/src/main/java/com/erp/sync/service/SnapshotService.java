@@ -56,6 +56,7 @@ public class SnapshotService {
     private final SalesStatsService              salesStatsService;
     private final SyncEventPublisher             publisher;
     private final CaisseRepository               caisseRepo;
+    private final com.erp.caisse.repository.CaisseOperationRepository caisseOperationRepo;
     private final AccountJournalRepository       journalRepo;
     private final PartnerRepository              partnerRepo;
     private final AccountAccountRepository       accountRepo;
@@ -480,6 +481,25 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Opérations de caisse : même fenêtre que les factures (complet) ou delta depuis le
+        // dernier snapshot (incrémental) — rattrape celles dont l'événement n'est jamais arrivé.
+        Map<Long, String> caisseNames = caisseRepo.findAll().stream()
+                .filter(c -> cid.equals(c.getCompanyId()))
+                .collect(Collectors.toMap(Caisse::getId, c -> c.getName() != null ? c.getName() : "", (a, b2) -> a));
+        List<SpokeSnapshotPayload.CaisseOperationItem> caisseOperations =
+                (modifiedSince != null
+                        ? caisseOperationRepo.findByCompanyIdModifiedSince(cid, modifiedSince)
+                        : caisseOperationRepo.findByCompanyIdAndDateGreaterThanEqual(cid, invoicesWindowStart)).stream()
+                .map(o -> SpokeSnapshotPayload.CaisseOperationItem.builder()
+                        .operationId(o.getId()).caisseId(o.getCaisseId())
+                        .caisseName(caisseNames.get(o.getCaisseId()))
+                        .type(o.getType() != null ? o.getType().name() : null)
+                        .montant(o.getMontant()).date(o.getDate())
+                        .libelle(o.getLibelle()).reference(o.getReference()).tiersName(o.getTiersName())
+                        .journalMoveId(o.getJournalMoveId()).createdBy(o.getCreatedBy())
+                        .build())
+                .collect(Collectors.toList());
+
         // ── Caisses métier : solde réel par entité Caisse ────────────────────
         LocalDate tomorrow = today.plusDays(1);
         List<SpokeSnapshotPayload.CaisseSnapshot> caissesActuelles = new ArrayList<>();
@@ -738,6 +758,7 @@ public class SnapshotService {
                 .accounts(accounts)
                 .ristournePaiements(ristournePaiements)
                 .remisePaiements(remisePaiements)
+                .caisseOperations(caisseOperations)
                 .saleInvoices(saleInvoices)
                 .purchaseInvoices(purchaseInvoices)
                 .accountMoveLines(accountMoveLines)

@@ -13,4 +13,13 @@ public interface CaisseOperationRepository extends JpaRepository<CaisseOperation
     List<CaisseOperation> findByCaisseIdAndDateAndCompanyId(Long caisseId, LocalDate date, Long companyId);
     List<CaisseOperation> findByCompanyIdOrderByDateDescCreatedAtDesc(Long companyId);
     List<CaisseOperation> findByCompanyIdAndTypeOrderByDateDesc(Long companyId, OperationType type);
+
+    /** Snapshot Hub complet : opérations datées depuis {@code since} (fenêtre bornée en SQL). */
+    List<CaisseOperation> findByCompanyIdAndDateGreaterThanEqual(Long companyId, LocalDate since);
+
+    /** Snapshot Hub incrémental : opérations créées ou modifiées depuis le snapshot précédent. */
+    @org.springframework.data.jpa.repository.Query("SELECT o FROM CaisseOperation o WHERE o.companyId = :cid " +
+           "AND (o.createdAt >= :since OR o.updatedAt >= :since)")
+    List<CaisseOperation> findByCompanyIdModifiedSince(@org.springframework.data.repository.query.Param("cid") Long companyId,
+                                                       @org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since);
 }
