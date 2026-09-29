@@ -763,7 +763,10 @@ public class SnapshotService {
         for (Object[] row : rows) {
             String partner = row[1] != null ? row[1].toString().toLowerCase(java.util.Locale.ROOT) : "";
             boolean match = "brasseries".equals(supplierToken)
-                    ? partner.contains("brasseries")
+                    // SABC = Société Anonyme des Brasseries du Cameroun, souvent saisie sous son nom
+                    // commercial « Boissons du Cameroun » : sans ce cas, sa dette remontait à 0.
+                    ? partner.contains("brasserie") || partner.contains("boissons du cameroun")
+                        || partner.contains("sabc")
                     : partner.contains("guinness") || partner.contains("guiness");
             if (match) total = total.add(toBD(row[3]).subtract(toBD(row[2])));
         }
