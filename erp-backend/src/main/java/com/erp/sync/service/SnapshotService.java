@@ -179,8 +179,11 @@ public class SnapshotService {
         BigDecimal creancesTotal = sumSoldeParTiers(moveLineRepo.creancesParTiers(cid), true);
         List<Object[]> dettesParTiers = moveLineRepo.dettesParTiers(cid);
         BigDecimal dettesTotal   = sumSoldeParTiers(dettesParTiers, false);
-        BigDecimal detteBrasseries = sumDettesFournisseur(dettesParTiers, "brasseries");
-        BigDecimal detteGuinness = sumDettesFournisseur(dettesParTiers, "guinness");
+        // Dettes réelles par fournisseur : soldes des comptes fournisseurs (401*) des tiers dont
+        // le nom contient Brasseries / Boissons (→ Boissons du Cameroun) ou Guinness.
+        List<Object[]> soldesFournisseurs = moveLineRepo.soldesComptesFournisseursParTiers(cid);
+        BigDecimal detteBrasseries = sumDettesFournisseur(soldesFournisseurs, "brasseries");
+        BigDecimal detteGuinness = sumDettesFournisseur(soldesFournisseurs, "guinness");
 
         // Jour/Mois : PAS le même calcul par tiers restreint à la période — un tiers déjà soldé
         // avant le mois mais avec une grosse facture nouvelle ce mois-ci gonflait "Ce mois" au-delà
@@ -758,17 +761,20 @@ public class SnapshotService {
         return total;
     }
 
+    /**
+     * Dette envers Boissons du Cameroun (nom contenant « brasserie », « boissons » ou « sabc ») ou
+     * Guinness (« guinness »). Chaque tiers ne compte que si son solde fournisseur est créditeur
+     * (on lui doit réellement) : une avance chez un autre tiers ne diminue pas la dette.
+     */
     private static BigDecimal sumDettesFournisseur(java.util.List<Object[]> rows, String supplierToken) {
         BigDecimal total = BigDecimal.ZERO;
         for (Object[] row : rows) {
             String partner = row[1] != null ? row[1].toString().toLowerCase(java.util.Locale.ROOT) : "";
             boolean match = "brasseries".equals(supplierToken)
-                    // Fournisseur « Boissons du Cameroun » (SABC) ; « brasserie » gardé pour les saisies
-                    // anciennes. Le champ garde son nom technique dettesBrasseriesCameroun.
-                    ? partner.contains("brasserie") || partner.contains("boissons du cameroun")
-                        || partner.contains("sabc")
+                    ? partner.contains("brasserie") || partner.contains("boissons") || partner.contains("sabc")
                     : partner.contains("guinness") || partner.contains("guiness");
-            if (match) total = total.add(toBD(row[3]).subtract(toBD(row[2])));
+            BigDecimal solde = toBD(row[3]).subtract(toBD(row[2]));
+            if (match && solde.signum() > 0) total = total.add(solde);
         }
         return total;
     }

@@ -432,6 +432,15 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
            "ORDER BY (SUM(l.credit) - SUM(l.debit)) DESC")
     List<Object[]> dettesParTiers(@Param("cid") Long companyId);
 
+    /** Solde des seuls comptes fournisseurs (internalType 'payable' : 4011, 401100…) par tiers,
+     *  pour la carte Dettes du Hub (Boissons du Cameroun / Guinness). */
+    @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +
+           "FROM AccountMoveLine l " +
+           "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
+           "AND l.account.internalType = 'payable' AND l.partner IS NOT NULL " +
+           "GROUP BY l.partner.id, l.partner.name")
+    List<Object[]> soldesComptesFournisseursParTiers(@Param("cid") Long companyId);
+
     /** Même logique que creancesParTiers/dettesParTiers, restreinte à une période — pour le
      *  snapshot envoyé au Hub (dashboard), qui utilisait jusqu'ici un calcul différent (solde
      *  brut 411/401 non ventilé par tiers, ou somme de montantDu sur les factures) au lieu de
