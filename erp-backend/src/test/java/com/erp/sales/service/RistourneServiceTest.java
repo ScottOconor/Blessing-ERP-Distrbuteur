@@ -62,7 +62,8 @@ class RistourneServiceTest {
 
     @Test
     void usesTheRistourneMatchingTheGivenCategoryNotJustTheFirstOne() {
-        Partner partner = Partner.builder().id(10L).tauxPrecompte(BigDecimal.ZERO).build();
+        // Précompte client non nul : il doit être ignoré pour Guinness.
+        Partner partner = Partner.builder().id(10L).tauxPrecompte(new BigDecimal("5")).build();
         when(partnerRepo.findById(10L)).thenReturn(Optional.of(partner));
 
         // Deux ristournes pour le même partenaire, catégories différentes, types différents.
@@ -71,11 +72,11 @@ class RistourneServiceTest {
         when(ristourneRepo.findByPartnerIdAndCompanyIdAndActiveTrue(10L, 1L))
                 .thenReturn(List.of(brasserieRistourne, guinnessRistourne));
 
-        // On traite une ligne de catégorie 2 (guinness) : TOTAL TTC = TOTAL HT, le montant saisi
-        // est déjà le TTC — aucune TVA/précompte à ajouter par-dessus.
+        // On traite une ligne de catégorie 2 (guinness) : TTC = HT × (1 + TVA 19,25 %), sans
+        // précompte client (le coefficient brasserie donnerait 1242.50 avec 5 % de précompte).
         BigDecimal result = ristourneService.computeRistourneTTC(new BigDecimal("1000"), 10L, 1L, 2L);
 
-        assertThat(result).isEqualByComparingTo("1000.00");
+        assertThat(result).isEqualByComparingTo("1192.50");
     }
 
     @Test

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build: `./mvnw clean package` (produces `target/blessing-erp.jar`)
 - Run dev server: `./mvnw spring-boot:run` (listens on port 8085, needs a local PostgreSQL at `erp_base`)
 - Compile only: `./mvnw compile`
-- No test suite exists in this repo (`src/test/` is absent) — there is nothing to run with `./mvnw test`.
+- Run tests: `./mvnw test` (JUnit 5 + Mockito unit tests under `src/test/java`, no database needed). Run them after touching business rules — e.g. `RistourneServiceTest` pins the ristourne TTC formulas.
 
 ## Architecture
 
