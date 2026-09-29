@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 /**
  * Configuration d'une ristourne pour un client sur une catégorie de produit.
- * La ristourne TTC est calculée : montantFixe * (1 + tauxPrecompte/100 + 0.1925)
+ * Le HT total est montantFixe + montantEnlevementHT. La formule TTC dépend du type.
  */
 @Entity
 @Table(name = "ristournes",
@@ -32,10 +32,15 @@ public class Ristourne {
     @Column(name = "montant_fixe", precision = 20, scale = 2, nullable = false)
     private BigDecimal montantFixe;
 
+    /** Frais d'enlèvement HT par unité, débités au compte 701500. */
+    @Column(name = "montant_enlevement_ht", precision = 20, scale = 2)
+    @Builder.Default
+    private BigDecimal montantEnlevementHT = BigDecimal.ZERO;
+
     /**
      * Type de calcul ristourne TTC :
      * brasserie  : montantFixe * (1 + tauxPrecompte/100 + 0.1925)
-     * guinness   : montantFixe (TTC = HT, aucune TVA ajoutée)
+     * guinness   : (montantFixe + montantEnlevementHT) * (1 + TVA), sans précompte
      */
     @Column(name = "type_ristourne")
     private String typeRistourne;  // "brasserie" | "guinness" | null (HT brut)

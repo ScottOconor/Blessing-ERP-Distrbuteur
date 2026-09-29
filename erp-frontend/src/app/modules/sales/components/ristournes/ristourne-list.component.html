@@ -115,7 +115,8 @@
                     <tr>
                       <th>Catégorie</th>
                       <th>Type</th>
-                      <th class="r">Montant HT / u</th>
+                      <th class="r">Ristourne HT / u</th>
+                      <th class="r">Enlèvement HT / u</th>
                       <th class="r">TTC / u</th>
                       <th class="r">Actif</th>
                       <th></th>
@@ -135,6 +136,7 @@
                           }
                         </td>
                         <td class="r mono">{{ r.montantFixe | number:'1.0-2' }}</td>
+                        <td class="r mono">{{ r.montantEnlevementHT | number:'1.0-2' }}</td>
                         <td class="r mono ttc-val">{{ r.montantTTCUnitaire | number:'1.0-2' }}</td>
                         <td class="r">
                           <span class="active-dot" [class.on]="r.active !== false"></span>
@@ -602,8 +604,12 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Montant fixe / unité (FCFA) <span class="req">*</span></label>
+            <label>Montant ristourne HT / unité (FCFA) <span class="req">*</span></label>
             <input type="number" class="form-control" [(ngModel)]="rstForm.montantFixe" min="0" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Frais d'enlèvement HT / unité (FCFA)</label>
+            <input type="number" class="form-control" [(ngModel)]="rstForm.montantEnlevementHT" min="0" step="1" />
           </div>
           <div class="form-group">
             <label>Type de calcul TTC</label>

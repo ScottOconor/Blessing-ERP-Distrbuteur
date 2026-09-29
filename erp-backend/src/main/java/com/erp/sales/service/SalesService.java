@@ -109,7 +109,6 @@ public class SalesService {
     private static final String CONSIGNE_ACCOUNT           = "419400";
     private static final String RISTOURNE_CREDIT_ACCOUNT   = "419800";
     private static final String RISTOURNE_CREDIT_GUINNESS  = "419801";
-    private static final BigDecimal RISTOURNE_7019_FIXE    = new BigDecimal("201.00");
     private static final BigDecimal GUINNESS_TAXE_LIGNE    = new BigDecimal("300.00");
     private static final BigDecimal TVA_RATE               = new BigDecimal("0.1925");
 
@@ -1875,13 +1874,17 @@ public class SalesService {
         Company company = companyRepo.findById(dto.getCompanyId())
                 .orElseThrow(() -> new EntityNotFoundException("Société introuvable"));
 
-        Seller seller = Seller.builder()
-                .ref(dto.getRef())
-                .name(dto.getName())
-                .phone(dto.getPhone())
-                .email(dto.getEmail())
-                .company(company)
-                .build();
+        String ref = dto.getRef() != null && !dto.getRef().isBlank() ? dto.getRef().trim() : null;
+        Seller seller = (ref != null
+                ? sellerRepo.findFirstByRefIgnoreCaseAndCompanyId(ref, company.getId())
+                        .or(() -> sellerRepo.findFirstByNameIgnoreCaseAndCompanyId(dto.getName().trim(), company.getId()))
+                : sellerRepo.findFirstByNameIgnoreCaseAndCompanyId(dto.getName().trim(), company.getId()))
+                .orElse(Seller.builder().company(company).build());
+        seller.setRef(ref);
+        seller.setName(dto.getName().trim());
+        seller.setPhone(dto.getPhone());
+        seller.setEmail(dto.getEmail());
+        seller.setActive(true);
 
         return toSellerDTO(sellerRepo.save(seller));
     }
@@ -2316,11 +2319,13 @@ public class SalesService {
      *
      * Catégories éligibles : BIERES 24, BIERES 12, Alcools mixtes 12, Alcools mixtes 24.
      * Pour le total HT ristourne des lignes éligibles :
-     *   Débit  7019    : 201 FCFA (fixe)
-     *   Débit  7015    : HT - 201
-     *   Débit  4412    : tauxPrecompte% × HT
-     *   Débit  4431    : 19,25% × HT
-     *   Crédit 419800  : somme des débits = TTC ristourne
+     *   Brasserie (HT total = ristourne HT + enlèvement HT configurés) :
+     *     Débit  7019    : qty × montantFixe (ristourne HT)
+     *     Débit  7015    : qty × montantEnlevementHT
+     *     Débit  4412    : tauxPrecompte% × HT total
+     *     Débit  4431    : 19,25% × HT total
+     *     Crédit 419800  : somme des débits = TTC ristourne
+     *   Guinness : mêmes 7019 / 7015 / 4431, sans précompte (pas de 4412), Crédit 419801
      *
      * Si aucune ristourne n'est configurée pour le client, la méthode est sans effet.
      */
@@ -2353,17 +2358,17 @@ public class SalesService {
                         .map(com.erp.common.entity.Precompte::getTauxPrecompte).orElse(ZERO);
         BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
-        // ── Groupe BRASSERIE : 7019 = qty×201/article, 7015 = reste HT ──
-        BigDecimal total7019Brasserie = ZERO;
+        // ── Groupe BRASSERIE : 7019 = qty×montantFixe, 7015 = qty×montantEnlevementHT ──
         BigDecimal totalHtBrasserie   = ZERO;
+        BigDecimal totalEnlevementBrasserie = ZERO;
         for (Ristourne r : brasserie) {
             BigDecimal qty = getQtyFromInvoice(r.getCategory().getId(), invoice, companyId);
             log.info("[RISTOURNE] Brasserie '{}' qty={} montantFixe={}", r.getCategory().getName(), qty, r.getMontantFixe());
             if (qty.compareTo(ZERO) > 0) {
                 BigDecimal htLine = qty.multiply(r.getMontantFixe());
                 totalHtBrasserie   = totalHtBrasserie.add(htLine);
-                total7019Brasserie = total7019Brasserie.add(
-                        qty.multiply(RISTOURNE_7019_FIXE).min(htLine));
+                totalEnlevementBrasserie = totalEnlevementBrasserie.add(qty.multiply(
+                        r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : ZERO));
             }
         }
 
@@ -2379,16 +2384,19 @@ public class SalesService {
 
         // ── Groupe GUINNESS : HT complet → 7019 (Cr 419801) ──
         BigDecimal totalHtGuinness = ZERO;
+        BigDecimal totalEnlevementGuinness = ZERO;
         for (Ristourne r : guinness) {
             BigDecimal qty = getQtyFromInvoice(r.getCategory().getId(), invoice, companyId);
             log.info("[RISTOURNE] Guinness '{}' qty={} montantFixe={}", r.getCategory().getName(), qty, r.getMontantFixe());
             if (qty.compareTo(ZERO) > 0) {
                 totalHtGuinness = totalHtGuinness.add(qty.multiply(r.getMontantFixe()));
+                totalEnlevementGuinness = totalEnlevementGuinness.add(qty.multiply(
+                        r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : ZERO));
             }
         }
 
-        log.info("[RISTOURNE] HT brasserie={} (7019={}) HT autres={} HT guinness={}",
-                totalHtBrasserie, total7019Brasserie, totalHtAutres, totalHtGuinness);
+        log.info("[RISTOURNE] HT brasserie={} (enlèvement={}) HT autres={} HT guinness={} (enlèvement={})",
+                totalHtBrasserie, totalEnlevementBrasserie, totalHtAutres, totalHtGuinness, totalEnlevementGuinness);
 
         if (totalHtBrasserie.compareTo(ZERO) <= 0 && totalHtAutres.compareTo(ZERO) <= 0
                 && totalHtGuinness.compareTo(ZERO) <= 0) {
@@ -2451,11 +2459,11 @@ public class SalesService {
         // dr(x) = isAvoir ? ristourneLine(0, x) : ristourneLine(x, 0)
         // cr(x) = isAvoir ? ristourneLine(x, 0) : ristourneLine(0, x)
 
-        // ── Brasserie : 7019 (qty×201) + 7015 (reste HT) ──
+        // ── Brasserie : 7019 (ristourne HT) + 7015 (enlèvement HT configuré) ──
         if (needBrasserieAutres && acct7019 != null && acct4431 != null && acct4198 != null
                 && totalHtBrasserie.compareTo(ZERO) > 0) {
-            BigDecimal d7019br = total7019Brasserie.setScale(2, RoundingMode.HALF_UP);
-            BigDecimal d7015br = totalHtBrasserie.subtract(total7019Brasserie).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal d7015br = totalEnlevementBrasserie.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal d7019br = totalHtBrasserie.setScale(2, RoundingMode.HALF_UP);
             lines.add(ristourneLine(move, acct7019, partner, labelBr, date, isAvoir ? ZERO : d7019br, isAvoir ? d7019br : ZERO, journal, invoice.getCompany()));
             totalDebitsBrassAutres = totalDebitsBrassAutres.add(d7019br);
             if (d7015br.compareTo(ZERO) > 0 && acct7015 != null) {
@@ -2474,7 +2482,7 @@ public class SalesService {
 
         // ── Précompte + TVA sur HT brasserie/autres ──
         if (needBrasserieAutres && acct7019 != null && acct4431 != null && acct4198 != null) {
-            BigDecimal htBrAut = totalHtBrasserie.add(totalHtAutres);
+            BigDecimal htBrAut = totalHtBrasserie.add(totalEnlevementBrasserie).add(totalHtAutres);
             BigDecimal debitPcBrAut = htBrAut.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
             if (acct4412 != null && debitPcBrAut.compareTo(ZERO) > 0) {
                 lines.add(ristourneLine(move, acct4412, partner, labelAut, date, isAvoir ? ZERO : debitPcBrAut, isAvoir ? debitPcBrAut : ZERO, journal, invoice.getCompany()));
@@ -2487,19 +2495,19 @@ public class SalesService {
             }
         }
 
-        // ── Guinness : HT complet → 7019, précompte → 4412, TVA → 4431, contrepartie → 419801 ──
+        // ── Guinness : ristourne HT → 7019, enlèvement HT → 7015, TVA → 4431 (sans précompte), contrepartie → 419801 ──
         if (needGuinness && acct7019 != null && acct4431 != null && acct419801 != null) {
             String labelGu = prefix + "Guinness " + invoice.getName();
             BigDecimal d7019gu = totalHtGuinness.setScale(2, RoundingMode.HALF_UP);
             lines.add(ristourneLine(move, acct7019, partner, labelGu, date, isAvoir ? ZERO : d7019gu, isAvoir ? d7019gu : ZERO, journal, invoice.getCompany()));
             totalDebitsGuinness = totalDebitsGuinness.add(d7019gu);
 
-            BigDecimal debitPcGu = totalHtGuinness.multiply(pcRate).setScale(2, RoundingMode.HALF_UP);
-            if (acct4412 != null && debitPcGu.compareTo(ZERO) > 0) {
-                lines.add(ristourneLine(move, acct4412, partner, labelGu, date, isAvoir ? ZERO : debitPcGu, isAvoir ? debitPcGu : ZERO, journal, invoice.getCompany()));
-                totalDebitsGuinness = totalDebitsGuinness.add(debitPcGu);
+            BigDecimal d7015gu = totalEnlevementGuinness.setScale(2, RoundingMode.HALF_UP);
+            if (acct7015 != null && d7015gu.compareTo(ZERO) > 0) {
+                lines.add(ristourneLine(move, acct7015, partner, labelGu, date, isAvoir ? ZERO : d7015gu, isAvoir ? d7015gu : ZERO, journal, invoice.getCompany()));
+                totalDebitsGuinness = totalDebitsGuinness.add(d7015gu);
             }
-            BigDecimal debitTVAGu = totalHtGuinness.multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal debitTVAGu = totalHtGuinness.add(totalEnlevementGuinness).multiply(TVA_RATE).setScale(2, RoundingMode.HALF_UP);
             lines.add(ristourneLine(move, acct4431, partner, labelGu, date, isAvoir ? ZERO : debitTVAGu, isAvoir ? debitTVAGu : ZERO, journal, invoice.getCompany()));
             totalDebitsGuinness = totalDebitsGuinness.add(debitTVAGu);
         }
@@ -3216,7 +3224,8 @@ public class SalesService {
                             .map(l -> l.getQuantity() != null ? l.getQuantity() : ZERO)
                             .reduce(ZERO, BigDecimal::add);
                     if (totalQty.compareTo(ZERO) == 0) return ZERO;
-                    BigDecimal montantTTC = computeRistourneTTCUnit(r.getMontantFixe(), r.getTypeRistourne(), tauxPrecompte);
+                    BigDecimal montantHT = r.getMontantFixe().add(r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : ZERO);
+                    BigDecimal montantTTC = computeRistourneTTCUnit(montantHT, r.getTypeRistourne(), tauxPrecompte);
                     return totalQty.multiply(montantTTC).setScale(2, RoundingMode.HALF_UP);
                 })
                 .reduce(ZERO, BigDecimal::add);
@@ -3231,7 +3240,7 @@ public class SalesService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(TAUX_TVA);
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         }
-        // guinness et autres : TTC = HT, le montant fixe saisi est déjà le TTC (aucune TVA ajoutée)
+        if ("guinness".equals(type)) return montantHT.multiply(BigDecimal.ONE.add(TAUX_TVA)).setScale(2, RoundingMode.HALF_UP);
         return montantHT.setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -3317,7 +3326,8 @@ public class SalesService {
                             .map(l -> l.getQuantity() != null ? l.getQuantity() : ZERO)
                             .reduce(ZERO, BigDecimal::add);
                     if (totalQty.compareTo(ZERO) == 0) return null;
-                    BigDecimal montantUnit = computeRistourneTTCUnit(r.getMontantFixe(), r.getTypeRistourne(), tauxPrecompte);
+                    BigDecimal montantHT = r.getMontantFixe().add(r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : ZERO);
+                    BigDecimal montantUnit = computeRistourneTTCUnit(montantHT, r.getTypeRistourne(), tauxPrecompte);
                     // Pour les avoirs : quantité et total négatifs pour indiquer l'annulation
                     return SalesInvoiceDTO.RistourneDetailDTO.builder()
                             .categoryName(r.getCategory().getName())
@@ -3357,7 +3367,8 @@ public class SalesService {
                 .filter(r -> r.getCategory().getId().equals(catId))
                 .findFirst()
                 .ifPresent(r -> {
-                    BigDecimal montantUnit = computeRistourneTTCUnit(r.getMontantFixe(), r.getTypeRistourne(), tauxPrecompte);
+                    BigDecimal montantHT = r.getMontantFixe().add(r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : ZERO);
+                    BigDecimal montantUnit = computeRistourneTTCUnit(montantHT, r.getTypeRistourne(), tauxPrecompte);
                     BigDecimal montant = qty.multiply(montantUnit).setScale(2, RoundingMode.HALF_UP).multiply(sign);
                     result.add(RistournePaiementDTO.ArticleLineDTO.builder()
                         .productCode(invLine.getProductCode())

@@ -11,6 +11,7 @@ public class RistourneDTO {
     private Long categoryId;
     private String categoryName;
     private BigDecimal montantFixe;
+    private BigDecimal montantEnlevementHT;
     /** Montant TTC par unité, calculé selon le type (brasserie/guinness) et le tauxPrecompte du client */
     private BigDecimal montantTTCUnitaire;
     private String typeRistourne;

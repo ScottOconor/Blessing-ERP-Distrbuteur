@@ -9,8 +9,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
 import { NotificationService } from '../../../../core/services/notification.service';
 
-const RST_HEADERS = ['Client', "Catégorie d'article", 'Type de ristourne', 'Montant de la ristourne', 'Ristourne TTC', 'Actif'];
-const RST_SAMPLE  = ['Client ABC', 'Bières', 'Brasserie', '261.21', '318.02', 'OUI'];
+const RST_HEADERS = ['Client', "Catégorie d'article", 'Type de ristourne', 'Montant de la ristourne', "Montant de l'enlèvement HT", 'Ristourne TTC', 'Actif'];
+const RST_SAMPLE  = ['Client ABC', 'Bières', 'Brasserie', '261.21', '0', '318.02', 'OUI'];
 
 @Component({
   selector: 'app-ristourne-list',
@@ -104,7 +104,7 @@ export class RistourneListComponent implements OnInit {
   readonly TYPE_OPTS = [
     { value: '', label: 'Autre (TTC = HT, montant saisi déjà TTC)' },
     { value: 'brasserie', label: 'Brasserie (HT × (1 + précompte% + 19.25%))' },
-    { value: 'guinness',  label: 'Guinness (TTC = HT, montant saisi déjà TTC)' }
+    { value: 'guinness',  label: 'Guinness (HT × (1 + TVA), sans précompte)' }
   ];
 
   readonly QUARTERS = [
@@ -559,7 +559,8 @@ export class RistourneListComponent implements OnInit {
         clientName:    String(row['Client'] || ''),
         categoryName:  String(row["Catégorie d'article"] || ''),
         typeRistourne: this.normalizeType(String(row['Type de ristourne'] || '')),
-        montantFixe:   parseFloat(row['Montant de la ristourne']) || 0
+        montantFixe:   parseFloat(row['Montant de la ristourne']) || 0,
+        montantEnlevementHT: parseFloat(row["Montant de l'enlèvement HT"]) || 0
       }))
       .filter(r => r.clientName);
 

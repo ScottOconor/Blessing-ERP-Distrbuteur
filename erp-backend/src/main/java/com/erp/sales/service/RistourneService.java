@@ -86,6 +86,7 @@ public class RistourneService {
         entity.setPartner(partner);
         entity.setCategory(cat);
         entity.setMontantFixe(dto.getMontantFixe());
+        entity.setMontantEnlevementHT(dto.getMontantEnlevementHT() != null ? dto.getMontantEnlevementHT() : BigDecimal.ZERO);
         entity.setTypeRistourne(dto.getTypeRistourne());
         entity.setCompanyId(companyId);
         entity.setActive(true);
@@ -135,6 +136,7 @@ public class RistourneService {
             entity.setPartner(partner);
             entity.setCategory(cat);
             entity.setMontantFixe(row.getMontantFixe() != null ? row.getMontantFixe() : BigDecimal.ZERO);
+            entity.setMontantEnlevementHT(row.getMontantEnlevementHT() != null ? row.getMontantEnlevementHT() : BigDecimal.ZERO);
             entity.setTypeRistourne(row.getTypeRistourne());
             entity.setCompanyId(companyId);
             entity.setActive(true);
@@ -149,6 +151,7 @@ public class RistourneService {
         private String categoryName;
         private String typeRistourne;
         private BigDecimal montantFixe;
+        private BigDecimal montantEnlevementHT;
         private Boolean active;
     }
 
@@ -235,8 +238,11 @@ public class RistourneService {
                 BigDecimal montantTotal = lineDto.getMontantUnitaire()
                         .multiply(lineDto.getQuantite()).setScale(2, RoundingMode.HALF_UP);
 
+                BigDecimal elevementUnitaire = ristourneRepo.findByPartnerIdAndCompanyIdAndActiveTrue(partner.getId(), entity.getCompanyId()).stream()
+                        .filter(r -> r.getCategory() != null && cat.getId().equals(r.getCategory().getId()))
+                        .map(Ristourne::getMontantEnlevementHT).filter(Objects::nonNull).findFirst().orElse(BigDecimal.ZERO);
                 BigDecimal montantTTC = computeRistourneTTC(
-                        montantTotal, partner, entity.getCompanyId(), cat.getId());
+                        montantTotal.add(elevementUnitaire.multiply(lineDto.getQuantite())), partner, entity.getCompanyId(), cat.getId());
 
                 RistournePaiementLine line = RistournePaiementLine.builder()
                         .paiement(entity)
@@ -354,14 +360,17 @@ public class RistourneService {
             BigDecimal montantUnit = r.getMontantFixe();
             BigDecimal montantTotal = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP);
             BigDecimal montantTTC;
+            BigDecimal enlevementTotal = (r.getMontantEnlevementHT() == null ? BigDecimal.ZERO : r.getMontantEnlevementHT()).multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal montantHtComplet = montantTotal.add(enlevementTotal);
             if ("brasserie".equals(r.getTypeRistourne())) {
                 BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
-                montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+                montantTTC = montantHtComplet.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+            } else if ("guinness".equals(r.getTypeRistourne())) {
+                // Guinness : TVA appliquée au HT total, sans précompte.
+                montantTTC = montantHtComplet.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
             } else {
-                // guinness et autres : le montant fixe saisi est déjà le TTC (TOTAL TTC = TOTAL HT),
-                // aucune TVA/précompte à ajouter par-dessus.
-                montantTTC = montantTotal;
+                montantTTC = montantHtComplet.setScale(2, RoundingMode.HALF_UP);
             }
 
             // Pour les avoirs : les montants sont négatifs (annulation de ristourne)
@@ -517,14 +526,17 @@ public class RistourneService {
             BigDecimal montantUnit  = r.getMontantFixe();
             BigDecimal montantTotal = montantUnit.multiply(qty).setScale(2, RoundingMode.HALF_UP).multiply(sign);
             BigDecimal montantTTC;
+            BigDecimal enlevementTotal = (r.getMontantEnlevementHT() == null ? BigDecimal.ZERO : r.getMontantEnlevementHT()).multiply(qty).setScale(2, RoundingMode.HALF_UP).multiply(sign);
+            BigDecimal montantHtComplet = montantTotal.add(enlevementTotal);
             if ("brasserie".equals(r.getTypeRistourne())) {
                 BigDecimal pcRate = tauxPc.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                 BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
-                montantTTC = montantTotal.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+                montantTTC = montantHtComplet.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
+            } else if ("guinness".equals(r.getTypeRistourne())) {
+                // Guinness : TVA appliquée au HT total, sans précompte.
+                montantTTC = montantHtComplet.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
             } else {
-                // guinness et autres : le montant fixe saisi est déjà le TTC (TOTAL TTC = TOTAL HT),
-                // aucune TVA/précompte à ajouter par-dessus.
-                montantTTC = montantTotal;
+                montantTTC = montantHtComplet.setScale(2, RoundingMode.HALF_UP);
             }
 
             lines.add(RistournePaiementLine.builder()
@@ -583,8 +595,7 @@ public class RistourneService {
     /**
      * Calcule le montant TTC de ristourne à partir du type et du tauxPrecompte du client.
      * brasserie : montantHT × (1 + tauxPrecompte/100 + 0.1925)
-     * guinness  : montantTTC = montantHT — le montant saisi est déjà TTC, aucune TVA/précompte
-     *             à ajouter par-dessus.
+     * guinness  : montantTTC = montantHT × (1 + TVA), sans précompte.
      */
     public BigDecimal computeRistourneTTC(BigDecimal montantHT, Long partnerId, Long companyId, Long categoryId) {
         Partner partner = partnerRepo.findById(partnerId).orElse(null);
@@ -621,8 +632,8 @@ public class RistourneService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantHT.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         } else if ("guinness".equals(type)) {
-            // guinness : TOTAL TTC = TOTAL HT, le montant saisi est déjà le TTC.
-            return montantHT.setScale(2, RoundingMode.HALF_UP);
+            // Guinness : TVA appliquée, sans précompte.
+            return montantHT.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
         }
         return montantHT.setScale(2, RoundingMode.HALF_UP);
     }
@@ -793,7 +804,7 @@ public class RistourneService {
     private RistourneDTO toDTO(Ristourne r) {
         BigDecimal taux = r.getPartner().getTauxPrecompte() != null
                 ? r.getPartner().getTauxPrecompte() : BigDecimal.ZERO;
-        BigDecimal ttcUnit = computeUnitTTC(r.getMontantFixe(), r.getTypeRistourne(), taux);
+        BigDecimal ttcUnit = computeUnitTTC(r.getMontantFixe().add(r.getMontantEnlevementHT() == null ? BigDecimal.ZERO : r.getMontantEnlevementHT()), r.getTypeRistourne(), taux);
         return RistourneDTO.builder()
                 .id(r.getId())
                 .partnerId(r.getPartner().getId())
@@ -801,6 +812,7 @@ public class RistourneService {
                 .categoryId(r.getCategory().getId())
                 .categoryName(r.getCategory().getName())
                 .montantFixe(r.getMontantFixe())
+                .montantEnlevementHT(r.getMontantEnlevementHT() != null ? r.getMontantEnlevementHT() : BigDecimal.ZERO)
                 .montantTTCUnitaire(ttcUnit)
                 .typeRistourne(r.getTypeRistourne())
                 .companyId(r.getCompanyId())
@@ -814,7 +826,7 @@ public class RistourneService {
             BigDecimal coeff = BigDecimal.ONE.add(pcRate).add(BigDecimal.valueOf(0.1925));
             return montantFixe.multiply(coeff).setScale(2, RoundingMode.HALF_UP);
         }
-        // guinness et autres : TOTAL TTC = TOTAL HT, le montant fixe saisi est déjà le TTC.
+        if ("guinness".equals(type)) return montantFixe.multiply(BigDecimal.ONE.add(BigDecimal.valueOf(0.1925))).setScale(2, RoundingMode.HALF_UP);
         return montantFixe.setScale(2, RoundingMode.HALF_UP);
     }
 

@@ -10,6 +10,7 @@ export interface Ristourne {
   categoryId: number;
   categoryName?: string;
   montantFixe: number;
+  montantEnlevementHT?: number;
   montantTTCUnitaire?: number;
   typeRistourne?: string;  // 'brasserie' | 'guinness' | null
   companyId: number;
@@ -159,7 +160,7 @@ export class RistourneService {
   }
 
   importBatch(
-    rows: Array<{ clientName: string; categoryName: string; typeRistourne: string; montantFixe: number }>,
+    rows: Array<{ clientName: string; categoryName: string; typeRistourne: string; montantFixe: number; montantEnlevementHT?: number }>,
     companyId: number
   ): Observable<Ristourne[]> {
     return this.http.post<Ristourne[]>(
