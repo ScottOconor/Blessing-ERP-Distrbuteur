@@ -33,7 +33,7 @@
 .mono { font-family: 'Roboto Mono', monospace; }
 .usage-badge {
   display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600;
-  &.internal { background: #d1f0e8; color: var(--success); }
+  &.internal { background: var(--success-bg); color: var(--success); }
   &.view { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border); }
   &.supplier { background: var(--primary-subtle); color: var(--primary); }
   &.customer { background: var(--warning-bg); color: var(--warning); }
@@ -53,3 +53,13 @@
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; .form-full { grid-column: 1 / -1; } }
 .form-group { display: flex; flex-direction: column; gap: 4px; label { font-size: 13px; font-weight: 500; color: var(--text-secondary); } }
 .form-control { padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-family: 'Roboto', sans-serif; outline: none; &:focus { border-color: var(--primary); } }
+
+/* L’aperçu d’import contient encore quelques styles inline conçus pour le fond clair. */
+:host-context([data-theme="dark"]) .modal > div[style*="position:absolute"] {
+  background: rgba(13, 17, 23, 0.94) !important;
+  p { color: var(--text-secondary) !important; }
+}
+:host-context([data-theme="dark"]) .modal table thead tr { background: var(--bg-elevated) !important; }
+:host-context([data-theme="dark"]) .modal table th,
+:host-context([data-theme="dark"]) .modal table td { color: var(--text-primary) !important; border-color: var(--border) !important; }
+:host-context([data-theme="dark"]) .modal table td[style*="color:"] { color: var(--text-secondary) !important; }

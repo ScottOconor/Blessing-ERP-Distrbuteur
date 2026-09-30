@@ -115,7 +115,7 @@ $shadow: 0 2px 10px rgba(0,0,0,0.07);
 }
 
 .code-cell { display:flex; align-items:center; gap:6px; }
-.sub-arrow  { font-size:13px; color:#d1d5db; }
+.sub-arrow  { font-size:13px; color:var(--text-secondary); }
 .acc-avatar {
   width:26px; height:26px; border-radius:50%; background:var(--primary-subtle); color: var(--primary);
   font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;

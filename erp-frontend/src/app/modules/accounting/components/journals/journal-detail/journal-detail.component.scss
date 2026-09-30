@@ -354,7 +354,7 @@ tfoot td { padding: 9px 14px; }
 .balance-neg { color: $red; }
 
 .closed-icon .material-icons { font-size: 16px; color: $green; }
-.open-icon   .material-icons { font-size: 16px; color: #d1d5db; }
+.open-icon   .material-icons { font-size: 16px; color: var(--text-secondary); }
 
 .badge {
   display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap;

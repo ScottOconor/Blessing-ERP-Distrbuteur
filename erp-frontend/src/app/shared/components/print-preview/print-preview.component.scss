@@ -65,7 +65,7 @@
   --bg-surface: #FFFFFF; --bg-elevated: #F8FAFC; --bg-hover: #F1F5F9;
   --text-primary: #0F172A; --text-secondary: #475569; --text-muted: #64748B;
   --border: #E2E8F0; --border-light: #F1F5F9;
-  background: #FFFFFF; color: #0F172A;
+  background: #FFFFFF; color: var(--text-primary);
 
   &.page-a4 { width: 210mm; min-height: 297mm; }
   &.page-a5 { width: 148mm; min-height: 210mm; }

@@ -5,7 +5,7 @@
 .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
 .search-input { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: .9rem; }
 .toolbar-actions { display: flex; gap: 8px; }
-.btn-text { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 6px 12px; font-size: .85rem; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #555;
+.btn-text { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 6px 12px; font-size: .85rem; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--text-secondary);
   &:hover { background: var(--bg-elevated); }
 }
 
@@ -19,16 +19,16 @@
 }
 .acc-left { display: flex; align-items: center; gap: 10px; }
 .acc-right { display: flex; align-items: center; gap: 8px; }
-.acc-chevron { color: #aaa; font-size: 20px; transition: transform .2s; }
+.acc-chevron { color: var(--text-secondary); font-size: 20px; transition: transform .2s; }
 .acc-item.open .acc-chevron { color: #017E84; }
-.client-name { font-weight: 600; font-size: .95rem; color: #222; }
+.client-name { font-weight: 600; font-size: .95rem; color: var(--text-primary); }
 .client-ref { font-size: .8rem; color: var(--text-muted); background: var(--bg-elevated); padding: 2px 8px; border-radius: 10px; }
 .badge-count { background: #e65100; color: #fff; font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-.badge-none { font-size: .8rem; color: #bbb; }
+.badge-none { font-size: .8rem; color: var(--text-secondary); }
 
 .acc-body { border-top: 1px solid #f0f0f0; padding: 0; }
-.inner-loading { padding: 16px 20px; color: #aaa; font-size: .875rem; display: flex; align-items: center; gap: 6px; }
-.inner-empty { padding: 14px 20px; color: #aaa; font-size: .875rem; }
+.inner-loading { padding: 16px 20px; color: var(--text-secondary); font-size: .875rem; display: flex; align-items: center; gap: 6px; }
+.inner-empty { padding: 14px 20px; color: var(--text-secondary); font-size: .875rem; }
 
 /* ── Tableau tarifs ── */
 .prices-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
@@ -38,15 +38,15 @@
 .text-right { text-align: right; }
 .rabais-col { color: #e65100; font-weight: 700; }
 .prod-code { color: var(--text-muted); font-family: monospace; margin-right: 6px; font-size: .8rem; }
-.muted { color: #aaa; }
+.muted { color: var(--text-secondary); }
 .bold { font-weight: 700; }
 
 .actions-col { width: 90px; text-align: center; white-space: nowrap; }
-.btn-edit { background: none; border: none; cursor: pointer; color: #aaa; padding: 4px; border-radius: 4px; display: inline-flex; align-items: center;
+.btn-edit { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center;
   &:hover { color: #017E84; background: #e8f5f5; }
   .material-icons { font-size: 18px; }
 }
-.btn-delete { background: none; border: none; cursor: pointer; color: #aaa; padding: 4px; border-radius: 4px; display: inline-flex; align-items: center;
+.btn-delete { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center;
   &:hover { color: #c62828; background: #fce8e8; }
   .material-icons { font-size: 18px; }
 }
@@ -96,7 +96,7 @@
   margin-bottom: 14px;
 }
 .add-field { display: flex; flex-direction: column; gap: 4px;
-  label { font-size: .78rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .03em; }
+  label { font-size: .78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
 }
 .add-field-product { flex: 1; min-width: 240px; }
 .add-field-sm { min-width: 120px; }
@@ -129,18 +129,18 @@
   &:last-child { border-bottom: none; }
   &:hover { background: #f0f8f8; }
 }
-.suggest-code { color: #888; font-family: monospace; font-size: .82rem; flex-shrink: 0; }
-.suggest-name { flex: 1; color: #222; font-size: .9rem; }
+.suggest-code { color: var(--text-secondary); font-family: monospace; font-size: .82rem; flex-shrink: 0; }
+.suggest-name { flex: 1; color: var(--text-primary); font-size: .9rem; }
 .suggest-price { color: #017E84; font-weight: 700; flex-shrink: 0; font-size: .85rem; }
 
 /* Prix standard et rabais (lecture seule) */
 .std-price-badge {
   padding: 7px 10px; background: #f0f0f0; border-radius: 6px;
-  font-size: .875rem; font-weight: 600; color: #555; white-space: nowrap;
+  font-size: .875rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;
 }
 .rabais-badge {
   padding: 7px 10px; background: #fff3e0; border-radius: 6px;
-  font-size: .875rem; color: #aaa;
+  font-size: .875rem; color: var(--text-secondary);
   &.positive { color: #e65100; font-weight: 700; }
   &.surplus { background: #e8f5e9; color: #2e7d32; font-weight: 700; }
 }
@@ -151,7 +151,7 @@
 .btn-add-cancel {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; background: #fff; border: 1px solid #ccc; border-radius: 6px;
-  font-size: .875rem; cursor: pointer; color: #555;
+  font-size: .875rem; cursor: pointer; color: var(--text-secondary);
   &:hover { background: #f5f5f5; }
   .material-icons { font-size: 16px; }
 }
@@ -165,7 +165,7 @@
 }
 
 /* Utilitaires */
-.empty { text-align: center; padding: 48px 24px; color: #aaa; }
+.empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
 .empty .material-icons { font-size: 48px; display: block; margin-bottom: 8px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

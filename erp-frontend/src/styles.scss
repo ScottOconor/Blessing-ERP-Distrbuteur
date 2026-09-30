@@ -43,8 +43,8 @@
 
   /* Text */
   --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
+  --text-secondary: #334155;
+  --text-muted:     #64748B;
   --text-inverse:   #FFFFFF;
 
   /* Borders */
@@ -111,9 +111,9 @@
   --navbar-hover:   rgba(255,255,255,0.08);
   --navbar-accent:  #60A5FA;
 
-  --text-primary:   #E2E8F0;
-  --text-secondary: #94A3B8;
-  --text-muted:     #8391A5;
+  --text-primary:   #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted:     #A8B3C2;
   --text-inverse:   #0F172A;
 
   --border:         #2D3748;
@@ -545,9 +545,20 @@ h1, h2, h3, h4, h5, h6 {
    Fixes hardcoded hex colors scattered across all module SCSS files
    ================================================================ */
 [data-theme="dark"] {
+  color-scheme: dark;
 
   /* ── Layout navbar logos ── */
   .navbar-logo { background: var(--bg-elevated) !important; }
+
+  /* Keep primary action buttons dark enough for white labels to stay legible. */
+  .btn-primary { background: var(--primary-dark) !important; color: #fff !important; }
+  .order-step.active, .col-chip-active {
+    background: var(--primary-dark) !important;
+    color: #fff !important;
+  }
+  .order-step.active .step-number,
+  .order-step.active .step-label,
+  .order-step.active .material-icons { color: #fff !important; }
 
   /* ── Export buttons — all components ── */
   .btn-excel, .btn-export.btn-excel { background: #217346 !important; color: white !important; border: none !important; }
@@ -661,9 +672,9 @@ h1, h2, h3, h4, h5, h6 {
   }
   .alert-error { background: var(--danger-bg) !important; color: var(--danger) !important; border-color: rgba(248,113,113,0.3) !important; }
   .replace-toggle.active    { background: var(--warning-bg) !important; border-color: var(--warning) !important; }
-  .btn-import               { background: var(--primary) !important; }
+  .btn-import               { background: var(--primary-dark) !important; color: #fff !important; }
   .btn-template             { background: var(--success-bg) !important; color: var(--success) !important; border-color: var(--success) !important; }
-  .btn-confirm              { background: var(--primary) !important; }
+  .btn-confirm              { background: var(--primary-dark) !important; color: #fff !important; }
   .btn-secondary            { background: var(--bg-surface) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
   .btn-secondary:hover      { background: var(--primary-subtle) !important; }
   .preview-detected-cols    { background: var(--bg-elevated) !important; border-color: var(--border) !important; }
@@ -711,9 +722,19 @@ h1, h2, h3, h4, h5, h6 {
   /* ── Sales layout misc ── */
   .client-badge   { background: var(--primary-subtle) !important; color: var(--primary) !important; }
   .product-badge  { background: var(--info-bg) !important; color: var(--info) !important; }
+  .usage-badge.supplier, .badge-client, .client-badge, .stat-blue,
+  .tab-count, .badge-count { color: #93C5FD !important; }
 
   /* ── Text colors (hardcoded dark text visible in dark mode) ── */
   .text-dark, [class*="color-dark"] { color: var(--text-primary) !important; }
+  .text-muted, .muted, .hint, .empty, .date-sep, .badge-none,
+  .inner-empty, .inner-loading, .acc-chevron, .btn-text {
+    color: var(--text-secondary) !important;
+  }
+  [class*="text-secondary"], [class*="text-gray"], [class*="text-grey"] {
+    color: var(--text-secondary) !important;
+  }
+  input, select, textarea { color-scheme: dark; }
   .subtitle { color: var(--text-muted) !important; }
   .panel-desc { color: var(--text-secondary) !important; }
   .drop-text { color: var(--text-secondary) !important; }
@@ -1366,7 +1387,10 @@ select.form-control {
 .p-3  { padding: 16px; }
 .text-right   { text-align: right; }
 .text-center  { text-align: center; }
-.text-muted   { color: var(--text-muted); }
+.text-muted, .muted, .hint, .date-sep, .badge-none,
+.inner-empty, .inner-loading, .acc-chevron, .btn-text {
+  color: var(--text-secondary);
+}
 .text-primary { color: var(--primary); }
 .text-success { color: var(--success); }
 .text-danger  { color: var(--danger); }

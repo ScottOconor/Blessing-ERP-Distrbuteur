@@ -292,7 +292,7 @@ $accent: #017E84;
   &:last-child { border-bottom: none; }
   span:first-child { color: var(--text-muted); }
   span:last-child  { font-weight: 500; font-family: 'Roboto Mono', monospace; }
-  .muted { color: #adb5bd !important; }
+  .muted { color: var(--text-secondary) !important; }
   &.tot-ttc {
     border-top: 2px solid $accent; border-bottom: none; margin-top: 4px; padding-top: 12px;
     span:first-child { font-size: 15px; font-weight: 600; color: var(--text-primary); }

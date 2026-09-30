@@ -125,7 +125,7 @@ textarea.form-control { resize: vertical; }
 .tarifs-table .rabais-col { color: #e65100; font-weight: 600; }
 .tarifs-table .text-muted { color: var(--text-muted); }
 .tarifs-table .font-bold { font-weight: 700; }
-.btn-del-price { background: none; border: none; cursor: pointer; color: #bbb; padding: 2px; &:hover { color: #e53e3e; } }
+.btn-del-price { background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px; &:hover { color: #e53e3e; } }
 .tarifs-add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .tarif-select { flex: 1; min-width: 180px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: .875rem; }
 .tarif-prix-wrap { display: flex; align-items: center; gap: 6px; }

@@ -281,7 +281,7 @@ select.analytic-select {
     font-weight: 500;
   }
 
-  .analytic-placeholder { color: #bbb; font-style: italic; }
+  .analytic-placeholder { color: var(--text-secondary); font-style: italic; }
 }
 
 .analytic-readonly {
@@ -571,7 +571,7 @@ select.analytic-select {
   background: none;
   border: none;
   cursor: pointer;
-  color: #ccc;
+  color: var(--text-secondary);
   padding: 5px;
   border-radius: 4px;
   display: flex;

@@ -162,7 +162,7 @@ $shadow: 0 2px 10px rgba(0,0,0,0.07);
 .muted    { color: var(--text-muted); }
 
 .icon-on  { font-size: 16px; color: $green; }
-.icon-off { font-size: 16px; color: #d1d5db; }
+.icon-off { font-size: 16px; color: var(--text-secondary); }
 
 .status-pill {
   display: inline-block; padding: 2px 9px; border-radius: 20px;
@@ -262,7 +262,7 @@ $shadow: 0 2px 10px rgba(0,0,0,0.07);
   }
   tr.row-even td { background: var(--bg-hover); }
   .row-num { width: 40px; font-family: 'Roboto Mono', monospace; color: var(--text-muted); font-size: 11px; }
-  .cell-empty { color: #d1d5db; font-style: italic; }
+  .cell-empty { color: var(--text-secondary); font-style: italic; }
 }
 
 // ── Modal form ─────────────────────────────────────────────────────────────
