@@ -82,9 +82,14 @@ public class SnapshotService {
     /** Snapshot horaire automatique — fenêtré (factures des 2 dernières années) pour rester léger
      *  sur un envoi qui tourne en continu. */
     @Transactional(readOnly = true)
-    public void buildAndPublish() {
-        buildAndPublish(false);
+    public boolean buildAndPublish() {
+        return buildAndPublish(false);
     }
+
+    /** Un seul snapshot à la fois : chacun garde une connexion JDBC plusieurs minutes (jusqu'à
+     *  ~15 min constaté en prod). Le job horaire + des clics répétés sur "Snapshot complet" en
+     *  parallèle ont vidé le pool Hikari le 2026-10-02 (14:40-14:58, toute l'appli bloquée). */
+    private final java.util.concurrent.atomic.AtomicBoolean running = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     /**
      * @param full si vrai (déclenché manuellement via "Forcer envoi"), ignore la fenêtre de 2 ans
@@ -93,7 +98,20 @@ public class SnapshotService {
      *             qui étaient jusque-là exclus indéfiniment de tout filet de sécurité.
      */
     @Transactional(readOnly = true)
-    public void buildAndPublish(boolean full) {
+    public boolean buildAndPublish(boolean full) {
+        if (!running.compareAndSet(false, true)) {
+            log.warn("Snapshot {} ignoré : un snapshot est déjà en cours", full ? "complet" : "horaire");
+            return false;
+        }
+        try {
+            doBuildAndPublish(full);
+            return true;
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private void doBuildAndPublish(boolean full) {
         List<Company> companies = companyRepo.findAll();
         if (companies.isEmpty()) {
             log.warn("Snapshot: aucune société, ignoré");

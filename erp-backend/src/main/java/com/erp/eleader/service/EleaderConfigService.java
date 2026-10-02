@@ -165,8 +165,61 @@ public class EleaderConfigService {
     }
 
     /**
-     * Résout le code produit ERP depuis un code eLeader en cherchant
-     * uniquement dans les mappings configurés dans l'application.
+     * Correspondances de référence eLeader (mêmes valeurs que le bouton "Charger les valeurs par
+     * défaut" de l'écran de config). Utilisées en repli quand la société n'a pas enregistré de
+     * mapping pour un code : sans ce repli, une config jamais sauvegardée faisait ignorer les lignes
+     * d'emballage/déconsigne à l'import (ex: VRACC12 chez NDEMEFO, log du 2026-10-02).
+     * Clé = "CODE_ELEADER|MODELE".
+     */
+    private static final Map<String, String> DEFAULT_MAPPINGS = Map.ofEntries(
+            Map.entry("VCBB65|BRASSERIES", "CB12"),
+            Map.entry("VCBB60|BRASSERIES", "CB12"),
+            Map.entry("VCBB50|BRASSERIES", "CB12"),
+            Map.entry("VCBV65|BRASSERIES", "CB12"),
+            Map.entry("VCMU65|BRASSERIES", "CB12"),
+            Map.entry("VCBA65|BRASSERIES", "CB12"),
+            Map.entry("VCBA50|BRASSERIES", "CB12"),
+            Map.entry("VCCC60|BRASSERIES", "CB12"),
+            Map.entry("VCFA60|BRASSERIES", "CB12"),
+            Map.entry("VCAP65|BRASSERIES", "CB12"),
+            Map.entry("VRACC12|BRASSERIES", "CB12"),
+            Map.entry("VCCC30|BRASSERIES", "CB24"),
+            Map.entry("VCFA30|BRASSERIES", "CB24"),
+            Map.entry("VCAP33|BRASSERIES", "CB24"),
+            Map.entry("VCBV33|BRASSERIES", "CB24"),
+            Map.entry("VCBA33|BRASSERIES", "CB24"),
+            Map.entry("VCMA30|BRASSERIES", "CB24"),
+            Map.entry("VCMB30|BRASSERIES", "CB24"),
+            Map.entry("VRACC24|BRASSERIES", "CB24"),
+            Map.entry("VIP12|BRASSERIES", "CV12"),
+            Map.entry("VIP12M|BRASSERIES", "CV12"),
+            Map.entry("VIP12R|BRASSERIES", "CV12"),
+            Map.entry("VIP24|BRASSERIES", "CV24"),
+            Map.entry("VIP24B|BRASSERIES", "CV24"),
+            Map.entry("VIP24R|BRASSERIES", "CV24"),
+            Map.entry("VCHP60|GUINNESS", "CBG12"),
+            Map.entry("VCGA65|GUINNESS", "CBG12"),
+            Map.entry("VCGA50|GUINNESS", "CBG12"),
+            Map.entry("VCGA33|GUINNESS", "CBG12"),
+            Map.entry("VCGM33|GUINNESS", "CBG12"),
+            Map.entry("VCFG33|GUINNESS", "CBG12"),
+            Map.entry("354111|GUINNESS", "CBG12"),
+            Map.entry("354112|GUINNESS", "CBG12"),
+            Map.entry("354113|GUINNESS", "CBG12"),
+            Map.entry("VRFG33|GUINNESS", "CBG12"),
+            Map.entry("VRGA33|GUINNESS", "CBG12"),
+            Map.entry("VRMG33|GUINNESS", "CBG12"),
+            Map.entry("VRHP60|GUINNESS", "CBG12"),
+            Map.entry("VRGA65|GUINNESS", "CBG12"),
+            Map.entry("VRGA50|GUINNESS", "CBG12"),
+            Map.entry("VIP12G|GUINNESS", "CVG12"),
+            Map.entry("VIP15G|GUINNESS", "CVG12"),
+            Map.entry("VIP24G|GUINNESS", "CVG12")
+    );
+
+    /**
+     * Résout le code produit ERP depuis un code eLeader : d'abord les mappings configurés dans
+     * l'application, puis les correspondances de référence (DEFAULT_MAPPINGS).
      * Si aucun mapping n'est trouvé, retourne le code eLeader brut.
      */
     public String resolveErpCode(EleaderConfig config, String eleaderCode, String invoiceModel) {
@@ -183,6 +236,9 @@ public class EleaderConfigService {
                 }
             }
         }
+
+        String fallback = invoiceModel != null ? DEFAULT_MAPPINGS.get(code + "|" + invoiceModel.toUpperCase()) : null;
+        if (fallback != null) return fallback;
 
         log.warn("Aucun mapping configuré pour le code eLeader '{}' (modèle: {}). Code brut utilisé.", code, invoiceModel);
         return code;

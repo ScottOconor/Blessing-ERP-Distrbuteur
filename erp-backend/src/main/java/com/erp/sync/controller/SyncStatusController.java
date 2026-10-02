@@ -219,7 +219,10 @@ public class SyncStatusController {
     @PostMapping("/snapshot/force")
     public ResponseEntity<Map<String, String>> forceSnapshot() {
         try {
-            snapshotService.buildAndPublish(true);
+            if (!snapshotService.buildAndPublish(true)) {
+                return ResponseEntity.status(409).body(Map.of("status", "busy",
+                        "message", "Un snapshot est déjà en cours, réessayez dans quelques minutes"));
+            }
             return ResponseEntity.ok(Map.of("status", "ok", "message", "Snapshot complet envoyé dans l'outbox"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
@@ -234,7 +237,10 @@ public class SyncStatusController {
     @PostMapping("/snapshot/hourly")
     public ResponseEntity<Map<String, String>> triggerHourlySnapshot() {
         try {
-            snapshotService.buildAndPublish(false);
+            if (!snapshotService.buildAndPublish(false)) {
+                return ResponseEntity.status(409).body(Map.of("status", "busy",
+                        "message", "Un snapshot est déjà en cours, réessayez dans quelques minutes"));
+            }
             return ResponseEntity.ok(Map.of("status", "ok", "message", "Snapshot incrémental envoyé dans l'outbox"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()

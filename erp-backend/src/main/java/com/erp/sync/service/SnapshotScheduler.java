@@ -40,7 +40,10 @@ public class SnapshotScheduler {
         }
         log.info("Snapshot horaire démarré…");
         try {
-            snapshotService.buildAndPublish();
+            if (!snapshotService.buildAndPublish()) {
+                // Un snapshot manuel tourne déjà : lastSnapshotAt inchangé, retenté au prochain passage.
+                return;
+            }
             lastSnapshotAt = now;
             log.info("Snapshot horaire terminé.");
         } catch (Exception e) {

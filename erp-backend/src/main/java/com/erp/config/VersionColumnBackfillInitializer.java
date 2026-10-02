@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
  * déjà présentes en base restent à NULL. Hibernate traite ensuite tout UPDATE sur une de ces
  * lignes comme un verrou optimiste à incrémenter, et {@code Versioning.increment} plante avec un
  * NullPointerException ("current" is null) faute de valeur de départ. Backfill idempotent à 0.
+ *
+ * Même problème pour caisse_sessions.ouverture_controlee (boolean primitif côté entité) : les
+ * sessions antérieures à la colonne restent à NULL et font planter le rapport consolidé de caisse
+ * ("Null value was assigned to a property ... of primitive type").
  */
 @Component
 @Order(0)
@@ -42,6 +46,10 @@ public class VersionColumnBackfillInitializer implements ApplicationRunner {
             if (updated > 0) {
                 log.info("Backfill version=0 sur {} ({} ligne(s))", table, updated);
             }
+        }
+        int sessions = jdbc.update("UPDATE caisse_sessions SET ouverture_controlee = false WHERE ouverture_controlee IS NULL");
+        if (sessions > 0) {
+            log.info("Backfill ouverture_controlee=false sur caisse_sessions ({} ligne(s))", sessions);
         }
     }
 }
