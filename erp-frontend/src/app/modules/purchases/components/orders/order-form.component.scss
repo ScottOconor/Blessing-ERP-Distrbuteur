@@ -255,6 +255,11 @@ td .form-control {
   box-shadow: 0 2px 8px rgba(0,0,0,0.06); min-width: 300px;
 }
 
+.total-sep-label {
+  margin-top: 8px; padding: 6px 0 2px; border-top: 1px dashed var(--border);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted);
+}
+
 .total-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 8px 0; border-bottom: 1px solid var(--border-light);
@@ -265,6 +270,8 @@ td .form-control {
   }
   &.total-precompte { color: var(--warning, #c27c00); font-weight: 600; }
   &.total-frais { color: var(--info, #0891b2); }
+  &.total-consigne   { color: var(--success); font-weight: 600; }
+  &.total-deconsigne { color: var(--warning); font-weight: 600; }
   &.net-a-payer {
     font-size: 17px; font-weight: 700; color: var(--success, #16a34a);
     border-top: 2px solid var(--border-light); padding-top: 12px;

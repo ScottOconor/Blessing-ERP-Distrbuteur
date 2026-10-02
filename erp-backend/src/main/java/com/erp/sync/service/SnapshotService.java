@@ -69,8 +69,8 @@ public class SnapshotService {
 
     private static final Set<String> EMBALLAGE_CODES = Set.of(
         "PRC01","ELV01","CB24M","CB12M","CAIMET","CONS001","CB12","CB24","CV12","CV24",
-        "PP","PB","TT","BPM","BGM","VIP24","VIP12","VCP24","VCP12",
-        "EGUI24","EGUI12","EGUI15","CBG12","CBG15","CBG24",
+        "PP","PB","TT","BPM","BGM","B12","B120","B150","B75","BV12","VIP24","VIP12","VCP24","VCP12",
+        "EGUI24","EGUI12","EGUI15","CBG12","CBG15","CBG24","CBG12M","CBG15M","CBG24M",
         "VIPG12","VIPG15","VIPG24","CVG12","CVG15","CVG24",
         "EMB1","EMB2","EMB3","EMB4","EMB5","CAISMB","PALT-V","PALTPL"
     );

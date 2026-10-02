@@ -298,6 +298,12 @@ $accent: #017E84;
     span:first-child { font-size: 15px; font-weight: 600; color: var(--text-primary); }
     span:last-child  { font-size: 18px; font-weight: 700; color: $accent; }
   }
+  &.tot-consigne   span:last-child { color: var(--success); font-weight: 600; }
+  &.tot-deconsigne span:last-child { color: var(--warning); font-weight: 600; }
+}
+.tot-sep-label {
+  margin-top: 8px; padding: 6px 0 2px; border-top: 1px dashed var(--border);
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted);
 }
 
 // ─── Modal Déconsigne ─────────────────────────────────────────────────────────
@@ -363,6 +369,12 @@ $accent: #017E84;
   color: var(--text-primary);
   &:focus { border-color: $accent; box-shadow: 0 0 0 3px rgba(1,126,132,0.15); }
   &.di-filled { border-color: var(--success); background: var(--success-bg); color: var(--success); font-weight: 800; }
+  &.di-error  { border-color: var(--danger); background: var(--danger-bg); color: var(--danger); }
+}
+.dg-row.dg-missing .di-code { color: var(--danger); }
+.di-missing {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; color: var(--danger); background: var(--danger-bg);
 }
 
 .modal-d-error {

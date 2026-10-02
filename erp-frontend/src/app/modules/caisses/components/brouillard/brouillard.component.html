@@ -8,10 +8,16 @@
       </div>
     </div>
     @if (brouillard) {
-      <button class="btn-print" (click)="print()">
-        <span class="material-icons">print</span>
-        Imprimer
-      </button>
+      <div class="header-actions">
+        <button class="btn-print" (click)="exportPdf()" [disabled]="exportingPdf">
+          <span class="material-icons">{{ exportingPdf ? 'hourglass_empty' : 'picture_as_pdf' }}</span>
+          {{ exportingPdf ? 'Export…' : 'Exporter PDF' }}
+        </button>
+        <button class="btn-print" (click)="print()">
+          <span class="material-icons">print</span>
+          Imprimer
+        </button>
+      </div>
     }
   </div>
 

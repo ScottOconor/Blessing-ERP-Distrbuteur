@@ -191,6 +191,8 @@ table.inv-lines {
 .tkt-lettres { font-size: 6.5pt; font-style: italic; text-align: center; margin: 2mm 0; color: var(--text-secondary); }
 .tkt-thanks  { font-size: 8.5pt; text-align: center; font-weight: 700; margin: 2mm 0; }
 .tkt-sig     { font-size: 8pt; text-align: center; margin-top: 4mm; }
+// Aperçu fidèle à l'impression : ticket entièrement en gras et en noir
+.tkt, .tkt * { font-weight: 800 !important; color: #000 !important; }
 
 // ─── Footer ──────────────────────────────────────────────────────────────────
 

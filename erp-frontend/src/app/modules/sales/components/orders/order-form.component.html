@@ -380,11 +380,17 @@
 
         <div class="so-totals">
           <div class="totals-box">
-            <div class="tot-row"><span>Total HT</span><span>{{ order.totalHT | number:'1.2-2' }} FCFA</span></div>
+            <div class="tot-row"><span>Total HT articles</span><span>{{ order.totalHT | number:'1.2-2' }} FCFA</span></div>
             <div class="tot-row tot-taxes">
               <span>Taxes (TVA + Précompte)</span>
               <span>{{ ((order.totalTVA ?? 0) + (order.totalPrecompte ?? 0)) | number:'1.0-0' }} FCFA</span>
             </div>
+            @if (totalEnlevementLignes > 0) {
+              <div class="tot-row">
+                <span>Frais d'enlèvement TTC</span>
+                <span>{{ totalEnlevementLignes | number:'1.0-0' }} FCFA</span>
+              </div>
+            }
             <div class="tot-row tot-ttc">
               <span>Total TTC</span>
               <span>{{ (order.totalTTC ?? 0) | number:'1.0-0' }} FCFA</span>
@@ -395,8 +401,14 @@
                 <span>– {{ totalRabais | number:'1.0-0' }} FCFA</span>
               </div>
             }
-            @if ((order.fraisEnlevementTTC ?? 0) > 0) {
-              <div class="tot-row"><span>Frais d'enlèvement</span><span>{{ order.fraisEnlevementTTC | number:'1.0-0' }} FCFA</span></div>
+            @if (consigneMontant > 0 || deconsigneMontant > 0) {
+              <div class="tot-sep-label">Emballages (hors taxes, non soumis au précompte)</div>
+              @if (consigneMontant > 0) {
+                <div class="tot-row tot-consigne"><span>+ Consigne</span><span>{{ consigneMontant | number:'1.0-0' }} FCFA</span></div>
+              }
+              @if (deconsigneMontant > 0) {
+                <div class="tot-row tot-deconsigne"><span>− Déconsigne</span><span>{{ deconsigneMontant | number:'1.0-0' }} FCFA</span></div>
+              }
             }
             <div class="tot-row tot-net">
               <span>NET À PAYER</span>
@@ -466,15 +478,20 @@
             <div class="dg-section">
               <div class="dg-section-header">{{ group.label }}</div>
               @for (d of group.items; track d.code) {
-                <div class="dg-row">
+                <div class="dg-row" [class.dg-missing]="!d.exists"
+                     [title]="d.exists ? '' : 'Cet emballage n\'existe pas en base de données'">
                   <span class="di-code">{{ d.code }}</span>
-                  <span class="di-nom">{{ d.nom }}</span>
+                  <span class="di-nom">
+                    {{ d.nom }}
+                    @if (!d.exists) { <span class="di-missing">Absent en base</span> }
+                  </span>
                   <input type="number"
                          [(ngModel)]="d.qty"
                          class="di-input"
                          min="0"
                          placeholder="0"
-                         [class.di-filled]="d.qty !== null && d.qty! > 0" />
+                         [class.di-filled]="d.qty !== null && d.qty! > 0"
+                         [class.di-error]="!d.exists && d.qty !== null && d.qty! > 0" />
                 </div>
               }
             </div>

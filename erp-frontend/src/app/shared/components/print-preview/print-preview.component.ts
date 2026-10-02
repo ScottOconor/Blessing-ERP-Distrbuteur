@@ -969,6 +969,8 @@ table.t-lines td { padding: 1px 2px; font-size: 8.5pt; vertical-align: top; }
 .t-sig-lbl { font-size: 8.5pt; font-weight: 700; margin-bottom: 1mm; text-align: center; }
 .t-sig-name { font-size: 8pt; color: #444; margin-bottom: 1mm; }
 .t-sig-area { height: 18mm; border: 1px solid #999; border-radius: 2px; width: 100%; }
+/* Ticket entièrement en gras et en noir : les gris et graisses fines ressortent pâles sur imprimante thermique. */
+.ticket, .ticket * { font-weight: 800 !important; color: #000 !important; }
 @page { size: 80mm auto; margin: 0; }
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;

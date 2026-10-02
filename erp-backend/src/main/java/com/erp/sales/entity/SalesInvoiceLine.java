@@ -66,6 +66,13 @@ public class SalesInvoiceLine {
     @Column(name = "frais_enlevement", precision = 20, scale = 2)
     private BigDecimal fraisEnlevement;
 
+    /**
+     * Supplément d'enlèvement du client (montant configuré × quantité), ajouté au TTC des frais
+     * d'enlèvement, sans TVA — comptabilisé au 707100. Non inclus dans fraisEnlevement (HT de base).
+     */
+    @Column(name = "frais_enlevement_supplement", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementSupplement;
+
     /** TVA sur les frais d'enlèvement de cette ligne = fraisEnlevement * tauxTVA */
     @Column(name = "frais_enlevement_tva", precision = 20, scale = 2)
     private BigDecimal fraisEnlevementTVA;

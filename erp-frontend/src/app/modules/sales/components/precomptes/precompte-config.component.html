@@ -112,7 +112,7 @@
               <th class="text-right">Montant HT / unité</th>
               <th class="text-right">Montant TTC / unité</th>
               <th class="text-right">Coût importé / unité</th>
-              <th>Suppléments clients</th>
+              <th>Suppléments clients (supplément TTC · TTC facturé)</th>
               <th></th>
             </tr>
           </thead>
@@ -126,7 +126,16 @@
                 <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
                 <td>
                   @if (e.clients && e.clients.length > 0) {
-                    <span class="clients-count">{{ e.clients.length }} supplément(s) client</span>
+                    <div class="supp-list">
+                      @for (c of e.clients; track c.partnerId) {
+                        <div class="supp-row">
+                          <span class="supp-client">{{ c.partnerName || clientNameById(c.partnerId) }}</span>
+                          <span class="supp font-mono" [class.supp-plus]="c.montant > 0"
+                                title="Supplément TTC par unité, comptabilisé au 707100">+{{ c.montant | number:'1.0-0' }}</span>
+                          <span class="font-mono" title="TTC facturé par unité">{{ ttc(e.montantFixe) + c.montant | number:'1.0-0' }}</span>
+                        </div>
+                      }
+                    </div>
                   } @else {
                     <span class="text-muted">Montant uniforme</span>
                   }
@@ -292,8 +301,8 @@
           <span>Suppléments clients (facultatif)</span>
         </div>
         <p style="font-size:12px;color:#6c757d;margin:0 0 8px">
-          Le montant supplémentaire s'<strong>ajoute</strong> au montant fixe lors de la facturation.
-          Il est comptabilisé dans un compte distinct (ex. surcharge logistique).
+          Le supplément s'<strong>ajoute au montant TTC</strong> du tarif de base (il n'est pas soumis à la TVA).
+          À la facturation : HT de base au 701500, sa TVA au 443200, supplément au <strong>707100</strong>.
         </p>
         <div class="lines-header">
           <span class="lines-title">Tarifs clients spécifiques</span>
@@ -304,20 +313,37 @@
             <thead>
               <tr>
                 <th>Client</th>
-                <th class="ar">Tarif client (FCFA/unité)</th>
+                <th class="ar">Supplément TTC / unité (707100)</th>
+                <th class="ar">TTC facturé / unité</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               @for (ec of enlForm.clients; track $index; let i = $index) {
                 <tr>
-                  <td>
-                    <select class="inp" [(ngModel)]="ec.partnerId">
-                      <option [value]="0">-- Client --</option>
-                      @for (c of clients; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
-                    </select>
+                  <td class="ac-cell">
+                    <input type="text" class="inp" placeholder="Tapez le nom du client…" autocomplete="off"
+                           [class.inp-missing]="!ec.partnerId"
+                           [(ngModel)]="enlClientSearch[i]"
+                           (focus)="activeEnlClientIdx = i"
+                           (ngModelChange)="onEnlClientInput(i)"
+                           (keydown.enter)="onEnlClientEnter(i, $event)"
+                           (blur)="closeEnlClientSuggestions(i)" />
+                    @if (activeEnlClientIdx === i) {
+                      <div class="ac-dropdown">
+                        @for (c of enlClientSuggestions(i); track c.id) {
+                          <div class="ac-item" (mousedown)="selectEnlClient(i, c)">
+                            {{ c.name }}
+                            @if (c.ref) { <span class="ac-ref">{{ c.ref }}</span> }
+                          </div>
+                        } @empty {
+                          <div class="ac-empty">Aucun client trouvé</div>
+                        }
+                      </div>
+                    }
                   </td>
                   <td class="ar"><input type="number" class="inp ar" [(ngModel)]="ec.montant" min="0" /></td>
+                  <td class="ar font-mono font-bold">{{ ttc(enlForm.montantFixe) + (ec.montant || 0) | number:'1.0-0' }}</td>
                   <td><button class="btn-del" (click)="removeEnlClient(i)"><span class="material-icons">delete</span></button></td>
                 </tr>
               }

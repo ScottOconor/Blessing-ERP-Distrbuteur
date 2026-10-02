@@ -24,3 +24,20 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
   router.navigate(['/welcome']);
   return false;
 };
+
+/**
+ * Protège un écran précis d'un module : exige le droit VIEW sur la ressource.
+ * Usage : canActivate: [resourceGuard]  +  data: { permModule: 'STOCK', permResource: 'PRODUITS' }
+ */
+export const resourceGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  const module: string | undefined = route.data['permModule'];
+  const resource: string | undefined = route.data['permResource'];
+  if (!module || !resource) return true;
+  if (auth.hasPermission(module, resource, 'VIEW')) return true;
+
+  router.navigate(['/welcome']);
+  return false;
+};

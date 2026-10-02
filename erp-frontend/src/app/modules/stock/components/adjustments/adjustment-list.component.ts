@@ -36,7 +36,7 @@ export class AdjustmentListComponent implements OnInit {
   filterWarehouseId: number | null = null;
   filterLocationId: number | null = null;
   filterSearch = '';
-  filterCat = 'autres'; // 'autres'(=tous) | 'articles' | 'emballages' | 'bouteilles'
+  filterCat = 'autres'; // 'autres'(=tous) | 'articles' | 'guinness' | 'brasseries' | 'emballages' | 'bouteilles'
   filterWithStock = false; // filtre : uniquement les produits avec stock > 0
   notes = '';
   adjDate: string = new Date().toISOString().split('T')[0];
@@ -165,11 +165,32 @@ export class AdjustmentListComponent implements OnInit {
     return 'autres';
   }
 
+  /** Sous-famille d'un article : Guinness (famille Guinness 12/15/24) ou Brasseries (Bières / Alcools mixtes 12/24). */
+  private articleFamily(l: InventoryLine): 'guinness' | 'brasseries' | null {
+    if (this.catGroup(l) !== 'articles') return null;
+    const cat = (l.categoryName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/\s+/g, ' ').trim();
+    if (cat.includes('guinness')) return 'guinness';
+    if (/^(bieres?|alcools? mixtes?) (12|24)$/.test(cat)) return 'brasseries';
+    return null;
+  }
+
+  private matchesCat(l: InventoryLine): boolean {
+    switch (this.filterCat) {
+      case 'autres':     return true;
+      case 'guinness':
+      case 'brasseries': return this.articleFamily(l) === this.filterCat;
+      default:           return this.catGroup(l) === this.filterCat;
+    }
+  }
+
   get catCounts(): Record<string, number> {
-    const c: Record<string, number> = { autres: this.inventoryLines.length, articles: 0, emballages: 0, bouteilles: 0 };
+    const c: Record<string, number> = { autres: this.inventoryLines.length, articles: 0, guinness: 0, brasseries: 0, emballages: 0, bouteilles: 0 };
     this.inventoryLines.forEach(l => {
       const g = this.catGroup(l);
       if (g !== 'autres') c[g]++;
+      const f = this.articleFamily(l);
+      if (f) c[f]++;
     });
     return c;
   }
@@ -181,7 +202,7 @@ export class AdjustmentListComponent implements OnInit {
         if (loc?.warehouseId !== this.filterWarehouseId) return false;
       }
       if (this.filterLocationId && l.locationId !== this.filterLocationId) return false;
-      if (this.filterCat !== 'autres' && this.catGroup(l) !== this.filterCat) return false;
+      if (!this.matchesCat(l)) return false;
       if (this.filterWithStock && (l.availableQty ?? 0) <= 0) return false;
       if (this.filterSearch) {
         const q = this.filterSearch.toLowerCase();

@@ -118,7 +118,11 @@ export class OrderFormComponent implements OnInit {
     });
 
     this.stockService.getProducts(companyId).subscribe({
-      next: data => { this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu'); },
+      next: data => {
+        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu');
+        // Brouillon : le précompte dépend de la catégorie (Emballage → aucun), connue seulement ici
+        if (!this.isReadOnly) this.order.lines.forEach((_, i) => this.computeLine(i));
+      },
       error: () => { this.errorMsg = 'Impossible de charger les articles du stock'; }
     });
   }
@@ -142,6 +146,10 @@ export class OrderFormComponent implements OnInit {
         this.order.lines.forEach(l => {
           l.consigne = CONSIGNE_CODES.has((l.productCode ?? '').trim().toUpperCase());
         });
+        // Brouillon : recalcul (emballages sans TVA ni précompte, hors totaux du bon)
+        if (this.order.state === 'draft' || !this.order.state) {
+          this.order.lines.forEach((_, i) => this.computeLine(i));
+        }
         this.supplierSearch = data.partnerName || '';
         this.lineSearches = this.order.lines.map(l =>
           l.productCode ? `[${l.productCode}] ${l.description}` : l.description
@@ -192,8 +200,9 @@ export class OrderFormComponent implements OnInit {
     const line = this.order.lines[i];
     const qty = line.quantity ?? 0;
     const pu = line.prixUnitaire ?? 0;
+    if (line.consigne) line.tauxTVA = 0; // emballages : ni TVA ni précompte
     const tva = line.tauxTVA ?? 0;
-    const pc = line.consigne ? 0 : (this.supplierPrecompteRate ?? 0);
+    const pc = this.sansPrecompte(line) ? 0 : (this.supplierPrecompteRate ?? 0);
     line.montantHT = Math.round(qty * pu * 100) / 100;
     line.montantTVA = Math.round(line.montantHT * tva) / 100;
     line.montantPrecompte = Math.round(line.montantHT * pc) / 100;
@@ -203,10 +212,19 @@ export class OrderFormComponent implements OnInit {
     this.computeTotals();
   }
 
+  /** Pas de précompte : emballage consigné ou article de la catégorie « Emballage ». */
+  private sansPrecompte(line: PurchaseOrderLine): boolean {
+    if (line.consigne) return true;
+    const cat = this.allProducts.find(p => p.id === line.productId)?.categoryName ?? '';
+    return cat.toLowerCase().includes('emballage');
+  }
+
   computeTotals(): void {
-    this.order.totalHT = this.order.lines.reduce((s, l) => s + (l.montantHT ?? 0), 0);
-    this.order.totalTVA = this.order.lines.reduce((s, l) => s + (l.montantTVA ?? 0), 0);
-    this.orderTotalPrecompte = this.order.lines.reduce((s, l) => s + (l.montantPrecompte ?? 0), 0);
+    // Consigne / déconsigne : présentées à part sous les totaux, comme sur la facture
+    const articles = this.order.lines.filter(l => !l.consigne);
+    this.order.totalHT = articles.reduce((s, l) => s + (l.montantHT ?? 0), 0);
+    this.order.totalTVA = articles.reduce((s, l) => s + (l.montantTVA ?? 0), 0);
+    this.orderTotalPrecompte = articles.reduce((s, l) => s + (l.montantPrecompte ?? 0), 0);
     this.order.totalTTC = (this.order.totalHT ?? 0) + (this.order.totalTVA ?? 0) + this.orderTotalPrecompte;
   }
 
@@ -341,14 +359,14 @@ export class OrderFormComponent implements OnInit {
   }
 
   get totalRabais(): number {
-    return this.order.lines.reduce((s, l) => s + (l.totalRabaisLigne ?? 0), 0);
+    return this.order.lines.filter(l => !l.consigne).reduce((s, l) => s + (l.totalRabaisLigne ?? 0), 0);
   }
 
   /** Rabais TTC (approximation TVA + précompte) déduit du net à payer */
   get totalRabaisTTC(): number {
-    return this.order.lines.reduce((s, l) => {
+    return this.order.lines.filter(l => !l.consigne).reduce((s, l) => {
       const r = l.totalRabaisLigne ?? 0;
-      const pc = l.consigne ? 0 : (this.supplierPrecompteRate ?? 0);
+      const pc = this.sansPrecompte(l) ? 0 : (this.supplierPrecompteRate ?? 0);
       return s + r * (1 + (l.tauxTVA ?? 0) / 100 + pc / 100);
     }, 0);
   }
@@ -485,7 +503,28 @@ export class OrderFormComponent implements OnInit {
     return this.fraisEnlevementLines.reduce((s, l) => s + (l.montantTotal ?? 0), 0);
   }
   get netAPayer(): number {
-    return this.invoiceDetails?.netAPayer ?? Math.round(this.totalTTC - this.totalRabaisTTC);
+    return this.invoiceDetails?.netAPayer
+      ?? Math.round(this.totalTTC - this.totalRabaisTTC + this.consigneMontant - this.deconsigneMontant);
+  }
+
+  /** Lignes emballage : celles de la facture une fois le bon confirmé, sinon celles du bon. */
+  private emballageAmounts(): number[] {
+    const invLines = this.invoiceDetails?.lines;
+    if (invLines?.length) {
+      return invLines
+        .filter(l => CONSIGNE_CODES.has((l.productCode ?? '').trim().toUpperCase()))
+        // signe porté par la quantité (déconsigne = quantité négative)
+        .map(l => Math.sign(Number(l.quantity) || 0) * Math.abs(Number(l.montantTTC) || 0));
+    }
+    return this.order.lines
+      .filter(l => l.consigne)
+      .map(l => (l.quantity ?? 0) * (l.prixUnitaire ?? 0));
+  }
+  get consigneMontant(): number {
+    return Math.round(this.emballageAmounts().filter(v => v > 0).reduce((s, v) => s + v, 0));
+  }
+  get deconsigneMontant(): number {
+    return Math.round(this.emballageAmounts().filter(v => v < 0).reduce((s, v) => s + Math.abs(v), 0));
   }
   get supplierPrecompteLabel(): string {
     return this.supplierPrecompteRate > 0 ? `PSA (${this.supplierPrecompteRate}%)` : 'PSA';

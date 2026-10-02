@@ -305,8 +305,11 @@ public class ReportService {
             List<AccountMoveLine> accountLines = entry.getValue();
             AccountAccount account = accountLines.get(0).getAccount();
 
+            // Le solde du grand livre porte UNIQUEMENT sur la période demandée : il part de zéro et
+            // le solde final = débit − crédit de la période. Le solde antérieur reste fourni à titre
+            // d'information (openingBalance) mais n'entre plus dans les soldes.
             BigDecimal openingBalance  = openingByAccount.getOrDefault(code, BigDecimal.ZERO);
-            BigDecimal cumulativeBalance = openingBalance;
+            BigDecimal cumulativeBalance = BigDecimal.ZERO;
             List<Map<String, Object>> lineResults = new ArrayList<>();
 
             for (AccountMoveLine line : accountLines) {

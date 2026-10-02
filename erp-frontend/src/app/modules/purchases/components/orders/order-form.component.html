@@ -270,7 +270,7 @@
       <div class="totals-section">
         <div class="totals-box">
           <div class="total-row">
-            <span>Montant HT</span>
+            <span>Montant HT articles</span>
             <span>{{ totalHT | number:'1.0-0' }} FCFA</span>
           </div>
           <div class="total-row">
@@ -292,6 +292,21 @@
               <span>− Rabais obtenus (601901)</span>
               <span>– {{ totalRabais | number:'1.0-0' }} FCFA</span>
             </div>
+          }
+          @if (consigneMontant > 0 || deconsigneMontant > 0) {
+            <div class="total-sep-label">Emballages (hors taxes, sans précompte)</div>
+            @if (consigneMontant > 0) {
+              <div class="total-row total-consigne">
+                <span>+ Consigne</span>
+                <span>{{ consigneMontant | number:'1.0-0' }} FCFA</span>
+              </div>
+            }
+            @if (deconsigneMontant > 0) {
+              <div class="total-row total-deconsigne">
+                <span>− Déconsigne</span>
+                <span>{{ deconsigneMontant | number:'1.0-0' }} FCFA</span>
+              </div>
+            }
           }
           <div class="total-row net-a-payer">
             <span>= Net à payer</span>

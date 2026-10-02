@@ -201,6 +201,7 @@ public class PermissionService {
         new PermissionRule("GET",    "/api/caisses/sessions/**",     "CAISSE","SESSIONS|RAPPORTS","VIEW"),
         new PermissionRule("GET",    "/api/caisses/rapport-consolide","CAISSE","RAPPORTS","VIEW"),
         new PermissionRule("GET",    "/api/caisses/*/brouillard",    "CAISSE","RAPPORTS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/*/brouillard/pdf","CAISSE","RAPPORTS","VIEW"),
         new PermissionRule("GET",    "/api/caisses",                 "CAISSE","CAISSES|SESSIONS|OPERATIONS|RAPPORTS","VIEW"),
         new PermissionRule("GET",    "/api/caisses/**",              "CAISSE","CAISSES|SESSIONS|OPERATIONS|RAPPORTS","VIEW"),
         new PermissionRule("POST",   "/api/caisses",                 "CAISSE","CAISSES","CREATE"),
@@ -401,6 +402,8 @@ public class PermissionService {
         return switch (context.toUpperCase()) {
             case "CAISSE" -> hasAny(auth, caisseEquivalents(rule, uri));
             case "CONFIG" -> hasAny(auth, configEquivalents(rule));
+            case "VENTES" -> hasAny(auth, catalogueEquivalents(rule, uri, "VENTES"));
+            case "ACHATS" -> hasAny(auth, catalogueEquivalents(rule, uri, "ACHATS"));
             default       -> false;
         };
     }
@@ -417,6 +420,23 @@ public class PermissionService {
             default -> List.of();
         };
     }
+    /**
+     * Bons et factures de vente / d'achat : lecture du catalogue (articles, catégories, entrepôts,
+     * et tarifs d'enlèvement pour les ventes)
+     * avec les droits du module lui-même. Le droit STOCK.PRODUITS peut ainsi être retiré à un rôle
+     * pour lui masquer les articles du module Stock sans l'empêcher de saisir ses bons.
+     */
+    private static List<String> catalogueEquivalents(PermissionRule rule, String uri, String module) {
+        if (!"VIEW".equals(rule.action())) return List.of();
+        boolean catalogue = uri.equals("/api/stock/products") || uri.startsWith("/api/stock/products/")
+                || uri.equals("/api/stock/categories")
+                || uri.equals("/api/stock/warehouses") || uri.startsWith("/api/stock/warehouses/")
+                // tarifs d'enlèvement : inclus dans le prix TTC des bons de vente
+                || ("VENTES".equals(module) && uri.equals("/api/enlevements"));
+        if (!catalogue) return List.of();
+        return List.of("PERM_" + module + "_COMMANDES_VIEW", "PERM_" + module + "_FACTURES_VIEW");
+    }
+
     private static List<String> configEquivalents(PermissionRule rule) {
         if (!"VIEW".equals(rule.action())) return List.of();
         return switch (rule.module()) {

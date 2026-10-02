@@ -107,6 +107,8 @@ public class SalesService {
     private static final String TVA_ACCOUNT_SERVICES       = "443150";
     private static final String ENLEVEMENT_ACCOUNT         = "701500";
     private static final String ENLEVEMENT_TVA_ACCOUNT     = "443200";
+    /** Supplément de frais d'enlèvement (tarif client − tarif de base de la catégorie). */
+    private static final String ENLEVEMENT_SUPPLEMENT_ACCOUNT = "707100";
     private static final String PSA_ACCOUNT                = "441200";
     private static final String CONSIGNE_ACCOUNT           = "419400";
     private static final String RISTOURNE_CREDIT_ACCOUNT   = "419800";
@@ -474,7 +476,9 @@ public class SalesService {
                         BigDecimal montantTVA = ht.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
                         BigDecimal ttc = ht.add(montantTVA);
                         // Prix TTC = HT × (1 + TVA% + Précompte%)
-                        BigDecimal pcRateAvPartiel = ol.isConsigne() ? ZERO : avoirTauxPrecompte;
+                        // Même régime que la ligne d'origine : pas de précompte facturé → pas de précompte repris
+                        boolean origSansPc = ol.getPrecompte() == null || ol.getPrecompte().compareTo(ZERO) == 0;
+                        BigDecimal pcRateAvPartiel = (ol.isConsigne() || origSansPc) ? ZERO : avoirTauxPrecompte;
                         BigDecimal prixUnitaireTTC = pu
                                 .multiply(BigDecimal.ONE
                                         .add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP))
@@ -487,6 +491,13 @@ public class SalesService {
                                 && ol.getQuantity().compareTo(ZERO) > 0) {
                             BigDecimal tauxEnlev = ol.getFraisEnlevement().divide(ol.getQuantity(), 6, RoundingMode.HALF_UP);
                             fraisEnlev = tauxEnlev.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                        }
+                        BigDecimal fraisEnlevSupp = ZERO;
+                        if (ol.getFraisEnlevementSupplement() != null && ol.getQuantity() != null
+                                && ol.getQuantity().compareTo(ZERO) > 0) {
+                            fraisEnlevSupp = ol.getFraisEnlevementSupplement()
+                                    .divide(ol.getQuantity(), 6, RoundingMode.HALF_UP)
+                                    .multiply(qty).setScale(2, RoundingMode.HALF_UP);
                         }
 
                         // Précompte proportionnel
@@ -516,6 +527,7 @@ public class SalesService {
                                 .montantTVA(montantTVA)
                                 .montantTTC(ttc)
                                 .fraisEnlevement(fraisEnlev)
+                                .fraisEnlevementSupplement(fraisEnlevSupp)
                                 .precompte(precompte)
                                 .consigne(ol.isConsigne())
                                 .guinessTaxe(ol.getGuinessTaxe() != null ? ol.getGuinessTaxe() : ZERO)
@@ -550,6 +562,7 @@ public class SalesService {
                             .montantTTC(ol.getMontantTTC())
                             .precompte(ol.getPrecompte())
                             .fraisEnlevement(ol.getFraisEnlevement())
+                            .fraisEnlevementSupplement(ol.getFraisEnlevementSupplement())
                             .consigne(ol.isConsigne())
                             .guinessTaxe(ol.getGuinessTaxe())
                             .rabaisUnitaire(ol.getRabaisUnitaire())
@@ -896,9 +909,28 @@ public class SalesService {
             }
         }
 
-        // Ligne frais d'enlèvement 701500 (montant HT) + TVA 443200
+        // Frais d'enlèvement : HT de base 701500 + TVA 443200 ; supplément client (TTC, sans TVA) 707100
         BigDecimal totalEnlevementHT = (invoice.getFraisEnlevementHT() != null ? invoice.getFraisEnlevementHT() : ZERO)
                 .setScale(0, RoundingMode.HALF_UP);
+        BigDecimal totalEnlevementSupplement = invoice.getLines().stream()
+                .filter(l -> !l.isConsigne())
+                .map(l -> l.getFraisEnlevementSupplement() != null ? l.getFraisEnlevementSupplement() : ZERO)
+                .reduce(ZERO, BigDecimal::add)
+                .setScale(0, RoundingMode.HALF_UP);
+        if (totalEnlevementSupplement.compareTo(ZERO) > 0) {
+            AccountAccount suppAccount = findOrCreateAccount(
+                    ENLEVEMENT_SUPPLEMENT_ACCOUNT, "Supplément frais d'enlèvement",
+                    "income", companyId, invoice.getJournal(), invoice.getCompany());
+            if (suppAccount != null) {
+                moveLines.add(AccountMoveLine.builder()
+                        .move(move).account(suppAccount).partner(invoice.getPartner())
+                        .name("Supplément frais d'enlèvement - " + invoice.getName()).date(date)
+                        .debit(isAvoir ? totalEnlevementSupplement : ZERO)
+                        .credit(isAvoir ? ZERO : totalEnlevementSupplement)
+                        .journal(invoice.getJournal()).company(invoice.getCompany())
+                        .build());
+            }
+        }
         if (totalEnlevementHT.compareTo(ZERO) != 0) {
             AccountAccount enlAccount = accountRepo.findFirstByCodeAndCompanyId(ENLEVEMENT_ACCOUNT, companyId)
                     .or(() -> accountRepo.findFirstByCodeAndCompanyId("7015", companyId))
@@ -1960,9 +1992,10 @@ public class SalesService {
             // Ignorer les placeholders provenant d'anciens bons enregistrés.
             if (isEmptyDocumentLine(ol.getProductId(), ol.getProductCode(), ol.getDescription(), ol.getPrixUnitaire())) continue;
             boolean isConsigne = ConsigneCodes.isConsigne(ol.getProductCode(), companyId);
+            boolean sansPrecompte = isConsigne || isSansPrecompte(ol.getCategoryId(), ol.getProductCode(), companyId);
             BigDecimal ht = ol.getMontantHT() != null ? ol.getMontantHT() : ZERO;
             BigDecimal pc = ZERO;
-            if (!isConsigne && tauxPrecompte.compareTo(ZERO) > 0) {
+            if (!sansPrecompte && tauxPrecompte.compareTo(ZERO) > 0) {
                 pc = ht.multiply(tauxPrecompte).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             }
 
@@ -1975,10 +2008,11 @@ public class SalesService {
                     .build();
             BigDecimal enlHT = computeFraisEnlevement(null, tempLine, partnerId, companyId);
 
-            BigDecimal tva = ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO;
+            // Emballages consignés : jamais de TVA (bons enregistrés avant la règle compris)
+            BigDecimal tva = isConsigne ? ZERO : (ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO);
             BigDecimal enlTVA = enlHT.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             // Prix TTC unitaire = HT × (1 + TVA% + Précompte%), arrondi à l'entier
-            BigDecimal pcRateFromOrder = isConsigne ? ZERO : tauxPrecompte;
+            BigDecimal pcRateFromOrder = sansPrecompte ? ZERO : tauxPrecompte;
             BigDecimal puttc = (ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO)
                     .multiply(BigDecimal.ONE
                             .add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP))
@@ -2018,10 +2052,11 @@ public class SalesService {
                     .categoryId(catId)
                     .consigne(isConsigne)
                     .montantHT(ht)
-                    .montantTVA(ol.getMontantTVA() != null ? ol.getMontantTVA() : ZERO)
+                    .montantTVA(isConsigne ? ZERO : (ol.getMontantTVA() != null ? ol.getMontantTVA() : ZERO))
                     .montantTTC(montantTTC)
                     .precompte(pc)
                     .fraisEnlevement(enlHT)
+                    .fraisEnlevementSupplement(tempLine.getFraisEnlevementSupplement())
                     .fraisEnlevementTVA(enlTVA)
                     .prixUnitaireTTC(puttc)
                     .guinessTaxe(guinessTaxe)
@@ -2887,6 +2922,8 @@ public class SalesService {
             // Respecter le flag exemptTva du produit — priorité sur ce que le frontend envoie
             BigDecimal resolvedTauxTVA = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
             resolvedTauxTVA = resolveExemptTva(resolvedTauxTVA, req.getProductId(), req.getProductCode(), companyId);
+            // Emballages consignés : jamais de TVA (ni de précompte)
+            if (ConsigneCodes.isConsigne(req.getProductCode(), companyId)) resolvedTauxTVA = ZERO;
 
             SalesOrderLine line = SalesOrderLine.builder()
                     .order(order)
@@ -2950,6 +2987,8 @@ public class SalesService {
             // Respecter le flag exemptTva du produit
             BigDecimal resolvedTauxTVA = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
             resolvedTauxTVA = resolveExemptTva(resolvedTauxTVA, resolvedProductId, req.getProductCode(), companyId);
+            // Emballages consignés : jamais de TVA (ni de précompte)
+            if (ConsigneCodes.isConsigne(req.getProductCode(), companyId)) resolvedTauxTVA = ZERO;
 
             SalesInvoiceLine line = SalesInvoiceLine.builder()
                     .invoice(invoice)
@@ -2967,7 +3006,8 @@ public class SalesService {
             computeInvoiceLineTotals(line);
 
             // Précompte (only on non-consigne lines, jamais sur les avoirs de règlement ristourne/remise)
-            boolean excludePrecompteLine = req.isExcludePrecompte();
+            boolean excludePrecompteLine = req.isExcludePrecompte()
+                    || isSansPrecompte(line.getCategoryId(), line.getProductCode(), companyId);
             if (!ConsigneCodes.isConsigne(line.getProductCode(), companyId) && !excludePrecompteLine
                     && tauxPrecompte.compareTo(ZERO) > 0) {
                 BigDecimal pc = line.getMontantHT()
@@ -3042,6 +3082,17 @@ public class SalesService {
         return ttcLigne.divide(qty, 0, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Ligne exemptée de précompte : emballage consigné (code) ou article de la catégorie « Emballage ».
+     */
+    private boolean isSansPrecompte(Long categoryId, String productCode, Long companyId) {
+        if (ConsigneCodes.isConsigne(productCode, companyId)) return true;
+        Long catId = resolveCategoryId(categoryId, productCode, companyId);
+        return catId != null && categoryRepo.findById(catId)
+                .map(c -> c.getName() != null && c.getName().toLowerCase().contains("emballage"))
+                .orElse(false);
+    }
+
     private Long resolveCategoryId(Long categoryId, String productCode, Long companyId) {
         if (categoryId != null) return categoryId;
         if (productCode != null && !productCode.isBlank() && companyId != null) {
@@ -3053,14 +3104,16 @@ public class SalesService {
     }
 
     /**
-     * Calcule les frais d'enlèvement HT d'une ligne selon la logique Odoo :
-     * - Si un tarif client spécifique existe → il REMPLACE le tarif de base (pas d'addition)
-     * - Sinon → tarif de base (montantFixe) pour la catégorie
-     * - montantFixe et les tarifs client sont HT par unité ; la TVA est ajoutée lors de la facturation
+     * Calcule les frais d'enlèvement HT d'une ligne :
+     * - HT = montantFixe (tarif de base de la catégorie, HT par unité) × qté ; la TVA s'y ajoute
+     *   à la facturation (TTC = HT × (1 + TVA), sans précompte)
+     * - Supplément client : montant configuré pour le client, ajouté au TTC (sans TVA) × qté,
+     *   renseigné dans line.fraisEnlevementSupplement et comptabilisé au 707100
      */
     private BigDecimal computeFraisEnlevement(SalesInvoiceRequest.LineRequest req,
                                                SalesInvoiceLine line,
                                                Long partnerId, Long companyId) {
+        line.setFraisEnlevementSupplement(ZERO);
         if (ConsigneCodes.isConsigne(line.getProductCode(), companyId) || companyId == null) return ZERO;
 
         Long catId = line.getCategoryId();
@@ -3074,20 +3127,23 @@ public class SalesService {
 
         BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
 
-        // Tarif client spécifique : remplace le tarif de base (logique Odoo get_montant_enlevement)
+        // Tarif de base pour la catégorie
+        BigDecimal tarifBase = enlevementRepo.findByCategoryIdAndCompanyIdAndActiveTrue(catId, companyId)
+                .map(e -> e.getMontantFixe() != null ? e.getMontantFixe() : ZERO)
+                .orElse(null);
+
+        // Supplément client : s'ajoute au TTC du tarif de base (pas de TVA dessus) → 707100
         if (partnerId != null) {
             var clientRate = enlevementClientRepo
                     .findByEnlevement_CategoryIdAndEnlevement_CompanyIdAndPartnerId(catId, companyId, partnerId);
-            if (clientRate.isPresent() && clientRate.get().getMontant() != null) {
-                return clientRate.get().getMontant().multiply(qty).setScale(2, RoundingMode.HALF_UP);
+            if (clientRate.isPresent() && clientRate.get().getMontant() != null
+                    && clientRate.get().getMontant().compareTo(ZERO) > 0) {
+                line.setFraisEnlevementSupplement(
+                        clientRate.get().getMontant().multiply(qty).setScale(2, RoundingMode.HALF_UP));
             }
         }
 
-        // Tarif de base pour la catégorie
-        return enlevementRepo.findByCategoryIdAndCompanyIdAndActiveTrue(catId, companyId)
-                .map(e -> (e.getMontantFixe() != null ? e.getMontantFixe() : ZERO)
-                        .multiply(qty).setScale(2, RoundingMode.HALF_UP))
-                .orElse(ZERO);
+        return tarifBase != null ? tarifBase.multiply(qty).setScale(2, RoundingMode.HALF_UP) : ZERO;
     }
 
     private void computeLineTotals(SalesOrderLine line) {
@@ -3124,7 +3180,10 @@ public class SalesService {
 
     private void computeOrderTotals(SalesOrder order) {
         BigDecimal totalHT = ZERO, totalTVA = ZERO, totalTTC = ZERO, totalRemise = ZERO;
+        Long companyId = order.getCompany() != null ? order.getCompany().getId() : null;
         for (SalesOrderLine line : order.getLines()) {
+            // Consigne / déconsigne : présentées à part (comme sur la facture), hors totaux du bon
+            if (line.isConsigne() || ConsigneCodes.isConsigne(line.getProductCode(), companyId)) continue;
             BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
             BigDecimal pu = line.getPrixUnitaire() != null ? line.getPrixUnitaire() : ZERO;
             BigDecimal remise = line.getTauxRemise() != null ? line.getTauxRemise() : ZERO;
@@ -3179,7 +3238,9 @@ public class SalesService {
                 totalPrecompte    = totalPrecompte.add(pc);
                 totalEnlevementHT  = totalEnlevementHT.add(enlHT);
                 totalEnlevementTVA = totalEnlevementTVA.add(enlTVA);
-                totalEnlevement   = totalEnlevement.add(enlHT).add(enlTVA);
+                // TTC enlèvement = HT + TVA + supplément client (ajouté au TTC, sans TVA)
+                BigDecimal enlSupp = line.getFraisEnlevementSupplement() != null ? line.getFraisEnlevementSupplement() : ZERO;
+                totalEnlevement   = totalEnlevement.add(enlHT).add(enlTVA).add(enlSupp);
                 totalGuinessTaxe  = totalGuinessTaxe.add(gTx);
                 totalRabais       = totalRabais.add(rabais);
                 totalRabaisTTC    = totalRabaisTTC.add(rabaisTTC);
@@ -3452,6 +3513,8 @@ public class SalesService {
                         .montantHT(l.getMontantHT()).montantTVA(l.getMontantTVA()).montantTTC(l.getMontantTTC())
                         .rabaisUnitaire(l.getRabaisUnitaire())
                         .totalRabaisLigne(l.getTotalRabaisLigne())
+                        .consigne(l.isConsigne() || ConsigneCodes.isConsigne(l.getProductCode(),
+                                order.getCompany() != null ? order.getCompany().getId() : null))
                         .build())
                 .collect(Collectors.toList());
 

@@ -58,4 +58,23 @@ export class BrouillardComponent implements OnInit {
   print(): void {
     window.print();
   }
+
+  exportingPdf = false;
+
+  exportPdf(): void {
+    if (!this.selectedCaisseId || !this.selectedDate) return;
+    this.exportingPdf = true;
+    this.caisseService.downloadBrouillardPdf(this.selectedCaisseId, this.selectedDate).subscribe({
+      next: blob => {
+        this.exportingPdf = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `brouillard_${this.brouillard?.caisseName ?? this.selectedCaisseId}_${this.selectedDate}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => { this.exportingPdf = false; this.error = 'Erreur lors de l\'export PDF du brouillard.'; }
+    });
+  }
 }

@@ -11,6 +11,7 @@ import { AccountJournal } from '../../../../core/models/account.model';
 import { PrintPreviewComponent } from '../../../../shared/components/print-preview/print-preview.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
 import { CONSIGNE_NAMES } from '../../../../shared/constants/consigne-codes';
+import { PrecompteService, Enlevement } from '../../../../shared/services/precompte.service';
 
 @Component({
   selector: 'app-order-form',
@@ -112,7 +113,7 @@ export class OrderFormComponent implements OnInit {
 
   // Déconsigne modal
   showDeconsigneModal = false;
-  deconsigneInputs: { code: string; nom: string; qty: number | null }[] = [];
+  deconsigneInputs: { code: string; nom: string; qty: number | null; exists: boolean }[] = [];
 
   // ─── Constantes emballages consigne ──────────────────────────────────────
   private readonly CASIER12_RE = /casier\s*(?:de\s*)?12/i;
@@ -134,11 +135,19 @@ export class OrderFormComponent implements OnInit {
     private stockService: StockService,
     private authService: AuthService,
     private companyService: CompanyService,
+    private precompteService: PrecompteService,
     private route: ActivatedRoute,
     public router: Router
   ) {}
 
   ngOnInit(): void {
+    this.precompteService.getAllEnlevements(this.authService.getCompanyId()).subscribe({
+      next: e => {
+        this.enlevements = (e ?? []).filter(x => x.active !== false);
+        this.refreshPrixTTC();
+      },
+      error: () => { this.enlevements = []; }
+    });
     const id = this.route.snapshot.paramMap.get('id');
     this.orderId = id ? +id : null;
     this.loadReferenceData();
@@ -168,7 +177,7 @@ export class OrderFormComponent implements OnInit {
     // Recharger les prix client et recalculer les TTC (precompte dépend du client)
     this.order.lines.forEach((line, i) => {
       if (line.productId) this.loadClientPriceForLine(i, line.productId);
-      this.linePrixTTC[i] = this.computePrixTTC(line.prixUnitaire || 0, line.tauxTVA || 0, !line.consigne);
+      this.linePrixTTC[i] = this.prixTTCLigne(line);
       this.onLineChange(line);
     });
   }
@@ -192,12 +201,14 @@ export class OrderFormComponent implements OnInit {
 
   get totalRabais(): number {
     return this.order.lines
-      .filter(l => !l.consigne)
+      .filter(l => !this.isEmballage(l))
       .reduce((s, l) => s + (l.totalRabaisLigne || 0), 0);
   }
 
   get netAPayer(): number {
-    return Math.round((this.order.totalTTC || 0) + (this.order.fraisEnlevementTTC || 0) - this.totalRabais);
+    // Frais d'enlèvement déjà inclus dans le Total TTC (montantTTC des lignes)
+    return Math.round((this.order.totalTTC || 0) - this.totalRabais
+      + this.consigneMontant - this.deconsigneMontant);
   }
 
   private getClientTauxPrecompte(): number {
@@ -282,6 +293,9 @@ export class OrderFormComponent implements OnInit {
           }
           return '';
         });
+        // Précompte (catégorie Emballage → aucun) et frais d'enlèvement dépendent de la catégorie,
+        // connue seulement ici
+        this.refreshPrixTTC();
       },
       error: () => { this.errorMsg = 'Impossible de charger les articles du stock'; }
     });
@@ -303,6 +317,9 @@ export class OrderFormComponent implements OnInit {
     this.salesService.getOrder(id).subscribe({
       next: (data) => {
         this.order = { ...data, lines: (data.lines ?? []).filter(line => !this.isEmptyLine(line)) };
+        // Les lignes emballage rechargées restent des lignes consigne (sinon elles seraient
+        // recomptées comme articles « casier » et la consigne auto doublerait)
+        this.order.lines.forEach(l => { if (this.isEmballage(l)) l.consigne = true; });
         this.clientSearch = data.partnerName || '';
         if (data.partnerId) this.onClientChange(data.partnerId);
         this.lineSearches = this.order.lines.map(l => l.productCode ? `[${l.productCode}] ${l.description}` : l.description);
@@ -345,6 +362,45 @@ export class OrderFormComponent implements OnInit {
     this.linePrixTTC.push(0);
   }
 
+  // ─── Frais d'enlèvement (inclus dans le prix TTC affiché) ─────────────────
+  enlevements: Enlevement[] = [];
+
+  private enlevementConfig(line: SalesOrderLine): Enlevement | undefined {
+    if (this.isEmballage(line)) return undefined;
+    const catId = line.categoryId ?? this.allProducts.find(p => p.id === line.productId)?.categoryId;
+    return catId ? this.enlevements.find(e => e.categoryId === catId) : undefined;
+  }
+
+  /**
+   * Frais d'enlèvement TTC par unité, comme à la facturation : montant fixe HT × (1 + TVA), sans
+   * précompte, + supplément du client (ajouté au TTC, sans TVA). Jamais sur les emballages.
+   */
+  enlevementUnitTTC(line: SalesOrderLine): number {
+    const cfg = this.enlevementConfig(line);
+    if (!cfg) return 0;
+    const supplement = Number(cfg.clients?.find(c => Number(c.partnerId) === Number(this.order.partnerId))?.montant) || 0;
+    return Math.round((Number(cfg.montantFixe) || 0) * (1 + (line.tauxTVA || 0) / 100) + supplement);
+  }
+
+  /** Prix unitaire TTC affiché : article (HT + TVA + précompte) + frais d'enlèvement TTC. */
+  prixTTCLigne(line: SalesOrderLine): number {
+    if (this.isEmballage(line)) return line.prixUnitaire || 0;
+    return this.computePrixTTC(line.prixUnitaire || 0, line.tauxTVA || 0, !this.sansPrecompte(line))
+      + this.enlevementUnitTTC(line);
+  }
+
+  /** Total TTC des frais d'enlèvement inclus dans les lignes du bon. */
+  get totalEnlevementLignes(): number {
+    return this.order.lines.reduce((s, l) => s + this.enlevementUnitTTC(l) * (l.quantity || 0), 0);
+  }
+
+  /** Recalcule prix TTC et montants (tarifs d'enlèvement / client / articles chargés). */
+  private refreshPrixTTC(): void {
+    if (!this.order?.lines?.length) return;
+    this.order.lines.forEach((l, i) => { if (!this.isEmballage(l)) this.linePrixTTC[i] = this.prixTTCLigne(l); });
+    [...this.order.lines].filter(l => !this.isEmballage(l)).forEach(l => this.onLineChange(l));
+  }
+
   /**
    * Prix TTC = Prix HT × (1 + TVA% + Précompte%).
    * inclurePrecompte=false pour les lignes consigne (pas de PSA sur emballages).
@@ -364,15 +420,16 @@ export class OrderFormComponent implements OnInit {
   /** Appelé quand l'utilisateur saisit un prix TTC dans le formulaire. */
   onPrixTTCChange(i: number): void {
     const line = this.order.lines[i];
-    const prixTTC = this.linePrixTTC[i] || 0;
-    line.prixUnitaire = this.computePrixHT(prixTTC, line.tauxTVA || 0, !line.consigne);
+    // Le prix TTC saisi inclut les frais d'enlèvement : on les retire avant de remonter au HT article
+    const prixTTC = Math.max(0, (this.linePrixTTC[i] || 0) - this.enlevementUnitTTC(line));
+    line.prixUnitaire = this.computePrixHT(prixTTC, line.tauxTVA || 0, !this.sansPrecompte(line));
     this.onLineChange(line);
   }
 
   /** Appelé quand le taux TVA change — recalcule le prix TTC à partir du HT. */
   onTauxTVAChange(i: number): void {
     const line = this.order.lines[i];
-    this.linePrixTTC[i] = this.computePrixTTC(line.prixUnitaire || 0, line.tauxTVA || 0, !line.consigne);
+    this.linePrixTTC[i] = this.prixTTCLigne(line);
     this.onLineChange(line);
   }
 
@@ -398,6 +455,18 @@ export class OrderFormComponent implements OnInit {
     return null;
   }
 
+  /** Emballage consigné (auto, déconsigne ou saisi à la main) : sans TVA ni précompte, hors totaux du bon. */
+  isEmballage(line: SalesOrderLine): boolean {
+    return !!line.consigne || this.CONSIGNE_CODES_SET.has((line.productCode || '').trim().toUpperCase());
+  }
+
+  /** Pas de précompte : emballage consigné ou article de la catégorie « Emballage ». */
+  sansPrecompte(line: SalesOrderLine): boolean {
+    if (this.isEmballage(line)) return true;
+    const cat = this.allProducts.find(p => p.id === line.productId)?.categoryName ?? '';
+    return cat.toLowerCase().includes('emballage');
+  }
+
   isAutoConsigneLine(line: SalesOrderLine): boolean {
     return !!line.consigne && (line.quantity || 0) > 0 &&
       !!line.productCode && this.CONSIGNE_CODES_SET.has(line.productCode);
@@ -415,7 +484,7 @@ export class OrderFormComponent implements OnInit {
 
     for (let i = 0; i < this.order.lines.length; i++) {
       const line = this.order.lines[i];
-      if (line.consigne) continue;
+      if (this.isEmballage(line)) continue; // un casier vendu n'appelle pas une consigne de plus
       const code = this.getConsigneCode(this.lineUomNames[i] || '', this.lineCategoryNames[i] || '');
       if (code) totals[code] += line.quantity || 0;
     }
@@ -425,23 +494,35 @@ export class OrderFormComponent implements OnInit {
     }
   }
 
+  private removeLineAt(idx: number): void {
+    this.order.lines.splice(idx, 1);
+    this.lineSearches.splice(idx, 1);
+    this.lineStockQty.splice(idx, 1);
+    this.lineSearchResults.splice(idx, 1);
+    this.lineUomNames.splice(idx, 1);
+    this.lineCategoryNames.splice(idx, 1);
+    this.linePrixTTC.splice(idx, 1);
+  }
+
   private syncConsigneLine(code: string, name: string, totalQty: number): void {
+    // Une seule ligne consigne auto par code : supprimer les doublons éventuels (bons déjà enregistrés)
+    for (let k = this.order.lines.length - 1; k >= 0; k--) {
+      const l = this.order.lines[k];
+      if (l.consigne && (l.quantity || 0) > 0 && l.productCode === code
+          && this.order.lines.findIndex(x => x.consigne && (x.quantity || 0) > 0 && x.productCode === code) !== k) {
+        this.removeLineAt(k);
+      }
+    }
     const idx = this.order.lines.findIndex(l => l.consigne && (l.quantity || 0) > 0 && l.productCode === code);
     if (totalQty <= 0) {
       if (idx >= 0) {
-        this.order.lines.splice(idx, 1);
-        this.lineSearches.splice(idx, 1);
-        this.lineStockQty.splice(idx, 1);
-        this.lineSearchResults.splice(idx, 1);
-        this.lineUomNames.splice(idx, 1);
-        this.lineCategoryNames.splice(idx, 1);
-        this.linePrixTTC.splice(idx, 1);
+        this.removeLineAt(idx);
         this.computeTotals();
       }
       return;
     }
     const product = this.allProducts.find(p => p.defaultCode === code);
-    const tauxTVA = product?.exemptTva ? 0 : this.TVA_DEFAULT;
+    const tauxTVA = 0; // emballage : exempté de TVA
     if (idx >= 0) {
       this.order.lines[idx].quantity = totalQty;
       this.onLineChange(this.order.lines[idx]);
@@ -568,8 +649,9 @@ export class OrderFormComponent implements OnInit {
     line.prixUnitaire = product.salePrice || 0;
     line.rabaisUnitaire = 0;
     line.totalRabaisLigne = 0;
-    line.tauxTVA = product.exemptTva ? 0 : this.TVA_DEFAULT;
-    line.accountCode = '701100';
+    const emballage = this.CONSIGNE_CODES_SET.has((product.defaultCode || '').trim().toUpperCase());
+    line.tauxTVA = (product.exemptTva || emballage) ? 0 : this.TVA_DEFAULT;
+    line.accountCode = emballage ? this.CONSIGNE_ACCOUNT : '701100';
     line.categoryId = product.categoryId;
     this.lineSearches[i] = product.defaultCode
       ? `[${product.defaultCode}] ${product.name}`
@@ -577,7 +659,7 @@ export class OrderFormComponent implements OnInit {
     this.lineStockQty[i] = product.qtyOnHand ?? 0;
     this.lineUomNames[i] = product.uomName ?? '';
     this.lineCategoryNames[i] = product.categoryName ?? '';
-    this.linePrixTTC[i] = this.computePrixTTC(line.prixUnitaire, line.tauxTVA || 0, true);
+    this.linePrixTTC[i] = this.prixTTCLigne(line);
     this.activeSuggestionIdx = null;
     this.onLineChange(line);
     // Charger le prix spécifique à ce client pour cet article
@@ -618,8 +700,11 @@ export class OrderFormComponent implements OnInit {
     const qty = line.quantity || 0;
     const pu = line.prixUnitaire || 0;
     const remise = line.tauxRemise || 0;
+    const emballage = this.isEmballage(line);
+    if (emballage) line.tauxTVA = 0; // emballages : ni TVA ni précompte
     const tva = line.tauxTVA || 0;
-    const tauxPrecompte = line.consigne ? 0 : this.getClientTauxPrecompte();
+    const sansPc = this.sansPrecompte(line);
+    const tauxPrecompte = sansPc ? 0 : this.getClientTauxPrecompte();
 
     const brut = qty * pu;
     const remiseMontant = brut * remise / 100;
@@ -631,7 +716,8 @@ export class OrderFormComponent implements OnInit {
     line.montantHT  = ht;
     line.montantTVA = montantTVA;
     // TTC = qty × prixUnitaireTTC (arrondi à l'entier)
-    line.montantTTC = Math.round(this.computePrixTTC(pu, tva, !line.consigne) * qty);
+    // + frais d'enlèvement TTC par unité (comme sur la facture)
+    line.montantTTC = Math.round((this.computePrixTTC(pu, tva, !sansPc) + this.enlevementUnitTTC(line)) * qty);
 
     line.totalRabaisLigne = Math.round(qty * (line.rabaisUnitaire || 0));
 
@@ -645,14 +731,14 @@ export class OrderFormComponent implements OnInit {
     let ht = 0, tva = 0, ttc = 0, remise = 0, precompte = 0;
     const tauxPrecompte = this.getClientTauxPrecompte();
     for (const line of this.order.lines) {
+      // Consigne / déconsigne : présentées à part sous les totaux, comme sur la facture
+      if (this.isEmballage(line)) continue;
       ht  += line.montantHT  || 0;
       tva += line.montantTVA || 0;
       ttc += line.montantTTC || 0;  // déjà inclut la PSA
       const brut = (line.quantity || 0) * (line.prixUnitaire || 0);
       remise += brut * (line.tauxRemise || 0) / 100;
-      if (!line.consigne) {
-        precompte += (line.montantHT || 0) * tauxPrecompte / 100;
-      }
+      if (!this.sansPrecompte(line)) precompte += (line.montantHT || 0) * tauxPrecompte / 100;
     }
     // HT/TVA/Précompte : pleine précision pour les calculs
     this.order.totalHT        = ht;
@@ -666,15 +752,28 @@ export class OrderFormComponent implements OnInit {
 
   // ─── Getters résumé consignes ─────────────────────────────────────────────
 
+  /** Montant des emballages consignés (sans TVA ni précompte). */
+  get consigneMontant(): number {
+    return Math.round(this.order.lines
+      .filter(l => this.isEmballage(l) && (l.quantity || 0) > 0)
+      .reduce((s, l) => s + (l.quantity || 0) * (l.prixUnitaire || 0), 0));
+  }
+
+  get deconsigneMontant(): number {
+    return Math.round(this.order.lines
+      .filter(l => this.isEmballage(l) && (l.quantity || 0) < 0)
+      .reduce((s, l) => s + Math.abs((l.quantity || 0) * (l.prixUnitaire || 0)), 0));
+  }
+
   get qteConsigne(): number {
     return this.order.lines
-      .filter(l => l.consigne && (l.quantity || 0) > 0)
+      .filter(l => this.isEmballage(l) && (l.quantity || 0) > 0)
       .reduce((s, l) => s + (l.quantity || 0), 0);
   }
 
   get qteDeconsigne(): number {
     return this.order.lines
-      .filter(l => l.consigne && (l.quantity || 0) < 0)
+      .filter(l => this.isEmballage(l) && (l.quantity || 0) < 0)
       .reduce((s, l) => s + Math.abs(l.quantity || 0), 0);
   }
 
@@ -744,9 +843,7 @@ export class OrderFormComponent implements OnInit {
       }
       return '';
     });
-    this.linePrixTTC = lines.map(l =>
-      this.computePrixTTC(l.prixUnitaire || 0, l.tauxTVA || 0, !l.consigne)
-    );
+    this.linePrixTTC = lines.map(l => this.prixTTCLigne(l));
   }
 
   // ─── Confirmation ─────────────────────────────────────────────────────────
@@ -770,7 +867,8 @@ export class OrderFormComponent implements OnInit {
       return {
         code,
         nom: product?.name || this.CONSIGNE_NAMES[code] || code,
-        qty: null
+        qty: null,
+        exists: !!product
       };
     });
     this.showDeconsigneModal = true;
@@ -781,11 +879,20 @@ export class OrderFormComponent implements OnInit {
       if (d.qty === null || d.qty === undefined) d.qty = 0;
     }
 
+    // Un emballage sans article en base donnerait une ligne de déconsigne sans produit (ni stock ni prix)
+    const missing = this.deconsigneInputs.filter(d => (d.qty || 0) > 0 && !d.exists);
+    if (missing.length > 0) {
+      this.errorMsg = `Emballage sélectionné pour la déconsigne inexistant en base de données : `
+        + missing.map(d => `${d.code} (${d.nom})`).join(', ')
+        + `. Créez l'article ou retirez la quantité.`;
+      return;
+    }
+
     for (const d of this.deconsigneInputs) {
       const qty = d.qty || 0;
       if (qty > 0) {
         const product = this.allProducts.find(p => p.defaultCode === d.code);
-        const tauxTVA = product?.exemptTva ? 0 : this.TVA_DEFAULT;
+        const tauxTVA = 0; // emballage : exempté de TVA
         const prixUnitaire = product?.salePrice || 0;
         const deconsigneLine: SalesOrderLine = {
           description: product?.name || d.nom,
@@ -819,14 +926,15 @@ export class OrderFormComponent implements OnInit {
     this.deconsigneInputs = [];
   }
 
-  get deconsigneGroups(): { label: string; items: { code: string; nom: string; qty: number | null }[] }[] {
+  get deconsigneGroups(): { label: string; items: { code: string; nom: string; qty: number | null; exists: boolean }[] }[] {
     const defs = [
       { label: 'CB — Casiers Bouteille',          codes: ['CB12','CB24','CB12M','CB24M'] },
       { label: 'CV — Casiers Verre',              codes: ['CV12','CV24'] },
-      { label: 'CBG — Casiers Bouteille Guinness',codes: ['CBG12','CBG15','CBG24'] },
+      { label: 'CBG — Casiers Bouteille Guinness',codes: ['CBG12','CBG15','CBG24','CBG12M','CBG15M','CBG24M'] },
       { label: 'CVG — Casiers Verre Guinness',    codes: ['CVG12','CVG15','CVG24'] },
       { label: 'VIP / VCP',                       codes: ['VIP12','VIP24','VCP12','VCP24'] },
       { label: 'VIPG — VIP Guinness',             codes: ['VIPG12','VIPG15','VIPG24'] },
+      { label: 'Bouteilles vides',                codes: ['B12','B120','B150','B75','BV12'] },
     ];
     return defs.map(g => ({
       label: g.label,

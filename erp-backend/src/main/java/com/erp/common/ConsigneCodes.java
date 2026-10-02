@@ -15,12 +15,13 @@ public final class ConsigneCodes {
     private static final Set<String> BASE = Set.of(
         "CB12", "CB24", "CB12M", "CB24M",
         "CV12", "CV24",
-        "CBG12", "CBG15", "CBG24",
+        "CBG12", "CBG15", "CBG24", "CBG12M", "CBG15M", "CBG24M",
         "VIP12", "VIP24", "VCP12", "VCP24",
         "VIPG12", "VIPG15", "VIPG24",
         "CVG12", "CVG15", "CVG24",
         "EGUI12", "EGUI15", "EGUI24",
         "PP", "PB", "TT", "BPM", "BGM",
+        "B12", "B120", "B150", "B75", "BV12",
         "CAIMET", "CONS001", "INPN33",
         "EMB1", "EMB2", "EMB3", "EMB4", "EMB5",
         "CAISMB", "PALT-V", "PALTPL"

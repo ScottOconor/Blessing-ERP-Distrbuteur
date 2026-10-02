@@ -142,14 +142,11 @@
             </div>
             <div class="partner-header-right">
               <div class="balance-chips">
-                <span class="bal-chip chip-open">
-                  Ouv. {{ fmt2(account.openingBalance) }}
-                </span>
                 <span class="bal-chip chip-debit">+ {{ fmt2(account.totalDebit) }}</span>
                 <span class="bal-chip chip-credit">− {{ fmt2(account.totalCredit) }}</span>
                 <span class="bal-chip" [class.chip-pos]="account.finalBalance >= 0"
                                        [class.chip-neg]="account.finalBalance < 0">
-                  Clôt. <strong>{{ fmt2(account.finalBalance) }}</strong>
+                  Solde <strong>{{ fmt2(account.finalBalance) }}</strong>
                 </span>
               </div>
               <span class="material-icons acc-chevron">
@@ -162,14 +159,14 @@
           <div class="partner-header-print print-only"
                [style.background]="accountColor(account.accountCode)">
             <span class="partner-name-print">{{ account.accountCode }} — {{ account.accountName }}</span>
-            <span>Solde ouv. : {{ fmt2(account.openingBalance) }} | Clôture : {{ fmt2(account.finalBalance) }}</span>
+            <span>Débit : {{ fmt2(account.totalDebit) }} | Crédit : {{ fmt2(account.totalCredit) }} | Solde de la période : {{ fmt2(account.finalBalance) }}</span>
           </div>
 
           <!-- Corps : lignes -->
           <div class="partner-body" [class.body-hidden]="!expandedAccounts.has(account.accountCode)">
 
             @if (account.lines.length === 0) {
-              <div class="no-lines no-print">Aucun mouvement dans la période — solde reporté uniquement.</div>
+              <div class="no-lines no-print">Aucun mouvement dans la période.</div>
             } @else {
               <div class="table-wrap">
                 <table class="gl-table">

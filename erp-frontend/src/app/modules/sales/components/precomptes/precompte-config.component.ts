@@ -156,6 +156,7 @@ export class PrecompteConfigComponent implements OnInit {
   openNewEnl(): void {
     this.editingEnl = null;
     this.enlForm = this.emptyEnl();
+    this.initEnlClientSearch();
     this.enlError = '';
     this.showEnlModal = true;
   }
@@ -163,6 +164,7 @@ export class PrecompteConfigComponent implements OnInit {
   editEnl(e: Enlevement): void {
     this.editingEnl = e;
     this.enlForm = { ...e, clients: (e.clients ?? []).map(c => ({ ...c })) };
+    this.initEnlClientSearch();
     this.enlError = '';
     this.showEnlModal = true;
   }
@@ -170,15 +172,78 @@ export class PrecompteConfigComponent implements OnInit {
   addEnlClient(): void {
     if (!this.enlForm.clients) this.enlForm.clients = [];
     this.enlForm.clients.push({ partnerId: 0, montant: 0 });
+    this.enlClientSearch.push('');
+    this.activeEnlClientIdx = this.enlForm.clients.length - 1;
   }
 
   removeEnlClient(i: number): void {
     this.enlForm.clients?.splice(i, 1);
+    this.enlClientSearch.splice(i, 1);
+    this.activeEnlClientIdx = null;
   }
+
+  // ── Autocomplete client des suppléments ──
+  /** Texte saisi par ligne de tarif client. */
+  enlClientSearch: string[] = [];
+  activeEnlClientIdx: number | null = null;
+
+  private initEnlClientSearch(): void {
+    this.enlClientSearch = (this.enlForm.clients ?? []).map(c => this.clientName(c.partnerId));
+    this.activeEnlClientIdx = null;
+  }
+
+  clientNameById(id?: number): string { return this.clientName(id); }
+
+  private clientName(id?: number): string {
+    return id ? (this.clients.find(c => c.id === Number(id))?.name ?? '') : '';
+  }
+
+  enlClientSuggestions(i: number): SalesClient[] {
+    const q = (this.enlClientSearch[i] ?? '').toLowerCase().trim();
+    const taken = new Set((this.enlForm.clients ?? []).filter((_, k) => k !== i).map(c => Number(c.partnerId)));
+    return this.clients
+      .filter(c => !taken.has(c.id!))
+      .filter(c => !q || c.name.toLowerCase().includes(q) || (c.ref ?? '').toLowerCase().includes(q))
+      .slice(0, 10);
+  }
+
+  onEnlClientInput(i: number): void {
+    this.activeEnlClientIdx = i;
+    const ec = this.enlForm.clients?.[i];
+    if (ec && this.clientName(ec.partnerId) !== this.enlClientSearch[i]) ec.partnerId = 0;
+  }
+
+  selectEnlClient(i: number, c: SalesClient): void {
+    const ec = this.enlForm.clients?.[i];
+    if (!ec) return;
+    ec.partnerId = c.id!;
+    this.enlClientSearch[i] = c.name;
+    this.activeEnlClientIdx = null;
+  }
+
+  onEnlClientEnter(i: number, event: Event): void {
+    event.preventDefault();
+    const first = this.enlClientSuggestions(i)[0];
+    if (first) this.selectEnlClient(i, first);
+  }
+
+  closeEnlClientSuggestions(i: number): void {
+    // Laisser le clic sur une suggestion aboutir avant de fermer
+    setTimeout(() => {
+      if (this.activeEnlClientIdx === i) this.activeEnlClientIdx = null;
+      if (!this.enlForm.clients?.[i]?.partnerId) this.enlClientSearch[i] = '';
+    }, 200);
+  }
+
+
 
   saveEnl(): void {
     if (!this.enlForm.categoryId || !this.enlForm.montantFixe) {
       this.enlError = 'Catégorie et montant sont requis.';
+      return;
+    }
+    if ((this.enlForm.clients ?? []).some(c => !c.partnerId)) {
+      this.enlError = 'Choisissez un client dans la liste pour chaque tarif client (ou supprimez la ligne).';
       return;
     }
     this.savingEnl = true;

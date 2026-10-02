@@ -2,10 +2,13 @@ package com.erp.caisse.controller;
 
 import com.erp.caisse.dto.*;
 import com.erp.caisse.entity.OperationType;
+import com.erp.caisse.service.BrouillardPdfService;
 import com.erp.caisse.service.CaisseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +22,7 @@ import java.util.List;
 public class CaisseController {
 
     private final CaisseService caisseService;
+    private final BrouillardPdfService brouillardPdfService;
 
     // ── Caisses CRUD ──
 
@@ -170,5 +174,19 @@ public class CaisseController {
             @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return caisseService.getBrouillard(id, date);
+    }
+
+    @GetMapping("/{id}/brouillard/pdf")
+    public ResponseEntity<byte[]> getBrouillardPdf(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        BrouillardDTO dto = caisseService.getBrouillard(id, date);
+        byte[] pdf = brouillardPdfService.generatePdf(dto, caisseService.getCaisse(id).getCompanyId());
+        String filename = "brouillard_" + (dto.getCaisseName() != null ? dto.getCaisseName().replaceAll("[^A-Za-z0-9_-]", "_") : id)
+                + "_" + date + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

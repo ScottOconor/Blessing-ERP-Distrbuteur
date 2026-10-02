@@ -73,5 +73,6 @@ public class SalesOrderDTO {
         private BigDecimal rabaisUnitaire;
         private BigDecimal totalRabaisLigne;
         private BigDecimal totalRabaisLigneTTC;
+        private boolean consigne;
     }
 }

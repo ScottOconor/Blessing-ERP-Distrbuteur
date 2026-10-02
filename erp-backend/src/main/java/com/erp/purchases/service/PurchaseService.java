@@ -1895,7 +1895,8 @@ public class PurchaseService {
             boolean isConsigne = ConsigneCodes.isConsigne(ol.getProductCode(), companyId);
             BigDecimal qty = ol.getQuantity() != null ? ol.getQuantity() : ZERO;
             BigDecimal pu  = ol.getPrixUnitaire() != null ? ol.getPrixUnitaire() : ZERO;
-            BigDecimal tva = ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO;
+            // Emballages consignés : jamais de TVA (bons enregistrés avant la règle compris)
+            BigDecimal tva = isConsigne ? ZERO : (ol.getTauxTVA() != null ? ol.getTauxTVA() : ZERO);
 
             // Apply preferential supplier price if configured
             BigDecimal rabaisUnitaire = ZERO;
@@ -1916,14 +1917,15 @@ public class PurchaseService {
 
             BigDecimal ht   = qty.multiply(pu).setScale(2, RoundingMode.HALF_UP);
             BigDecimal lTVA = ht.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            boolean sansPrecompte = isConsigne || isSansPrecompte(ol.getCategoryId(), ol.getProductCode(), companyId);
             BigDecimal pc   = ZERO;
-            if (!isConsigne && tauxPrecompte.compareTo(ZERO) > 0) {
+            if (!sansPrecompte && tauxPrecompte.compareTo(ZERO) > 0) {
                 pc = ht.multiply(tauxPrecompte).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             }
             BigDecimal lTTC = ht.add(lTVA).add(pc);
             BigDecimal totalRabaisLigne = !isConsigne ? qty.multiply(rabaisUnitaire).setScale(2, RoundingMode.HALF_UP) : ZERO;
 
-            BigDecimal pcUnitRate = isConsigne ? ZERO : tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal pcUnitRate = sansPrecompte ? ZERO : tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
             BigDecimal puttc = pu
                     .multiply(BigDecimal.ONE
                             .add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP))
@@ -1985,6 +1987,8 @@ public class PurchaseService {
             BigDecimal tva = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
             // Respecter le flag exemptTvaAchat du produit
             tva = resolveExemptTvaAchat(tva, req.getProductId(), req.getProductCode(), companyId);
+            // Emballages consignés : jamais de TVA (ni de précompte)
+            if (isConsigne) tva = ZERO;
 
             // Rabais unitaire : utiliser celui déjà résolu côté client ; sinon le déduire
             // du prix préférentiel fournisseur (sans jamais modifier pu).
@@ -2007,15 +2011,16 @@ public class PurchaseService {
             BigDecimal montantHT  = qty.multiply(pu).setScale(2, RoundingMode.HALF_UP);
             BigDecimal montantTVA = montantHT.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
+            boolean sansPrecompte = isConsigne || isSansPrecompte(req.getCategoryId(), req.getProductCode(), companyId);
             BigDecimal precompte = ZERO;
-            if (!isConsigne && tauxPrecompte.compareTo(ZERO) > 0) {
+            if (!sansPrecompte && tauxPrecompte.compareTo(ZERO) > 0) {
                 precompte = montantHT.multiply(tauxPrecompte)
                         .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
             }
 
             BigDecimal montantTTC = montantHT.add(montantTVA).add(precompte);
 
-            BigDecimal pcUnitRate = isConsigne ? ZERO : tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            BigDecimal pcUnitRate = sansPrecompte ? ZERO : tauxPrecompte.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
             BigDecimal puttc = pu.multiply(BigDecimal.ONE
                     .add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP))
                     .add(pcUnitRate))
@@ -2176,6 +2181,17 @@ public class PurchaseService {
             // guinness : pas de précompte ni TVA ajoutée
             return montantFixe.setScale(2, RoundingMode.HALF_UP);
         }
+    }
+
+    /**
+     * Ligne exemptée de précompte : emballage consigné (code) ou article de la catégorie « Emballage ».
+     */
+    private boolean isSansPrecompte(Long categoryId, String productCode, Long companyId) {
+        if (ConsigneCodes.isConsigne(productCode, companyId)) return true;
+        Long catId = resolveCategoryId(categoryId, productCode, companyId);
+        return catId != null && categoryRepo.findById(catId)
+                .map(c -> c.getName() != null && c.getName().toLowerCase().contains("emballage"))
+                .orElse(false);
     }
 
     private Long resolveCategoryId(Long categoryId, String productCode, Long companyId) {
@@ -2619,6 +2635,8 @@ public class PurchaseService {
             BigDecimal tva = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
             // Respecter le flag exemptTvaAchat du produit — priorité sur ce que le frontend envoie
             tva = resolveExemptTvaAchat(tva, req.getProductId(), req.getProductCode(), companyId);
+            // Emballages consignés : jamais de TVA (ni de précompte)
+            if (ConsigneCodes.isConsigne(req.getProductCode(), companyId)) tva = ZERO;
 
             BigDecimal montantHT  = qty.multiply(pu).setScale(2, RoundingMode.HALF_UP);
             BigDecimal montantTVA = montantHT.multiply(tva).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
@@ -2649,10 +2667,15 @@ public class PurchaseService {
     }
 
     private void computeOrderTotals(PurchaseOrder order) {
-        BigDecimal ht  = order.getLines().stream()
+        // Consigne / déconsigne : présentées à part (comme sur la facture), hors totaux du bon
+        Long companyId = order.getCompany() != null ? order.getCompany().getId() : null;
+        List<PurchaseOrderLine> articles = order.getLines().stream()
+                .filter(l -> !l.isConsigne() && !ConsigneCodes.isConsigne(l.getProductCode(), companyId))
+                .toList();
+        BigDecimal ht  = articles.stream()
                 .map(l -> l.getMontantHT() != null ? l.getMontantHT() : ZERO)
                 .reduce(ZERO, BigDecimal::add);
-        BigDecimal tva = order.getLines().stream()
+        BigDecimal tva = articles.stream()
                 .map(l -> l.getMontantTVA() != null ? l.getMontantTVA() : ZERO)
                 .reduce(ZERO, BigDecimal::add);
         order.setTotalHT(ht);
