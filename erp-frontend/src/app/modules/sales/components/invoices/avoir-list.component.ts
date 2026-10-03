@@ -161,12 +161,23 @@ export class AvoirListComponent implements OnInit {
         if (this.journals.length > 0 && !this.avoirForm.journalId) {
           this.avoirForm.journalId = this.journals[0].id!;
         }
+        this.applyWarehouseSalesJournal();
       }
     });
   }
 
+  /** Pré-sélectionne le journal de vente configuré sur l'entrepôt choisi. */
+  private applyWarehouseSalesJournal(): void {
+    const wh = this.warehouses.find(w => w.id === Number(this.selectedWarehouseId));
+    const salesId = wh?.salesJournalId != null ? Number(wh.salesJournalId) : null;
+    if (salesId && this.journals.some(j => j.id === salesId)) {
+      this.avoirForm.journalId = salesId;
+    }
+  }
+
   /** Recharge les produits (quantités dispo) pour l'entrepôt choisi. Le stock du retour partira de cet entrepôt. */
   onWarehouseChange(): void {
+    this.applyWarehouseSalesJournal();
     this.stockService.getProducts(this.companyId, this.selectedWarehouseId ?? undefined).subscribe({
       next: (products) => {
         this.allProducts = products.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');

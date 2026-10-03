@@ -99,6 +99,7 @@ export class InvoiceDetailComponent implements OnInit {
         this.invoice = data;
         this.payment.amount = data.montantDu || 0;
         this.loading = false;
+        this.applyWarehouseCashJournal();
         this.loadReconciliations();
       },
       error: () => { this.loading = false; }
@@ -118,14 +119,31 @@ export class InvoiceDetailComponent implements OnInit {
         if (this.cashBankJournals.length > 0) {
           this.payment.journalId = this.cashBankJournals[0].id!;
         }
+        this.applyWarehouseCashJournal();
       }
     });
   }
 
   loadWarehouses(): void {
     this.stockService.getWarehouses(this.authService.getCompanyId()).subscribe({
-      next: (data) => { this.warehouses = data.filter(w => w.active !== false); }
+      next: (data) => {
+        this.warehouses = data.filter(w => w.active !== false);
+        this.applyWarehouseCashJournal();
+      }
     });
+  }
+
+  /** Pré-sélectionne le journal de caisse/banque configuré sur l'entrepôt de la facture. Appelé à
+   *  l'arrivée de chacune des trois données (facture, journaux, entrepôts), qui chargent en
+   *  parallèle : sans ça, une facture créée depuis un bon de commande (entrepôt déjà renseigné)
+   *  gardait toujours le premier journal de la liste. */
+  private applyWarehouseCashJournal(warehouseId = this.invoice?.warehouseId): void {
+    if (!warehouseId) return;
+    const wh = this.warehouses.find(w => w.id === Number(warehouseId));
+    const cashId = wh?.cashJournalId != null ? Number(wh.cashJournalId) : null;
+    if (cashId && this.cashBankJournals.some(j => j.id === cashId)) {
+      this.payment.journalId = cashId;
+    }
   }
 
   setWarehouse(warehouseId: number): void {
@@ -136,11 +154,7 @@ export class InvoiceDetailComponent implements OnInit {
         this.invoice = updated;
         this.savingWarehouse = false;
         this.showSuccess('Entrepôt enregistré');
-        // Pré-sélectionner le journal de caisse configuré sur l'entrepôt
-        const wh = this.warehouses.find(w => w.id === Number(warehouseId));
-        if (wh?.cashJournalId && this.cashBankJournals.some(j => j.id === wh.cashJournalId)) {
-          this.payment.journalId = wh.cashJournalId;
-        }
+        this.applyWarehouseCashJournal(warehouseId);
       },
       error: (err) => {
         this.savingWarehouse = false;

@@ -257,8 +257,9 @@ export class OrderFormComponent implements OnInit {
       this.loadProductsForWarehouse(warehouseId);
       // Pré-sélectionner le journal de vente configuré sur l'entrepôt
       const wh = this.warehouses.find(w => w.id === Number(warehouseId));
-      if (wh?.salesJournalId && this.journals.some(j => j.id === wh.salesJournalId)) {
-        this.order.journalId = wh.salesJournalId;
+      const salesId = wh?.salesJournalId != null ? Number(wh.salesJournalId) : null;
+      if (salesId && this.journals.some(j => j.id === salesId)) {
+        this.order.journalId = salesId;
       }
     } else {
       this.allProducts = [];
