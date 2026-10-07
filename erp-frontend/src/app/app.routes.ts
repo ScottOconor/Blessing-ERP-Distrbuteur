@@ -50,6 +50,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'declaration',
+    loadChildren: () => import('./modules/declaration/declaration.routes').then(m => m.declarationRoutes),
+    canActivate: [authGuard]
+  },
+  {
     path: 'extra-apps',
     loadComponent: () => import('./pages/extra-apps/extra-apps.component').then(m => m.ExtraAppsComponent),
     canActivate: [authGuard]

@@ -1,0 +1,118 @@
+<div class="gen-page">
+
+  <div class="gen-header hist-header">
+    <div>
+      <h1 class="gen-title"><span class="material-icons">history</span> Historique des générations</h1>
+      <p class="gen-sub">Cliquez sur une date pour voir les factures générées ce jour-là, les ouvrir ou les réimprimer.</p>
+    </div>
+    <div class="hist-actions">
+      <button class="btn btn-ghost" (click)="load()" [disabled]="loading">
+        <span class="material-icons">refresh</span> Actualiser
+      </button>
+      <button class="btn btn-primary" (click)="newGeneration()">
+        <span class="material-icons">add</span> Nouvelle génération
+      </button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="alert alert-error"><span class="material-icons">error_outline</span><span>{{ error }}</span></div>
+  }
+
+  @if (days.length) {
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-lbl">Jours de génération</div><div class="kpi-val">{{ days.length }}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Factures générées</div><div class="kpi-val">{{ fmt(totalInvoices) }}</div></div>
+      <div class="kpi kpi-accent"><div class="kpi-lbl">Montant total généré</div><div class="kpi-val">{{ fmt(totalAmount) }}</div></div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="card empty"><span class="material-icons spin">autorenew</span> Chargement…</div>
+  } @else if (!days.length) {
+    <div class="card empty"><span class="material-icons">inbox</span> Aucune génération pour le moment.</div>
+  } @else {
+    <div class="day-list">
+      @for (d of days; track d.day) {
+        <div class="card day-card" [class.open]="selectedDay?.day === d.day">
+          <button type="button" class="day-head" (click)="openDay(d)">
+            <span class="day-icon"><span class="material-icons">event</span></span>
+            <span class="day-main">
+              <span class="day-title">{{ fmtDayLong(d.day) }}</span>
+              <span class="day-sub">
+                {{ d.batches.length }} génération(s) · {{ d.invoiceCount }} facture(s)
+              </span>
+            </span>
+            <span class="day-total">{{ fmt(d.total) }} <small>FCFA</small></span>
+            <span class="material-icons day-chev">{{ selectedDay?.day === d.day ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+
+          @if (selectedDay?.day === d.day) {
+            <div class="day-body">
+              <div class="batch-chips">
+                @for (b of d.batches; track b.id) {
+                  <span class="batch-chip">
+                    <span class="material-icons">schedule</span>
+                    {{ fmtTime(b.createdAt) }}@if (b.createdBy) { · {{ b.createdBy }}} ·
+                    factures du {{ fmtDate(b.dateFrom) }} au {{ fmtDate(b.dateTo) }} ·
+                    {{ b.invoiceCount }} × {{ fmt(b.minAmount) }}–{{ fmt(b.maxAmount) }}
+                    @if (b.notes) { · « {{ b.notes }} » }
+                    @if (b.status === 'RUNNING') {
+                      <span class="run-badge">En cours {{ b.processedCount }}/{{ b.invoiceCount }}</span>
+                    } @else if (b.status === 'FAILED') {
+                      <span class="fail-badge" [title]="b.errorMessage ?? ''">Interrompue ({{ b.processedCount }}/{{ b.invoiceCount }})</span>
+                    }
+                  </span>
+                }
+              </div>
+
+              @if (loadingDetail) {
+                <div class="empty small"><span class="material-icons spin">autorenew</span> Chargement des factures…</div>
+              } @else {
+                <div class="batch-print">
+                  <div class="print-formats">
+                    <span class="field-label">Format</span>
+                    <button class="fmt-btn" [class.active]="printFormat === 'a4'" (click)="printFormat = 'a4'">A4</button>
+                    <button class="fmt-btn" [class.active]="printFormat === 'a5'" (click)="printFormat = 'a5'">A5</button>
+                    <button class="fmt-btn" [class.active]="printFormat === 'ticket'" (click)="printFormat = 'ticket'">Ticket</button>
+                  </div>
+                  <button class="btn btn-primary" (click)="printAll()" [disabled]="!printableInvoices.length">
+                    <span class="material-icons">print</span> Tout imprimer ({{ printableInvoices.length }})
+                  </button>
+                </div>
+
+                <div class="table-scroll">
+                  <table class="gen-table">
+                    <thead>
+                      <tr><th>N°</th><th>Date facture</th><th>Client</th><th>Entrepôt</th><th>État</th><th class="r">Net à payer</th><th class="r">Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (inv of invoices; track inv.id) {
+                        <tr [class.void]="isVoid(inv.state)">
+                          <td class="strong">{{ inv.name }}</td>
+                          <td>{{ fmtDate(inv.date) }}</td>
+                          <td>{{ inv.partnerName }}</td>
+                          <td>{{ inv.warehouseName }}</td>
+                          <td><span class="state" [class.state-void]="isVoid(inv.state)">{{ stateLabel(inv.state) }}</span></td>
+                          <td class="r">{{ fmt(inv.netAPayer) }}</td>
+                          <td class="r actions">
+                            <button class="icon-btn" title="Imprimer cette facture" (click)="printOne(inv)" [disabled]="isVoid(inv.state)">
+                              <span class="material-icons">print</span>
+                            </button>
+                            <button class="icon-btn" title="Ouvrir la facture" (click)="openInvoice(inv)">
+                              <span class="material-icons">open_in_new</span>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

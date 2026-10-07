@@ -164,8 +164,35 @@ export class PrintPreviewComponent {
   close() { this.closed.emit(); }
 
   print(): void {
+    this.openAndPrint(this.buildFullHtml());
+  }
+
+  /**
+   * Impression groupée de plusieurs factures de vente : une facture par page, dans une seule
+   * fenêtre d'impression (même mise en page que l'impression unitaire).
+   */
+  printInvoices(invoices: SalesInvoice[], format: PrintFormat = 'a4'): void {
+    const savedInvoice = this.invoice;
+    const savedFormat = this.format;
+    this.format = format;
+    const bodies = invoices.map(inv => {
+      this.invoice = inv;
+      return format === 'ticket' ? this.buildTicketBody() : this.buildInvoiceBody(format === 'a5');
+    });
+    this.invoice = savedInvoice;
+    this.format = savedFormat;
+
+    const css = (format === 'ticket' ? TICKET_CSS : format === 'a5' ? A5_CSS : A4_CSS)
+      + '.batch-page { break-after: page; page-break-after: always; }'
+      + '.batch-page:last-child { break-after: auto; page-break-after: auto; }';
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<title>Factures (${invoices.length})</title>
+<style>${css}</style></head><body>${bodies.map(b => `<div class="batch-page">${b}</div>`).join('')}</body></html>`;
+    this.openAndPrint(html);
+  }
+
+  private openAndPrint(html: string): void {
     this.printing = true;
-    const html = this.buildFullHtml();
     const w = window.open('', '_blank', 'width=1000,height=1100');
     if (!w) { this.printing = false; return; }
     w.document.write(html);
