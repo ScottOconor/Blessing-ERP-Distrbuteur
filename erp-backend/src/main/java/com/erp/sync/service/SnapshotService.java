@@ -261,7 +261,7 @@ public class SnapshotService {
         long       countEnlev       = enlevementRepo.countByCompanyIdAndActiveTrue(cid);
 
         // ── Frais d'enlèvement — collecté/coût pondérés par quantité, calcul unique et cohérent
-        // (jamais via les écritures comptables — modèle Enlevement uniquement, cf. EnlevementService)
+        // (collecté = solde 701500, coût = Rapport des enlèvements — cf. EnlevementService)
         // réutilisé sur les 2 fenêtres affichées au dashboard : depuis le 1er janvier et trimestre
         // en cours — remplace les anciennes figures fraisTotal/fraisVentesTotal qui n'étaient ni
         // comparables entre elles (config statique vs factures de vente) ni cohérentes dans le temps.

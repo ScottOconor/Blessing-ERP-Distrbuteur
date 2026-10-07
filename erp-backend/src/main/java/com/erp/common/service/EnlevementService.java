@@ -1,6 +1,7 @@
 package com.erp.common.service;
 
 import com.erp.accounting.entity.Partner;
+import com.erp.accounting.repository.AccountMoveLineRepository;
 import com.erp.accounting.repository.PartnerRepository;
 import com.erp.common.dto.EnlevementDTO;
 import com.erp.common.dto.EnlevementRapportDTO;
@@ -37,6 +38,7 @@ public class EnlevementService {
     private final PartnerRepository partnerRepo;
     private final PurchaseInvoiceRepository purchaseInvoiceRepo;
     private final SalesInvoiceRepository salesInvoiceRepo;
+    private final AccountMoveLineRepository moveLineRepo;
     private final SyncEventPublisher syncEventPublisher;
     private final TenantGuard tenantGuard;
 
@@ -197,44 +199,22 @@ public class EnlevementService {
                 .collect(Collectors.toList());
     }
 
-    // ── Résumé collecté/coût pour le dashboard (jamais via les écritures comptables) ──
+    // ── Résumé collecté/coût pour le dashboard ──
     //
-    // Collecté = ce qui est réellement facturé au client à la vente. SalesInvoice.fraisEnlevementTTC
-    // est déjà calculé et stocké ligne par ligne au moment de la facturation (computeFraisEnlevement
-    // dans SalesService, même tarif Enlevement/EnlevementClient, "logique Odoo") — on le lit
-    // directement, on ne le recalcule pas nous-mêmes depuis les achats.
+    // Collecté = solde du compte 701500 (crédit des frais HT à la facturation − débit des
+    // ristournes Brasserie/Guinness), écritures validées uniquement — comme le CA lu sur 701100.
     //
-    // Coût = charge interne. Il n'existe aucune écriture/champ direct pour ça à l'achat (pas de
-    // colonne équivalente sur PurchaseInvoice/PurchaseInvoiceLine) — obligé de le dériver de la
-    // quantité achetée × Enlevement.coutEnlevement, catégorie par catégorie.
+    // Coût = exactement le total du Rapport des enlèvements (factures fournisseur validées,
+    // quantité × Enlevement.coutEnlevement) pour que le dashboard et le rapport affichent la même valeur.
     @Transactional(readOnly = true)
     public FraisEnlevementSummaryDTO getFraisEnlevementSummary(Long companyId, LocalDate dateFrom, LocalDate dateTo) {
-        BigDecimal collecteRaw = salesInvoiceRepo.sumFraisEnlevementsVentesForPeriod(companyId, dateFrom, dateTo);
+        BigDecimal collecteRaw = moveLineRepo.soldeCompteEnlevement(companyId, dateFrom, dateTo);
         BigDecimal collecte = collecteRaw != null ? collecteRaw : BigDecimal.ZERO;
 
-        // PurchaseInvoiceLine.quantity est TOUJOURS stocké en valeur faciale POSITIVE, avoir compris
-        // (cf. PurchaseService.createAvoirFromInvoice qui clamp explicitement qty >= 0) — il n'y a pas
-        // de signe négatif dans la donnée brute. C'est nous qui devons inverser la contribution d'un
-        // avoir selon inv.getType(), sinon un retour fournisseur s'ajoute au lieu de se soustraire.
-        List<PurchaseInvoice> invoices = purchaseInvoiceRepo
-                .findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo);
-
-        Map<Long, Enlevement> enlevByCategory = buildEnlevByCategory(companyId);
-        BigDecimal cout = BigDecimal.ZERO;
-
-        for (PurchaseInvoice inv : invoices) {
-            BigDecimal sign = "credit_note".equals(inv.getType()) ? BigDecimal.valueOf(-1) : BigDecimal.ONE;
-            for (PurchaseInvoiceLine line : inv.getLines()) {
-                if (line.isConsigne() || line.getCategoryId() == null) continue;
-                Enlevement enlev = enlevByCategory.get(line.getCategoryId());
-                if (enlev == null) continue;
-                BigDecimal rawQty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ZERO;
-                if (rawQty.compareTo(BigDecimal.ZERO) == 0) continue;
-                BigDecimal qty = rawQty.multiply(sign);
-                BigDecimal coutRate = enlev.getCoutEnlevement() != null ? enlev.getCoutEnlevement() : BigDecimal.ZERO;
-                cout = cout.add(qty.multiply(coutRate));
-            }
-        }
+        BigDecimal cout = getRapport(companyId, dateFrom, dateTo).stream()
+                .map(EnlevementRapportDTO::getTotalAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         collecte = collecte.setScale(2, java.math.RoundingMode.HALF_UP);
         cout = cout.setScale(2, java.math.RoundingMode.HALF_UP);

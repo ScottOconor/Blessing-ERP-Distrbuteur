@@ -283,6 +283,32 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     BigDecimal computePartnerBalance(@Param("partnerId") Long partnerId,
                                      @Param("companyId") Long companyId);
 
+    /** Solde du seul compte client (receivable) d'un partenaire : positif = il nous doit,
+     *  négatif = on lui doit. Contrairement à computePartnerBalance, n'inclut pas le payable. */
+    @Query("SELECT COALESCE(SUM(l.debit - l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.partner.id = :partnerId " +
+           "AND l.company.id = :companyId " +
+           "AND l.move.state = 'posted' " +
+           "AND l.account.internalType = 'receivable'")
+    BigDecimal computePartnerReceivableBalance(@Param("partnerId") Long partnerId,
+                                               @Param("companyId") Long companyId);
+
+    /** Total des versements libres d'un client (même périmètre que findPostedReceivableCreditLinesForPartner,
+     *  hors écritures servant de paiement direct d'une facture) — ce sont eux qui alimentent le lettrage. */
+    @Query("""
+        SELECT COALESCE(SUM(l.credit), 0) FROM AccountMoveLine l
+        WHERE l.partner.id = :partnerId
+        AND l.company.id = :companyId
+        AND l.move.state = 'posted'
+        AND l.account.internalType = 'receivable'
+        AND l.credit > 0
+        AND l.move.journal.type IN ('bank', 'cash')
+        AND l.move.id NOT IN (SELECT p.accountMove.id FROM InvoicePayment p
+                              WHERE p.invoice.partner.id = :partnerId AND p.accountMove IS NOT NULL)
+    """)
+    BigDecimal sumFreeReceivableVersementsForPartner(@Param("partnerId") Long partnerId,
+                                                     @Param("companyId") Long companyId);
+
     // ── Lettrage / Rapprochement ──
 
     @Query("""
@@ -344,6 +370,14 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     BigDecimal soldeCompteCAHT(@Param("cid") Long companyId,
                                 @Param("from") LocalDate from,
                                 @Param("to") LocalDate to);
+
+    /** Frais d'enlèvement : solde créditeur net du compte 701500 (crédit à la vente − débit des ristournes). */
+    @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
+           "WHERE l.account.code IN ('701500', '7015') AND l.company.id = :cid " +
+           "AND l.move.state = 'posted' AND l.date BETWEEN :from AND :to")
+    BigDecimal soldeCompteEnlevement(@Param("cid") Long companyId,
+                                     @Param("from") LocalDate from,
+                                     @Param("to") LocalDate to);
 
     /** CA HT du jour : solde créditeur net du seul compte 701100. */
     @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +

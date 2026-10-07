@@ -6,13 +6,13 @@ import java.time.LocalDate;
 
 /**
  * Frais d'enlèvement collecté (facturé aux clients) vs coût interne, sur une période donnée.
- * Calculé à partir du modèle Enlevement (montantFixe/coutEnlevement), jamais des écritures comptables.
+ * Collecté = solde du compte 701500 ; coût = total du Rapport des enlèvements (factures fournisseur).
  */
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class FraisEnlevementSummaryDTO {
     private LocalDate dateFrom;
     private LocalDate dateTo;
-    private BigDecimal collecte;        // montant HT facturé + TVA calculée côté vente
-    private BigDecimal cout;            // sum(qty * coût importé du modèle), utilisé tel quel
+    private BigDecimal collecte;        // solde créditeur net du compte 701500
+    private BigDecimal cout;            // total du Rapport des enlèvements (qty achetée × coût)
     private BigDecimal net;             // collecte facturée - coût importé
 }
