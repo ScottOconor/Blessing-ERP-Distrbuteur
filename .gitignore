@@ -1,0 +1,11 @@
+# Dépendances et fichiers générés — reconstruits par npm install / mvn / ng build
+erp-frontend/node_modules/
+erp-frontend/dist/
+erp-frontend/.angular/
+erp-backend/target/
+erp-backend/logs/
+
+# Outils de développement (graphe graphify, réglages éditeur / assistant) — inutiles à l'application
+graphify-out/
+.claude/
+.vscode/
