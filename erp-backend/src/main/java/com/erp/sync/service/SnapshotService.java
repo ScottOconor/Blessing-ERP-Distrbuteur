@@ -426,26 +426,24 @@ public class SnapshotService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Quantité du premier quant rencontré par produit (même règle que l'ancienne boucle
-        // "break" au premier match) — construite une seule fois en O(quants) au lieu d'un balayage
-        // complet de quants pour chaque produit (O(produits × quants), quadratique sur un client
-        // avec beaucoup de références).
-        Map<Long, BigDecimal> firstQtyByProduct = new LinkedHashMap<>();
-        Map<Long, Long> firstLocationByProduct = new LinkedHashMap<>();
-        for (StockQuant q : quants) {
-            if (q.getProductId() != null) {
-                firstQtyByProduct.putIfAbsent(q.getProductId(), q.getQuantity());
-                firstLocationByProduct.putIfAbsent(q.getProductId(), q.getLocationId());
+        // Quantités d'articles envoyées au hub : magasin principal UNIQUEMENT (seul magasin contrôlé ;
+        // Dépôt Achat, Avaries et autres entrepôts sont intermédiaires). Avant : quantité du premier
+        // quant rencontré, quel que soit son emplacement → chiffre arbitraire.
+        com.erp.stock.entity.Warehouse mainWarehouse = resolveMainWarehouse(cid);
+        Long mainWarehouseId = mainWarehouse != null ? mainWarehouse.getId() : null;
+        Map<Long, BigDecimal> mainQtyByProduct = new HashMap<>();
+        if (mainWarehouseId != null) {
+            for (Object[] row : stockQuantRepo.sumQuantityByProductForWarehouse(cid, mainWarehouseId)) {
+                if (row[0] != null) mainQtyByProduct.put((Long) row[0], (BigDecimal) row[1]);
             }
         }
 
-        List<SpokeSnapshotPayload.ProductItem> products = (modifiedSince != null
-                ? productRepo.findByCompanyIdAndActiveAndUpdatedAtGreaterThanEqual(cid, true, modifiedSince)
-                : productRepo.findByCompanyIdAndActiveOrderByNameAsc(cid, true)).stream()
+        // Toujours la liste complète : un mouvement de stock ne modifie pas Product.updatedAt,
+        // l'incrémental laissait donc les quantités figées côté hub.
+        List<SpokeSnapshotPayload.ProductItem> products = productRepo.findByCompanyIdAndActiveOrderByNameAsc(cid, true).stream()
                 .map(p -> {
-                    BigDecimal qty = firstQtyByProduct.getOrDefault(p.getId(), BigDecimal.ZERO);
-                    Long warehouseId = productValuationService.resolveWarehouseId(firstLocationByProduct.get(p.getId()));
-                    BigDecimal price = productValuationService.getWarehouseCmup(p.getId(), warehouseId, p);
+                    BigDecimal qty = mainQtyByProduct.getOrDefault(p.getId(), BigDecimal.ZERO);
+                    BigDecimal price = productValuationService.getWarehouseCmup(p.getId(), mainWarehouseId, p);
                     BigDecimal val = qty.multiply(price);
                     return SpokeSnapshotPayload.ProductItem.builder()
                             .id(p.getId()).code(p.getDefaultCode()).name(p.getName())
@@ -821,5 +819,16 @@ public class SnapshotService {
         if (o == null) return BigDecimal.ZERO;
         if (o instanceof BigDecimal bd) return bd;
         return new BigDecimal(o.toString());
+    }
+
+    /** Magasin principal : même règle que PurchaseService/SalesService (entrepôt rattaché à un
+     *  Dépôt Achat, sinon entrepôt par défaut, sinon premier entrepôt actif). */
+    private com.erp.stock.entity.Warehouse resolveMainWarehouse(Long companyId) {
+        List<com.erp.stock.entity.Warehouse> all = warehouseRepo.findByCompanyIdAndActiveTrue(companyId);
+        return all.stream()
+                .filter(w -> w.getDepotAchatWarehouseId() != null)
+                .findFirst()
+                .orElseGet(() -> warehouseRepo.findFirstByCompanyIdAndIsDefaultTrue(companyId)
+                        .orElse(all.isEmpty() ? null : all.get(0)));
     }
 }
