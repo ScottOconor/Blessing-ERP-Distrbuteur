@@ -62,18 +62,6 @@ export class ExtraAppsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Génération de factures en masse : outil réservé aux administrateurs.
-    if (this.authService.isPrivileged()) {
-      this.apps.push({
-        id: 'declaration',
-        name: 'Déclaration',
-        description: 'Génération de factures de vente pour un montant donné — comptabilité et stock inclus',
-        icon: 'receipt_long',
-        color: '#0E7490',
-        route: '/declaration',
-        available: true
-      });
-    }
     this.loadModules();
   }
 
