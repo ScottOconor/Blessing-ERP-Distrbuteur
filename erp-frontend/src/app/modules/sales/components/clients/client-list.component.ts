@@ -16,6 +16,8 @@ export interface RistourneForm {
   categoryId: number;
   typeRistourne: string;
   montantHT: number;
+  /** Frais d'enlèvement HT par unité — sans lui, enregistrer la fiche remettait à 0 celui déjà saisi */
+  montantEnlevementHT: number;
   montantTTC: number;
 }
 
@@ -125,6 +127,7 @@ export class ClientListComponent implements OnInit {
             categoryId: r.categoryId,
             typeRistourne: r.typeRistourne ?? 'brasserie',
             montantHT: r.montantFixe,
+            montantEnlevementHT: r.montantEnlevementHT ?? 0,
             montantTTC: this.calcTTC(r.montantFixe, r.typeRistourne ?? 'brasserie', client.tauxPrecompte ?? 0)
           }));
           this.loadingRst = false;
@@ -160,7 +163,7 @@ export class ClientListComponent implements OnInit {
   }
 
   addRistourne(): void {
-    this.ristournes.push({ categoryId: 0, typeRistourne: 'brasserie', montantHT: 0, montantTTC: 0 });
+    this.ristournes.push({ categoryId: 0, typeRistourne: 'brasserie', montantHT: 0, montantEnlevementHT: 0, montantTTC: 0 });
   }
 
   removeRistourne(i: number): void {
@@ -191,6 +194,7 @@ export class ClientListComponent implements OnInit {
             categoryId: r.categoryId,
             typeRistourne: r.typeRistourne,
             montantFixe: r.montantHT,
+            montantEnlevementHT: r.montantEnlevementHT ?? 0,
             companyId
           })
         );

@@ -286,6 +286,7 @@
                   <th>Catégorie</th>
                   <th>Type</th>
                   <th class="ar">Montant HT</th>
+                  <th class="ar" title="Frais d'enlèvement HT par unité">Enlèvement HT / u</th>
                   <th class="ar">Montant TTC</th>
                   <th></th>
                 </tr>
@@ -307,6 +308,9 @@
                     <td class="ar">
                       <input type="number" class="inp-cell ar" [(ngModel)]="r.montantHT" min="0"
                         (ngModelChange)="onRistourneHtChange(r)" />
+                    </td>
+                    <td class="ar">
+                      <input type="number" class="inp-cell ar" [(ngModel)]="r.montantEnlevementHT" min="0" step="1" />
                     </td>
                     <td class="ar ttc-val">{{ r.montantTTC | number:'1.0-2' }}</td>
                     <td>
