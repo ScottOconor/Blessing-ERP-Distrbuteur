@@ -90,6 +90,7 @@ public class SalesService {
     private final WarehouseRepository warehouseRepo;
     private final AccountingService accountingService;
     private final SalesInvoiceReconciliationRepository reconciliationRepo;
+    private final com.erp.accounting.service.ServiceAccountService serviceAccountService;
     private final SyncEventPublisher syncEventPublisher;
     private final PrixClientArticleRepository prixClientArticleRepo;
     private final AuditService auditService;
@@ -111,6 +112,7 @@ public class SalesService {
     private static final String ENLEVEMENT_SUPPLEMENT_ACCOUNT = "707100";
     private static final String PSA_ACCOUNT                = "441200";
     private static final String CONSIGNE_ACCOUNT           = "419400";
+    private static final String SERVICE_REVENUE_ACCOUNT    = com.erp.accounting.service.ServiceAccountService.FALLBACK_SERVICE_ACCOUNT;
     private static final String RISTOURNE_CREDIT_ACCOUNT   = "419800";
     private static final String RISTOURNE_CREDIT_GUINNESS  = "419801";
     private static final BigDecimal GUINNESS_TAXE_LIGNE    = new BigDecimal("300.00");
@@ -715,7 +717,9 @@ public class SalesService {
         if (invoice.getPartner() == null) missing.add("Client");
         if (invoice.getJournal() == null) missing.add("Journal");
         if (invoice.getDate() == null) missing.add("Date");
-        if (!isAvoir && invoice.getWarehouseId() == null) missing.add("Entrepôt");
+        // Entrepôt exigé seulement s'il y a des articles physiques à sortir du stock : une vente de
+        // services seuls (prestations, sans mouvement de stock) se facture sans entrepôt.
+        if (!isAvoir && invoice.getWarehouseId() == null && hasPhysicalLines(invoice)) missing.add("Entrepôt");
         if (invoice.getLines() == null || invoice.getLines().isEmpty()) missing.add("Lignes de facturation");
         if (!missing.isEmpty()) {
             throw new IllegalArgumentException("Champs obligatoires manquants : " + String.join(", ", missing));
@@ -803,8 +807,24 @@ public class SalesService {
                 if (ht.compareTo(ZERO) != 0) {
                     String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
                             ? line.getAccountCode() : DEFAULT_REVENUE_ACCOUNT;
-                    AccountAccount acc = accCode.equals(DEFAULT_REVENUE_ACCOUNT) ? revenueAccount
-                            : accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(revenueAccount);
+                    AccountAccount acc;
+                    com.erp.stock.entity.Product serviceProduct = findServiceProduct(line, companyId);
+                    if (serviceProduct != null) {
+                        // Prestation de services : compte paramétré en comptabilité (compte du service,
+                        // sinon compte par défaut de la société, sinon 706100) — jamais 701100.
+                        String serviceCode = serviceAccountService.resolveAccountCode(serviceProduct, invoice.getCompany());
+                        acc = SERVICE_REVENUE_ACCOUNT.equals(serviceCode)
+                                ? findOrCreateAccount(SERVICE_REVENUE_ACCOUNT, "Services vendus", "income",
+                                        companyId, invoice.getJournal(), invoice.getCompany())
+                                : accountRepo.findFirstByCodeAndCompanyId(serviceCode, companyId)
+                                        .orElseThrow(() -> new IllegalStateException("Compte " + serviceCode
+                                                + " paramétré pour le service « " + serviceProduct.getName()
+                                                + " » introuvable dans le plan comptable"));
+                    } else if (accCode.equals(DEFAULT_REVENUE_ACCOUNT)) {
+                        acc = revenueAccount;
+                    } else {
+                        acc = accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(revenueAccount);
+                    }
                     moveLines.add(AccountMoveLine.builder()
                             .move(move).account(acc).partner(invoice.getPartner())
                             .name(line.getDescription()).date(date)
@@ -1615,16 +1635,66 @@ public class SalesService {
      */
     @Transactional(readOnly = true)
     public List<com.erp.sales.dto.AvailableCreditDTO> getAvailableCredits(Long partnerId, Long companyId) {
-        return invoiceRepo.findAvailableCreditNotes(partnerId, companyId).stream()
+        List<com.erp.sales.dto.AvailableCreditDTO> result = invoiceRepo.findAvailableCreditNotes(partnerId, companyId).stream()
                 .map(c -> com.erp.sales.dto.AvailableCreditDTO.builder()
                         .id(c.getId()).name(c.getName()).date(c.getDate())
+                        .type(com.erp.sales.dto.AvailableCreditDTO.TYPE_AVOIR)
                         .montantTotal(c.getNetAPayer() != null ? c.getNetAPayer().abs() : ZERO)
                         .montantDu(c.getMontantDu() != null ? c.getMontantDu() : ZERO)
                         .notes(c.getNotes())
                         .originalInvoiceId(c.getOriginalInvoice() != null ? c.getOriginalInvoice().getId() : null)
                         .originalInvoiceName(c.getOriginalInvoice() != null ? c.getOriginalInvoice().getName() : null)
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors.toCollection(ArrayList::new));
+        BigDecimal avoirs = result.stream().map(com.erp.sales.dto.AvailableCreditDTO::getMontantDu).reduce(ZERO, BigDecimal::add);
+        BigDecimal surplus = computePartnerSurplusCredit(partnerId, companyId, avoirs);
+        if (surplus.compareTo(ZERO) > 0) {
+            result.add(com.erp.sales.dto.AvailableCreditDTO.builder()
+                    .id(com.erp.sales.dto.AvailableCreditDTO.SURPLUS_ID)
+                    .name("Trop-perçu / dette envers le client")
+                    .type(com.erp.sales.dto.AvailableCreditDTO.TYPE_SURPLUS)
+                    .montantTotal(surplus).montantDu(surplus)
+                    .notes("Surplus de paiements ou solde créditeur du compte client, hors avoirs et hors versements à lettrer")
+                    .build());
+        }
+        return result;
+    }
+
+    /**
+     * Dette envers le client hors avoirs et hors versements libres : trop-perçu sur paiement de
+     * facture (paiement > net à payer), solde créditeur repris/importé, écriture OD au crédit 411...
+     * Les versements libres non lettrés en sont exclus — ils restent traités par le lettrage.
+     *
+     * Le compte client vaut, une fois tout bien rattaché :
+     *   solde 411 = restes dus des factures − avoirs disponibles − versements non lettrés − trop-perçu
+     * d'où le trop-perçu = restes dus − avoirs − versements non lettrés − solde 411 (borné à 0).
+     * Calculé à partir du grand livre plutôt que stocké : une imputation (paiement sans écriture qui
+     * réduit le reste dû d'une facture) ou son annulation le fait varier automatiquement.
+     */
+    private BigDecimal computePartnerSurplusCredit(Long partnerId, Long companyId, BigDecimal avoirsDisponibles) {
+        BigDecimal soldeClient = moveLineRepo.computePartnerReceivableBalance(partnerId, companyId);
+        BigDecimal restesDus = ZERO;
+        for (SalesInvoice inv : invoiceRepo.findOpenInvoicesForPartner(partnerId, companyId)) {
+            BigDecimal du = inv.getMontantDu() != null ? inv.getMontantDu() : ZERO;
+            // Un avoir partiel crédite déjà le 411 sans réduire le montantDu de la facture d'origine
+            if ("partiellement_extournee".equals(inv.getState())) {
+                du = du.subtract(invoiceRepo.sumPostedAvoirsOnInvoice(inv.getId())).max(ZERO);
+            }
+            restesDus = restesDus.add(du);
+        }
+        BigDecimal versementsNonLettres = moveLineRepo.sumFreeReceivableVersementsForPartner(partnerId, companyId)
+                .subtract(reconciliationRepo.sumReconciledByPartner(partnerId, companyId)).max(ZERO);
+        return restesDus
+                .subtract(avoirsDisponibles != null ? avoirsDisponibles : ZERO)
+                .subtract(versementsNonLettres)
+                .subtract(soldeClient)
+                .max(ZERO).setScale(0, RoundingMode.HALF_UP);
+    }
+
+    /** Total des crédits en circulation d'un client : avoirs disponibles + trop-perçu. */
+    private BigDecimal computeTotalAvailableCredit(Long partnerId, Long companyId) {
+        BigDecimal avoirs = invoiceRepo.sumAvailableCredits(partnerId, companyId);
+        return avoirs.add(computePartnerSurplusCredit(partnerId, companyId, avoirs));
     }
 
     /**
@@ -1643,6 +1713,19 @@ public class SalesService {
     @Transactional
     public SalesInvoiceDTO applyCreditToInvoice(Long invoiceId, java.math.BigDecimal amount, Long companyId,
                                                  Long creditNoteId) {
+        return applyCreditToInvoice(invoiceId, amount, companyId, creditNoteId, false);
+    }
+
+    /**
+     * @param surplus si vrai, impute sur le trop-perçu du client (cf. computePartnerSurplusCredit)
+     *                plutôt que sur un avoir.
+     */
+    @Transactional
+    public SalesInvoiceDTO applyCreditToInvoice(Long invoiceId, java.math.BigDecimal amount, Long companyId,
+                                                 Long creditNoteId, boolean surplus) {
+        if (surplus || com.erp.sales.dto.AvailableCreditDTO.SURPLUS_ID.equals(creditNoteId)) {
+            return applySurplusToInvoice(invoiceId, amount, companyId);
+        }
         SalesInvoice invoice = invoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new EntityNotFoundException("Facture introuvable"));
         tenantGuard.check(invoice.getCompany() != null ? invoice.getCompany().getId() : null);
@@ -1724,11 +1807,64 @@ public class SalesService {
         return creditResult;
     }
 
+    /**
+     * Impute le trop-perçu du client sur une facture. Aucune écriture comptable : le crédit est déjà
+     * au 411 (paiement en surplus, solde créditeur...) ; seul le reste dû de la facture baisse, ce
+     * qui consomme d'autant le trop-perçu calculé. Annuler ce règlement le restitue.
+     */
+    private SalesInvoiceDTO applySurplusToInvoice(Long invoiceId, BigDecimal amount, Long companyId) {
+        SalesInvoice invoice = invoiceRepo.findById(invoiceId)
+                .orElseThrow(() -> new EntityNotFoundException("Facture introuvable"));
+        tenantGuard.check(invoice.getCompany() != null ? invoice.getCompany().getId() : null);
+        if (!"posted".equals(invoice.getState()) && !"partiellement_extournee".equals(invoice.getState())) {
+            throw new IllegalStateException("Seules les factures validées acceptent une compensation");
+        }
+        if (!companyId.equals(invoice.getCompany().getId())) {
+            throw new IllegalArgumentException("Société incohérente");
+        }
+        BigDecimal montantDu = invoice.getMontantDu() != null ? invoice.getMontantDu() : ZERO;
+        if (amount == null || amount.compareTo(ZERO) <= 0 || amount.compareTo(montantDu) > 0) {
+            throw new IllegalArgumentException(
+                "Montant invalide — doit être > 0 et ≤ " + montantDu + " FCFA (reste dû)");
+        }
+        Long partnerId = invoice.getPartner().getId();
+        BigDecimal disponible = computePartnerSurplusCredit(partnerId, companyId,
+                invoiceRepo.sumAvailableCredits(partnerId, companyId));
+        if (amount.compareTo(disponible) > 0) {
+            throw new IllegalArgumentException(
+                "Trop-perçu disponible insuffisant — disponible : " + disponible + " FCFA");
+        }
+
+        paymentRepo.save(InvoicePayment.builder()
+                .name(generatePaymentName(invoice.getCompany().getId(), LocalDate.now()))
+                .date(LocalDate.now()).amount(amount)
+                .memo("Crédit en circulation (trop-perçu)")
+                .state("posted")
+                .invoice(invoice)
+                .company(invoice.getCompany())
+                .build());
+
+        BigDecimal totalPaye = paymentRepo.sumPostedPaymentsByInvoice(invoice.getId());
+        invoice.setMontantPaye(totalPaye);
+        BigDecimal newDu = (invoice.getNetAPayer() != null ? invoice.getNetAPayer() : ZERO)
+                .subtract(totalPaye).max(ZERO);
+        invoice.setMontantDu(newDu);
+        if (newDu.compareTo(ZERO) == 0) invoice.setState("paid");
+
+        SalesInvoiceDTO result = toInvoiceDTOWithPayments(invoiceRepo.save(invoice));
+        syncEventPublisher.publish(SyncEventType.SALE_INVOICE_POSTED, String.valueOf(invoice.getId()), result);
+        auditService.log("SALE_INVOICE", invoice.getId(), invoice.getName(),
+                "CREDIT_APPLIED", "Trop-perçu compensé",
+                AuditService.details(Map.of("montant", amount + " FCFA")),
+                invoice.getCompany().getId());
+        return result;
+    }
+
     /** Retourne le solde net et le crédit disponible d'un partenaire. */
     @Transactional(readOnly = true)
     public Map<String, java.math.BigDecimal> getPartnerBalanceInfo(Long partnerId, Long companyId) {
         java.math.BigDecimal balance = moveLineRepo.computePartnerBalance(partnerId, companyId);
-        java.math.BigDecimal credit  = invoiceRepo.sumAvailableCredits(partnerId, companyId);
+        java.math.BigDecimal credit  = computeTotalAvailableCredit(partnerId, companyId);
         return Map.of("balance", balance, "credit", credit);
     }
 
@@ -2139,6 +2275,37 @@ public class SalesService {
      * Les avoirs réintègrent du stock (pas de sortie) et les lignes négatives (retours/déconsignes)
      * sont ignorées.
      */
+    /** Article de type service (hors emballage/consigne) d'une ligne de facture, sinon null. */
+    private Product findServiceProduct(SalesInvoiceLine l, Long companyId) {
+        if (l.isConsigne() || ConsigneCodes.isConsigne(l.getProductCode(), companyId)) return null;
+        Product p = null;
+        if (l.getProductId() != null) {
+            p = stockProductRepo.findById(l.getProductId()).orElse(null);
+        }
+        if (p == null && l.getProductCode() != null && !l.getProductCode().isBlank()) {
+            p = stockProductRepo.findFirstByDefaultCodeAndCompanyId(l.getProductCode(), companyId).orElse(null);
+        }
+        return p != null && "service".equals(p.getType()) ? p : null;
+    }
+
+    /** Vrai si la facture contient au moins une ligne qui mouvemente le stock (article non-service
+     *  ou emballage/consigne) — même règle que createStockMovementsOnInvoicePost. */
+    private boolean hasPhysicalLines(SalesInvoice invoice) {
+        Long companyId = invoice.getCompany().getId();
+        for (SalesInvoiceLine l : invoice.getLines()) {
+            if (l.isConsigne() || ConsigneCodes.isConsigne(l.getProductCode(), companyId)) return true;
+            Product p = null;
+            if (l.getProductId() != null) {
+                p = stockProductRepo.findById(l.getProductId()).orElse(null);
+            }
+            if (p == null && l.getProductCode() != null && !l.getProductCode().isBlank()) {
+                p = stockProductRepo.findFirstByDefaultCodeAndCompanyId(l.getProductCode(), companyId).orElse(null);
+            }
+            if (p != null && !"service".equals(p.getType())) return true;
+        }
+        return false;
+    }
+
     private void validateStockAvailabilityForInvoice(SalesInvoice invoice, boolean isAvoir) {
         if (isAvoir) return;
         Long companyId = invoice.getCompany().getId();
@@ -3607,13 +3774,13 @@ public class SalesService {
             if (partnerBalanceCache != null) {
                 java.math.BigDecimal[] cached = partnerBalanceCache.computeIfAbsent(partnerId, pid -> new java.math.BigDecimal[]{
                         moveLineRepo.computePartnerBalance(pid, companyId),
-                        invoiceRepo.sumAvailableCredits(pid, companyId)
+                        computeTotalAvailableCredit(pid, companyId)
                 });
                 partnerBalance = cached[0];
                 partnerCreditDisponible = cached[1];
             } else {
                 partnerBalance = moveLineRepo.computePartnerBalance(partnerId, companyId);
-                partnerCreditDisponible = invoiceRepo.sumAvailableCredits(partnerId, companyId);
+                partnerCreditDisponible = computeTotalAvailableCredit(partnerId, companyId);
             }
         }
 
@@ -3677,6 +3844,8 @@ public class SalesService {
                         : null)
                 .partnerBalance(partnerBalance)
                 .partnerCreditDisponible(partnerCreditDisponible)
+                .requiresWarehouse("draft".equals(invoice.getState()) && "invoice".equals(invoice.getType())
+                        ? hasPhysicalLines(invoice) : null)
                 .totalHT(invoice.getTotalHT()).totalTVA(invoice.getTotalTVA()).totalTTC(invoice.getTotalTTC())
                 .montantPaye(invoice.getMontantPaye()).montantDu(invoice.getMontantDu())
                 .totalRistourne(invoice.getTotalRistourne())

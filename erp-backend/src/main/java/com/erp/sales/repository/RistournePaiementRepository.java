@@ -50,18 +50,6 @@ public interface RistournePaiementRepository extends JpaRepository<RistournePaie
                            @Param("to")   LocalDate to);
 
     @Query("SELECT COALESCE(SUM(r.totalAmount), 0) FROM RistournePaiement r " +
-           "WHERE r.companyId = :cid AND r.state = :state")
-    BigDecimal sumByState(@Param("cid") Long companyId, @Param("state") String state);
-
-    @Query("SELECT COALESCE(SUM(r.totalAmount), 0) FROM RistournePaiement r " +
-           "WHERE r.companyId = :cid AND r.state = :state " +
-           "AND r.date BETWEEN :from AND :to")
-    BigDecimal sumByStateAndPeriod(@Param("cid") Long companyId,
-                                   @Param("state") String state,
-                                   @Param("from") LocalDate from,
-                                   @Param("to")   LocalDate to);
-
-    @Query("SELECT COALESCE(SUM(r.totalAmount), 0) FROM RistournePaiement r " +
            "WHERE r.companyId = :cid AND r.state IN :states")
     BigDecimal sumByStates(@Param("cid") Long companyId, @Param("states") List<String> states);
 

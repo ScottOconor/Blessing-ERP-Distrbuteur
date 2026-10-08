@@ -21,4 +21,9 @@ public interface SalesInvoiceReconciliationRepository extends JpaRepository<Sale
 
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM SalesInvoiceReconciliation r WHERE r.accountMove.id = :moveId AND r.invoice.id = :invoiceId")
     BigDecimal sumReconciledByMoveAndInvoice(@Param("moveId") Long moveId, @Param("invoiceId") Long invoiceId);
+
+    /** Total déjà lettré sur les factures d'un client (consommé sur ses versements libres). */
+    @Query("SELECT COALESCE(SUM(r.amount), 0) FROM SalesInvoiceReconciliation r " +
+           "WHERE r.invoice.partner.id = :partnerId AND r.invoice.company.id = :companyId")
+    BigDecimal sumReconciledByPartner(@Param("partnerId") Long partnerId, @Param("companyId") Long companyId);
 }

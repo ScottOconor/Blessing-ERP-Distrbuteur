@@ -128,10 +128,8 @@ export class HrService {
 
   // Employés
   getEmployees(companyId: number): Observable<Employee[]> { return this.http.get<Employee[]>(`${this.base}/employees`, { params: this.cp(companyId) }); }
-  getEmployee(id: number): Observable<Employee> { return this.http.get<Employee>(`${this.base}/employees/${id}`); }
   createEmployee(e: Employee): Observable<Employee> { return this.http.post<Employee>(`${this.base}/employees`, e); }
   updateEmployee(id: number, e: Employee): Observable<Employee> { return this.http.put<Employee>(`${this.base}/employees/${id}`, e); }
-  deleteEmployee(id: number): Observable<void> { return this.http.delete<void>(`${this.base}/employees/${id}`); }
 
   // Départements & postes
   getDepartments(companyId: number): Observable<Department[]> { return this.http.get<Department[]>(`${this.base}/departments`, { params: this.cp(companyId) }); }
@@ -159,11 +157,9 @@ export class HrService {
 
   // Contrats
   getContracts(companyId: number): Observable<EmployeeContract[]> { return this.http.get<EmployeeContract[]>(`${this.base}/contracts`, { params: this.cp(companyId) }); }
-  getEmployeeContracts(employeeId: number): Observable<EmployeeContract[]> { return this.http.get<EmployeeContract[]>(`${this.base}/employees/${employeeId}/contracts`); }
   saveContract(c: EmployeeContract): Observable<EmployeeContract> { return this.http.post<EmployeeContract>(`${this.base}/contracts`, c); }
   updateContract(id: number, c: EmployeeContract): Observable<EmployeeContract> { return this.http.put<EmployeeContract>(`${this.base}/contracts/${id}`, c); }
   setContractState(id: number, state: string): Observable<EmployeeContract> { return this.http.post<EmployeeContract>(`${this.base}/contracts/${id}/state?state=${state}`, {}); }
-  deleteContract(id: number): Observable<void> { return this.http.delete<void>(`${this.base}/contracts/${id}`); }
 
   // Config paie
   getCategories(companyId: number): Observable<SalaryRuleCategory[]> { return this.http.get<SalaryRuleCategory[]>(`${this.base}/salary-rule-categories`, { params: this.cp(companyId) }); }

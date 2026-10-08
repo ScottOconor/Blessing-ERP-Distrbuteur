@@ -135,26 +135,9 @@ export class ConfigService {
 
   constructor(private http: HttpClient) {}
 
-  // ── Entreprises ──────────────────────────────────────────────────
-  getAllCompanies(): Observable<CompanyInfo[]> {
-    return this.http.get<CompanyInfo[]>(`${this.api}/companies`);
-  }
-  getCompany(id: number): Observable<CompanyInfo> {
-    return this.http.get<CompanyInfo>(`${this.api}/companies/${id}`);
-  }
-  createCompany(c: CompanyInfo): Observable<CompanyInfo> {
-    return this.http.post<CompanyInfo>(`${this.api}/companies`, c);
-  }
-  updateCompany(id: number, c: CompanyInfo): Observable<CompanyInfo> {
-    return this.http.put<CompanyInfo>(`${this.api}/companies/${id}`, c);
-  }
-
   // ── Rôles ────────────────────────────────────────────────────────
   getAllRoles(): Observable<RoleInfo[]> {
     return this.http.get<RoleInfo[]>(`${this.api}/roles`);
-  }
-  getSystemRoles(): Observable<RoleInfo[]> {
-    return this.http.get<RoleInfo[]>(`${this.api}/roles/system`);
   }
   createRole(r: RoleInfo): Observable<RoleInfo> {
     return this.http.post<RoleInfo>(`${this.api}/roles`, r);
@@ -169,9 +152,6 @@ export class ConfigService {
   // ── Utilisateurs ─────────────────────────────────────────────────
   getAllUsers(): Observable<UserInfo[]> {
     return this.http.get<UserInfo[]>(`${this.api}/users`);
-  }
-  getUser(id: number): Observable<UserInfo> {
-    return this.http.get<UserInfo>(`${this.api}/users/${id}`);
   }
   createUser(req: CreateUserRequest): Observable<UserInfo> {
     return this.http.post<UserInfo>(`${this.api}/users`, req);
@@ -202,9 +182,6 @@ export class ConfigService {
   // ── Agences distantes ─────────────────────────────────────────────
   getRemoteAgencies(all = false): Observable<RemoteAgency[]> {
     return this.http.get<RemoteAgency[]>(`${this.api}/remote-agencies`, { params: { all: String(all) } });
-  }
-  getRemoteAgency(id: number): Observable<RemoteAgency> {
-    return this.http.get<RemoteAgency>(`${this.api}/remote-agencies/${id}`);
   }
   createRemoteAgency(a: RemoteAgency): Observable<RemoteAgency> {
     return this.http.post<RemoteAgency>(`${this.api}/remote-agencies`, a);

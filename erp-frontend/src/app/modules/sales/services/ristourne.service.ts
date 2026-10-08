@@ -120,10 +120,6 @@ export class RistourneService {
     return this.http.get<RistournePaiement>(`${this.base}/paiements/${id}`);
   }
 
-  savePaiement(dto: RistournePaiement): Observable<RistournePaiement> {
-    return this.http.post<RistournePaiement>(`${this.base}/paiements`, dto);
-  }
-
   confirmPaiement(id: number): Observable<RistournePaiement> {
     return this.http.post<RistournePaiement>(`${this.base}/paiements/${id}/confirm`, {});
   }

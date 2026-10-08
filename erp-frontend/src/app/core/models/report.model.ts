@@ -49,26 +49,6 @@ export interface GrandLivreLine {
   balance: number;
 }
 
-export interface GrandLivreAccount {
-  accountCode: string;
-  accountName: string;
-  lines: GrandLivreLine[];
-  totalDebit: number;
-  totalCredit: number;
-  finalBalance: number;
-}
-
-export interface BilanLine {
-  code: string;
-  label: string;
-  brut?: number;
-  amort?: number;
-  net: number;
-  netPrevious?: number;
-  isTotal?: boolean;
-  isSectionHeader?: boolean;
-}
-
 export interface CompteResultatLine {
   code: string;
   label: string;

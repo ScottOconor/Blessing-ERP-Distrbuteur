@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { SalesService, SalesInvoice, InvoicePayment, AvailableMoveDTO, InvoiceReconciliationDTO, AvailableCredit } from '../../services/sales.service';
+import { SalesService, SalesInvoice, InvoicePayment, AvailableMoveDTO, InvoiceReconciliationDTO, AvailableCredit,
+  PAYABLE_INVOICE_STATES, paymentProgressPct, invoiceTropPercu } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CompanyService } from '../../../../core/services/company.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
@@ -177,7 +178,7 @@ export class InvoiceDetailComponent implements OnInit {
     if (!this.invoice.partnerId) missing.push('Client');
     if (!this.invoice.journalId) missing.push('Journal');
     if (!this.invoice.date) missing.push('Date');
-    if (!isAvoir && !this.invoice.warehouseId) missing.push('Entrepôt');
+    if (!isAvoir && !this.invoice.warehouseId && this.invoice.requiresWarehouse !== false) missing.push('Entrepôt');
     if (!this.invoice.lines || this.invoice.lines.length === 0) missing.push('Lignes de facturation');
     return missing;
   }
@@ -306,11 +307,13 @@ export class InvoiceDetailComponent implements OnInit {
   }
 
   applyCredit(): void {
-    if (!this.selectedCreditId) { this.errorMsg = 'Sélectionnez un avoir à imputer.'; return; }
+    if (!this.selectedCreditId) { this.errorMsg = 'Sélectionnez un crédit à imputer.'; return; }
     if (!this.creditAmount || this.creditAmount <= 0) return;
     this.applyingCredit = true;
     this.errorMsg = '';
-    this.salesService.applyCredit(this.invoiceId, this.creditAmount, this.authService.getCompanyId(), this.selectedCreditId).subscribe({
+    const surplus = this.availableCredits.find(c => c.id === this.selectedCreditId)?.type === 'surplus';
+    this.salesService.applyCredit(this.invoiceId, this.creditAmount, this.authService.getCompanyId(),
+        surplus ? undefined : this.selectedCreditId, surplus).subscribe({
       next: (updated) => {
         this.invoice = updated;
         this.applyingCredit = false;
@@ -468,8 +471,15 @@ export class InvoiceDetailComponent implements OnInit {
   }
 
   getProgressPct(): number {
-    if (!this.invoice?.totalTTC || this.invoice.totalTTC === 0) return 0;
-    return Math.min(100, Math.round(((this.invoice.montantPaye || 0) / this.invoice.totalTTC) * 100));
+    return this.invoice ? paymentProgressPct(this.invoice) : 0;
+  }
+
+  get tropPercu(): number {
+    return this.invoice ? invoiceTropPercu(this.invoice) : 0;
+  }
+
+  get hasPaymentProgress(): boolean {
+    return PAYABLE_INVOICE_STATES.includes(this.invoice?.state || '');
   }
 
   fmtM(n: number): string {

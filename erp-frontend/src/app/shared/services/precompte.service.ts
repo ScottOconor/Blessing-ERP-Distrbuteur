@@ -68,12 +68,6 @@ export class PrecompteService {
     });
   }
 
-  getPrecomptesByPartner(partnerId: number, companyId: number): Observable<Precompte[]> {
-    return this.http.get<Precompte[]>(`${this.basePrecompte}/partner/${partnerId}`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
-  }
-
   savePrecompte(dto: Precompte): Observable<Precompte> {
     return this.http.post<Precompte>(this.basePrecompte, dto);
   }

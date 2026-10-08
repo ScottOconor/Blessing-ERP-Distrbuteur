@@ -37,16 +37,6 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     List<AccountMoveLine> findByMoveIdWithAnalytic(@Param("moveId") Long moveId);
 
     @Query("SELECT l FROM AccountMoveLine l " +
-           "WHERE l.account.id = :accountId " +
-           "AND l.date BETWEEN :from AND :to " +
-           "AND l.move.state = :state")
-    List<AccountMoveLine> findByAccountIdAndDateBetweenAndMoveState(
-            @Param("accountId") Long accountId,
-            @Param("from") LocalDate from,
-            @Param("to") LocalDate to,
-            @Param("state") String state);
-
-    @Query("SELECT l FROM AccountMoveLine l " +
            "WHERE l.company.id = :companyId " +
            "AND l.date BETWEEN :from AND :to " +
            "AND l.move.state = 'posted' " +
@@ -183,12 +173,6 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
             @Param("to") LocalDate to,
             @Param("accountIds") List<Long> accountIds);
 
-    /** Toutes les lignes postées d'un journal pour une date précise (pour solde journalier) */
-    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.date = :date AND l.move.state = 'posted'")
-    List<AccountMoveLine> findPostedLinesByJournalAndDate(
-            @Param("journalId") Long journalId,
-            @Param("date") LocalDate date);
-
     /**
      * Lignes de trésorerie d'un journal pour une date : uniquement les comptes
      * dont internalType = 'liquidity' (571, 521...). Utilisé pour le solde journalier.
@@ -237,15 +221,6 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
             @Param("journalId") Long journalId,
             @Param("accountId") Long accountId,
             @Param("date") LocalDate date);
-
-    /** Lignes d'un journal sur le compte réellement lié (defaultDebitAccount/defaultCreditAccount) entre deux dates (cashbook) */
-    @Query("SELECT l FROM AccountMoveLine l WHERE l.journal.id = :journalId AND l.account.id = :accountId " +
-           "AND l.date BETWEEN :from AND :to AND l.move.state = 'posted' ORDER BY l.date, l.move.name, l.id")
-    List<AccountMoveLine> findLinesByJournalAccountAndDateBetween(
-            @Param("journalId") Long journalId,
-            @Param("accountId") Long accountId,
-            @Param("from") LocalDate from,
-            @Param("to") LocalDate to);
 
     /**
      * Variantes filtrées UNIQUEMENT par compte (sans condition de journal) — indispensable pour un
@@ -406,32 +381,6 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
     List<Object[]> soldesInitiauxCaisses(@Param("cid") Long companyId,
                                          @Param("from") LocalDate from);
 
-    /** Créances: solde débiteur net comptes 411* (clients impayés) */
-    @Query("SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '411%' AND l.company.id = :cid " +
-           "AND l.move.state = 'posted'")
-    BigDecimal soldeCreances(@Param("cid") Long companyId);
-
-    /** Créances sur le mois courant */
-    @Query("SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '411%' AND l.company.id = :cid " +
-           "AND l.move.state = 'posted' AND l.date BETWEEN :from AND :to")
-    BigDecimal soldeCreancesPeriode(@Param("cid") Long companyId,
-                                    @Param("from") LocalDate from,
-                                    @Param("to") LocalDate to);
-
-    /** Dettes: solde créditeur net comptes 401* (fournisseurs impayés) */
-    @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '401%' AND l.company.id = :cid " +
-           "AND l.move.state = 'posted'")
-    BigDecimal soldeDettes(@Param("cid") Long companyId);
-
-    /** Mouvement du jour sur les dettes (comptes 401*) */
-    @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
-           "WHERE l.account.code LIKE '401%' AND l.company.id = :cid " +
-           "AND l.move.state = 'posted' AND l.date = :date")
-    BigDecimal soldeDettesJour(@Param("cid") Long companyId, @Param("date") LocalDate date);
-
     /** CA du jour (comptes 701*) */
     @Query("SELECT COALESCE(SUM(l.credit) - SUM(l.debit), 0) FROM AccountMoveLine l " +
            "WHERE l.account.code IN ('701100', '443100', '441200') AND l.company.id = :cid " +
@@ -475,30 +424,4 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
            "GROUP BY l.partner.id, l.partner.name")
     List<Object[]> soldesComptesFournisseursParTiers(@Param("cid") Long companyId);
 
-    /** Même logique que creancesParTiers/dettesParTiers, restreinte à une période — pour le
-     *  snapshot envoyé au Hub (dashboard), qui utilisait jusqu'ici un calcul différent (solde
-     *  brut 411/401 non ventilé par tiers, ou somme de montantDu sur les factures) au lieu de
-     *  reprendre celui déjà utilisé par l'écran "Suivi Tiers" que l'utilisateur vérifie en local.
-     *  Ventiler par tiers avant de sommer (au lieu d'un solde net global) garantit un total
-     *  jamais négatif : un partenaire en crédit (avance, trop-perçu) est exclu des créances et
-     *  compté dans les dettes, plutôt que de faire baisser le total créances en dessous de zéro. */
-    @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +
-           "FROM AccountMoveLine l " +
-           "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
-           "AND l.account.internalType IN ('receivable', 'payable') AND l.partner IS NOT NULL " +
-           "AND l.date BETWEEN :from AND :to " +
-           "GROUP BY l.partner.id, l.partner.name " +
-           "HAVING SUM(l.debit) > SUM(l.credit)")
-    List<Object[]> creancesParTiersPeriode(@Param("cid") Long companyId,
-                                           @Param("from") LocalDate from, @Param("to") LocalDate to);
-
-    @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +
-           "FROM AccountMoveLine l " +
-           "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
-           "AND l.account.internalType IN ('receivable', 'payable') AND l.partner IS NOT NULL " +
-           "AND l.date BETWEEN :from AND :to " +
-           "GROUP BY l.partner.id, l.partner.name " +
-           "HAVING SUM(l.credit) > SUM(l.debit)")
-    List<Object[]> dettesParTiersPeriode(@Param("cid") Long companyId,
-                                         @Param("from") LocalDate from, @Param("to") LocalDate to);
 }

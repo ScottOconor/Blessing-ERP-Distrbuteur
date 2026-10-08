@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SalesService, SalesInvoice } from '../../services/sales.service';
+import { SalesService, SalesInvoice, PAYABLE_INVOICE_STATES, paymentProgressPct, invoiceTropPercu } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
@@ -107,8 +107,15 @@ export class InvoiceListComponent implements OnInit {
   }
 
   getProgressPct(invoice: SalesInvoice): number {
-    if (!invoice.totalTTC || invoice.totalTTC === 0) return 0;
-    return Math.min(100, Math.round(((invoice.montantPaye || 0) / invoice.totalTTC) * 100));
+    return paymentProgressPct(invoice);
+  }
+
+  getTropPercu(invoice: SalesInvoice): number {
+    return invoiceTropPercu(invoice);
+  }
+
+  hasPaymentProgress(invoice: SalesInvoice): boolean {
+    return PAYABLE_INVOICE_STATES.includes(invoice.state || '');
   }
 
   get totals(): { ht: number; ttc: number; paye: number; du: number } {

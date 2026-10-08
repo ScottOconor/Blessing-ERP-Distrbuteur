@@ -16,6 +16,10 @@ export const accountingRoutes: Routes = [
         loadComponent: () => import('./components/chart-of-accounts/chart-of-accounts.component').then(m => m.ChartOfAccountsComponent)
       },
       {
+        path: 'service-accounts',
+        loadComponent: () => import('./components/service-accounts/service-accounts.component').then(m => m.ServiceAccountsComponent)
+      },
+      {
         path: 'journals',
         loadComponent: () => import('./components/journals/journals.component').then(m => m.JournalsComponent)
       },

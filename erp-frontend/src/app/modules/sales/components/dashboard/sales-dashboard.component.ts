@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { SalesService, SalesOrder, SalesInvoice } from '../../services/sales.service';
+import { SalesService, SalesOrder, SalesInvoice, collectionRatePct } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
@@ -105,7 +105,7 @@ export class SalesDashboardComponent implements OnInit {
     this.caHT     = active.reduce((s, i) => s + (i.totalHT  || 0), 0);
     this.encaisse = active.reduce((s, i) => s + (i.montantPaye || 0), 0);
     this.resteAEncaisser = active.reduce((s, i) => s + (i.montantDu || 0), 0);
-    this.tauxEncaissement = this.caTTC > 0 ? Math.round((this.encaisse / this.caTTC) * 100) : 0;
+    this.tauxEncaissement = collectionRatePct(active);
     this.totalAvoirs = avoirs.filter(a => a.state === 'posted').reduce((s, a) => s + (a.totalTTC || 0), 0);
 
     this.nbFactures      = invoices.length;

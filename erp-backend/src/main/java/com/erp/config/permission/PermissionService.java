@@ -149,6 +149,8 @@ public class PermissionService {
         new PermissionRule("PUT",    "/api/accounting/accounts/**",  "COMPTABILITE","ECRITURES","EDIT"),
         new PermissionRule("PATCH",  "/api/accounting/accounts/**",  "COMPTABILITE","ECRITURES","EDIT"),
         new PermissionRule("DELETE", "/api/accounting/accounts/**",  "COMPTABILITE","ECRITURES","DELETE"),
+        new PermissionRule("GET",    "/api/accounting/service-accounts",    "COMPTABILITE","ECRITURES","VIEW"),
+        new PermissionRule("PUT",    "/api/accounting/service-accounts/**", "COMPTABILITE","ECRITURES","EDIT"),
         new PermissionRule("GET",    "/api/accounting/journals",     "COMPTABILITE","JOURNAUX","VIEW"),
         new PermissionRule("GET",    "/api/accounting/journals/**",  "COMPTABILITE","JOURNAUX","VIEW"),
         new PermissionRule("POST",   "/api/accounting/journals",     "COMPTABILITE","JOURNAUX","CREATE"),

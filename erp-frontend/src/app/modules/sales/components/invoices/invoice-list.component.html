@@ -114,11 +114,16 @@
                       {{ inv.montantDu | number:'1.0-0' }}
                     </td>
                     <td>
-                      @if (inv.state === 'posted' || inv.state === 'paid') {
+                      @if (hasPaymentProgress(inv)) {
                         <div class="progress-bar">
                           <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
                         </div>
                         <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+                        @if (getTropPercu(inv) > 0) {
+                          <span class="progress-pct progress-surplus" title="Payé au-delà du net à payer — crédit en circulation du client">
+                            +{{ getTropPercu(inv) | number:'1.0-0' }}
+                          </span>
+                        }
                       }
                     </td>
                     <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
@@ -145,11 +150,16 @@
                   {{ inv.montantDu | number:'1.0-0' }}
                 </td>
                 <td>
-                  @if (inv.state === 'posted' || inv.state === 'paid') {
+                  @if (hasPaymentProgress(inv)) {
                     <div class="progress-bar">
                       <div class="progress-fill" [style.width]="getProgressPct(inv) + '%'"></div>
                     </div>
                     <span class="progress-pct">{{ getProgressPct(inv) }}%</span>
+                    @if (getTropPercu(inv) > 0) {
+                      <span class="progress-pct progress-surplus" title="Payé au-delà du net à payer — crédit en circulation du client">
+                        +{{ getTropPercu(inv) | number:'1.0-0' }}
+                      </span>
+                    }
                   }
                 </td>
                 <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>

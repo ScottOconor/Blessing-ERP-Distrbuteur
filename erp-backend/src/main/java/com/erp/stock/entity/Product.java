@@ -51,6 +51,11 @@ public class Product {
     @Column(nullable = false)
     private String type;
 
+    /** Compte de produit (classe 7) des ventes de ce service, paramétré en comptabilité
+     *  (écran "Comptes des services"). Null = compte par défaut des services de la société. */
+    @Column(name = "income_account_code")
+    private String incomeAccountCode;
+
     /** Compte stock OHADA (ex: 311000). Si null, hérite de la catégorie */
     private String stockAccountCode;
 

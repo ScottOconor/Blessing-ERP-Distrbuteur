@@ -138,11 +138,12 @@ public class SalesController {
             @PathVariable Long id,
             @RequestParam java.math.BigDecimal amount,
             @RequestParam Long companyId,
-            @RequestParam(required = false) Long creditNoteId) {
-        return ResponseEntity.ok(salesService.applyCreditToInvoice(id, amount, companyId, creditNoteId));
+            @RequestParam(required = false) Long creditNoteId,
+            @RequestParam(defaultValue = "false") boolean surplus) {
+        return ResponseEntity.ok(salesService.applyCreditToInvoice(id, amount, companyId, creditNoteId, surplus));
     }
 
-    /** Liste détaillée des avoirs disponibles ("crédits en circulation") d'un client, un par avoir. */
+    /** Crédits en circulation d'un client : un par avoir disponible, plus le trop-perçu éventuel. */
     @GetMapping("/partners/{partnerId}/available-credits")
     public ResponseEntity<List<com.erp.sales.dto.AvailableCreditDTO>> getAvailableCredits(
             @PathVariable Long partnerId,

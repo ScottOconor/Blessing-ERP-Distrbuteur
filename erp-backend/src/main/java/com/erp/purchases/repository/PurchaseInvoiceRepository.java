@@ -52,8 +52,6 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
                                                                    @Param("excludedState") String excludedState,
                                                                    @Param("modifiedSince") java.time.LocalDateTime modifiedSince);
 
-    Optional<PurchaseInvoice> findFirstByPurchaseOrderId(Long orderId);
-
     List<PurchaseInvoice> findByOriginalInvoiceId(Long originalInvoiceId);
 
     @Query("SELECT i FROM PurchaseInvoice i WHERE i.company.id = :companyId AND i.state IN ('posted','paid','partiellement_extournee') AND i.date >= :dateStart AND i.date <= :dateEnd ORDER BY i.date ASC")
@@ -82,15 +80,6 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
                                                 @Param("year") int year);
 
     // ── Snapshot queries ─────────────────────────────────────────────────
-
-    @Query("SELECT COALESCE(SUM(i.totalTTC), 0) FROM PurchaseInvoice i " +
-           "WHERE i.company.id = :cid AND i.state IN ('posted','paid','partiellement_extournee') AND i.type = 'invoice'")
-    java.math.BigDecimal sumAchatsTotal(@Param("cid") Long companyId);
-
-    @Query("SELECT COALESCE(SUM(i.totalTTC), 0) FROM PurchaseInvoice i " +
-           "WHERE i.company.id = :cid AND i.state IN ('posted','paid','partiellement_extournee') AND i.type = 'invoice' " +
-           "AND YEAR(i.date) = :year AND MONTH(i.date) = :month")
-    java.math.BigDecimal sumAchatsMois(@Param("cid") Long companyId, @Param("year") int year, @Param("month") int month);
 
     @Query("SELECT COUNT(i) FROM PurchaseInvoice i " +
            "WHERE i.company.id = :cid AND i.state IN ('posted','paid','partiellement_extournee') AND i.type = 'invoice'")

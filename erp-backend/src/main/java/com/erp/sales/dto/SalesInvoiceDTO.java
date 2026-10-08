@@ -43,6 +43,9 @@ public class SalesInvoiceDTO {
     private java.math.BigDecimal partnerBalance;
     /** Total des avoirs non encore compensés disponibles pour ce client */
     private java.math.BigDecimal partnerCreditDisponible;
+    /** Brouillon de facture : vrai si un entrepôt est exigé pour la valider (articles physiques).
+     *  Faux pour une facture de services seuls ; null hors brouillon. */
+    private Boolean requiresWarehouse;
 
     private BigDecimal totalHT;
     private BigDecimal totalTVA;

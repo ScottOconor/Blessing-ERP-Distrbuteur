@@ -16,9 +16,6 @@ public interface AnalyticAccountRepository extends JpaRepository<AnalyticAccount
     @Query("SELECT a FROM AnalyticAccount a WHERE a.company.id = :companyId AND a.parent IS NULL AND a.active = true ORDER BY a.code")
     List<AnalyticAccount> findRootsByCompanyId(@Param("companyId") Long companyId);
 
-    @Query("SELECT a FROM AnalyticAccount a WHERE a.company.id = :companyId AND a.parent.id = :parentId AND a.active = true ORDER BY a.code")
-    List<AnalyticAccount> findByParentId(@Param("companyId") Long companyId, @Param("parentId") Long parentId);
-
     boolean existsByCodeAndCompanyId(String code, Long companyId);
 
     java.util.Optional<AnalyticAccount> findFirstByCodeAndCompanyId(String code, Long companyId);

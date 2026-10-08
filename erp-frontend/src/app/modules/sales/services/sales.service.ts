@@ -106,6 +106,8 @@ export interface PrixClientArticle {
 
 export interface AvailableCredit {
   id: number;
+  /** 'avoir' = avoir client disponible ; 'surplus' = trop-perçu / dette envers le client */
+  type?: 'avoir' | 'surplus';
   name: string;
   date: string;
   montantTotal: number;
@@ -113,6 +115,46 @@ export interface AvailableCredit {
   notes?: string;
   originalInvoiceId?: number;
   originalInvoiceName?: string;
+}
+
+/** États de facture dont la progression de paiement a un sens (validée, payée, partiellement extournée). */
+export const PAYABLE_INVOICE_STATES = ['posted', 'paid', 'partiellement_extournee'];
+
+/**
+ * Montant réellement à régler sur la facture : payé + reste dû (= net à payer, précompte, rabais et
+ * enlèvement compris) — et non le total TTC, qui faussait la barre (97 % ou 103 % sur une facture soldée).
+ * Un paiement au-delà du net à payer n'en fait pas partie : c'est un trop-perçu.
+ */
+function invoiceSettlementBase(inv: SalesInvoice): { applique: number; du: number } {
+  const paye = Math.max(0, inv.montantPaye || 0);
+  const du = Math.max(0, inv.montantDu || 0);
+  const net = inv.netAPayer ?? (paye + du);
+  return { applique: Math.min(paye, Math.max(0, net - du)), du };
+}
+
+/** Pourcentage payé : 100 seulement quand il ne reste plus rien à payer (pas d'arrondi trompeur). */
+export function paymentProgressPct(inv: SalesInvoice): number {
+  const { applique, du } = invoiceSettlementBase(inv);
+  if (du <= 0) return applique > 0 || inv.state === 'paid' ? 100 : 0;
+  return Math.min(99, Math.floor((applique / (applique + du)) * 100));
+}
+
+/** Trop-perçu sur la facture (payé au-delà du net à payer) — devient un crédit en circulation du client. */
+export function invoiceTropPercu(inv: SalesInvoice): number {
+  const paye = Math.max(0, inv.montantPaye || 0);
+  const net = inv.netAPayer ?? (paye + Math.max(0, inv.montantDu || 0));
+  return Math.max(0, Math.round(paye - net));
+}
+
+/** Taux d'encaissement d'un ensemble de factures, trop-perçus exclus. */
+export function collectionRatePct(invoices: SalesInvoice[]): number {
+  let applique = 0, du = 0;
+  for (const inv of invoices) {
+    const b = invoiceSettlementBase(inv);
+    applique += b.applique; du += b.du;
+  }
+  if (applique + du <= 0) return 0;
+  return du <= 0 ? 100 : Math.min(99, Math.floor((applique / (applique + du)) * 100));
 }
 
 export interface RistourneDetail {
@@ -142,6 +184,8 @@ export interface SalesInvoice {
   sellerName?: string;
   partnerBalance?: number | null;
   partnerCreditDisponible?: number | null;
+  /** Brouillon : entrepôt exigé (articles physiques) — faux pour une facture de services seuls */
+  requiresWarehouse?: boolean | null;
   salesOrderId?: number;
   salesOrderName?: string;
   originalInvoiceId?: number;
@@ -397,9 +441,10 @@ export class SalesService {
     return this.http.delete<InvoicePayment>(`${this.apiUrl}/payments/${paymentId}`);
   }
 
-  applyCredit(invoiceId: number, amount: number, companyId: number, creditNoteId?: number): Observable<SalesInvoice> {
+  applyCredit(invoiceId: number, amount: number, companyId: number, creditNoteId?: number, surplus = false): Observable<SalesInvoice> {
     let params = new HttpParams().set('amount', amount).set('companyId', companyId);
-    if (creditNoteId) params = params.set('creditNoteId', creditNoteId);
+    if (surplus) params = params.set('surplus', true);
+    else if (creditNoteId) params = params.set('creditNoteId', creditNoteId);
     return this.http.post<SalesInvoice>(
       `${this.apiUrl}/invoices/${invoiceId}/apply-credit`,
       null,
@@ -407,7 +452,7 @@ export class SalesService {
     );
   }
 
-  /** Liste détaillée des avoirs disponibles ("crédits en circulation") d'un client, un par avoir. */
+  /** Crédits en circulation d'un client : un par avoir disponible, plus le trop-perçu éventuel. */
   getAvailableCredits(partnerId: number, companyId: number): Observable<AvailableCredit[]> {
     return this.http.get<AvailableCredit[]>(
       `${this.apiUrl}/partners/${partnerId}/available-credits`,

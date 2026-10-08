@@ -59,6 +59,11 @@ public class Company {
     @Column(name = "lock_date")
     private LocalDate lockDate;
 
+    /** Compte de produit par défaut des ventes de services, paramétré en comptabilité.
+     *  Null = 706100 "Services vendus". */
+    @Column(name = "service_revenue_account_code")
+    private String serviceRevenueAccountCode;
+
     /** Marque la fin d'un passage complet de StockService#reconcileMovementLedgerWithQuants pour
      *  cette société — cette migration recale l'historique des mouvements (Fiche de stock) sur le
      *  quant réel après un bug de valorisation aujourd'hui corrigé (voir applyStockMovement) et n'a

@@ -30,6 +30,21 @@ export interface JournalDailyBalanceDTO {
   closed?: boolean;
 }
 
+/** Paramétrage des comptes de produit des ventes de services (écran "Comptes des services"). */
+export interface ServiceAccounts {
+  /** Compte par défaut paramétré (null = 706100) */
+  defaultAccountCode: string | null;
+  effectiveDefaultAccountCode: string;
+  services: {
+    productId: number;
+    defaultCode?: string;
+    name: string;
+    /** Compte propre au service (null = compte par défaut) */
+    incomeAccountCode: string | null;
+    effectiveAccountCode: string;
+  }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AccountingService {
   private apiUrl = `${environment.apiUrl}/api/accounting`;
@@ -53,6 +68,27 @@ export class AccountingService {
 
   deleteAccount(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/accounts/${id}`);
+  }
+
+  // ===== COMPTES DES SERVICES =====
+  getServiceAccounts(companyId: number): Observable<ServiceAccounts> {
+    return this.http.get<ServiceAccounts>(`${this.apiUrl}/service-accounts`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  /** accountCode vide = retour à 706100 */
+  setDefaultServiceAccount(companyId: number, accountCode: string | null): Observable<ServiceAccounts> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (accountCode) params = params.set('accountCode', accountCode);
+    return this.http.put<ServiceAccounts>(`${this.apiUrl}/service-accounts/default`, null, { params });
+  }
+
+  /** accountCode vide = le service suit le compte par défaut */
+  setServiceAccount(productId: number, accountCode: string | null): Observable<ServiceAccounts> {
+    let params = new HttpParams();
+    if (accountCode) params = params.set('accountCode', accountCode);
+    return this.http.put<ServiceAccounts>(`${this.apiUrl}/service-accounts/${productId}`, null, { params });
   }
 
   toggleAccountDeprecated(id: number): Observable<AccountAccount> {
@@ -107,10 +143,6 @@ export class AccountingService {
     return this.http.post<AccountMove>(`${this.apiUrl}/moves/${id}/post`, {});
   }
 
-  cancelMove(id: number): Observable<AccountMove> {
-    return this.http.post<AccountMove>(`${this.apiUrl}/moves/${id}/cancel`, {});
-  }
-
   // ===== PARTENAIRES =====
   getPartners(companyId: number): Observable<Partner[]> {
     return this.http.get<Partner[]>(`${this.apiUrl}/partners`, {
@@ -144,12 +176,6 @@ export class AccountingService {
 
   getDailyBalances(journalId: number): Observable<JournalDailyBalanceDTO[]> {
     return this.http.get<JournalDailyBalanceDTO[]>(`${this.apiUrl}/journals/${journalId}/daily-balances`);
-  }
-
-  getDailyBalance(journalId: number, date: string, companyId?: number): Observable<JournalDailyBalanceDTO> {
-    let params = new HttpParams().set('date', date);
-    if (companyId) params = params.set('companyId', companyId);
-    return this.http.get<JournalDailyBalanceDTO>(`${this.apiUrl}/journals/${journalId}/daily-balance`, { params });
   }
 
   closeDayBalance(journalId: number, date: string): Observable<JournalDailyBalanceDTO> {
@@ -233,9 +259,4 @@ export class AccountingService {
     return this.http.post<ImportResult>(`${this.importUrl}/warehouses`, fd);
   }
 
-  getJournalTypes(): Observable<{ value: string; label: string; icon: string }[]> {
-    return this.http.get<{ value: string; label: string; icon: string }[]>(
-      `${this.importUrl}/journal-types`
-    );
-  }
 }

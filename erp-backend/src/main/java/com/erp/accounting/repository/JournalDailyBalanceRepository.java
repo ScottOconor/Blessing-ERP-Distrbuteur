@@ -15,11 +15,4 @@ public interface JournalDailyBalanceRepository extends JpaRepository<JournalDail
 
     Optional<JournalDailyBalance> findByJournalIdAndDate(Long journalId, LocalDate date);
 
-    List<JournalDailyBalance> findByJournalIdOrderByDateDesc(Long journalId);
-
-    List<JournalDailyBalance> findByCompanyIdAndDateOrderByJournalIdAsc(Long companyId, LocalDate date);
-
-    /** Dernier solde enregistré pour un journal (pour calculer le solde d'ouverture du prochain jour) */
-    @Query("SELECT b FROM JournalDailyBalance b WHERE b.journalId = :journalId AND b.date < :date ORDER BY b.date DESC")
-    List<JournalDailyBalance> findLatestBeforeDate(@Param("journalId") Long journalId, @Param("date") LocalDate date);
 }

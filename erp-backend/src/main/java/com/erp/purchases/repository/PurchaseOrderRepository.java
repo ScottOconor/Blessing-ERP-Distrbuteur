@@ -22,10 +22,6 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     @Query("SELECT o FROM PurchaseOrder o WHERE o.company.id = :companyId ORDER BY o.createdAt DESC")
     Stream<PurchaseOrder> streamByCompanyId(@Param("companyId") Long companyId);
 
-    /** Tous les bons de commande "actifs" (tout sauf brouillon) pour le snapshot — seul filet de
-     *  sécurité de réconciliation pour PURCHASE_ORDER_RECEIVED côté Hub. */
-    List<PurchaseOrder> findByCompanyIdAndStateNotOrderByCreatedAtDesc(Long companyId, String excludedState);
-
     /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
      *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
     @Query("SELECT o FROM PurchaseOrder o WHERE o.company.id = :companyId AND o.state <> :excludedState " +

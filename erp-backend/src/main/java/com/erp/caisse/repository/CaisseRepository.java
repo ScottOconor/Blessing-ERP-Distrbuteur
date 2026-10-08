@@ -13,7 +13,6 @@ public interface CaisseRepository extends JpaRepository<Caisse, Long> {
     List<Caisse> findByCompanyIdAndActiveTrue(Long companyId);
     List<Caisse> findByCompanyId(Long companyId);
     boolean existsByCodeAndCompanyId(String code, Long companyId);
-    Optional<Caisse> findFirstByJournalIdAndCompanyId(Long journalId, Long companyId);
 
     /** Verrou pessimiste : empêche deux clôtures concurrentes de la même caisse de passer toutes
      *  les deux le contrôle "session déjà existante aujourd'hui" avant que l'une ne committe

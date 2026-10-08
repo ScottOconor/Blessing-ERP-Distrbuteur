@@ -30,12 +30,6 @@ export class ThemeService {
     this.isDark.update(v => !v);
   }
 
-  /** Réinitialise vers le thème système (supprime la préférence stockée) */
-  resetToSystem(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
-    this.isDark.set(this.mediaQuery.matches);
-  }
-
   private loadPreference(): boolean {
     const stored = localStorage.getItem(this.STORAGE_KEY);
     if (stored) return stored === 'dark';

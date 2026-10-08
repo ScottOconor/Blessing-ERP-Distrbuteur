@@ -20,6 +20,7 @@ import java.util.List;
 public class AccountController {
 
     private final AccountingService accountingService;
+    private final com.erp.accounting.service.ServiceAccountService serviceAccountService;
 
     // ===================== ACCOUNTS =====================
 
@@ -48,6 +49,27 @@ public class AccountController {
     @PatchMapping("/accounts/{id}/toggle-deprecated")
     public ResponseEntity<AccountAccountDTO> toggleAccountDeprecated(@PathVariable("id") Long id) {
         return ResponseEntity.ok(accountingService.toggleAccountDeprecated(id));
+    }
+
+    // ===================== COMPTES DES SERVICES =====================
+
+    @GetMapping("/service-accounts")
+    public ResponseEntity<ServiceAccountsDTO> getServiceAccounts(@RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(serviceAccountService.getServiceAccounts(companyId));
+    }
+
+    /** Compte par défaut des services de la société (accountCode vide = 706100). */
+    @PutMapping("/service-accounts/default")
+    public ResponseEntity<ServiceAccountsDTO> setDefaultServiceAccount(@RequestParam("companyId") Long companyId,
+                                                                       @RequestParam(name = "accountCode", required = false) String accountCode) {
+        return ResponseEntity.ok(serviceAccountService.setDefaultAccount(companyId, accountCode));
+    }
+
+    /** Compte propre à un service (accountCode vide = compte par défaut). */
+    @PutMapping("/service-accounts/{productId}")
+    public ResponseEntity<ServiceAccountsDTO> setServiceAccount(@PathVariable("productId") Long productId,
+                                                                @RequestParam(name = "accountCode", required = false) String accountCode) {
+        return ResponseEntity.ok(serviceAccountService.setProductAccount(productId, accountCode));
     }
 
     // ===================== JOURNALS =====================

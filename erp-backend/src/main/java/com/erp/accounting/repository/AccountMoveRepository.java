@@ -16,16 +16,12 @@ import java.util.Optional;
 public interface AccountMoveRepository extends JpaRepository<AccountMove, Long>,
         JpaSpecificationExecutor<AccountMove> {
 
-    List<AccountMove> findByJournalIdAndDateBetween(Long journalId, LocalDate from, LocalDate to);
-
     /** Retrouve une écriture par son nom exact (ex : "STK/AV-2024-00001") pour extourne. */
     Optional<AccountMove> findFirstByNameAndCompanyId(String name, Long companyId);
 
     List<AccountMove> findByCompanyIdAndStateOrderByDateDescNameDesc(Long companyId, String state);
 
     List<AccountMove> findByCompanyIdOrderByDateDescNameDesc(Long companyId);
-
-    List<AccountMove> findByCompanyIdAndJournalIdOrderByDateDescNameDesc(Long companyId, Long journalId);
 
     /** Écritures d'un état donné (typiquement "draft") datées dans un intervalle — utilisé
      *  par la clôture d'exercice pour bloquer tant que des écritures non validées subsistent. */

@@ -62,7 +62,13 @@ export class AccountingLayoutComponent implements OnInit {
     }
 
     if (this.can('ECRITURES')) {
-      items.push({ id: 'chart', label: 'Plan Comptable', icon: 'account_tree', route: '/accounting/chart-of-accounts' });
+      items.push({
+        id: 'chart', label: 'Plan Comptable', icon: 'account_tree',
+        children: [
+          { label: 'Plan comptable',       icon: 'account_tree',   route: '/accounting/chart-of-accounts' },
+          { label: 'Comptes des services', icon: 'room_service',   route: '/accounting/service-accounts' }
+        ]
+      });
       items.push({
         id: 'grandlivres', label: 'Grand Livre', icon: 'menu_book',
         children: [

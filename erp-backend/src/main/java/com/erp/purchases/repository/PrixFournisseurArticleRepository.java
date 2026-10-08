@@ -16,5 +16,4 @@ public interface PrixFournisseurArticleRepository extends JpaRepository<PrixFour
 
     List<PrixFournisseurArticle> findByCompanyId(Long companyId);
 
-    void deleteByProductIdAndFournisseurIdAndCompanyId(Long productId, Long fournisseurId, Long companyId);
 }

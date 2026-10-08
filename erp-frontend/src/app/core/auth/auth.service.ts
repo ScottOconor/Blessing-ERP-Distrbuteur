@@ -86,7 +86,6 @@ export class AuthService {
   isAdmin(): boolean { return this.isPrivileged(); }
   canDelete(): boolean { return this.isPrivileged(); }
   canImport(): boolean { return this.isPrivileged(); }
-  canManageConfig(): boolean { return this.isPrivileged(); }
   canManageUsers(): boolean { return this.isPrivileged(); }
 
   hasPermission(module: string, resource: string, action: string): boolean {

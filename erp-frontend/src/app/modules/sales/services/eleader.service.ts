@@ -70,17 +70,7 @@ export class EleaderService {
     return this.http.post<EleaderEmballageMapping>(`${this.base}/config/emballages`, mapping, { params: { companyId } });
   }
 
-  deleteMapping(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/config/emballages/${id}`);
-  }
-
   // ── Import PDF ──────────────────────────────────────────────────────────────
-
-  extractText(file: File): Observable<{ text: string; detectedModel: string }> {
-    const fd = new FormData();
-    fd.append('file', file);
-    return this.http.post<{ text: string; detectedModel: string }>(`${this.base}/extract-text`, fd);
-  }
 
   importPdf(file: File, companyId: number, invoiceModel?: string): Observable<EleaderImportResult> {
     const fd = new FormData();

@@ -107,6 +107,17 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     java.math.BigDecimal sumAvailableCredits(@Param("partnerId") Long partnerId,
                                              @Param("companyId") Long companyId);
 
+    /** Factures client encore ouvertes (reste dû > 0) — base du calcul du trop-perçu client. */
+    @Query("SELECT i FROM SalesInvoice i WHERE i.partner.id = :partnerId AND i.company.id = :companyId " +
+           "AND i.type = 'invoice' AND i.state IN ('posted','partiellement_extournee') AND i.montantDu > 0")
+    List<SalesInvoice> findOpenInvoicesForPartner(@Param("partnerId") Long partnerId,
+                                                  @Param("companyId") Long companyId);
+
+    /** Montant des avoirs d'extourne validés émis sur une facture (non déduits de son montantDu). */
+    @Query("SELECT COALESCE(SUM(ABS(a.netAPayer)), 0) FROM SalesInvoice a " +
+           "WHERE a.originalInvoice.id = :invoiceId AND a.type = 'credit_note' AND a.state IN ('posted','paid')")
+    java.math.BigDecimal sumPostedAvoirsOnInvoice(@Param("invoiceId") Long invoiceId);
+
     // ── Snapshot queries ─────────────────────────────────────────────────
 
     @Query("SELECT COALESCE(SUM(i.totalTTC), 0) FROM SalesInvoice i " +
@@ -117,10 +128,6 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
            "WHERE i.company.id = :cid AND i.state IN ('posted','paid') AND i.type = 'invoice' " +
            "AND YEAR(i.date) = :year AND MONTH(i.date) = :month")
     java.math.BigDecimal sumCaVentesMois(@Param("cid") Long companyId, @Param("year") int year, @Param("month") int month);
-
-    @Query("SELECT COUNT(i) FROM SalesInvoice i " +
-           "WHERE i.company.id = :cid AND i.state IN ('posted','paid') AND i.type = 'invoice'")
-    long countFacturesVentes(@Param("cid") Long companyId);
 
     @Query("SELECT COUNT(i) FROM SalesInvoice i " +
            "WHERE i.company.id = :cid AND i.state IN ('posted','paid') AND i.type = 'invoice' AND i.date = :date")
@@ -139,16 +146,6 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
            "FROM SalesInvoice i " +
            "WHERE i.company.id = :cid AND i.state IN ('posted','paid') AND i.type IN ('invoice','credit_note')")
     java.math.BigDecimal sumFraisEnlevementsVentes(@Param("cid") Long companyId);
-
-    // Même calcul que sumFraisEnlevementsVentes, borné à une période — pour le dashboard
-    // (année en cours, mois en cours, trimestre en cours).
-    @Query("SELECT COALESCE(SUM(CASE WHEN i.type = 'credit_note' THEN -i.fraisEnlevementTTC ELSE i.fraisEnlevementTTC END), 0) " +
-           "FROM SalesInvoice i " +
-           "WHERE i.company.id = :cid AND i.state IN ('posted','paid') AND i.type IN ('invoice','credit_note') " +
-           "AND i.date >= :dateFrom AND i.date <= :dateTo")
-    java.math.BigDecimal sumFraisEnlevementsVentesForPeriod(@Param("cid") Long companyId,
-                                                             @Param("dateFrom") LocalDate dateFrom,
-                                                             @Param("dateTo") LocalDate dateTo);
 
     @Query("SELECT i.partner.id, i.partner.name, SUM(i.montantDu) " +
            "FROM SalesInvoice i " +

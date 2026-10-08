@@ -547,7 +547,13 @@
             <span>Reste dû</span>
             <span>{{ invoice.montantDu | number:'1.0-0' }} FCFA</span>
           </div>
-          @if (invoice.state === 'posted' || invoice.state === 'paid') {
+          @if (tropPercu > 0) {
+            <div class="total-row" style="color:#017E84;font-weight:600">
+              <span>Trop-perçu (crédit en circulation)</span>
+              <span>{{ tropPercu | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          @if (hasPaymentProgress) {
             <div class="progress-section">
               <div class="progress-bar-lg">
                 <div class="progress-fill" [style.width]="getProgressPct() + '%'"></div>
@@ -819,11 +825,11 @@
         </div>
 
         <div class="form-group" style="margin-top:16px">
-          <label>Avoir à imputer <span class="required">*</span></label>
+          <label>Crédit à imputer <span class="required">*</span></label>
           @if (loadingCredits) {
-            <p class="text-muted" style="margin:8px 0">Chargement des avoirs disponibles…</p>
+            <p class="text-muted" style="margin:8px 0">Chargement des crédits disponibles…</p>
           } @else if (availableCredits.length === 0) {
-            <p class="text-muted" style="margin:8px 0">Aucun avoir disponible pour ce client.</p>
+            <p class="text-muted" style="margin:8px 0">Aucun crédit disponible pour ce client.</p>
           } @else {
             <div class="credit-list">
               @for (c of availableCredits; track c.id) {
@@ -831,7 +837,12 @@
                   <input type="radio" name="creditChoice" [checked]="selectedCreditId === c.id" />
                   <div class="credit-row-info">
                     <span class="credit-row-name">{{ c.name }}</span>
-                    <span class="credit-row-date">{{ c.date }}</span>
+                    @if (c.date) {
+                      <span class="credit-row-date">{{ c.date }}</span>
+                    }
+                    @if (c.type === 'surplus') {
+                      <span class="credit-row-origin">— hors versements à lettrer</span>
+                    }
                     @if (c.originalInvoiceName) {
                       <span class="credit-row-origin">— extourne de {{ c.originalInvoiceName }}</span>
                     }

@@ -471,9 +471,6 @@ export class StockService {
     return this.http.get<Product[]>(`${this.api}/products`, { params });
   }
 
-  getProduct(id: number): Observable<Product> {
-    return this.http.get<Product>(`${this.api}/products/${id}`);
-  }
   createProduct(dto: Product): Observable<Product> {
     return this.http.post<Product>(`${this.api}/products`, dto);
   }
@@ -498,9 +495,6 @@ export class StockService {
   // Warehouses
   getWarehouses(companyId: number): Observable<Warehouse[]> {
     return this.http.get<Warehouse[]>(`${this.api}/warehouses`, { params: new HttpParams().set('companyId', companyId) });
-  }
-  getWarehouse(id: number): Observable<Warehouse> {
-    return this.http.get<Warehouse>(`${this.api}/warehouses/${id}`);
   }
   createWarehouse(dto: Warehouse): Observable<Warehouse> {
     return this.http.post<Warehouse>(`${this.api}/warehouses`, dto);
@@ -534,17 +528,8 @@ export class StockService {
     return this.http.get<StockPickingType[]>(`${this.api}/picking-types`, { params: new HttpParams().set('companyId', companyId) });
   }
 
-  // Pickings
-  getPickings(companyId: number, type?: string): Observable<StockPicking[]> {
-    let params = new HttpParams().set('companyId', companyId);
-    if (type) params = params.set('type', type);
-    return this.http.get<StockPicking[]>(`${this.api}/pickings`, { params });
-  }
   getReceptions(companyId: number): Observable<StockPicking[]> {
     return this.http.get<StockPicking[]>(`${this.api}/receptions`, { params: new HttpParams().set('companyId', companyId) });
-  }
-  getLivraisons(companyId: number): Observable<StockPicking[]> {
-    return this.http.get<StockPicking[]>(`${this.api}/livraisons`, { params: new HttpParams().set('companyId', companyId) });
   }
   getTransferts(companyId: number): Observable<StockPicking[]> {
     return this.http.get<StockPicking[]>(`${this.api}/transferts`, { params: new HttpParams().set('companyId', companyId) });
@@ -613,9 +598,6 @@ export class StockService {
   // Ajustements de stock
   getAdjustments(companyId: number): Observable<StockAdjustment[]> {
     return this.http.get<StockAdjustment[]>(`${this.api}/adjustments`, { params: new HttpParams().set('companyId', companyId) });
-  }
-  createAdjustment(req: StockAdjustmentRequest): Observable<StockAdjustment> {
-    return this.http.post<StockAdjustment>(`${this.api}/adjustments`, req);
   }
   createAdjustmentsBulk(requests: StockAdjustmentRequest[]): Observable<StockAdjustment[]> {
     return this.http.post<StockAdjustment[]>(`${this.api}/adjustments/bulk`, requests);

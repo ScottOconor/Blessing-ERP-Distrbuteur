@@ -52,7 +52,4 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
            "FROM SalesOrder o WHERE o.company.id = :companyId AND YEAR(o.date) = :year")
     Integer findMaxSequenceByCompanyAndYear(@Param("companyId") Long companyId, @Param("year") int year);
 
-    @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(o.name, LENGTH(o.name) - 4) AS int)), 0) " +
-           "FROM SalesOrder o WHERE o.company.id = :companyId AND YEAR(o.date) = :year AND o.name LIKE 'EL-%'")
-    Integer findMaxEleaderSequenceByCompanyAndYear(@Param("companyId") Long companyId, @Param("year") int year);
 }

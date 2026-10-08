@@ -28,6 +28,9 @@ export class OrderFormComponent implements OnInit {
   journals: AccountJournal[] = [];
   warehouses: Warehouse[] = [];
   allProducts: Product[] = [];
+  /** Services du catalogue : vendables sans entrepôt (aucun mouvement de stock). */
+  private serviceProducts: Product[] = [];
+  private serviceProductIds = new Set<number>();
   loading = false;
   saving = false;
   confirming = false;
@@ -234,6 +237,14 @@ export class OrderFormComponent implements OnInit {
       next: (data) => { this.warehouses = data.filter(w => w.active !== false); }
     });
 
+    this.stockService.getProducts(companyId).subscribe({
+      next: (data) => {
+        this.serviceProducts = data.filter(p => p.type === 'service');
+        this.serviceProducts.forEach(p => { if (p.id != null) this.serviceProductIds.add(p.id); });
+        if (!this.order.warehouseId) this.allProducts = [...this.serviceProducts];
+      }
+    });
+
     this.salesService.getSellers(companyId).subscribe({
       next: (data) => { this.sellers = data; }
     });
@@ -262,16 +273,29 @@ export class OrderFormComponent implements OnInit {
         this.order.journalId = salesId;
       }
     } else {
-      this.allProducts = [];
+      // Sans entrepôt, seuls les services restent vendables
+      this.allProducts = [...this.serviceProducts];
       this.lineStockQty = this.lineStockQty.map(() => 0);
     }
+  }
+
+  /** Ligne de service : pas de stock, pas d'entrepôt nécessaire. */
+  isServiceLine(line: SalesOrderLine): boolean {
+    return !!line.productId && this.serviceProductIds.has(line.productId) && !line.consigne;
+  }
+
+  /** L'entrepôt n'est exigé que si le bon contient des articles physiques (articles stockés, emballages). */
+  get needsWarehouse(): boolean {
+    return (this.order.lines ?? []).some(l =>
+      !this.isEmptyLine(l) && (l.consigne || (!!l.productId && !this.serviceProductIds.has(l.productId))));
   }
 
   private loadProductsForWarehouse(warehouseId: number): void {
     const companyId = this.authService.getCompanyId();
     this.stockService.getProducts(companyId, warehouseId).subscribe({
       next: (data) => {
-        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu');
+        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');
+        this.allProducts.forEach(p => { if (p.type === 'service' && p.id != null) this.serviceProductIds.add(p.id); });
         this.lineStockQty = this.order.lines.map(l => {
           if (l.productId) {
             const p = this.allProducts.find(p => p.id === l.productId);
@@ -436,6 +460,7 @@ export class OrderFormComponent implements OnInit {
 
   hasStockWarning(i: number): boolean {
     const line = this.order.lines[i];
+    if (this.isServiceLine(line)) return false;
     const available = this.lineStockQty[i] ?? 0;
     return !!(line.productId) && available >= 0 && (line.quantity || 0) > available;
   }
@@ -652,7 +677,9 @@ export class OrderFormComponent implements OnInit {
     line.totalRabaisLigne = 0;
     const emballage = this.CONSIGNE_CODES_SET.has((product.defaultCode || '').trim().toUpperCase());
     line.tauxTVA = (product.exemptTva || emballage) ? 0 : this.TVA_DEFAULT;
-    line.accountCode = emballage ? this.CONSIGNE_ACCOUNT : '701100';
+    // Services : compte décidé à la validation de la facture, selon le paramétrage
+    // Comptabilité › Comptes des services (le code de ligne est ignoré pour eux)
+    line.accountCode = emballage ? this.CONSIGNE_ACCOUNT : (product.type === 'service' ? '' : '701100');
     line.categoryId = product.categoryId;
     this.lineSearches[i] = product.defaultCode
       ? `[${product.defaultCode}] ${product.name}`
@@ -786,7 +813,7 @@ export class OrderFormComponent implements OnInit {
     const missing: string[] = [];
     if (!this.order.partnerId) missing.push('Client');
     if (!this.order.journalId) missing.push('Journal');
-    if (!this.order.warehouseId) missing.push('Entrepôt');
+    if (!this.order.warehouseId && this.needsWarehouse) missing.push('Entrepôt');
     if (this.order.lines.length === 0) missing.push('Lignes');
     if (missing.length > 0) {
       this.errorMsg = `Champs manquants : ${missing.join(', ')}`;

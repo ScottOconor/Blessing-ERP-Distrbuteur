@@ -73,9 +73,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Query("SELECT e.status, COUNT(e) FROM OutboxEvent e WHERE e.eventType IN :types GROUP BY e.status")
     List<Object[]> countByStatusForTypes(@Param("types") List<SyncEventType> types);
 
-    @Query("SELECT e.status, COUNT(e) FROM OutboxEvent e GROUP BY e.status")
-    List<Object[]> countByStatusGrouped();
-
     /** Supprime définitivement tous les événements en échec — action destructive assumée par
      *  l'utilisateur (bouton "Vider les échecs"), à n'utiliser qu'après avoir résolu la cause des
      *  échecs et accepté de perdre ces opérations plutôt que de les revoir un jour au Hub. */

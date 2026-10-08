@@ -14,7 +14,5 @@ public interface PrixClientArticleRepository extends JpaRepository<PrixClientArt
 
     List<PrixClientArticle> findByProductIdAndCompanyId(Long productId, Long companyId);
 
-    void deleteByProductIdAndClientIdAndCompanyId(Long productId, Long clientId, Long companyId);
-
     List<PrixClientArticle> findByCompanyId(Long companyId);
 }

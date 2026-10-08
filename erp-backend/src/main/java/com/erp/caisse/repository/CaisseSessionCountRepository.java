@@ -8,6 +8,5 @@ import java.util.List;
 
 public interface CaisseSessionCountRepository extends JpaRepository<CaisseSessionCount, Long> {
     List<CaisseSessionCount> findByCaisseSessionIdAndMoment(Long caisseSessionId, CountMoment moment);
-    List<CaisseSessionCount> findByCaisseSessionId(Long caisseSessionId);
     void deleteByCaisseSessionIdAndMoment(Long caisseSessionId, CountMoment moment);
 }

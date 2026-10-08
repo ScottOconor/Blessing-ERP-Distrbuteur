@@ -22,10 +22,7 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
      *  de la liste "partners" du snapshot, qui ne contient que les partenaires modifiés récemment
      *  et sous-compterait sinon largement ce total sur un snapshot horaire. */
     long countByCompanyIdAndActiveTrueAndTypeIn(Long companyId, List<String> types);
-    List<Partner> findByCompanyIdAndTypeAndActiveTrue(Long companyId, String type);
     java.util.Optional<Partner> findByNameIgnoreCaseAndCompanyId(String name, Long companyId);
-
-    List<Partner> findByCompanyIdAndType(Long companyId, String type);
 
     java.util.Optional<Partner> findFirstByRefAndCompanyId(String ref, Long companyId);
     java.util.Optional<Partner> findFirstByRefIgnoreCaseAndCompanyId(String ref, Long companyId);

@@ -55,12 +55,6 @@ export class AnalyticService {
     });
   }
 
-  getAccountTree(companyId: number): Observable<AnalyticAccount[]> {
-    return this.http.get<AnalyticAccount[]>(`${this.apiUrl}/accounts/tree`, {
-      params: new HttpParams().set('companyId', companyId)
-    });
-  }
-
   createAccount(account: AnalyticAccount): Observable<AnalyticAccount> {
     return this.http.post<AnalyticAccount>(`${this.apiUrl}/accounts`, account);
   }

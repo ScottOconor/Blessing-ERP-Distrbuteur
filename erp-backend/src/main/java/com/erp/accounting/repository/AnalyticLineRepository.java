@@ -61,18 +61,6 @@ public interface AnalyticLineRepository extends JpaRepository<AnalyticLine, Long
         return findByCompanyAndPeriod(companyId, effectiveFrom, effectiveTo);
     }
 
-    @Query("""
-        SELECT l FROM AnalyticLine l
-        WHERE l.analyticAccount.id = :analyticAccountId
-          AND (:from IS NULL OR l.date >= :from)
-          AND (:to IS NULL OR l.date <= :to)
-    """)
-    List<AnalyticLine> findByAnalyticAccount(
-        @Param("analyticAccountId") Long analyticAccountId,
-        @Param("from") LocalDate from,
-        @Param("to") LocalDate to
-    );
-
     /** Chargement en masse pour l'affichage de listes d'écritures (cf. AccountingService#getJournalEntries)
      *  — évite une requête par ligne d'écriture. */
     @Query("SELECT l FROM AnalyticLine l JOIN FETCH l.analyticAccount WHERE l.moveLine.id IN :moveLineIds")
@@ -86,7 +74,4 @@ public interface AnalyticLineRepository extends JpaRepository<AnalyticLine, Long
     @Query("DELETE FROM AnalyticLine l WHERE l.moveLine.id = :moveLineId")
     void deleteByMoveLineId(@Param("moveLineId") Long moveLineId);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("DELETE FROM AnalyticLine l WHERE l.moveLine.move.id = :moveId")
-    void deleteByMoveId(@Param("moveId") Long moveId);
 }

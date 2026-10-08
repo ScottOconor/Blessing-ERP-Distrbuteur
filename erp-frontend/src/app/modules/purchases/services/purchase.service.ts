@@ -286,10 +286,6 @@ export class PurchaseService {
     return this.http.post<PurchaseOrder>(`${this.base}/orders/${id}/confirm`, {});
   }
 
-  receiveOrder(id: number): Observable<PurchaseOrder> {
-    return this.http.post<PurchaseOrder>(`${this.base}/orders/${id}/receive`, {});
-  }
-
   cancelOrder(id: number): Observable<PurchaseOrder> {
     return this.http.post<PurchaseOrder>(`${this.base}/orders/${id}/cancel`, {});
   }

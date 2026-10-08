@@ -11,9 +11,6 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCompanyIdAndActiveOrderByNameAsc(Long companyId, boolean active);
 
-    /** Snapshot incrémental (SnapshotService) : ne renvoie que les articles modifiés depuis le
-     *  dernier snapshot réussi, au lieu du catalogue entier à chaque passage horaire. */
-    List<Product> findByCompanyIdAndActiveAndUpdatedAtGreaterThanEqual(Long companyId, boolean active, java.time.LocalDateTime modifiedSince);
     List<Product> findByCompanyIdOrderByNameAsc(Long companyId);
     Optional<Product> findFirstByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
     Optional<Product> findFirstByCompanyIdAndDefaultCodeIgnoreCase(Long companyId, String defaultCode);
@@ -35,9 +32,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         THEN true ELSE false END
         """, nativeQuery = true)
     boolean hasOperationalReferences(@Param("productId") Long productId, @Param("companyId") Long companyId);
-
-    @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND p.type = 'product' AND p.active = true ORDER BY p.name")
-    List<Product> findStorableByCompanyId(@Param("cid") Long companyId);
 
     @Query("SELECT p FROM Product p WHERE p.companyId = :cid AND p.active = true AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(p.defaultCode) LIKE LOWER(CONCAT('%',:q,'%'))) ORDER BY p.name")
     List<Product> search(@Param("cid") Long companyId, @Param("q") String query);
