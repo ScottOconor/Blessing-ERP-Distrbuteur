@@ -238,8 +238,16 @@ export class PrecompteConfigComponent implements OnInit {
 
 
   saveEnl(): void {
-    if (!this.enlForm.categoryId || !this.enlForm.montantFixe) {
-      this.enlError = 'Catégorie et montant sont requis.';
+    if (!this.enlForm.categoryId) {
+      this.enlError = 'La catégorie est requise.';
+      return;
+    }
+    // Un tarif de base à 0 FCFA est valide (catégorie sans frais d'enlèvement, avec seulement
+    // des suppléments clients) : seul un montant vide est ramené à 0, un négatif est refusé.
+    this.enlForm.montantFixe = this.enlForm.montantFixe ?? 0;
+    this.enlForm.coutEnlevement = this.enlForm.coutEnlevement ?? 0;
+    if (this.enlForm.montantFixe < 0 || this.enlForm.coutEnlevement < 0) {
+      this.enlError = 'Les montants ne peuvent pas être négatifs.';
       return;
     }
     if ((this.enlForm.clients ?? []).some(c => !c.partnerId)) {
@@ -250,7 +258,7 @@ export class PrecompteConfigComponent implements OnInit {
     this.enlError = '';
     this.svc.saveEnlevement({ ...this.enlForm, companyId: this.companyId }).subscribe({
       next: () => { this.showEnlModal = false; this.loadEnlevements(); this.savingEnl = false; },
-      error: () => { this.enlError = 'Erreur lors de la sauvegarde.'; this.savingEnl = false; }
+      error: (err) => { this.enlError = err?.error?.message || 'Erreur lors de la sauvegarde.'; this.savingEnl = false; }
     });
   }
 
