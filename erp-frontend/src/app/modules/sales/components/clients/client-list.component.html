@@ -303,6 +303,7 @@
                     </td>
                     <td>
                       <select class="inp-cell" [(ngModel)]="r.typeRistourne" (ngModelChange)="onRistourneTypeChange(r)">
+                        <option value="" disabled>-- Type --</option>
                         @for (t of TYPE_OPTS; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
                       </select>
                     </td>

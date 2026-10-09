@@ -100,7 +100,7 @@
                       <span class="type-chip chip-guinness">{{ group.nbGuinness }} Guinness</span>
                     }
                     @if (group.nbAutre > 0) {
-                      <span class="type-chip chip-ht">{{ group.nbAutre }} Autre</span>
+                      <span class="type-chip chip-ht" title="Ristournes sans type : modifiez-les pour choisir Brasserie ou Guinness">{{ group.nbAutre }} type à choisir</span>
                     }
                   </span>
                 </div>
@@ -140,7 +140,7 @@
                           } @else if (r.typeRistourne === 'guinness') {
                             <span class="badge badge-guinness">Guinness</span>
                           } @else {
-                            <span class="badge badge-ht">Autre</span>
+                            <span class="badge badge-ht" title="Modifiez la ristourne pour choisir Brasserie ou Guinness">Type à choisir</span>
                           }
                         </td>
                         <td class="r mono">{{ r.montantFixe | number:'1.0-2' }}</td>
@@ -622,6 +622,7 @@
           <div class="form-group">
             <label>Type de calcul TTC</label>
             <select class="form-control" [(ngModel)]="rstForm.typeRistourne">
+              <option value="" disabled>-- Choisir Brasserie ou Guinness --</option>
               @for (t of TYPE_OPTS; track t.value) {
                 <option [value]="t.value">{{ t.label }}</option>
               }

@@ -55,8 +55,7 @@ export class ClientListComponent implements OnInit {
   readonly TAUX_OPTS = [1, 2, 2.5, 5, 10];
   readonly TYPE_OPTS = [
     { value: 'brasserie', label: 'Brasseries' },
-    { value: 'guinness',  label: 'Guinness' },
-    { value: '',          label: 'Autre (TTC = HT)' }
+    { value: 'guinness',  label: 'Guinness' }
   ];
 
   // === Import Excel ===
@@ -126,8 +125,8 @@ export class ClientListComponent implements OnInit {
           this.ristournes = rst.map(r => ({
             id: r.id,
             categoryId: r.categoryId,
-            // Type « Autre » (null côté serveur) conservé tel quel : le forcer en brasserie
-            // changeait le type de la ristourne à l'enregistrement de la fiche
+            // Ristourne sans type (ancienne donnée) : laissée vide pour obliger à choisir
+            // Brasserie ou Guinness, plutôt que de la convertir en silence
             typeRistourne: r.typeRistourne ?? '',
             montantHT: r.montantFixe,
             montantEnlevementHT: r.montantEnlevementHT ?? 0,
@@ -147,7 +146,7 @@ export class ClientListComponent implements OnInit {
 
   /** Même règle que le serveur (RistourneService.computeUnitTTC), appliquée au total HT
    *  (ristourne HT + enlèvement HT) : brasserie = total × (1 + précompte % + TVA 19,25 %),
-   *  guinness = total × 1,1925, autre = total (montant saisi déjà TTC). */
+   *  guinness = total × 1,1925 (type non choisi : total HT, en attendant le choix). */
   calcTTC(totalHT: number, type: string, taux: number): number {
     const ht = totalHT || 0;
     let ttc: number;
@@ -192,6 +191,10 @@ export class ClientListComponent implements OnInit {
   save(): void {
     if (!this.form.name?.trim()) {
       this.errorMsg = 'Le nom du client est obligatoire';
+      return;
+    }
+    if (this.ristournes.some(r => r.categoryId > 0 && r.typeRistourne !== 'brasserie' && r.typeRistourne !== 'guinness')) {
+      this.errorMsg = 'Choisissez le type (Brasserie ou Guinness) de chaque ristourne.';
       return;
     }
     this.saving = true;

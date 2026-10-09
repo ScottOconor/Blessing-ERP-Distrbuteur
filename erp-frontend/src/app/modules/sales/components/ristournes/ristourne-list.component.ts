@@ -104,7 +104,6 @@ export class RistourneListComponent implements OnInit {
   collapseAll(): void { this.expandedClients.clear(); }
 
   readonly TYPE_OPTS = [
-    { value: '', label: 'Autre (TTC = HT, montant saisi déjà TTC)' },
     { value: 'brasserie', label: 'Brasserie (HT × (1 + précompte% + 19.25%))' },
     { value: 'guinness',  label: 'Guinness (HT × (1 + TVA), sans précompte)' }
   ];
@@ -168,11 +167,15 @@ export class RistourneListComponent implements OnInit {
       this.rstError = 'Client, catégorie et montant sont requis.';
       return;
     }
+    if (this.rstForm.typeRistourne !== 'brasserie' && this.rstForm.typeRistourne !== 'guinness') {
+      this.rstError = 'Choisissez le type de ristourne : Brasserie ou Guinness.';
+      return;
+    }
     this.savingRst = true;
     this.rstError = '';
     this.svc.save({ ...this.rstForm, companyId: this.companyId }).subscribe({
       next: () => { this.showRstModal = false; this.loadRistournes(); this.savingRst = false; },
-      error: () => { this.rstError = 'Erreur lors de la sauvegarde.'; this.savingRst = false; }
+      error: (err) => { this.rstError = err?.error?.message || 'Erreur lors de la sauvegarde.'; this.savingRst = false; }
     });
   }
 
@@ -580,8 +583,16 @@ export class RistourneListComponent implements OnInit {
         active: String(row['Actif'] ?? '').trim().toLowerCase() !== 'non'
       }))
       .filter(r => r.clientName);
+    // Seules règles : brasserie ou guinness — une ligne sans type valide n'est pas importée
+    const invalid = rows.filter(r => !r.typeRistourne);
+    if (invalid.length > 0 && !confirm(`${invalid.length} ligne(s) sans type valide (Brasserie ou Guinness) ne seront pas importées :\n`
+        + invalid.slice(0, 10).map(r => `• ${r.clientName} / ${r.categoryName}`).join('\n')
+        + (invalid.length > 10 ? '\n…' : '') + '\n\nContinuer avec les autres lignes ?')) {
+      this.importLoading = false;
+      return;
+    }
 
-    this.svc.importBatch(rows, this.companyId).subscribe({
+    this.svc.importBatch(rows.filter(r => !!r.typeRistourne), this.companyId).subscribe({
       next: saved => {
         this.importLoading = false;
         this.closeImportModal();
@@ -600,6 +611,6 @@ export class RistourneListComponent implements OnInit {
   }
 
   private emptyRst(): Ristourne {
-    return { partnerId: 0, categoryId: 0, montantFixe: 0, typeRistourne: '', companyId: this.companyId };
+    return { partnerId: 0, categoryId: 0, montantFixe: 0, typeRistourne: 'brasserie', companyId: this.companyId };
   }
 }

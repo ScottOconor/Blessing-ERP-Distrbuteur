@@ -69,7 +69,17 @@ public class RistourneService {
                 .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    /** Seules règles de ristourne : brasserie ou guinness (normalise la casse / les espaces). */
+    private static String normalizeTypeRistourne(String type) {
+        String t = type == null ? "" : type.trim().toLowerCase();
+        return ("brasserie".equals(t) || "guinness".equals(t)) ? t : null;
+    }
+
     public RistourneDTO save(RistourneDTO dto) {
+        String type = normalizeTypeRistourne(dto.getTypeRistourne());
+        if (type == null) {
+            throw new IllegalArgumentException("Type de ristourne invalide : choisissez Brasserie ou Guinness");
+        }
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance
         // pour déterminer sous quelle société l'entité est créée/mise à jour.
         Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
@@ -87,7 +97,7 @@ public class RistourneService {
         entity.setCategory(cat);
         entity.setMontantFixe(dto.getMontantFixe());
         entity.setMontantEnlevementHT(dto.getMontantEnlevementHT() != null ? dto.getMontantEnlevementHT() : BigDecimal.ZERO);
-        entity.setTypeRistourne(dto.getTypeRistourne());
+        entity.setTypeRistourne(type);
         entity.setCompanyId(companyId);
         entity.setActive(true);
         return toDTO(ristourneRepo.save(entity));
@@ -129,6 +139,9 @@ public class RistourneService {
             if (partner == null) continue;
             ProductCategory cat = categoriesByName.get(row.getCategoryName().toLowerCase().trim());
             if (cat == null) continue;
+            // Type autre que brasserie / guinness : ligne ignorée (comptée comme non importée)
+            String type = normalizeTypeRistourne(row.getTypeRistourne());
+            if (type == null) continue;
 
             Ristourne entity = ristourneRepo.findByPartnerIdAndCategoryIdAndCompanyId(
                     partner.getId(), cat.getId(), companyId)
@@ -139,7 +152,7 @@ public class RistourneService {
             // Colonne enlèvement absente du fichier (ancien modèle) : on garde la valeur existante.
             if (row.getMontantEnlevementHT() != null) entity.setMontantEnlevementHT(row.getMontantEnlevementHT());
             else if (entity.getMontantEnlevementHT() == null) entity.setMontantEnlevementHT(BigDecimal.ZERO);
-            entity.setTypeRistourne(row.getTypeRistourne());
+            entity.setTypeRistourne(type);
             entity.setCompanyId(companyId);
             entity.setActive(row.getActive() == null || row.getActive());
             saved.add(toDTO(ristourneRepo.save(entity)));
