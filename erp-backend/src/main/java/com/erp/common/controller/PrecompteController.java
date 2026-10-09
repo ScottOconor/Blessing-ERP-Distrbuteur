@@ -26,6 +26,27 @@ public class PrecompteController {
 
     private final PrecompteService service;
     private final PrecompteExcelImportService excelImportService;
+    private final com.erp.accounting.repository.PartnerRepository partnerRepo;
+
+    /** Clients (type=sale) ou fournisseurs (type=purchase) proposés à la saisie d'un précompte —
+     *  couvert par les droits Précomptes, sans exiger l'accès à la comptabilité. */
+    @GetMapping("/partners")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getPartners(
+            @RequestParam(defaultValue = "sale") String type) {
+        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        String wanted = "purchase".equals(type) ? "supplier" : "customer";
+        return ResponseEntity.ok(partnerRepo.findByCompanyIdAndActiveTrue(companyId).stream()
+                .filter(p -> wanted.equals(p.getType()) || "both".equals(p.getType()))
+                .sorted(java.util.Comparator.comparing(p -> p.getName() == null ? "" : p.getName().toLowerCase()))
+                .map(p -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", p.getId());
+                    m.put("name", p.getName());
+                    m.put("ref", p.getRef());
+                    return m;
+                })
+                .toList());
+    }
 
 
     @GetMapping

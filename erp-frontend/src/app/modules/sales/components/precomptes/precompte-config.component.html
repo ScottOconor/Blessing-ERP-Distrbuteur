@@ -233,27 +233,47 @@
       <div class="modal-body">
         <div class="form-grid">
           <div class="form-group form-full">
-            <label>Partenaire <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="pcForm.partnerId">
-              <option [value]="0">-- Sélectionner --</option>
-              @for (c of clients; track c.id) { <option [value]="c.id">{{ c.name }}</option> }
-            </select>
-          </div>
-          <div class="form-group">
             <label>Type <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="pcForm.typePrecompte">
+            <select class="form-control" [(ngModel)]="pcForm.typePrecompte" (ngModelChange)="onPcTypeChange()">
               @for (t of TYPE_OPTS; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
             </select>
           </div>
+          <div class="form-group form-full">
+            <label for="pc-partner">{{ pcPartnerLabel }} <span class="req">*</span></label>
+            <div class="pc-ac" [class.pc-ac-ok]="pcForm.partnerId">
+              <input type="text" id="pc-partner" class="form-control" [(ngModel)]="pcQuery"
+                     autocomplete="off" role="combobox" aria-autocomplete="list"
+                     [attr.aria-expanded]="pcListOpen" aria-controls="pc-partner-list"
+                     [attr.aria-activedescendant]="pcListOpen ? 'pc-opt-' + pcActive : null"
+                     [placeholder]="'Rechercher un ' + pcPartnerLabel.toLowerCase() + '…'"
+                     (input)="onPcInput()" (focus)="pcListOpen = !pcForm.partnerId"
+                     (keydown)="onPcKeydown($event)" (blur)="onPcBlur()">
+              @if (pcForm.partnerId) { <span class="material-icons pc-ac-check" aria-hidden="true">check_circle</span> }
+              @if (pcListOpen) {
+                <ul class="pc-ac-list" role="listbox" id="pc-partner-list">
+                  @for (p of pcSuggestions(); track p.id; let k = $index) {
+                    <li role="option" [id]="'pc-opt-' + k" [class.active]="k === pcActive" [attr.aria-selected]="k === pcActive"
+                        (mousedown)="$event.preventDefault(); choosePcPartner(p)" (mouseenter)="pcActive = k">
+                      {{ p.name }}
+                      @if (p.ref) { <span class="ac-ref">{{ p.ref }}</span> }
+                    </li>
+                  } @empty {
+                    <li class="pc-ac-empty">Aucun {{ pcPartnerLabel.toLowerCase() }} trouvé</li>
+                  }
+                </ul>
+              }
+            </div>
+          </div>
           <div class="form-group">
-            <label>Taux (%) <span class="req">*</span></label>
-            <select class="form-control" [(ngModel)]="pcForm.tauxPrecompte">
+            <label for="pc-taux">Taux (%) <span class="req">*</span></label>
+            <select id="pc-taux" class="form-control" [(ngModel)]="pcForm.tauxPrecompte" (keydown.enter)="onTauxEnter($event)">
               @for (t of TAUX_OPTS; track t) { <option [value]="t">{{ t }}%</option> }
             </select>
           </div>
         </div>
       </div>
       <div class="modal-footer">
+        @if (!editingPc) { <span class="pc-hint">Entrée sur le taux : enregistre et passe au suivant</span> }
         <button class="btn-cancel" (click)="showPcModal = false">Annuler</button>
         <button class="btn-save" (click)="savePc()" [disabled]="savingPc">
           <span class="material-icons">save</span> {{ savingPc ? 'Enregistrement...' : 'Enregistrer' }}
@@ -322,7 +342,7 @@
               @for (ec of enlForm.clients; track $index; let i = $index) {
                 <tr>
                   <td class="ac-cell">
-                    <input type="text" class="inp" placeholder="Tapez le nom du client…" autocomplete="off"
+                    <input type="text" class="inp" placeholder="Tapez le nom du client…" autocomplete="off" [id]="'enl-client-' + i"
                            [class.inp-missing]="!ec.partnerId"
                            [(ngModel)]="enlClientSearch[i]"
                            (focus)="activeEnlClientIdx = i"
@@ -342,7 +362,8 @@
                       </div>
                     }
                   </td>
-                  <td class="ar"><input type="number" class="inp ar" [(ngModel)]="ec.montant" min="0" /></td>
+                  <td class="ar"><input type="number" class="inp ar" [id]="'enl-montant-' + i" [(ngModel)]="ec.montant" min="0"
+                                        (keydown.enter)="onEnlMontantEnter($event, i)" /></td>
                   <td class="ar font-mono font-bold">{{ ttc(enlForm.montantFixe) + (ec.montant || 0) | number:'1.0-0' }}</td>
                   <td><button class="btn-del" (click)="removeEnlClient(i)"><span class="material-icons">delete</span></button></td>
                 </tr>

@@ -9,6 +9,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
 import { NotificationService } from '../../../../core/services/notification.service';
 
+interface PartnerOption { id?: number; name: string; ref?: string; }
+
 
 
 const ENL_HEADERS = ["Catégorie d'article", "Montant de l'enlèvement", "Cout enlevement", "Date de l'enlèvement", 'Actif', 'Clients spécifiques'];
@@ -50,6 +52,12 @@ export class PrecompteConfigComponent implements OnInit {
   /** Précomptes cochés pour l'export Excel. */
   selPc = new RowSelection<Precompte>();
   clients: SalesClient[] = [];
+  /** Fournisseurs (type supplier / both) — proposés pour un précompte sur les achats */
+  suppliers: PartnerOption[] = [];
+  /** Recherche du client / fournisseur dans la fenêtre précompte (autocomplétion) */
+  pcQuery = '';
+  pcListOpen = false;
+  pcActive = 0;
   loadingPc = false;
   showPcModal = false;
   editingPc: Precompte | null = null;
@@ -93,6 +101,7 @@ export class PrecompteConfigComponent implements OnInit {
 
   private loadAll(): void {
     this.salesSvc.getClients(this.companyId).subscribe(c => this.clients = c);
+    this.svc.getPartners('purchase').subscribe({ next: p => this.suppliers = p, error: () => {} });
     this.stockSvc.getCategories(this.companyId).subscribe(cats => this.categories = cats);
     this.loadPrecomptes();
     this.loadEnlevements();
@@ -108,31 +117,139 @@ export class PrecompteConfigComponent implements OnInit {
     });
   }
 
-  openNewPc(): void {
+  /** @param typePrecompte type conservé quand on enchaîne les saisies (Entrée sur le taux) */
+  openNewPc(typePrecompte?: string): void {
     this.editingPc = null;
     this.pcForm = this.emptyPc();
+    if (typePrecompte) this.pcForm.typePrecompte = typePrecompte;
+    this.pcQuery = '';
+    this.pcListOpen = false;
     this.pcError = '';
     this.showPcModal = true;
+    this.focusField('pc-partner');
   }
 
   editPc(p: Precompte): void {
     this.editingPc = p;
     this.pcForm = { ...p };
+    this.pcQuery = p.partnerName ?? this.pcPartnerName(p.partnerId);
+    this.pcListOpen = false;
     this.pcError = '';
     this.showPcModal = true;
   }
 
-  savePc(): void {
-    if (!this.pcForm.partnerId || !this.pcForm.tauxPrecompte) {
-      this.pcError = 'Partenaire et taux sont requis.';
+  /** @param next après enregistrement, ouvre aussitôt une nouvelle saisie (Entrée sur le taux) */
+  savePc(next = false): void {
+    if (!this.pcForm.partnerId) {
+      this.pcError = `Choisissez le ${this.pcPartnerLabel.toLowerCase()} dans la liste.`;
+      this.focusField('pc-partner');
+      return;
+    }
+    if (!this.pcForm.tauxPrecompte) {
+      this.pcError = 'Le taux est requis.';
       return;
     }
     this.savingPc = true;
     this.pcError = '';
+    const type = this.pcForm.typePrecompte;
     this.svc.savePrecompte({ ...this.pcForm, companyId: this.companyId }).subscribe({
-      next: () => { this.showPcModal = false; this.loadPrecomptes(); this.savingPc = false; },
-      error: () => { this.pcError = 'Erreur lors de la sauvegarde.'; this.savingPc = false; }
+      next: () => {
+        this.savingPc = false;
+        this.loadPrecomptes();
+        if (next && !this.editingPc) this.openNewPc(type);
+        else this.showPcModal = false;
+      },
+      error: (err) => { this.pcError = err?.error?.message || 'Erreur lors de la sauvegarde.'; this.savingPc = false; }
     });
+  }
+
+  // ----- Autocomplétion client / fournisseur du précompte -----
+
+  /** Partenaires proposés selon le type : clients pour les ventes, fournisseurs pour les achats. */
+  get pcPartners(): PartnerOption[] {
+    return this.pcForm.typePrecompte === 'purchase' ? this.suppliers : this.clients;
+  }
+
+  get pcPartnerLabel(): string {
+    return this.pcForm.typePrecompte === 'purchase' ? 'Fournisseur' : 'Client';
+  }
+
+  private pcPartnerName(id: number | undefined): string {
+    if (!id) return '';
+    return [...this.clients, ...this.suppliers].find(p => p.id === Number(id))?.name ?? '';
+  }
+
+  private normalize(s: string): string {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
+  /** Clients/fournisseurs dont le nom (ou la référence) contient le texte saisi, sans accents ni casse. */
+  pcSuggestions(): PartnerOption[] {
+    const q = this.normalize(this.pcQuery.trim());
+    const found = q
+      ? this.pcPartners.filter(p => this.normalize(p.name ?? '').includes(q) || this.normalize(p.ref ?? '').includes(q))
+      : this.pcPartners;
+    return found.slice(0, 15);
+  }
+
+  onPcInput(): void {
+    this.pcForm.partnerId = 0;
+    this.pcListOpen = true;
+    this.pcActive = 0;
+  }
+
+  /** Clavier : ↑/↓ parcourent les suggestions, Entrée choisit (puis passe au taux), Échap ferme. */
+  onPcKeydown(e: KeyboardEvent): void {
+    const list = this.pcSuggestions();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.pcListOpen = true;
+      this.pcActive = Math.min(this.pcActive + 1, list.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      this.pcActive = Math.max(this.pcActive - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (this.pcListOpen && list[this.pcActive]) this.choosePcPartner(list[this.pcActive]);
+      else if (this.pcForm.partnerId) this.focusField('pc-taux');
+    } else if (e.key === 'Escape') {
+      this.pcListOpen = false;
+    }
+  }
+
+  choosePcPartner(p: PartnerOption): void {
+    this.pcForm.partnerId = p.id!;
+    this.pcQuery = p.name;
+    this.pcListOpen = false;
+    this.focusField('pc-taux');
+  }
+
+  /** Recherche quittée : on retrouve le partenaire si le nom tapé correspond exactement. */
+  onPcBlur(): void {
+    this.pcListOpen = false;
+    if (!this.pcForm.partnerId) {
+      const q = this.normalize(this.pcQuery.trim());
+      const exact = this.pcPartners.find(p => this.normalize(p.name ?? '') === q);
+      if (exact) { this.pcForm.partnerId = exact.id!; this.pcQuery = exact.name; }
+    }
+  }
+
+  /** Entrée sur le taux : enregistre et ouvre directement la saisie suivante. */
+  onTauxEnter(e: Event): void {
+    e.preventDefault();
+    if (!this.savingPc) this.savePc(true);
+  }
+
+  /** Changer de type (ventes ↔ achats) change la liste : le partenaire choisi doit en faire partie. */
+  onPcTypeChange(): void {
+    if (!this.pcPartners.some(p => p.id === Number(this.pcForm.partnerId))) {
+      this.pcForm.partnerId = 0;
+      this.pcQuery = '';
+    }
+  }
+
+  private focusField(id: string): void {
+    setTimeout(() => (document.getElementById(id) as HTMLElement | null)?.focus());
   }
 
   deletePc(id: number): void {
@@ -174,6 +291,16 @@ export class PrecompteConfigComponent implements OnInit {
     this.enlForm.clients.push({ partnerId: 0, montant: 0 });
     this.enlClientSearch.push('');
     this.activeEnlClientIdx = this.enlForm.clients.length - 1;
+    this.focusField(`enl-client-${this.enlForm.clients.length - 1}`);
+  }
+
+  /** Entrée sur le supplément : passe au client suivant, ou ouvre directement une nouvelle ligne. */
+  onEnlMontantEnter(e: Event, i: number): void {
+    e.preventDefault();
+    const ec = this.enlForm.clients?.[i];
+    if (!ec?.partnerId) { this.focusField(`enl-client-${i}`); return; }
+    if ((this.enlForm.clients?.length ?? 0) > i + 1) this.focusField(`enl-client-${i + 1}`);
+    else this.addEnlClient();
   }
 
   removeEnlClient(i: number): void {
@@ -219,6 +346,7 @@ export class PrecompteConfigComponent implements OnInit {
     ec.partnerId = c.id!;
     this.enlClientSearch[i] = c.name;
     this.activeEnlClientIdx = null;
+    this.focusField(`enl-montant-${i}`);
   }
 
   onEnlClientEnter(i: number, event: Event): void {

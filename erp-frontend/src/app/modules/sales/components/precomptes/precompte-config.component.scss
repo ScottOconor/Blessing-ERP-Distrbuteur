@@ -88,3 +88,27 @@
 .supp-row { display: grid; grid-template-columns: 1fr auto 70px; gap: 10px; font-size: 12px; align-items: center; }
 .supp-client { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .supp-row .supp { text-align: right; }
+
+// Autocomplétion client / fournisseur du précompte (même comportement que la génération de factures)
+.pc-ac {
+  position: relative; min-width: 0;
+  input { width: 100%; padding-right: 30px; }
+  &.pc-ac-ok input { border-color: var(--success, #16a34a); }
+}
+.pc-ac-check {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-size: 18px; color: var(--success, #16a34a); pointer-events: none;
+}
+.pc-ac-list {
+  position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 240px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  li {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 7px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-primary);
+    &.active { background: var(--primary-subtle); color: var(--primary); font-weight: 600; }
+  }
+  .pc-ac-empty { cursor: default; color: var(--text-muted); font-style: italic; }
+}
+.pc-hint { margin-right: auto; font-size: 12px; color: var(--text-muted); }

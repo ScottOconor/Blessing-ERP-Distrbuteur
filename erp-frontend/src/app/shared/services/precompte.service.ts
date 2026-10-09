@@ -61,6 +61,11 @@ export class PrecompteService {
     return this.http.post<PrecompteImportResult>(`${this.basePrecompte}/import`, fd);
   }
 
+  /** Clients (sale) ou fournisseurs (purchase) pour la saisie d'un précompte. */
+  getPartners(type: 'sale' | 'purchase'): Observable<{ id: number; name: string; ref?: string }[]> {
+    return this.http.get<{ id: number; name: string; ref?: string }[]>(`${this.basePrecompte}/partners`, { params: { type } });
+  }
+
   getAllPrecomptes(companyId: number): Observable<Precompte[]> {
 
     return this.http.get<Precompte[]>(this.basePrecompte, {
