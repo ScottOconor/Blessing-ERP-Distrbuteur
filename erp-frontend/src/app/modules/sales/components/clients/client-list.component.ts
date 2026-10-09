@@ -55,7 +55,8 @@ export class ClientListComponent implements OnInit {
   readonly TAUX_OPTS = [1, 2, 2.5, 5, 10];
   readonly TYPE_OPTS = [
     { value: 'brasserie', label: 'Brasseries' },
-    { value: 'guinness',  label: 'Guinness' }
+    { value: 'guinness',  label: 'Guinness' },
+    { value: '',          label: 'Autre (TTC = HT)' }
   ];
 
   // === Import Excel ===
@@ -125,10 +126,12 @@ export class ClientListComponent implements OnInit {
           this.ristournes = rst.map(r => ({
             id: r.id,
             categoryId: r.categoryId,
-            typeRistourne: r.typeRistourne ?? 'brasserie',
+            // Type « Autre » (null côté serveur) conservé tel quel : le forcer en brasserie
+            // changeait le type de la ristourne à l'enregistrement de la fiche
+            typeRistourne: r.typeRistourne ?? '',
             montantHT: r.montantFixe,
             montantEnlevementHT: r.montantEnlevementHT ?? 0,
-            montantTTC: this.calcTTC(r.montantFixe, r.typeRistourne ?? 'brasserie', client.tauxPrecompte ?? 0)
+            montantTTC: r.montantTTCUnitaire ?? this.calcTTC(r.montantFixe + (r.montantEnlevementHT ?? 0), r.typeRistourne ?? '', client.tauxPrecompte ?? 0)
           }));
           this.loadingRst = false;
         },
@@ -142,24 +145,40 @@ export class ClientListComponent implements OnInit {
     this.editingClient = null;
   }
 
-  calcTTC(ht: number, type: string, taux: number): number {
-    if (type === 'guinness') return ht;
-    return ht + ht * (taux / 100);
+  /** Même règle que le serveur (RistourneService.computeUnitTTC), appliquée au total HT
+   *  (ristourne HT + enlèvement HT) : brasserie = total × (1 + précompte % + TVA 19,25 %),
+   *  guinness = total × 1,1925, autre = total (montant saisi déjà TTC). */
+  calcTTC(totalHT: number, type: string, taux: number): number {
+    const ht = totalHT || 0;
+    let ttc: number;
+    if (type === 'brasserie') ttc = ht * (1 + (taux || 0) / 100 + 0.1925);
+    else if (type === 'guinness') ttc = ht * 1.1925;
+    else ttc = ht;
+    return Math.round(ttc * 100) / 100;
+  }
+
+  /** Total HT de la ristourne : montant HT + frais d'enlèvement HT. */
+  totalHT(r: RistourneForm): number {
+    return (r.montantHT || 0) + (r.montantEnlevementHT || 0);
+  }
+
+  private recalcTTC(r: RistourneForm): void {
+    r.montantTTC = this.calcTTC(this.totalHT(r), r.typeRistourne, this.form.tauxPrecompte ?? 0);
   }
 
   onTauxChange(): void {
     const taux = this.form.tauxPrecompte ?? 0;
     this.ristournes.forEach(r => {
-      r.montantTTC = this.calcTTC(r.montantHT, r.typeRistourne, taux);
+      r.montantTTC = this.calcTTC(this.totalHT(r), r.typeRistourne, taux);
     });
   }
 
   onRistourneHtChange(r: RistourneForm): void {
-    r.montantTTC = this.calcTTC(r.montantHT, r.typeRistourne, this.form.tauxPrecompte ?? 0);
+    this.recalcTTC(r);
   }
 
   onRistourneTypeChange(r: RistourneForm): void {
-    r.montantTTC = this.calcTTC(r.montantHT, r.typeRistourne, this.form.tauxPrecompte ?? 0);
+    this.recalcTTC(r);
   }
 
   addRistourne(): void {
