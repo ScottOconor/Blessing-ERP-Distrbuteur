@@ -370,6 +370,11 @@ export class SalesService {
   confirmOrder(id: number): Observable<SalesOrder> {
     return this.http.post<SalesOrder>(`${this.apiUrl}/orders/${id}/confirm`, {});
   }
+  /** Suppression définitive d'un bon en brouillon. */
+  deleteOrder(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/orders/${id}`);
+  }
+
   cancelOrder(id: number): Observable<SalesOrder> {
     return this.http.post<SalesOrder>(`${this.apiUrl}/orders/${id}/cancel`, {});
   }

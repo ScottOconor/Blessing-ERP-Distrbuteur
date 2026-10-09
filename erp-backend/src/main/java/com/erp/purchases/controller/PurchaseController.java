@@ -67,6 +67,13 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.receivePicking(id));
     }
 
+    /** Suppression définitive d'une commande en brouillon. */
+    @DeleteMapping("/orders/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        purchaseService.deleteOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/orders/{id}/cancel")
     public ResponseEntity<PurchaseOrderDTO> cancelOrder(@PathVariable("id") Long id) {
         return ResponseEntity.ok(purchaseService.cancelOrder(id));

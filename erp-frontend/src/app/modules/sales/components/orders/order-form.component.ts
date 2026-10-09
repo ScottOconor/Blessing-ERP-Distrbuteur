@@ -407,11 +407,20 @@ export class OrderFormComponent implements OnInit {
     return Math.round((Number(cfg.montantFixe) || 0) * (1 + (line.tauxTVA || 0) / 100) + supplement);
   }
 
-  /** Prix unitaire TTC affiché : article (HT + TVA + précompte) + frais d'enlèvement TTC. */
+  /** Taxe Guinness par unité (300 FCFA) sur les catégories Guinness, sauf client exempté —
+   *  même règle que la facture tirée du bon. */
+  guinnessTaxeUnit(line: SalesOrderLine): number {
+    if (this.isEmballage(line) || !line.productId) return 0;
+    if (this.clients.find(c => c.id === this.order.partnerId)?.exemptTaxeGuinness) return 0;
+    const cat = this.allProducts.find(p => p.id === line.productId)?.categoryName ?? '';
+    return this.GUINNESS_CAT_RE.test(cat) ? 300 : 0;
+  }
+
+  /** Prix unitaire TTC affiché : article (HT + TVA + précompte) + taxe Guinness + frais d'enlèvement TTC. */
   prixTTCLigne(line: SalesOrderLine): number {
     if (this.isEmballage(line)) return line.prixUnitaire || 0;
     return this.computePrixTTC(line.prixUnitaire || 0, line.tauxTVA || 0, !this.sansPrecompte(line))
-      + this.enlevementUnitTTC(line);
+      + this.guinnessTaxeUnit(line) + this.enlevementUnitTTC(line);
   }
 
   /** Total TTC des frais d'enlèvement inclus dans les lignes du bon. */
@@ -445,8 +454,9 @@ export class OrderFormComponent implements OnInit {
   /** Appelé quand l'utilisateur saisit un prix TTC dans le formulaire. */
   onPrixTTCChange(i: number): void {
     const line = this.order.lines[i];
-    // Le prix TTC saisi inclut les frais d'enlèvement : on les retire avant de remonter au HT article
-    const prixTTC = Math.max(0, (this.linePrixTTC[i] || 0) - this.enlevementUnitTTC(line));
+    // Le prix TTC saisi inclut les frais d'enlèvement et la taxe Guinness : on les retire avant
+    // de remonter au HT article
+    const prixTTC = Math.max(0, (this.linePrixTTC[i] || 0) - this.enlevementUnitTTC(line) - this.guinnessTaxeUnit(line));
     line.prixUnitaire = this.computePrixHT(prixTTC, line.tauxTVA || 0, !this.sansPrecompte(line));
     this.onLineChange(line);
   }
@@ -745,7 +755,9 @@ export class OrderFormComponent implements OnInit {
     line.montantTVA = montantTVA;
     // TTC = qty × prixUnitaireTTC (arrondi à l'entier)
     // + frais d'enlèvement TTC par unité (comme sur la facture)
-    line.montantTTC = Math.round((this.computePrixTTC(pu, tva, !sansPc) + this.enlevementUnitTTC(line)) * qty);
+    // + taxe Guinness par unité (même calcul que la facture et que le serveur)
+    line.montantTTC = Math.round((this.computePrixTTC(pu, tva, !sansPc) + this.guinnessTaxeUnit(line)
+      + this.enlevementUnitTTC(line)) * qty);
 
     line.totalRabaisLigne = Math.round(qty * (line.rabaisUnitaire || 0));
 
@@ -1002,6 +1014,15 @@ export class OrderFormComponent implements OnInit {
         this.confirming = false;
         this.errorMsg = err.error?.message || 'Erreur lors de la confirmation';
       }
+    });
+  }
+
+  deleteOrder(): void {
+    if (!this.orderId) return;
+    if (!confirm('Supprimer définitivement ce bon brouillon ?')) return;
+    this.salesService.deleteOrder(this.orderId).subscribe({
+      next: () => this.router.navigate(['/sales/orders']),
+      error: (err) => { this.errorMsg = err.error?.message || 'Erreur lors de la suppression'; }
     });
   }
 

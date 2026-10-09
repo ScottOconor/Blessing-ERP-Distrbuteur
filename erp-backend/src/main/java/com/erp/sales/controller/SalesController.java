@@ -52,6 +52,13 @@ public class SalesController {
         return ResponseEntity.ok(salesService.confirmOrder(id));
     }
 
+    /** Suppression définitive d'un bon en brouillon. */
+    @DeleteMapping("/orders/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable("id") Long id) {
+        salesService.deleteOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/orders/{id}/cancel")
     public ResponseEntity<SalesOrderDTO> cancelOrder(@PathVariable("id") Long id) {
         return ResponseEntity.ok(salesService.cancelOrder(id));

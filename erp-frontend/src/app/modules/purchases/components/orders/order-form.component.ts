@@ -445,6 +445,15 @@ export class OrderFormComponent implements OnInit {
     });
   }
 
+  deleteOrder(): void {
+    if (!this.orderId) return;
+    if (!confirm('Supprimer définitivement cette commande brouillon ?')) return;
+    this.purchaseService.deleteOrder(this.orderId).subscribe({
+      next: () => this.backToList(),
+      error: err => { this.errorMsg = err.error?.message || 'Erreur lors de la suppression'; }
+    });
+  }
+
   cancelOrder(): void {
     if (!this.orderId) return;
     if (!confirm('Annuler la commande ?')) return;

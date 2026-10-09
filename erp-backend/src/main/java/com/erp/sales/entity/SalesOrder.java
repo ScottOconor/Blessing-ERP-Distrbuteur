@@ -75,6 +75,14 @@ public class SalesOrder {
     @Column(precision = 20, scale = 2)
     private BigDecimal totalRemise;
 
+    /** Précompte (PSA) du client sur le bon — même calcul que la facture, connu avant confirmation. */
+    @Column(name = "total_precompte", precision = 20, scale = 2)
+    private BigDecimal totalPrecompte;
+
+    /** Frais d'enlèvement TTC (base + suppléments client) inclus dans le total TTC du bon. */
+    @Column(name = "frais_enlevement_ttc", precision = 20, scale = 2)
+    private BigDecimal fraisEnlevementTTC;
+
     @Column(name = "warehouse_id")
     private Long warehouseId;
 

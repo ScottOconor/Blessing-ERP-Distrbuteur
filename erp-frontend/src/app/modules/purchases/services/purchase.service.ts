@@ -286,6 +286,11 @@ export class PurchaseService {
     return this.http.post<PurchaseOrder>(`${this.base}/orders/${id}/confirm`, {});
   }
 
+  /** Suppression définitive d'une commande en brouillon. */
+  deleteOrder(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/orders/${id}`);
+  }
+
   cancelOrder(id: number): Observable<PurchaseOrder> {
     return this.http.post<PurchaseOrder>(`${this.base}/orders/${id}/cancel`, {});
   }

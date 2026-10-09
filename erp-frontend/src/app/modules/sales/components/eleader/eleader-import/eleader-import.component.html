@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h2>Import eLeader</h2>
-      <p class="subtitle">Importer une facture PDF eLeader et créer un bon de commande</p>
+      <p class="subtitle">Importer une ou plusieurs factures PDF eLeader — un bon de commande par facture</p>
     </div>
     <button class="btn-logs" (click)="toggleLogs()">
       <span class="material-icons">history</span>
@@ -27,32 +27,46 @@
   <!-- Zone de dépôt -->
   <div class="drop-zone"
        [class.drag-over]="isDragOver"
-       [class.has-file]="!!selectedFile"
+       [class.has-file]="selectedFiles.length > 0"
        (dragover)="onDragOver($event)"
        (dragleave)="onDragLeave()"
        (drop)="onDrop($event)"
-       (click)="!selectedFile && fileInput.click()">
-    <input #fileInput type="file" accept=".pdf" (change)="onFileSelected($event)" hidden />
+       (click)="!importing && fileInput.click()">
+    <input #fileInput type="file" accept=".pdf" multiple (change)="onFileSelected($event)" hidden />
 
-    <ng-container *ngIf="!selectedFile">
+    <ng-container *ngIf="selectedFiles.length === 0">
       <span class="material-icons drop-icon">picture_as_pdf</span>
-      <p class="drop-title">Glissez-déposez votre PDF eLeader ici</p>
-      <p class="drop-sub">ou cliquez pour sélectionner un fichier</p>
+      <p class="drop-title">Glissez-déposez vos PDF eLeader ici</p>
+      <p class="drop-sub">ou cliquez pour sélectionner un ou plusieurs fichiers</p>
       <p class="drop-hint">Formats acceptés : PDF — Factures Brasseries ou Guinness</p>
     </ng-container>
 
-    <ng-container *ngIf="selectedFile">
+    <ng-container *ngIf="selectedFiles.length > 0">
       <span class="material-icons drop-icon ready">picture_as_pdf</span>
-      <p class="drop-title file-name">{{ selectedFile.name }}</p>
-      <p class="drop-sub">{{ (selectedFile.size / 1024).toFixed(1) }} Ko</p>
-      <button class="btn-clear" (click)="$event.stopPropagation(); clearFile()">
-        <span class="material-icons">close</span> Changer de fichier
+      <p class="drop-title file-name">{{ selectedFiles.length }} facture(s) sélectionnée(s)</p>
+      <p class="drop-sub">Cliquez ou déposez d'autres PDF pour en ajouter</p>
+      <ul class="file-list" (click)="$event.stopPropagation()">
+        <li *ngFor="let f of selectedFiles; let i = index">
+          <span class="material-icons">description</span>
+          <span class="file-list-name">{{ f.name }}</span>
+          <span class="file-list-size">{{ (f.size / 1024).toFixed(1) }} Ko</span>
+          <button class="btn-remove-file" title="Retirer" [disabled]="importing" (click)="removeFile(i)">
+            <span class="material-icons">close</span>
+          </button>
+        </li>
+      </ul>
+      <button class="btn-clear" [disabled]="importing" (click)="$event.stopPropagation(); clearFile()">
+        <span class="material-icons">close</span> Tout retirer
       </button>
     </ng-container>
   </div>
 
+  <div class="alert alert-warning" *ngIf="errorMsg">
+    <span class="material-icons">warning</span> {{ errorMsg }}
+  </div>
+
   <!-- Options d'import -->
-  <div class="options-card" *ngIf="selectedFile">
+  <div class="options-card" *ngIf="selectedFiles.length > 0">
     <div class="option-group">
       <label class="option-label">Modèle de facture</label>
       <div class="radio-group">
@@ -77,46 +91,44 @@
     <button class="btn-import" (click)="import()" [disabled]="importing">
       <span class="material-icons" *ngIf="!importing">upload</span>
       <span class="material-icons spin" *ngIf="importing">refresh</span>
-      {{ importing ? 'Import en cours…' : 'Importer la facture' }}
+      {{ importing ? ('Import ' + importIndex + ' / ' + selectedFiles.length + '…')
+                   : (selectedFiles.length > 1 ? 'Importer les ' + selectedFiles.length + ' factures' : 'Importer la facture') }}
     </button>
   </div>
 
-  <!-- Résultat -->
-  <ng-container *ngIf="result">
-    <div class="result-card" [class.success]="result.success" [class.error]="!result.success">
+  <!-- Résultats (un par facture) -->
+  <ng-container *ngIf="results.length > 0">
+    <div class="batch-summary">
+      <span class="material-icons">fact_check</span>
+      {{ successCount }} facture(s) importée(s)<span *ngIf="failureCount > 0"> — {{ failureCount }} en échec (restées sélectionnées pour relancer)</span>
+      <button class="btn-secondary" *ngIf="successCount > 0" (click)="goToOrder()">
+        <span class="material-icons">open_in_new</span> Voir les bons de commande
+      </button>
+    </div>
+    <div class="result-card" *ngFor="let r of results" [class.success]="r.result.success" [class.error]="!r.result.success">
       <div class="result-icon">
-        <span class="material-icons">{{ result.success ? 'check_circle' : 'error' }}</span>
+        <span class="material-icons">{{ r.result.success ? 'check_circle' : 'error' }}</span>
       </div>
       <div class="result-body">
-        <p class="result-title">{{ result.success ? 'Import réussi !' : 'Import échoué' }}</p>
-        <p class="result-msg">{{ result.message }}</p>
-        <div class="result-details" *ngIf="result.success">
+        <p class="result-title">{{ r.file }} — {{ r.result.success ? 'importée' : 'échec' }}</p>
+        <p class="result-msg">{{ r.result.message }}</p>
+        <div class="result-details" *ngIf="r.result.success">
           <span class="detail-chip">
             <span class="material-icons">receipt</span>
-            Facture eLeader : {{ result.eleaderReference }}
+            Facture eLeader : {{ r.result.eleaderReference }}
           </span>
           <span class="detail-chip">
             <span class="material-icons">person</span>
-            Client : {{ result.clientName }}
+            Client : {{ r.result.clientName }}
           </span>
           <span class="detail-chip">
             <span class="material-icons">assignment</span>
-            BC : {{ result.salesOrderName }}
+            BC : {{ r.result.salesOrderName }}
           </span>
         </div>
-        <div class="result-warning" *ngIf="result.warning">
+        <div class="result-warning" *ngIf="r.result.warning">
           <span class="material-icons">warning</span>
-          {{ result.warning }}
-        </div>
-        <div class="result-actions" *ngIf="result.success">
-          <button class="btn-secondary" (click)="goToOrder()">
-            <span class="material-icons">open_in_new</span>
-            Voir les bons de commande
-          </button>
-          <button class="btn-primary small" (click)="clearFile()">
-            <span class="material-icons">add</span>
-            Nouvel import
-          </button>
+          {{ r.result.warning }}
         </div>
       </div>
     </div>

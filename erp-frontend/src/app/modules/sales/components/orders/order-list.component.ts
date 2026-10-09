@@ -113,6 +113,24 @@ export class OrderListComponent implements OnInit {
     });
   }
 
+  deleteOrder(order: SalesOrder, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Supprimer définitivement le bon brouillon ${order.name} ?`)) return;
+
+    this.cancelling = order.id!;
+    this.salesService.deleteOrder(order.id!).subscribe({
+      next: () => {
+        this.cancelling = null;
+        this.showSuccess(`Bon ${order.name} supprimé`);
+        this.loadOrders();
+      },
+      error: (err) => {
+        this.cancelling = null;
+        this.errorMsg = err.error?.message || 'Erreur lors de la suppression';
+      }
+    });
+  }
+
   cancelOrder(order: SalesOrder, event: Event): void {
     event.stopPropagation();
     if (!confirm(`Annuler le bon ${order.name} ?`)) return;

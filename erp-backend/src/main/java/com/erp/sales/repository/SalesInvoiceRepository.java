@@ -118,6 +118,8 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
            "WHERE a.originalInvoice.id = :invoiceId AND a.type = 'credit_note' AND a.state IN ('posted','paid')")
     java.math.BigDecimal sumPostedAvoirsOnInvoice(@Param("invoiceId") Long invoiceId);
 
+    boolean existsBySalesOrderId(Long salesOrderId);
+
     // ── Snapshot queries ─────────────────────────────────────────────────
 
     @Query("SELECT COALESCE(SUM(i.totalTTC), 0) FROM SalesInvoice i " +

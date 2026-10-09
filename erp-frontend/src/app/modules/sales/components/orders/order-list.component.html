@@ -142,11 +142,11 @@
                         </button>
                         <button
                           class="btn-icon btn-cancel"
-                          title="Annuler"
+                          title="Supprimer le brouillon"
                           [disabled]="cancelling === order.id"
-                          (click)="cancelOrder(order, $event)"
+                          (click)="deleteOrder(order, $event)"
                         >
-                          <span class="material-icons">cancel</span>
+                          <span class="material-icons">delete</span>
                         </button>
                       }
                       @if (order.state === 'invoiced') {
@@ -195,11 +195,11 @@
                     </button>
                     <button
                       class="btn-icon btn-cancel"
-                      title="Annuler"
+                      title="Supprimer le brouillon"
                       [disabled]="cancelling === order.id"
-                      (click)="cancelOrder(order, $event)"
+                      (click)="deleteOrder(order, $event)"
                     >
-                      <span class="material-icons">cancel</span>
+                      <span class="material-icons">delete</span>
                     </button>
                   }
                   @if (order.state === 'invoiced') {

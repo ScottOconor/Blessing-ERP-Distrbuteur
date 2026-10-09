@@ -280,6 +280,28 @@ public class PurchaseService {
         return received;
     }
 
+    /**
+     * Supprime définitivement une commande fournisseur en brouillon (ni réception ni facture).
+     * Les autres états passent par l'annulation, qui garde la trace.
+     */
+    @Transactional
+    public void deleteOrder(Long id) {
+        PurchaseOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Commande introuvable: " + id));
+        tenantGuard.check(order.getCompany() != null ? order.getCompany().getId() : null);
+        if (!"draft".equals(order.getState())) {
+            throw new IllegalStateException("Seule une commande en brouillon peut être supprimée — annulez-la plutôt");
+        }
+        if (order.getPickingId() != null || order.getInvoiceId() != null || invoiceRepo.existsByPurchaseOrderId(id)) {
+            throw new IllegalStateException("Cette commande a une réception ou une facture : annulez-la plutôt");
+        }
+        order.setState("cancelled");
+        syncEventPublisher.publish(SyncEventType.PURCHASE_ORDER_RECEIVED, String.valueOf(id), toOrderDTO(order));
+        auditService.log("PURCHASE_ORDER", id, order.getName(), "DELETED", "Commande brouillon supprimée",
+                order.getCompany().getId());
+        orderRepo.delete(order);
+    }
+
     public PurchaseOrderDTO cancelOrder(Long id) {
         PurchaseOrder order = orderRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Commande introuvable: " + id));

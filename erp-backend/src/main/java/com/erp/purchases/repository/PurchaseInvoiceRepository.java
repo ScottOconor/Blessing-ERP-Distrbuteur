@@ -17,6 +17,9 @@ import java.util.stream.Stream;
 @Repository
 public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice, Long> {
 
+    boolean existsByPurchaseOrderId(Long purchaseOrderId);
+
+
     List<PurchaseInvoice> findByCompanyIdOrderByDateDescNameDesc(Long companyId);
 
     List<PurchaseInvoice> findByCompanyIdAndTypeOrderByDateDescNameDesc(Long companyId, String type);

@@ -187,3 +187,25 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin .8s linear infinite; display: inline-block; }
+
+// Sélection multiple
+.file-list {
+  list-style: none; margin: 10px auto 6px; padding: 0; max-width: 520px; max-height: 220px; overflow-y: auto; text-align: left;
+  li {
+    display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 13px;
+    &:nth-child(odd) { background: var(--bg-hover); }
+    .material-icons { font-size: 16px; color: var(--text-muted); }
+  }
+}
+.file-list-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.file-list-size { color: var(--text-muted); font-size: 12px; }
+.btn-remove-file {
+  border: none; background: transparent; cursor: pointer; padding: 2px; display: inline-flex;
+  &:hover .material-icons { color: #dc2626; }
+  &:disabled { opacity: .4; cursor: not-allowed; }
+}
+.batch-summary {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 10px; font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  .btn-secondary { margin-left: auto; }
+}

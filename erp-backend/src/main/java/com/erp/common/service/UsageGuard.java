@@ -53,13 +53,15 @@ public class UsageGuard {
                 "Impossible de supprimer cette unité de mesure : des articles l'utilisent.");
     }
 
+    /** La suppression d'un entrepôt est logique (désactivation) : son historique de mouvements
+     *  est conservé et ne bloque donc pas. Seuls bloquent du stock restant ou un transfert en cours. */
     public void assertWarehouseUnused(Long warehouseId) {
         String locs = "SELECT id FROM stock_locations WHERE warehouse_id = ?";
-        block(exists("SELECT 1 FROM stock_moves WHERE location_id IN (" + locs + ") OR location_dest_id IN (" + locs + ")",
-                        warehouseId, warehouseId),
-                "Impossible de supprimer cet entrepôt : il a des mouvements de stock.");
         block(exists("SELECT 1 FROM stock_quants WHERE quantity <> 0 AND location_id IN (" + locs + ")", warehouseId),
-                "Impossible de supprimer cet entrepôt : il contient encore du stock.");
+                "Impossible de supprimer cet entrepôt : il contient encore du stock. Videz-le (transfert ou ajustement) d'abord.");
+        block(exists("SELECT 1 FROM stock_pickings WHERE state NOT IN ('done','cancelled','cancel') "
+                        + "AND (location_id IN (" + locs + ") OR location_dest_id IN (" + locs + "))", warehouseId, warehouseId),
+                "Impossible de supprimer cet entrepôt : des transferts / réceptions sont encore en cours.");
     }
 
     public void assertLocationUnused(Long locationId) {

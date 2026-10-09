@@ -91,6 +91,7 @@ public class SalesService {
     private final AccountingService accountingService;
     private final SalesInvoiceReconciliationRepository reconciliationRepo;
     private final com.erp.accounting.service.ServiceAccountService serviceAccountService;
+    private final com.erp.eleader.repository.EleaderImportLogRepository eleaderImportLogRepo;
     private final SyncEventPublisher syncEventPublisher;
     private final PrixClientArticleRepository prixClientArticleRepo;
     private final AuditService auditService;
@@ -311,9 +312,11 @@ public class SalesService {
         if ("invoiced".equals(order.getState())) {
             throw new IllegalStateException("Un bon déjà facturé ne peut pas être annulé");
         }
+        // Libérer les réservations de stock seulement si le bon était confirmé : un brouillon n'a
+        // rien réservé, et « libérer » ses quantités retirait les réservations d'autres bons.
+        boolean wasConfirmed = "confirmed".equals(order.getState());
         order.setState("cancelled");
-        // Libérer les réservations de stock si le bon était confirmé
-        if (order.getLines() != null) {
+        if (wasConfirmed && order.getLines() != null) {
             releaseStockReservation(order);
         }
         SalesOrder cancelled = orderRepo.save(order);
@@ -325,6 +328,30 @@ public class SalesService {
         auditService.log("SALE_ORDER", cancelled.getId(), cancelled.getName(),
                 "CANCELLED", "Bon annulé", cancelled.getCompany().getId());
         return result;
+    }
+
+    /**
+     * Supprime définitivement un bon de commande en brouillon (jamais confirmé : ni réservation de
+     * stock, ni facture). Les autres états passent par l'annulation, qui garde la trace.
+     */
+    @Transactional
+    public void deleteOrder(Long id) {
+        SalesOrder order = orderRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Bon de commande introuvable: " + id));
+        tenantGuard.check(order.getCompany() != null ? order.getCompany().getId() : null);
+        if (!"draft".equals(order.getState())) {
+            throw new IllegalStateException("Seul un bon en brouillon peut être supprimé — annulez-le plutôt");
+        }
+        if (invoiceRepo.existsBySalesOrderId(id)) {
+            throw new IllegalStateException("Ce bon a une facture : annulez-le plutôt que de le supprimer");
+        }
+        // Le Hub garde une copie : il la reçoit comme annulée (il n'existe pas d'événement de suppression)
+        order.setState("cancelled");
+        syncEventPublisher.publish(SyncEventType.SALE_ORDER_CONFIRMED, String.valueOf(id), toOrderDTO(order));
+        eleaderImportLogRepo.detachSalesOrder(id);
+        auditService.log("SALE_ORDER", id, order.getName(), "DELETED", "Bon brouillon supprimé",
+                order.getCompany().getId());
+        orderRepo.delete(order);
     }
 
     // ===================== FACTURES =====================
@@ -3345,15 +3372,49 @@ public class SalesService {
         line.setMontantTTC(ht.add(montantTVA));
     }
 
+    /**
+     * Totaux du bon, calculés comme la facture qui en sera tirée (createInvoiceFromOrder) pour que
+     * le montant soit juste dès l'enregistrement, et non seulement à la confirmation :
+     * TTC ligne = qté × (prix TTC unitaire [HT × (1 + TVA + précompte client), + taxe Guinness]
+     * + frais d'enlèvement TTC unitaires [base × (1 + TVA) + supplément client]).
+     */
     private void computeOrderTotals(SalesOrder order) {
         BigDecimal totalHT = ZERO, totalTVA = ZERO, totalTTC = ZERO, totalRemise = ZERO;
+        BigDecimal totalPrecompte = ZERO, totalEnlevementTTC = ZERO;
         Long companyId = order.getCompany() != null ? order.getCompany().getId() : null;
+        Long partnerId = order.getPartner() != null ? order.getPartner().getId() : null;
+        BigDecimal tauxPrecompte = (partnerId != null && companyId != null)
+                ? getPartnerSalePrecompteTaux(partnerId, companyId) : ZERO;
+        boolean exemptGuinness = order.getPartner() != null && order.getPartner().isExemptTaxeGuinness();
         for (SalesOrderLine line : order.getLines()) {
             // Consigne / déconsigne : présentées à part (comme sur la facture), hors totaux du bon
             if (line.isConsigne() || ConsigneCodes.isConsigne(line.getProductCode(), companyId)) continue;
             BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
             BigDecimal pu = line.getPrixUnitaire() != null ? line.getPrixUnitaire() : ZERO;
             BigDecimal remise = line.getTauxRemise() != null ? line.getTauxRemise() : ZERO;
+            BigDecimal tva = line.getTauxTVA() != null ? line.getTauxTVA() : ZERO;
+            BigDecimal ht = line.getMontantHT() != null ? line.getMontantHT() : ZERO;
+
+            BigDecimal pcRate = isSansPrecompte(line.getCategoryId(), line.getProductCode(), companyId) ? ZERO : tauxPrecompte;
+            totalPrecompte = totalPrecompte.add(ht.multiply(pcRate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+            BigDecimal puttc = pu.multiply(BigDecimal.ONE
+                            .add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP))
+                            .add(pcRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
+                    .setScale(0, RoundingMode.HALF_UP);
+            Long catId = resolveCategoryId(line.getCategoryId(), line.getProductCode(), companyId);
+            if (!exemptGuinness && catId != null && categoryRepo.findById(catId)
+                    .map(c -> isCategorieGuinness(c.getName())).orElse(false)) {
+                puttc = puttc.add(GUINNESS_TAXE_LIGNE);
+            }
+            // Frais d'enlèvement unitaires (tarif de base HT + supplément client TTC)
+            SalesInvoiceLine unit = SalesInvoiceLine.builder()
+                    .productCode(line.getProductCode()).categoryId(catId).quantity(BigDecimal.ONE).build();
+            BigDecimal enlBaseHT = computeFraisEnlevement(null, unit, partnerId, companyId);
+            BigDecimal enlSupp = unit.getFraisEnlevementSupplement() != null ? unit.getFraisEnlevementSupplement() : ZERO;
+            BigDecimal enlUnitTTC = enlBaseHT.multiply(BigDecimal.ONE.add(tva.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)))
+                    .add(enlSupp).setScale(0, RoundingMode.HALF_UP);
+            line.setMontantTTC(puttc.add(enlUnitTTC).multiply(qty).setScale(0, RoundingMode.HALF_UP));
+            totalEnlevementTTC = totalEnlevementTTC.add(enlUnitTTC.multiply(qty));
 
             totalHT = totalHT.add(line.getMontantHT() != null ? line.getMontantHT() : ZERO);
             totalTVA = totalTVA.add(line.getMontantTVA() != null ? line.getMontantTVA() : ZERO);
@@ -3365,6 +3426,8 @@ public class SalesService {
         order.setTotalTVA(totalTVA);
         order.setTotalTTC(totalTTC);
         order.setTotalRemise(totalRemise);
+        order.setTotalPrecompte(totalPrecompte);
+        order.setFraisEnlevementTTC(totalEnlevementTTC.setScale(2, RoundingMode.HALF_UP));
     }
 
     private void computeInvoiceTotals(SalesInvoice invoice) {
@@ -3710,8 +3773,8 @@ public class SalesService {
                         : null)
                 .totalHT(order.getTotalHT()).totalTVA(order.getTotalTVA())
                 .totalTTC(order.getTotalTTC()).totalRemise(order.getTotalRemise())
-                .totalPrecompte(invoice != null ? invoice.getTotalPrecompte() : null)
-                .fraisEnlevementTTC(invoice != null ? invoice.getFraisEnlevementTTC() : null)
+                .totalPrecompte(invoice != null ? invoice.getTotalPrecompte() : order.getTotalPrecompte())
+                .fraisEnlevementTTC(invoice != null ? invoice.getFraisEnlevementTTC() : order.getFraisEnlevementTTC())
                 .totalRabais(invoice != null ? invoice.getTotalRabais() : null)
                 .totalRabaisTTC(invoice != null ? invoice.getTotalRabaisTTC() : null)
                 .netAPayer(invoice != null ? invoice.getNetAPayer() : null)

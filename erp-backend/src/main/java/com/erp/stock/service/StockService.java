@@ -655,8 +655,10 @@ public class StockService {
 
     @Transactional(readOnly = true)
     public List<WarehouseDTO> getWarehouses(Long companyId) {
+        // Entrepôts supprimés (désactivés) exclus : sinon un entrepôt supprimé restait affiché partout
         return warehouseRepo.findByCompanyIdOrderByNameAsc(companyId)
-                .stream().map(w -> toWarehouseDTO(w, false)).collect(Collectors.toList());
+                .stream().filter(Warehouse::isActive)
+                .map(w -> toWarehouseDTO(w, false)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -817,9 +819,14 @@ public class StockService {
         Warehouse wh = warehouseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
         tenantGuard.check(wh.getCompanyId());
+        if (Boolean.TRUE.equals(wh.getIsDefault())) {
+            throw new IllegalStateException("Impossible de supprimer le magasin par défaut : définissez-en un autre d'abord.");
+        }
         usageGuard.assertWarehouseUnused(id);
         wh.setActive(false);
         warehouseRepo.save(wh);
+        // Ses emplacements disparaissent aussi des listes (historique conservé)
+        locationRepo.findByWarehouseIdOrderByNameAsc(id).forEach(l -> { l.setActive(false); locationRepo.save(l); });
     }
 
     // ============================================================
@@ -1825,10 +1832,14 @@ public class StockService {
                     : resolveWarehouseId(move.getLocationId());
             BigDecimal priceUnit = move.getPriceUnit() != null ? move.getPriceUnit()
                     : getWarehouseCmup(move.getProductId(), costWarehouseId, product);
+            // Sortie réelle = livraison, ou transfert d'un emplacement propre vers un emplacement
+            // virtuel (perte, consommation, inventaire...) même enregistré comme transfert interne
+            boolean sortieReelle = "outgoing".equals(picking.getPickingTypeCode())
+                    || stockFlow(picking, move) < 0;
             ValuationLayer layer = ValuationLayer.builder()
                     .productId(move.getProductId())
                     .moveId(move.getId())
-                    .quantity("outgoing".equals(picking.getPickingTypeCode()) ? qty.negate() : qty)
+                    .quantity(sortieReelle ? qty.negate() : qty)
                     .unitCost(priceUnit)
                     .value(qty.multiply(priceUnit).setScale(2, RoundingMode.HALF_UP))
                     .locationId(move.getLocationDestId())
@@ -3489,8 +3500,32 @@ public class StockService {
      *   NB : "inter_company" (entre deux SOCIÉTÉS distinctes) n'est pas concerné — c'est un vrai
      *   transfert de valeur entre entités juridiques séparées, traité ailleurs.
      */
+    /** Emplacement qui fait partie du stock de la société (magasins, transit) — par opposition aux
+     *  emplacements virtuels (client, fournisseur, inventaire / pertes, consommation...). */
+    private boolean isOwnedStockLocation(Long locationId) {
+        if (locationId == null) return false;
+        return locationRepo.findById(locationId)
+                .map(l -> "internal".equals(l.getUsage()) || "transit".equals(l.getUsage()))
+                .orElse(false);
+    }
+
+    /**
+     * Sens réel d'un mouvement pour la valorisation : -1 sortie de stock, +1 entrée, 0 sans effet
+     * (entre deux emplacements propres). Réceptions et livraisons gardent leur sens par type ; un
+     * transfert "interne" se juge sur ses emplacements — une sortie du magasin vers un emplacement
+     * virtuel est une vraie sortie de stock et doit passer en variation de stocks.
+     */
+    private int stockFlow(StockPicking picking, StockMove move) {
+        if ("incoming".equals(picking.getPickingTypeCode())) return 1;
+        if ("outgoing".equals(picking.getPickingTypeCode())) return -1;
+        boolean srcOwned = isOwnedStockLocation(move.getLocationId());
+        boolean destOwned = isOwnedStockLocation(move.getLocationDestId());
+        if (srcOwned && !destOwned) return -1;
+        if (!srcOwned && destOwned) return 1;
+        return 0;
+    }
+
     private Long createStockAccountingEntry(StockPicking picking) {
-        if ("internal".equals(picking.getPickingTypeCode())) return null;
 
         Long journalId = resolveStockJournal(picking.getCompanyId());
         if (journalId == null) return null;
@@ -3513,7 +3548,10 @@ public class StockService {
             Product product = productRepo.findById(move.getProductId()).orElse(null);
             if (product == null) continue;
 
-            Long costLocId = "incoming".equals(picking.getPickingTypeCode()) ? move.getLocationDestId() : move.getLocationId();
+            int flow = stockFlow(picking, move);
+            if (flow == 0) continue; // entre emplacements propres : pas d'écriture
+
+            Long costLocId = flow > 0 ? move.getLocationDestId() : move.getLocationId();
             BigDecimal price = move.getPriceUnit() != null ? move.getPriceUnit()
                     : getWarehouseCmup(move.getProductId(), resolveWarehouseId(costLocId), product);
             BigDecimal value = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
@@ -3524,17 +3562,15 @@ public class StockService {
             AccountAccount stockAccount = findOrCreateAccount(stockCode, "Stock de marchandises", "asset", picking.getCompanyId(), journal, company);
             AccountAccount variationAccount = findOrCreateAccount("603100", "Variation de stocks de marchandises", "expense", picking.getCompanyId(), journal, company);
 
-            if ("incoming".equals(picking.getPickingTypeCode())) {
-                // Dr Stock / Cr 603100
+            if (flow > 0) {
+                // Entrée en stock : Dr Stock / Cr 603100
                 lines.add(buildLine(null, stockAccount, product.getName(), effectiveDate, value, ZERO, journal, company));
                 lines.add(buildLine(null, variationAccount, product.getName(), effectiveDate, ZERO, value, journal, company));
-
-            } else if ("outgoing".equals(picking.getPickingTypeCode())) {
-                // Dr 603100 / Cr Stock
+            } else {
+                // Sortie de stock (livraison, ou transfert vers un emplacement virtuel) : Dr 603100 / Cr Stock
                 lines.add(buildLine(null, variationAccount, product.getName(), effectiveDate, value, ZERO, journal, company));
                 lines.add(buildLine(null, stockAccount, product.getName(), effectiveDate, ZERO, value, journal, company));
             }
-            // "internal" (transfert entre dépôts) : aucune écriture — voir garde en tête de méthode.
         }
 
         if (lines.isEmpty() || totalValue.compareTo(ZERO) == 0) return null;

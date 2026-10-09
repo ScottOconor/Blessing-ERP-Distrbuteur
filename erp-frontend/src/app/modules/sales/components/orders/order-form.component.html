@@ -27,9 +27,11 @@
         </button>
       }
       @if (order.state === 'draft') {
-        <button class="btn-cancel-order" (click)="cancelOrder()">
-          <span class="material-icons">cancel</span> Annuler
-        </button>
+        @if (orderId) {
+          <button class="btn-cancel-order" (click)="deleteOrder()">
+            <span class="material-icons">delete</span> Supprimer
+          </button>
+        }
       }
     </div>
   </div>

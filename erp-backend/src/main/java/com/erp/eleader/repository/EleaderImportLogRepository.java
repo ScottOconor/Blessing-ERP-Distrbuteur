@@ -11,4 +11,10 @@ public interface EleaderImportLogRepository extends JpaRepository<EleaderImportL
     List<EleaderImportLog> findByCompanyIdOrderByImportDateDesc(Long companyId);
     List<EleaderImportLog> findByEleaderReferenceAndCompanyIdOrderByImportDateDesc(String eleaderReference, Long companyId);
     long countByCompanyId(Long companyId);
+
+    /** Délie les journaux d'import d'un bon supprimé (le doublon n'est plus bloqué : la facture
+     *  eLeader peut être réimportée). */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE EleaderImportLog l SET l.salesOrder = null WHERE l.salesOrder.id = :orderId")
+    int detachSalesOrder(@org.springframework.data.repository.query.Param("orderId") Long orderId);
 }
