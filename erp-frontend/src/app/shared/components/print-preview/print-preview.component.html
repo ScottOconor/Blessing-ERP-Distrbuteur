@@ -176,6 +176,7 @@
                 @if ((invoice?.totalRabaisTTC ?? 0) > 0) {
                   <div class="inv-trow"><span>Rabais TTC déduit</span><span>- {{ fmt(invoice?.totalRabaisTTC) }} F</span></div>
                 }
+                <div class="inv-trow inv-grand"><span>Total TTC après rabais</span><span>{{ fmt(salesTtcApresRabais) }} F</span></div>
                 <div class="inv-trow inv-net"><span>NET À PAYER</span><span>{{ fmt(invoice?.netAPayer ?? invoice?.totalTTC) }} F</span></div>
                 @if (invoice?.montantPaye) {
                   <div class="inv-trow inv-paid"><span>Déjà payé</span><span>{{ fmt(invoice?.montantPaye) }} F</span></div>

@@ -535,6 +535,10 @@
               <span>{{ (invoice.totalRabaisTTC ?? invoice.totalRabais) | number:'1.0-0' }} FCFA</span>
             </div>
           }
+          <div class="total-row total-ttc" title="Total TTC moins les rabais, hors consignes et déconsignes">
+            <span>= Total TTC après rabais</span>
+            <span>{{ ((invoice.totalTTC ?? 0) - (invoice.totalRabaisTTC ?? invoice.totalRabais ?? 0)) | number:'1.0-0' }} FCFA</span>
+          </div>
           <div class="total-row net-a-payer">
             <span>= Net à payer</span>
             <span>{{ (invoice.netAPayer ?? 0) | number:'1.0-0' }} FCFA</span>

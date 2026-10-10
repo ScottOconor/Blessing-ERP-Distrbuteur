@@ -64,6 +64,16 @@ export class PrintPreviewComponent {
   get client(): string { return this.invoice?.partnerName ?? this.picking?.partnerName ?? this.purchaseInvoice?.partnerName ?? this.purchaseOrder?.partnerName ?? this.salesOrder?.partnerName ?? ''; }
   get allLines(): SalesInvoiceLine[]  { return this.invoice?.lines ?? []; }
   /** Lignes normales : non-consigne ET quantité positive */
+  /** Total TTC après rabais = Total TTC − rabais TTC, hors consignes / déconsignes (le Total TTC
+   *  de la facture ne les contient pas). */
+  get salesTtcApresRabais(): number {
+    const inv = this.invoice;
+    return (inv?.totalTTC ?? 0) - (inv?.totalRabaisTTC ?? inv?.totalRabais ?? 0);
+  }
+  get purchaseTtcApresRabais(): number {
+    return (this.purchaseInvoice?.totalTTC ?? 0) - Math.round(this.purchaseTotalRabaisTTC);
+  }
+
   /** Colonnes rabais affichées seulement si le client a un rabais sur au moins une ligne. */
   get salesHasRabais(): boolean {
     return (this.invoice?.totalRabais ?? 0) > 0 || this.salesLines.some(l => (l.rabaisUnitaire ?? 0) > 0);
@@ -387,6 +397,7 @@ export class PrintPreviewComponent {
       ${(inv.totalRistourne ?? 0) > 0 ? `<div class="tot-row ristourne"><span>Ristournes (à récupérer)</span><span>${this.fmt(inv.totalRistourne)} F</span></div>` : ''}
       ${(inv.totalRabais ?? 0) > 0 ? `<div class="tot-row rabais"><span>Rabais HT</span><span>- ${this.fmt(inv.totalRabais)} F</span></div>` : ''}
       ${(inv.totalRabaisTTC ?? 0) > 0 ? `<div class="tot-row rabais"><span>Rabais TTC déduit</span><span>- ${this.fmt(inv.totalRabaisTTC)} F</span></div>` : ''}
+      <div class="tot-row grand"><span>Total TTC après rabais</span><span>${this.fmt(this.salesTtcApresRabais)} F</span></div>
       <div class="tot-row net"><span>NET À PAYER</span><span>${this.fmt(netAPayer)} F</span></div>
       ${inv.montantPaye ? `<div class="tot-row paid"><span>Déjà payé</span><span>${this.fmt(inv.montantPaye)} F</span></div>` : ''}
       ${(inv.montantDu ?? 0) > 0.01 ? `<div class="tot-row due"><span>Reste dû</span><span>${this.fmt(inv.montantDu)} F</span></div>` : ''}
@@ -515,6 +526,7 @@ export class PrintPreviewComponent {
     ${(inv.totalRistourne ?? 0) > 0 ? line('TOTAL Ristourne:', money(inv.totalRistourne)) : ''}
     ${taxeGuinness > 0 ? line('TOTAL Taxe Guinness:', money(taxeGuinness)) : ''}
     ${(inv.totalRabaisTTC ?? 0) > 0 ? line('TOTAL Rabais:', '- ' + money(inv.totalRabaisTTC)) : ''}
+    ${line('TOTAL TTC après rabais:', money(this.salesTtcApresRabais))}
   </div>
 
   <div class="t-net">NET À PAYER ${this.fmt(netAPayer)} FCFA</div>
@@ -675,6 +687,7 @@ export class PrintPreviewComponent {
       <div class="tot-row grand"><span>Total TTC</span><span>${this.fmt(inv.totalTTC)} F</span></div>
       ${totalRabaisHT > 0 ? `<div class="tot-row ristourne"><span>Rabais HT (601901)</span><span>– ${this.fmt(Math.round(totalRabaisHT))} F</span></div>` : ''}
       ${totalRabaisTTC > 0 ? `<div class="tot-row rabais"><span>Rabais TTC déduit</span><span>– ${this.fmt(Math.round(totalRabaisTTC))} F</span></div>` : ''}
+      <div class="tot-row grand"><span>Total TTC après rabais</span><span>${this.fmt(this.purchaseTtcApresRabais)} F</span></div>
       <div class="tot-row net"><span>NET À PAYER</span><span>${this.fmt(netAPayer)} F</span></div>
       ${inv.montantPaye ? `<div class="tot-row paid"><span>Déjà payé</span><span>${this.fmt(inv.montantPaye)} F</span></div>` : ''}
       ${(inv.montantDu ?? 0) > 0.01 ? `<div class="tot-row due"><span>Reste dû</span><span>${this.fmt(inv.montantDu)} F</span></div>` : ''}
@@ -716,6 +729,8 @@ export class PrintPreviewComponent {
   <div class="t-sep"></div>
   <div class="t-line"><span>Total HT</span><span>${this.fmt(inv.totalHT)} F</span></div>
   <div class="t-line"><span>TVA</span><span>${this.fmt(inv.totalTVA)} F</span></div>
+  <div class="t-line"><span>Total TTC</span><span>${this.fmt(inv.totalTTC)} F</span></div>
+  <div class="t-line"><span>Total TTC après rabais</span><span>${this.fmt(this.purchaseTtcApresRabais)} F</span></div>
   <div class="t-sep"></div>
   <div class="t-total"><span>NET À PAYER</span><span>${this.fmt(netAPayer)} F</span></div>
   <div class="t-sep"></div>
