@@ -393,6 +393,7 @@ export class PrintPreviewComponent {
       <div class="tot-row"><span>TVA (19,25%)</span><span>${this.fmt(inv.totalTVA)} F</span></div>
       ${inv.totalPrecompte ? `<div class="tot-row"><span>Précompte (PSA)</span><span>${this.fmt(inv.totalPrecompte)} F</span></div>` : ''}
       ${(inv.fraisEnlevementTTC ?? 0) > 0 ? `<div class="tot-row enlevement"><span>Frais d'enlèvement</span><span>+ ${this.fmt(inv.fraisEnlevementTTC)} F</span></div>` : ''}
+      ${(inv.totalGuinessTaxe ?? 0) > 0 ? `<div class="tot-row"><span>Taxe Guinness</span><span>+ ${this.fmt(inv.totalGuinessTaxe)} F</span></div>` : ''}
       <div class="tot-row grand"><span>Total TTC</span><span>${this.fmt(inv.totalTTC)} F</span></div>
       ${(inv.totalRistourne ?? 0) > 0 ? `<div class="tot-row ristourne"><span>Ristournes (à récupérer)</span><span>${this.fmt(inv.totalRistourne)} F</span></div>` : ''}
       ${(inv.totalRabais ?? 0) > 0 ? `<div class="tot-row rabais"><span>Rabais HT</span><span>- ${this.fmt(inv.totalRabais)} F</span></div>` : ''}

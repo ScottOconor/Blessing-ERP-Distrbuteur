@@ -259,7 +259,7 @@
               <td class="text-right">
                 @if ((line.guinessTaxe ?? 0) > 0) {
                   <span class="taxe-tag taxe-tva">TVA {{ line.tauxTVA || 0 }}%</span>
-                  <span class="taxe-tag taxe-guiness">Ristourne Guinness</span>
+                  <span class="taxe-tag taxe-guiness">Taxe Guinness {{ line.guinessTaxe | number:'1.0-0' }}</span>
                 } @else {
                   <span class="taxe-tag taxe-tva">TVA {{ line.tauxTVA || 0 }}%</span>
                 }
@@ -507,6 +507,12 @@
             <div class="total-row total-enlevement">
               <span>= Frais d'enlèvement TTC</span>
               <span>{{ invoice.fraisEnlevementTTC | number:'1.0-0' }} FCFA</span>
+            </div>
+          }
+          @if ((invoice.totalGuinessTaxe ?? 0) > 0) {
+            <div class="total-row">
+              <span>+ Taxe Guinness</span>
+              <span>{{ invoice.totalGuinessTaxe | number:'1.0-0' }} FCFA</span>
             </div>
           }
           <div class="total-row total-ttc">
