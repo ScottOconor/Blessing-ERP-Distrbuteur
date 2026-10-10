@@ -3890,6 +3890,7 @@ public class SalesService {
                 .notes(invoice.getNotes())
                 .partnerId(invoice.getPartner() != null ? invoice.getPartner().getId() : null)
                 .partnerName(invoice.getPartner() != null ? invoice.getPartner().getName() : null)
+                .partnerRef(invoice.getPartner() != null ? invoice.getPartner().getRef() : null)
                 .journalId(invoice.getJournal() != null ? invoice.getJournal().getId() : null)
                 .journalName(invoice.getJournal() != null ? invoice.getJournal().getName() : null)
                 .companyId(invoice.getCompany() != null ? invoice.getCompany().getId() : null)

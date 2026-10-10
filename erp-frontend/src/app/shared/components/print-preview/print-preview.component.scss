@@ -218,3 +218,6 @@ table.inv-lines {
   &:hover:not(:disabled) { background: var(--accent); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
+
+// Aperçu du ticket de vente : document imprimé affiché tel quel
+.tkt-frame { display: block; width: 80mm; min-height: 120mm; border: 0; background: #fff; }

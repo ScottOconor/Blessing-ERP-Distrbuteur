@@ -1,4 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { SalesInvoice, SalesInvoiceLine, SalesOrder } from '../../../modules/sales/services/sales.service';
 import { StockPicking } from '../../../modules/stock/services/stock.service';
@@ -37,6 +38,8 @@ export class PrintPreviewComponent {
   @Input() companyLogoUrl = '';
   @Input() companyLogoDataUrl = '';
   @Input() companyInfo: PrintCompanyInfo | null = null;
+
+  constructor(private sanitizer: DomSanitizer) {}
   @Output() closed = new EventEmitter<void>();
 
   format: PrintFormat = 'a4';
@@ -402,86 +405,154 @@ export class PrintPreviewComponent {
 </div>`;
   }
 
+  /** Conditionnement court pour la colonne Qté : « CASIER 24 » → C24, « CARTON 12 » → CT12, sinon l'UDM. */
+  private uomShort(uom?: string | null): string {
+    const u = (uom ?? '').trim();
+    if (!u) return '';
+    const casier = /casier\D*(\d+)/i.exec(u); if (casier) return 'C' + casier[1];
+    const carton = /carton\D*(\d+)/i.exec(u); if (carton) return 'CT' + carton[1];
+    if (/^(pcs?|pi[eè]ce|unit[eé]s?)$/i.test(u)) return 'PCS';
+    return u.length > 6 ? u.slice(0, 6) : u;
+  }
+
+  /** Ticket de facture (80 mm) sur le modèle des factures eLeader : en-tête société, bloc client,
+   *  tableau Art / Qté / PU / PT par sections (Commande, Emballages, Retours), totaux détaillés,
+   *  net à payer, règlements, puis tableaux ristournes / taxe Guinness et signatures. */
   private buildTicketBody(): string {
     const inv = this.invoice!;
-    const title = this.docType === 'avoir' ? 'AVOIR' : 'FACTURE';
+    const title = this.docType === 'avoir' ? 'Avoir' : 'Facture';
     const netAPayer = inv.netAPayer ?? (inv.totalTTC ?? 0) + (inv.fraisEnlevementTTC ?? 0);
+    const ci = this.companyInfo;
+    const coName = ci?.name || this.companyName || '';
+    const logo = this.logoImgHtml();
 
-    const linesHtml = this.salesLines.map(l => `
+    const row = (code: string | undefined, qty: number | undefined, uom: string, pu: number | undefined, pt: number | undefined) => `
       <tr>
-        <td class="tname">${this.h(l.productCode || l.description)}</td>
-        <td class="r">${this.fmt(l.quantity)}×${this.fmt(l.prixUnitaireTTC ?? l.prixUnitaire)}</td>
-        <td class="r">${this.fmt(l.montantTTC)}</td>
-      </tr>`).join('');
+        <td>${this.h(code)}</td>
+        <td class="r nowrap">${this.fmt(qty)}</td>
+        <td class="nowrap">${this.h(uom)}</td>
+        <td class="r">${this.fmt(pu)}</td>
+        <td class="r">${this.fmt(pt)}</td>
+      </tr>`;
+    const section = (label: string) => `<tr class="t-sec"><td colspan="5">${label}</td></tr>`;
 
-    const consignesHtml = this.consigneLines.length ? `
-      <tr class="sep"><td colspan="3">— Consignes —</td></tr>
-      ${this.consigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
-            <td class="r">${this.fmt(l.quantity)}</td>
-            <td class="r">${this.fmt(l.montantTTC)}</td>
-        </tr>`).join('')}` : '';
+    const commande = this.salesLines.map(l =>
+      row(l.productCode || l.description, l.quantity, this.uomShort(l.uomName), l.prixUnitaireTTC ?? l.prixUnitaire, l.montantTTC)).join('');
+    const emballages = this.consigneLines.map(l =>
+      row(l.productCode || l.description, l.quantity, this.uomShort(l.uomName) || 'PCS', l.prixUnitaireTTC ?? l.prixUnitaire, l.montantTTC)).join('');
+    const retours = this.deconsigneLines.map(l =>
+      row(l.productCode || l.description, Math.abs(l.quantity ?? 0), this.uomShort(l.uomName) || 'PCS',
+          l.prixUnitaireTTC ?? l.prixUnitaire, -Math.abs(l.montantTTC ?? 0))).join('');
 
-    const deconsignesHtml = this.deconsigneLines.length ? `
-      <tr class="sep"><td colspan="3">— Déconsignes —</td></tr>
-      ${this.deconsigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
-            <td class="r">${this.fmt(Math.abs(l.quantity ?? 0))}</td>
-            <td class="r">-${this.fmt(Math.abs(l.montantTTC ?? 0))}</td>
-        </tr>`).join('')}` : '';
+    const line = (label: string, value: string) => `<div class="t-line"><span>${label}</span><span>${value}</span></div>`;
+    const money = (n?: number | null) => `${this.fmt(n)} FCFA`;
+    const taux = (inv.totalHT ?? 0) > 0 && (inv.totalPrecompte ?? 0) > 0
+      ? Math.round(((inv.totalPrecompte ?? 0) / (inv.totalHT ?? 1)) * 1000) / 10 : null;
+
+    const ristournes = inv.ristourneDetails ?? [];
+    const ristourneHtml = ristournes.length ? `
+  <table class="t-grid t-annex">
+    <thead><tr><th>Famille</th><th class="r">Qté</th><th class="r">P.U</th><th class="r">Ristourne</th></tr></thead>
+    <tbody>
+      ${ristournes.map(r => `<tr><td>${this.h(r.categoryName)}</td><td class="r">${this.fmt(r.quantite)}</td>
+        <td class="r">${this.fmt(r.montantUnitaire)}</td><td class="r">${this.fmt(r.montantTotal)}</td></tr>`).join('')}
+      <tr class="t-tot"><td colspan="3">TOTAL</td><td class="r">${this.fmt(inv.totalRistourne ?? ristournes.reduce((s, r) => s + (r.montantTotal ?? 0), 0))}</td></tr>
+    </tbody>
+  </table>` : '';
+
+    const taxeGuinness = inv.totalGuinessTaxe ?? 0;
+    const guinnessHtml = taxeGuinness > 0 ? `
+  <table class="t-grid t-annex">
+    <thead><tr><th>Taxe Guinness</th><th class="r">Qté</th><th class="r">P.U</th><th class="r">Montant</th></tr></thead>
+    <tbody>
+      <tr><td>Guinness</td><td class="r">${this.fmt(Math.round(taxeGuinness / 300))}</td><td class="r">300</td><td class="r">${this.fmt(taxeGuinness)}</td></tr>
+      <tr class="t-tot"><td colspan="3">TOTAL</td><td class="r">${this.fmt(taxeGuinness)}</td></tr>
+    </tbody>
+  </table>` : '';
+
+    const payments = (inv.payments ?? []).filter(p => p.state !== 'reversed');
 
     return `
 <div class="ticket">
-  ${this.ticketCompanyHtml()}
+  ${logo ? `<div class="t-logo">${logo}</div>` : ''}
+  <div class="t-company">${this.h(coName)}</div>
+  ${ci?.sigle ? `<div class="t-coinfo">${this.h(ci.sigle)}</div>` : ''}
+  ${ci?.nif ? `<div class="t-coinfo">${this.h(ci.nif)}</div>` : ''}
+  ${ci?.adresse ? `<div class="t-coinfo">${this.h(ci.adresse)}</div>` : ''}
+  ${ci?.rccm ? `<div class="t-coinfo">${this.h(ci.rccm)}</div>` : ''}
+  ${(ci?.telephone || this.companyPhone) ? `<div class="t-coinfo">Tél : ${this.h(ci?.telephone || this.companyPhone)}</div>` : ''}
   <div class="t-sep"></div>
-  <div class="t-doctype">${title}</div>
-  <div class="t-ref">${this.h(inv.name)}</div>
-  <div class="t-line"><span>Date</span><span>${this.fmtDate(inv.date)}</span></div>
-  <div class="t-line"><span>Client</span><span>${this.h(inv.partnerName)}</span></div>
-  ${inv.notes ? `<div class="t-line"><span>Réf. client</span><span>${this.h(inv.notes)}</span></div>` : ''}
-  <div class="t-sep"></div>
-  <table class="t-lines">
-    <tbody>${linesHtml}${consignesHtml}${deconsignesHtml}</tbody>
+  <div class="t-kv"><b>Client:</b> ${this.h(inv.partnerName)}</div>
+  ${inv.partnerRef ? `<div class="t-kv"><b>Code client:</b> ${this.h(inv.partnerRef)}</div>` : ''}
+  ${(inv.sellerName || inv.createdByName || inv.createdBy) ? `<div class="t-kv"><b>Caissier:</b> ${this.h(inv.sellerName || inv.createdByName || inv.createdBy)}</div>` : ''}
+  <div class="t-kv"><b>${title}: ${this.h(inv.name)} ${this.fmtDate(inv.date)}</b></div>
+  ${inv.notes ? `<div class="t-kv"><b>Réf.:</b> ${this.h(inv.notes)}</div>` : ''}
+
+  <table class="t-grid t-main">
+    <thead><tr><th>Art</th><th class="r" colspan="2">Qté</th><th class="r">PU</th><th class="r">PT</th></tr></thead>
+    <tbody>
+      ${commande ? section('Commande') + commande : ''}
+      ${emballages ? section('Emballages') + emballages : ''}
+      ${retours ? section('Retours') + retours : ''}
+    </tbody>
   </table>
-  <div class="t-sep"></div>
-  <div class="t-line small"><span>Total Colis</span><span>${this.fmt(this.totalColis)}</span></div>
-  ${this.totalPET > 0 ? `<div class="t-line small"><span>Total PET</span><span>${this.fmt(this.totalPET)}</span></div>` : ''}
-  ${this.totalCasier > 0 ? `<div class="t-line small"><span>Total Casier</span><span>${this.fmt(this.totalCasier)}</span></div>` : ''}
-  ${(inv.totalLiquideNu ?? 0) > 0 ? `<div class="t-line small"><span>Liq. Nu</span><span>${this.fmt(inv.totalLiquideNu)} F</span></div>` : ''}
-  ${this.consigneMontant > 0 ? `<div class="t-line small"><span>Consigne</span><span>${this.fmt(this.consigneMontant)} F</span></div>` : ''}
-  ${this.deconsigneMontant > 0 ? `<div class="t-line small"><span>Déconsigne</span><span>– ${this.fmt(this.deconsigneMontant)} F</span></div>` : ''}
-  <div class="t-sep"></div>
-  <div class="t-line"><span>Total HT</span><span>${this.fmt(inv.totalHT)} F</span></div>
-  <div class="t-line"><span>TVA 19,25%</span><span>${this.fmt(inv.totalTVA)} F</span></div>
-  ${inv.totalPrecompte ? `<div class="t-line"><span>PSA</span><span>${this.fmt(inv.totalPrecompte)} F</span></div>` : ''}
-  ${(inv.fraisEnlevementTTC ?? 0) > 0 ? `<div class="t-line t-enlevement"><span>Enlèvement</span><span>+ ${this.fmt(inv.fraisEnlevementTTC)} F</span></div>` : ''}
-  <div class="t-line t-subtotal"><span>Total TTC</span><span>${this.fmt(inv.totalTTC)} F</span></div>
-  ${(inv.totalRistourne ?? 0) > 0 ? `
-  <div class="t-sep-dots"></div>
-  <div class="t-ristourne-hdr">RISTOURNES (à récupérer)</div>
-  <div class="t-line t-ristourne"><span>Total ristournes</span><span>${this.fmt(inv.totalRistourne)} F</span></div>
-  <div class="t-sep-dots"></div>` : ''}
-  <div class="t-sep"></div>
-  <div class="t-total"><span>NET À PAYER</span><span>${this.fmt(netAPayer)} F</span></div>
-  ${inv.montantPaye ? `<div class="t-line"><span>Déjà payé</span><span>${this.fmt(inv.montantPaye)} F</span></div>` : ''}
-  ${(inv.montantDu ?? 0) > 0.01 ? `<div class="t-line small"><span>Reste dû</span><span>${this.fmt(inv.montantDu)} F</span></div>` : ''}
-  <div class="t-sep"></div>
+
+  <div class="t-block">
+    ${line('Nombre de colis:', this.fmt(this.totalColis))}
+    ${this.consigneMontant || this.deconsigneMontant ? line('Total consignation:', money(this.consigneMontant)) : ''}
+    ${this.consigneMontant || this.deconsigneMontant ? line('Total déconsignation:', money(-Math.abs(this.deconsigneMontant))) : ''}
+  </div>
+
+  <div class="t-block">
+    ${line('Total HT:', money(inv.totalHT))}
+    ${(inv.fraisEnlevementHT ?? 0) > 0 ? line('Total frais d’enlèvement HT:', money(inv.fraisEnlevementHT)) : ''}
+    ${line('TVA 19,25 %:', money(inv.totalTVA))}
+    ${(inv.fraisEnlevementTVA ?? 0) > 0 ? line('TVA frais d’enlèvement (19,25 %):', money(inv.fraisEnlevementTVA)) : ''}
+    ${(inv.totalPrecompte ?? 0) > 0 ? line(`PSA${taux != null ? ' (' + String(taux).replace('.', ',') + ' %)' : ''}:`, money(inv.totalPrecompte)) : ''}
+    ${(inv.totalLiquideNu ?? 0) > 0 ? line('Total liquide nu:', money(inv.totalLiquideNu)) : ''}
+    ${(inv.fraisEnlevementTTC ?? 0) > 0 ? line('Frais d’enlèvement:', money(inv.fraisEnlevementTTC)) : ''}
+    ${line('TOTAL TTC:', money(inv.totalTTC))}
+    ${(inv.totalRistourne ?? 0) > 0 ? line('TOTAL Ristourne:', money(inv.totalRistourne)) : ''}
+    ${taxeGuinness > 0 ? line('TOTAL Taxe Guinness:', money(taxeGuinness)) : ''}
+    ${(inv.totalRabaisTTC ?? 0) > 0 ? line('TOTAL Rabais:', '- ' + money(inv.totalRabaisTTC)) : ''}
+  </div>
+
+  <div class="t-net">NET À PAYER ${this.fmt(netAPayer)} FCFA</div>
   <div class="t-lettres">${this.montantEnLettres(netAPayer)}</div>
+
+  ${payments.length ? `<div class="t-block">${payments.map(p => line(`${this.h(p.journalName || 'Règlement')}:`, money(p.amount))).join('')}
+    ${(inv.montantDu ?? 0) > 0.01 ? line('Reste dû:', money(inv.montantDu)) : ''}</div>` : ''}
+
+  ${ristourneHtml}
+  ${guinnessHtml}
+
+  <div class="t-sig-title">Signatures</div>
+  <div class="t-sig-row">
+    <div class="t-sig-cell"><div class="t-sig-lbl">Livreur</div><div class="t-sig-area"></div></div>
+    <div class="t-sig-cell"><div class="t-sig-lbl">Client</div><div class="t-sig-area"></div></div>
+  </div>
   <div class="t-thanks">Merci de votre confiance !</div>
-  ${inv.createdBy ? `<div class="t-line small"><span>Agent</span><span>${this.h(inv.createdBy)}</span></div>` : ''}
-  <div class="t-sep"></div>
-  <div class="t-sig-box">
-    <div class="t-sig-lbl">Signature du livreur</div>
-    <div class="t-sig-name">Nom : ___________________________</div>
-    <div class="t-sig-area"></div>
-  </div>
-  <div class="t-sig-gap"></div>
-  <div class="t-sig-box">
-    <div class="t-sig-lbl">Cachet &amp; signature client</div>
-    <div class="t-sig-name">Nom : ___________________________</div>
-    <div class="t-sig-area"></div>
-  </div>
 </div>`;
+  }
+
+  private ticketPreviewSrc = '';
+  private ticketPreviewSafe: SafeHtml | null = null;
+
+  /** HTML complet du ticket pour l'aperçu à l'écran : exactement celui qui est imprimé.
+   *  Mis en cache tant qu'il ne change pas (sinon le cadre se rechargerait à chaque rafraîchissement). */
+  get ticketPreviewHtml(): SafeHtml {
+    const src = this.buildFullHtml();
+    if (src !== this.ticketPreviewSrc || !this.ticketPreviewSafe) {
+      this.ticketPreviewSrc = src;
+      this.ticketPreviewSafe = this.sanitizer.bypassSecurityTrustHtml(src);
+    }
+    return this.ticketPreviewSafe;
+  }
+
+  /** Ajuste la hauteur du cadre d'aperçu à celle du ticket. */
+  fitTicketFrame(frame: HTMLIFrameElement): void {
+    const doc = frame.contentDocument;
+    if (doc?.body) frame.style.height = (doc.documentElement.scrollHeight + 4) + 'px';
   }
 
   private buildPurchaseInvoiceBody(compact = false): string {
@@ -948,38 +1019,50 @@ table.lines { font-size: 7.5pt; }
 
 const TICKET_CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: white; color: #111; font-family: 'Courier New', monospace; font-size: 9pt; font-weight: 700; width: 80mm; }
+body { background: white; color: #000; font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; width: 80mm; }
 .ticket { width: 80mm; padding: 3mm 4mm; }
 .t-logo { text-align: center; margin-bottom: 2mm; } .t-logo img { max-height: 32px; max-width: 60mm; object-fit: contain; }
-.t-company { font-size: 12pt; font-weight: 800; text-align: center; margin-bottom: 1mm; }
-.t-coinfo { font-size: 8pt; text-align: center; color: #555; margin-bottom: 1px; }
-.t-phone { font-size: 8.5pt; text-align: center; color: #555; margin-bottom: 2mm; }
-.t-sep { border-top: 1px dashed #666; margin: 2mm 0; }
-.t-doctype { font-size: 13pt; font-weight: 800; text-align: center; letter-spacing: 2px; margin: 1mm 0; }
-.t-ref { font-size: 10pt; font-weight: 700; text-align: center; color: #333; margin-bottom: 2mm; }
-.t-line { display: flex; justify-content: space-between; font-size: 9pt; margin: 1px 0; }
-.t-line.small { font-size: 8pt; color: #555; }
+.t-company { font-size: 11pt; text-align: center; padding-bottom: 1mm; border-bottom: 1px solid #999; margin-bottom: 1.5mm; }
+.t-coinfo { font-size: 9pt; text-align: right; line-height: 1.25; }
+.t-sep { border-top: 1px solid #999; margin: 2mm 0; }
+.t-kv { font-size: 9.5pt; line-height: 1.3; }
+.t-kv b { font-weight: 700; }
+table.t-grid { width: 100%; border-collapse: collapse; margin: 3mm 0; font-size: 9pt; }
+table.t-grid th { text-align: left; font-weight: 700; padding: 1.5mm 1mm; border-bottom: 1.5px solid #000; }
+table.t-grid td { padding: 1.2mm 1mm; border-bottom: 1px solid #ddd; vertical-align: top; }
+table.t-grid .r { text-align: right; }
+table.t-grid .nowrap { white-space: nowrap; }
+tr.t-sec td { font-weight: 400; padding-top: 1.5mm; }
+tr.t-tot td { font-weight: 700; }
+table.t-annex { margin-top: 4mm; }
+.t-block { margin: 3mm 0; }
+.t-line { display: flex; justify-content: space-between; gap: 3mm; font-size: 9.5pt; line-height: 1.35; }
+.t-line span:last-child { white-space: nowrap; text-align: right; }
+.t-net { text-align: center; font-size: 11pt; font-weight: 700; margin: 4mm 0 1mm; }
+.t-lettres { font-size: 8pt; font-style: italic; text-align: center; margin-bottom: 3mm; }
+.t-sig-title { margin-top: 5mm; font-size: 9.5pt; }
+.t-sig-row { display: flex; gap: 3mm; margin-top: 2mm; }
+.t-sig-cell { flex: 1; }
+.t-sig-lbl { font-size: 8.5pt; text-align: center; margin-bottom: 1mm; }
+.t-sig-area { height: 16mm; border: 1px solid #999; }
+.t-thanks { font-size: 9pt; text-align: center; margin: 3mm 0 1mm; }
+/* Lignes de fournisseurs (ticket achats) */
 table.t-lines { width: 100%; border-collapse: collapse; margin: 1mm 0; }
 table.t-lines td { padding: 1px 2px; font-size: 8.5pt; vertical-align: top; }
 .tname { max-width: 40mm; }
-.sep td { text-align: center; color: #222; font-size: 8.5pt; padding: 3px 0; font-weight: 700; border-top: 1px dotted #666; border-bottom: 1px dotted #666; }
+.sep td { text-align: center; font-size: 8.5pt; padding: 3px 0; border-top: 1px dotted #666; border-bottom: 1px dotted #666; }
 .r { text-align: right; }
-.t-subtotal { font-weight: 700; border-top: 1px solid #333; padding-top: 1px; }
-.t-ristourne { font-weight: 700; }
-.t-ristourne span:last-child { color: #1a7a3a; }
-.t-ristourne-hdr { font-size: 8.5pt; font-weight: 800; text-align: center; color: #1a7a3a; padding: 2px 0; text-transform: uppercase; letter-spacing: 1px; }
-.t-sep-dots { border-top: 1px dotted #666; margin: 2mm 0; }
-.t-enlevement span:last-child { color: #c60; }
-.t-total { display: flex; justify-content: space-between; font-size: 12pt; font-weight: 800; margin: 2mm 0; border-top: 2px solid #111; border-bottom: 2px solid #111; padding: 1mm 0; }
-.t-lettres { font-size: 7.5pt; font-style: italic; text-align: center; margin: 2mm 0; color: #444; }
-.t-thanks { font-size: 9pt; text-align: center; font-weight: 700; margin: 2mm 0; }
+.t-doctype { font-size: 12pt; text-align: center; margin: 1mm 0; }
+.t-ref { font-size: 10pt; text-align: center; margin-bottom: 2mm; }
+.t-line.small { font-size: 8.5pt; }
+.t-subtotal { border-top: 1px solid #333; padding-top: 1px; }
+.t-total { display: flex; justify-content: space-between; font-size: 11pt; font-weight: 700; margin: 2mm 0; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 1mm 0; }
 .t-sig-box { width: 100%; margin-top: 2mm; }
 .t-sig-gap { height: 3mm; }
-.t-sig-lbl { font-size: 8.5pt; font-weight: 700; margin-bottom: 1mm; text-align: center; }
-.t-sig-name { font-size: 8pt; color: #444; margin-bottom: 1mm; }
-.t-sig-area { height: 18mm; border: 1px solid #999; border-radius: 2px; width: 100%; }
-/* Ticket entièrement en gras et en noir : les gris et graisses fines ressortent pâles sur imprimante thermique. */
-.ticket, .ticket * { font-weight: 800 !important; color: #000 !important; }
+.t-sig-name { font-size: 8pt; margin-bottom: 1mm; }
+/* Thermique : noir franc et graisse soutenue — les traits fins ressortent pâles à l'impression */
+.ticket, .ticket * { color: #000 !important; font-weight: 600; }
+.ticket b, .ticket th, .ticket .t-net, .ticket tr.t-tot td, .ticket .t-company { font-weight: 800 !important; }
 @page { size: 80mm auto; margin: 0; }
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;

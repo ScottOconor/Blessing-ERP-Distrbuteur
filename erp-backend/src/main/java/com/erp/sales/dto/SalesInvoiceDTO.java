@@ -22,6 +22,8 @@ public class SalesInvoiceDTO {
 
     private Long partnerId;
     private String partnerName;
+    /** Code client (référence du partenaire), imprimé sur le ticket */
+    private String partnerRef;
     private Long journalId;
     private String journalName;
     private Long companyId;
