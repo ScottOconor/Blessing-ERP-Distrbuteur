@@ -177,8 +177,8 @@ import{c as X}from"./chunk-C7N26F4T.js";import{Ab as V,Ba as o,Ja as W,Na as K,N
     <thead><tr><th>Art</th><th class="r" colspan="2">Qt\xE9</th><th class="r">PU</th><th class="r">PT</th></tr></thead>
     <tbody>
       ${y?P("Commande")+y:""}
-      ${m?P("Emballages")+m:""}
-      ${T?P("Retours")+T:""}
+      ${m?P("Consignes")+m:""}
+      ${T?P("D\xE9consignes")+T:""}
     </tbody>
   </table>
 
