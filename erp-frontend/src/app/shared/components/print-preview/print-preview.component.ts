@@ -409,7 +409,7 @@ export class PrintPreviewComponent {
 
     const linesHtml = this.salesLines.map(l => `
       <tr>
-        <td class="tname">${this.h(l.description || l.productCode)}</td>
+        <td class="tname">${this.h(l.productCode || l.description)}</td>
         <td class="r">${this.fmt(l.quantity)}×${this.fmt(l.prixUnitaireTTC ?? l.prixUnitaire)}</td>
         <td class="r">${this.fmt(l.montantTTC)}</td>
       </tr>`).join('');
@@ -417,7 +417,7 @@ export class PrintPreviewComponent {
     const consignesHtml = this.consigneLines.length ? `
       <tr class="sep"><td colspan="3">— Consignes —</td></tr>
       ${this.consigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.description || l.productCode)}</td>
+        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
             <td class="r">${this.fmt(l.quantity)}</td>
             <td class="r">${this.fmt(l.montantTTC)}</td>
         </tr>`).join('')}` : '';
@@ -425,7 +425,7 @@ export class PrintPreviewComponent {
     const deconsignesHtml = this.deconsigneLines.length ? `
       <tr class="sep"><td colspan="3">— Déconsignes —</td></tr>
       ${this.deconsigneLines.map(l => `
-        <tr><td class="tname">${this.h(l.description || l.productCode)}</td>
+        <tr><td class="tname">${this.h(l.productCode || l.description)}</td>
             <td class="r">${this.fmt(Math.abs(l.quantity ?? 0))}</td>
             <td class="r">-${this.fmt(Math.abs(l.montantTTC ?? 0))}</td>
         </tr>`).join('')}` : '';
@@ -438,7 +438,6 @@ export class PrintPreviewComponent {
   <div class="t-ref">${this.h(inv.name)}</div>
   <div class="t-line"><span>Date</span><span>${this.fmtDate(inv.date)}</span></div>
   <div class="t-line"><span>Client</span><span>${this.h(inv.partnerName)}</span></div>
-  ${inv.createdBy ? `<div class="t-line"><span>Agent</span><span>${this.h(inv.createdByName || inv.createdBy)}</span></div>` : ''}
   ${inv.notes ? `<div class="t-line"><span>Réf. client</span><span>${this.h(inv.notes)}</span></div>` : ''}
   <div class="t-sep"></div>
   <table class="t-lines">
@@ -468,10 +467,20 @@ export class PrintPreviewComponent {
   ${(inv.montantDu ?? 0) > 0.01 ? `<div class="t-line small"><span>Reste dû</span><span>${this.fmt(inv.montantDu)} F</span></div>` : ''}
   <div class="t-sep"></div>
   <div class="t-lettres">${this.montantEnLettres(netAPayer)}</div>
-  <div class="t-sep"></div>
-  <div style="display:flex;justify-content:space-between;font-weight:bold"><span>Caissier</span><span>Client</span></div>
-  <div style="height:14mm"></div>
   <div class="t-thanks">Merci de votre confiance !</div>
+  ${inv.createdBy ? `<div class="t-line small"><span>Agent</span><span>${this.h(inv.createdBy)}</span></div>` : ''}
+  <div class="t-sep"></div>
+  <div class="t-sig-box">
+    <div class="t-sig-lbl">Signature du livreur</div>
+    <div class="t-sig-name">Nom : ___________________________</div>
+    <div class="t-sig-area"></div>
+  </div>
+  <div class="t-sig-gap"></div>
+  <div class="t-sig-box">
+    <div class="t-sig-lbl">Cachet &amp; signature client</div>
+    <div class="t-sig-name">Nom : ___________________________</div>
+    <div class="t-sig-area"></div>
+  </div>
 </div>`;
   }
 
@@ -619,7 +628,7 @@ export class PrintPreviewComponent {
     const netAPayer = inv.netAPayer ?? inv.totalTTC ?? 0;
     const linesHtml = this.purchaseInvoiceLines.map(l => `
       <tr>
-        <td class="tname">${this.h(l.description || l.productCode)}</td>
+        <td class="tname">${this.h(l.productCode || l.description)}</td>
         <td class="r">${this.fmt(l.quantity)}×${this.fmt(l.prixUnitaire)}</td>
         <td class="r">${this.fmt(l.montantTTC)}</td>
       </tr>`).join('');

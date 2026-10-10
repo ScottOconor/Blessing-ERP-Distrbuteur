@@ -208,15 +208,12 @@
             <div class="tkt-sep"></div>
             <div class="tkt-row"><span>Date</span><span>{{ fmtDate(invoice?.date) }}</span></div>
             <div class="tkt-row"><span>Client</span><span>{{ invoice?.partnerName }}</span></div>
-            @if (invoice?.createdBy) {
-              <div class="tkt-row"><span>Agent</span><span>{{ invoice!.createdByName || invoice!.createdBy }}</span></div>
-            }
             @if (invoice?.notes) {
               <div class="tkt-row"><span>Notes</span><span>{{ invoice!.notes }}</span></div>
             }
             <div class="tkt-sep"></div>
             @for (l of salesLines; track $index) {
-              <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+              <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
               <div class="tkt-prod-row">
                 <span>{{ fmt(l.quantity) }} × {{ fmt(l.prixUnitaireTTC ?? l.prixUnitaire) }}</span>
                 <span class="tbold">{{ fmt(l.montantTTC) }} F</span>
@@ -225,14 +222,14 @@
             @if (consigneLines.length) {
               <div class="tkt-sep-label">— Consignes —</div>
               @for (l of consigneLines; track $index) {
-                <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
                 <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>{{ fmt(l.montantTTC) }} F</span></div>
               }
             }
             @if (deconsigneLines.length) {
               <div class="tkt-sep-label">— Déconsignes —</div>
               @for (l of deconsigneLines; track $index) {
-                <div class="tkt-prod-name">{{ l.description || l.productCode }}</div>
+                <div class="tkt-prod-name">{{ l.productCode || l.description }}</div>
                 <div class="tkt-prod-row"><span>{{ fmt(l.quantity) }}</span><span>-{{ fmt(l.montantTTC) }} F</span></div>
               }
             }
@@ -285,12 +282,21 @@
             }
             <div class="tkt-sep"></div>
             <div class="tkt-lettres">{{ montantEnLettres(invoice?.netAPayer ?? invoice?.totalTTC) }}</div>
-            <div class="tkt-sep"></div>
-            <div style="display:flex;justify-content:space-between;font-weight:600">
-              <span>Caissier</span><span>Client</span>
-            </div>
-            <div style="height:14mm"></div>
             <div class="tkt-thanks">Merci de votre confiance !</div>
+            @if (invoice?.createdBy) {
+              <div class="tkt-row sm"><span>Agent</span><span>{{ invoice!.createdBy }}</span></div>
+            }
+            <div class="tkt-sep"></div>
+            <div class="tkt-sig-box">
+              <div class="tkt-sig-lbl">Signature du livreur</div>
+              <div class="tkt-sig-name">Nom : ___________________________</div>
+              <div class="tkt-sig-area"></div>
+            </div>
+            <div class="tkt-sig-box" style="margin-top:3mm">
+              <div class="tkt-sig-lbl">Cachet &amp; signature client</div>
+              <div class="tkt-sig-name">Nom : ___________________________</div>
+              <div class="tkt-sig-area"></div>
+            </div>
           </div>
         }
 
