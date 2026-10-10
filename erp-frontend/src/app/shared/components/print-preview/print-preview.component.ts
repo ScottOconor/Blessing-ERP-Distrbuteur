@@ -416,7 +416,7 @@ export class PrintPreviewComponent {
   }
 
   /** Ticket de facture (80 mm) sur le modèle des factures eLeader : en-tête société, bloc client,
-   *  tableau Art / Qté / PU / PT par sections (Commande, Emballages, Retours), totaux détaillés,
+   *  tableau Art / Qté / PU / PT par sections (Commande, Consignes, Déconsignes), totaux détaillés,
    *  net à payer, règlements, puis tableaux ristournes / taxe Guinness et signatures. */
   private buildTicketBody(): string {
     const inv = this.invoice!;
@@ -492,8 +492,8 @@ export class PrintPreviewComponent {
     <thead><tr><th>Art</th><th class="r" colspan="2">Qté</th><th class="r">PU</th><th class="r">PT</th></tr></thead>
     <tbody>
       ${commande ? section('Commande') + commande : ''}
-      ${emballages ? section('Emballages') + emballages : ''}
-      ${retours ? section('Retours') + retours : ''}
+      ${emballages ? section('Consignes') + emballages : ''}
+      ${retours ? section('Déconsignes') + retours : ''}
     </tbody>
   </table>
 
