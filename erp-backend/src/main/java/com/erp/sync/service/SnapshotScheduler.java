@@ -1,5 +1,6 @@
 package com.erp.sync.service;
 
+import com.erp.sync.entity.SyncEventType;
 import com.erp.sync.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,8 @@ public class SnapshotScheduler {
                initialDelayString = "${sync.snapshot.initial-delay-ms:60000}")
     public void run() {
         LocalDateTime now = LocalDateTime.now();
-        if (lastSnapshotAt != null && outboxEventRepo.countByCreatedAtAfter(lastSnapshotAt) == 0) {
+        if (lastSnapshotAt != null && outboxEventRepo.countByCreatedAtAfterAndEventTypeNot(
+                lastSnapshotAt, SyncEventType.FULL_SNAPSHOT) == 0) {
             log.debug("Snapshot horaire ignoré : aucune activité depuis {}", lastSnapshotAt);
             return;
         }

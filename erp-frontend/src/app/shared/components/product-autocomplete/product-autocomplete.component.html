@@ -1,0 +1,26 @@
+<div class="pa-wrap">
+  <span class="material-icons pa-icon">search</span>
+  <input type="text" class="pa-input" autocomplete="off"
+         [placeholder]="selected() ? '' : placeholder()"
+         [value]="open() ? query() : label(selected())"
+         (focus)="onFocus()"
+         (input)="onInput($any($event.target).value)"
+         (keydown)="onKeydown($event)" />
+  @if (productId() != null) {
+    <button type="button" class="pa-clear" title="Tous les articles" (click)="clear()">
+      <span class="material-icons">close</span>
+    </button>
+  }
+  @if (open()) {
+    <div class="pa-dropdown">
+      @for (p of suggestions(); track p.id; let i = $index) {
+        <div class="pa-item" [class.active]="i === activeIndex()" (mousedown)="$event.preventDefault(); select(p)">
+          @if (p.defaultCode) { <span class="pa-code">{{ p.defaultCode }}</span> }
+          <span class="pa-name">{{ p.name }}</span>
+        </div>
+      } @empty {
+        <div class="pa-empty">Aucun article trouvé</div>
+      }
+    </div>
+  }
+</div>

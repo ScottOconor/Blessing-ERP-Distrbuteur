@@ -207,3 +207,7 @@
 .code-badge { background: var(--primary-subtle); color: var(--primary); padding: 1px 6px; border-radius: 3px; font-size: 11px; font-family: monospace; }
 .move-ref { font-family: monospace; font-size: 11px; background: var(--bg-hover); padding: 1px 5px; border-radius: 3px; }
 .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
+
+// Pastilles par catégorie d'article
+.cat-chips-categories { margin-top: -4px; }
+.cat-chip-sm { padding: 4px 10px; font-size: 11px; font-weight: 500; }

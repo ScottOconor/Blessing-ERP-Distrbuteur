@@ -100,10 +100,16 @@ public class PermissionService {
         new PermissionRule("POST",   "/api/stock/categories",        "STOCK","PRODUITS","CREATE"),
         new PermissionRule("PUT",    "/api/stock/categories/**",     "STOCK","PRODUITS","EDIT"),
         new PermissionRule("DELETE", "/api/stock/categories/**",     "STOCK","PRODUITS","DELETE"),
+        // Unités de mesure : rattachées au catalogue (absentes jusqu'ici → refus systématique
+        // en fail-closed, qui bloquait tout l'écran Articles, chargé d'un bloc avec elles)
+        new PermissionRule("GET",    "/api/stock/units-of-measure",    "STOCK","PRODUITS","VIEW"),
+        new PermissionRule("POST",   "/api/stock/units-of-measure",    "STOCK","PRODUITS","CREATE"),
+        new PermissionRule("PUT",    "/api/stock/units-of-measure/**", "STOCK","PRODUITS","EDIT"),
+        new PermissionRule("DELETE", "/api/stock/units-of-measure/**", "STOCK","PRODUITS","DELETE"),
         new PermissionRule("GET",    "/api/stock/dashboard",         "STOCK","MOUVEMENTS","VIEW"),
         new PermissionRule("GET",    "/api/stock/picking-types",     "STOCK","MOUVEMENTS","VIEW"),
-        new PermissionRule("GET",    "/api/stock/warehouses",        "STOCK","MOUVEMENTS","VIEW"),
-        new PermissionRule("GET",    "/api/stock/warehouses/**",     "STOCK","MOUVEMENTS","VIEW"),
+        new PermissionRule("GET",    "/api/stock/warehouses",        "STOCK","PRODUITS|MOUVEMENTS|INVENTAIRE","VIEW"),
+        new PermissionRule("GET",    "/api/stock/warehouses/**",     "STOCK","PRODUITS|MOUVEMENTS|INVENTAIRE","VIEW"),
         new PermissionRule("POST",   "/api/stock/warehouses",        "STOCK","MOUVEMENTS","EDIT"),
         new PermissionRule("PUT",    "/api/stock/warehouses/**",     "STOCK","MOUVEMENTS","EDIT"),
         new PermissionRule("DELETE", "/api/stock/warehouses/**",     "STOCK","MOUVEMENTS","EDIT"),
@@ -403,6 +409,8 @@ public class PermissionService {
      */
     public boolean hasContextEquivalent(Authentication auth, PermissionRule rule, String uri, String context) {
         if (context == null) return false;
+        String ctx = context.toUpperCase();
+        if (isReferenceRead(rule, uri, ctx) && hasAnyModuleView(auth, ctx)) return true;
         return switch (context.toUpperCase()) {
             case "CAISSE" -> hasAny(auth, caisseEquivalents(rule, uri));
             case "CONFIG" -> hasAny(auth, configEquivalents(rule));
@@ -410,6 +418,49 @@ public class PermissionService {
             case "ACHATS" -> hasAny(auth, catalogueEquivalents(rule, uri, "ACHATS"));
             default       -> false;
         };
+    }
+
+    /** Modules dont les écrans envoient leur contexte (X-Erp-Context). */
+    private static final java.util.Set<String> SCREEN_MODULES = java.util.Set.of(
+            "VENTES", "ACHATS", "STOCK", "COMPTABILITE", "CAISSE", "CONFIG", "RH", "HELPDESK");
+
+    /**
+     * Listes de référence lues par les écrans de plusieurs modules (articles, catégories, unités,
+     * entrepôts, emplacements, stocks, comptes, journaux, partenaires, clients, vendeurs,
+     * fournisseurs, précomptes, tarifs d'enlèvement). Lecture seule. Les agences distantes n'en
+     * font pas partie (leur liste expose les clés API inter-agences).
+     */
+    private static boolean isReferenceRead(PermissionRule rule, String uri, String context) {
+        if (!"VIEW".equals(rule.action())) return false;
+        // Fiches client / fournisseur : leurs ristournes / remises, dans leur propre module
+        if ("VENTES".equals(context) && uri.startsWith("/api/ristournes/partner/")) return true;
+        if ("ACHATS".equals(context) && uri.startsWith("/api/remises/partner/")) return true;
+        return uri.equals("/api/stock/products") || uri.startsWith("/api/stock/products/")
+                || uri.equals("/api/stock/categories")
+                || uri.equals("/api/stock/units-of-measure")
+                || uri.equals("/api/stock/warehouses") || uri.startsWith("/api/stock/warehouses/")
+                || uri.equals("/api/stock/locations")
+                || uri.equals("/api/stock/picking-types")
+                || uri.equals("/api/stock/quants")
+                || uri.equals("/api/accounting/accounts") || uri.startsWith("/api/accounting/accounts/")
+                || uri.equals("/api/accounting/journals") || uri.startsWith("/api/accounting/journals/")
+                || uri.equals("/api/accounting/partners") || uri.startsWith("/api/accounting/partners/")
+                || uri.equals("/api/sales/clients") || uri.equals("/api/sales/sellers")
+                || uri.startsWith("/api/purchases/suppliers/")
+                || uri.equals("/api/precomptes") || uri.equals("/api/enlevements");
+    }
+
+    /**
+     * Un utilisateur qui consulte au moins un écran d'un module (n'importe quel droit VIEW de ce
+     * module) peut lire, depuis ce module, les listes de référence dont ses écrans ont besoin —
+     * sans quoi un écran autorisé se bloque ou affiche « Accès refusé » parce qu'une de ses listes
+     * dépend d'un autre droit (ex. Ajustements → articles et emplacements).
+     */
+    private static boolean hasAnyModuleView(Authentication auth, String module) {
+        if (!SCREEN_MODULES.contains(module)) return false;
+        String prefix = "PERM_" + module + "_";
+        return auth.getAuthorities().stream().map(a -> a.getAuthority())
+                .anyMatch(a -> a.startsWith(prefix) && a.endsWith("_VIEW"));
     }
 
     private static List<String> caisseEquivalents(PermissionRule rule, String uri) {
@@ -425,20 +476,37 @@ public class PermissionService {
         };
     }
     /**
-     * Bons et factures de vente / d'achat : lecture du catalogue (articles, catégories, entrepôts,
-     * et tarifs d'enlèvement pour les ventes)
-     * avec les droits du module lui-même. Le droit STOCK.PRODUITS peut ainsi être retiré à un rôle
-     * pour lui masquer les articles du module Stock sans l'empêcher de saisir ses bons.
+     * Écrans Ventes / Achats (bons, factures, clients, fournisseurs) : ils lisent des données
+     * d'autres modules (catalogue, entrepôts, journaux, partenaires, tarifs/coûts d'enlèvement).
+     * Ces lectures sont accordées avec les droits Commandes/Factures du module lui-même, pour
+     * qu'un vendeur sans droit Stock ou Comptabilité ne reçoive pas de 403 (« Accès refusé »)
+     * alors que son opération aboutit. Le droit STOCK.PRODUITS peut ainsi être retiré à un rôle
+     * pour lui masquer le module Stock sans l'empêcher de saisir ses bons. Création/modification
+     * d'un partenaire (client/fournisseur depuis un bon) suivent CREATE/EDIT ; jamais DELETE.
      */
     private static List<String> catalogueEquivalents(PermissionRule rule, String uri, String module) {
-        if (!"VIEW".equals(rule.action())) return List.of();
-        boolean catalogue = uri.equals("/api/stock/products") || uri.startsWith("/api/stock/products/")
-                || uri.equals("/api/stock/categories")
-                || uri.equals("/api/stock/warehouses") || uri.startsWith("/api/stock/warehouses/")
-                // tarifs d'enlèvement : inclus dans le prix TTC des bons de vente
-                || ("VENTES".equals(module) && uri.equals("/api/enlevements"));
-        if (!catalogue) return List.of();
-        return List.of("PERM_" + module + "_COMMANDES_VIEW", "PERM_" + module + "_FACTURES_VIEW");
+        String action = rule.action();
+        boolean partners = uri.equals("/api/accounting/partners") || uri.startsWith("/api/accounting/partners/");
+        if ("VIEW".equals(action)) {
+            boolean lecture = uri.equals("/api/stock/products") || uri.startsWith("/api/stock/products/")
+                    || uri.equals("/api/stock/categories")
+                    || uri.equals("/api/stock/warehouses") || uri.startsWith("/api/stock/warehouses/")
+                    || uri.equals("/api/accounting/journals")
+                    || partners
+                    // tarifs d'enlèvement (prix TTC des bons) et coûts d'une facture d'achat
+                    || uri.equals("/api/enlevements") || uri.startsWith("/api/enlevements/invoice/")
+                    // listes de saisie d'un bon de vente : clients, solde, prix client, vendeurs
+                    || ("VENTES".equals(module) && (uri.equals("/api/sales/clients")
+                        || uri.startsWith("/api/sales/partners/") || uri.startsWith("/api/sales/client-prices")
+                        || uri.equals("/api/sales/sellers")));
+            if (!lecture) return List.of();
+            return List.of("PERM_" + module + "_COMMANDES_VIEW", "PERM_" + module + "_FACTURES_VIEW");
+        }
+        boolean clientDepuisBon = "VENTES".equals(module) && uri.equals("/api/sales/clients") && "CREATE".equals(action);
+        if ((partners || clientDepuisBon) && ("CREATE".equals(action) || "EDIT".equals(action))) {
+            return List.of("PERM_" + module + "_COMMANDES_" + action, "PERM_" + module + "_FACTURES_" + action);
+        }
+        return List.of();
     }
 
     private static List<String> configEquivalents(PermissionRule rule) {

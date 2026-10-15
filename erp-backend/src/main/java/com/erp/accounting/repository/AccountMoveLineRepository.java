@@ -31,7 +31,6 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
         LEFT JOIN FETCH l.analyticDistributions d
         LEFT JOIN FETCH d.analyticAccount
         LEFT JOIN FETCH l.account
-        LEFT JOIN FETCH l.company
         WHERE l.move.id = :moveId
     """)
     List<AccountMoveLine> findByMoveIdWithAnalytic(@Param("moveId") Long moveId);

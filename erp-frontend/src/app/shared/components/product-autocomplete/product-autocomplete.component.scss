@@ -1,0 +1,24 @@
+:host { display: block; min-width: 240px; }
+.pa-wrap { position: relative; display: flex; align-items: center; }
+.pa-icon { position: absolute; left: 8px; font-size: 18px; color: var(--text-muted); pointer-events: none; }
+.pa-input {
+  width: 100%; padding: 7px 30px 7px 32px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; background: var(--bg-surface); color: var(--text-primary); outline: none;
+  &:focus { border-color: var(--accent); }
+}
+.pa-clear {
+  position: absolute; right: 4px; border: none; background: none; cursor: pointer; color: var(--text-muted);
+  display: flex; padding: 2px; .material-icons { font-size: 16px; }
+  &:hover { color: var(--text-primary); }
+}
+.pa-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50; max-height: 300px; overflow-y: auto;
+  background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.pa-item {
+  display: flex; gap: 8px; align-items: center; padding: 7px 10px; font-size: 13px; cursor: pointer; color: var(--text-primary);
+  &:hover, &.active { background: var(--bg-hover); }
+}
+.pa-code { font-family: monospace; font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.pa-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-empty { padding: 8px 10px; font-size: 12px; color: var(--text-muted); }

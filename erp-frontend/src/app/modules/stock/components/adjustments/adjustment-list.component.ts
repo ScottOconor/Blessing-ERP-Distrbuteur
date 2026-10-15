@@ -36,7 +36,6 @@ export class AdjustmentListComponent implements OnInit {
   filterWarehouseId: number | null = null;
   filterLocationId: number | null = null;
   filterSearch = '';
-  filterCat = 'autres'; // 'autres'(=tous) | 'articles' | 'guinness' | 'brasseries' | 'emballages' | 'bouteilles'
   filterWithStock = false; // filtre : uniquement les produits avec stock > 0
   notes = '';
   adjDate: string = new Date().toISOString().split('T')[0];
@@ -175,13 +174,38 @@ export class AdjustmentListComponent implements OnInit {
     return null;
   }
 
+  /**
+   * Filtres cochés (sélection multiple, cumulés en « OU ») : groupes ('grp:guinness',
+   * 'grp:emballages'…) et catégories d'articles ('cat:BIERES 12'…). Aucun filtre = tout afficher.
+   */
+  selectedFilters = new Set<string>();
+
+  toggleFilter(key: string): void {
+    if (this.selectedFilters.has(key)) this.selectedFilters.delete(key);
+    else this.selectedFilters.add(key);
+    this.applyInventoryFilter();
+  }
+
+  clearFilters(): void {
+    this.selectedFilters.clear();
+    this.applyInventoryFilter();
+  }
+
+  private categoryLabel(l: InventoryLine): string {
+    return (l.categoryName || '').trim() || 'Sans catégorie';
+  }
+
+  private matchesFilter(l: InventoryLine, key: string): boolean {
+    const [kind, value] = [key.slice(0, 4), key.slice(4)];
+    if (kind === 'cat:') return this.categoryLabel(l) === value;
+    if (value === 'guinness' || value === 'brasseries') return this.articleFamily(l) === value;
+    return this.catGroup(l) === value;
+  }
+
   private matchesCat(l: InventoryLine): boolean {
-    switch (this.filterCat) {
-      case 'autres':     return true;
-      case 'guinness':
-      case 'brasseries': return this.articleFamily(l) === this.filterCat;
-      default:           return this.catGroup(l) === this.filterCat;
-    }
+    if (this.selectedFilters.size === 0) return true;
+    for (const key of this.selectedFilters) if (this.matchesFilter(l, key)) return true;
+    return false;
   }
 
   get catCounts(): Record<string, number> {
@@ -193,6 +217,18 @@ export class AdjustmentListComponent implements OnInit {
       if (f) c[f]++;
     });
     return c;
+  }
+
+  /** Une pastille par catégorie d'article présente dans l'inventaire, avec son nombre d'articles. */
+  get categoryOptions(): { name: string; count: number }[] {
+    const counts = new Map<string, number>();
+    this.inventoryLines.forEach(l => {
+      const name = this.categoryLabel(l);
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   applyInventoryFilter(): void {

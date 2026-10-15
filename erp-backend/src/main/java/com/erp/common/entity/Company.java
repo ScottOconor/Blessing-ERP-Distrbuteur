@@ -2,6 +2,7 @@ package com.erp.common.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,17 +27,23 @@ public class Company {
     private String email;
     private String logoUrl;
 
-    @Column(columnDefinition = "bytea")
-    private byte[] logoData;
-
+    // Les images (logo_data, app_logo_data) sont mappées sur CompanyLogo, pas ici : Company est
+    // chargée partout (User EAGER à chaque requête, jointures des écritures...) et chaque ligne de
+    // résultat recopiait les deux logos — OutOfMemoryError sur GET /moves dès 200 écritures
+    // (erp.log du 2026-10-14). Seuls les indicateurs calculés en SQL restent ici.
     private String logoContentType;
+
+    @Formula("(logo_data IS NOT NULL AND length(logo_data) > 0)")
+    @Setter(AccessLevel.NONE)
+    private boolean hasLogo;
 
     /** Nom affiché dans le titre du navigateur et l'en-tête de l'app */
     private String appName;
 
-    /** Logo favicon et en-tête app */
-    @Column(name = "app_logo_data", columnDefinition = "bytea")
-    private byte[] appLogoData;
+    /** Logo favicon et en-tête app (données : CompanyLogo) */
+    @Formula("(app_logo_data IS NOT NULL AND length(app_logo_data) > 0)")
+    @Setter(AccessLevel.NONE)
+    private boolean hasAppLogo;
 
     @Column(name = "app_logo_content_type")
     private String appLogoContentType;

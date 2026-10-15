@@ -40,21 +40,12 @@
       </div>
       <div class="filter-group">
         <label>Catégorie (optionnel)</label>
-        <select [(ngModel)]="categoryId" class="f-ctrl">
-          <option [ngValue]="null">— Toutes —</option>
-          @for (c of categories; track c.id) {
-            <option [value]="c.id">{{ c.name }}</option>
-          }
-        </select>
+        <app-category-autocomplete [categories]="categories" [(categoryId)]="categoryId"
+                                   (categoryIdChange)="onCategoryChange()" />
       </div>
       <div class="filter-group">
         <label>Article (optionnel)</label>
-        <select [(ngModel)]="productId" class="f-ctrl">
-          <option [ngValue]="null">— Tous —</option>
-          @for (p of products; track p.id) {
-            <option [value]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
-          }
-        </select>
+        <app-product-autocomplete [products]="products" [categoryId]="categoryId" [(productId)]="productId" />
       </div>
     </div>
 

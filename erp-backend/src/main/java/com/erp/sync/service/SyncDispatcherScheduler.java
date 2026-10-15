@@ -265,7 +265,9 @@ public class SyncDispatcherScheduler {
      */
     @Scheduled(fixedDelayString = "${sync.dispatch.interval-ms:30000}")
     public void dispatch() {
-        List<OutboxEvent> pending = outboxRepo.findByStatusOrderByCreatedAtAscIdAsc(
+        // Ids seuls puis chargement un par un : un lot de BATCH_SIZE entités complètes (parties de
+        // FULL_SNAPSHOT jusqu'à 8 Mo chacune) suffisait à épuiser le heap (incident du 2026-10-13).
+        List<Long> pending = outboxRepo.findIdsByStatus(
                 OutboxStatus.PENDING, PageRequest.of(0, BATCH_SIZE));
 
         if (pending.isEmpty()) return;
@@ -275,7 +277,9 @@ public class SyncDispatcherScheduler {
         lastBatchSize = pending.size();
         int sent = 0;
 
-        for (OutboxEvent event : pending) {
+        for (Long eventId : pending) {
+            OutboxEvent event = outboxRepo.findById(eventId).orElse(null);
+            if (event == null || event.getStatus() != OutboxStatus.PENDING) continue;
             try {
                 SyncMessage msg = buildMessage(event);
                 String routingKey = "erp.sync." + event.getEventType().name().toLowerCase();
@@ -340,11 +344,7 @@ public class SyncDispatcherScheduler {
 
     @Transactional
     public int requeueFailed() {
-        List<OutboxEvent> failed = outboxRepo.findByStatusOrderByCreatedAtAscIdAsc(
-                OutboxStatus.FAILED, PageRequest.of(0, 500));
-        failed.forEach(e -> { e.setStatus(OutboxStatus.PENDING); e.setRetryCount(0); });
-        outboxRepo.saveAll(failed);
-        return failed.size();
+        return outboxRepo.requeueAllFailed();
     }
 
     /** Supprime définitivement les événements FAILED — à utiliser seulement quand ces opérations
@@ -365,23 +365,16 @@ public class SyncDispatcherScheduler {
     @Scheduled(fixedDelayString = "${sync.dispatch.retry-failed-interval-ms:300000}")
     @Transactional
     public void autoRequeueFailed() {
-        List<OutboxEvent> failed = outboxRepo.findByStatusOrderByCreatedAtAscIdAsc(
-                OutboxStatus.FAILED, PageRequest.of(0, 500));
-        List<OutboxEvent> toRequeue = failed.stream()
-                .filter(e -> e.getAutoRequeueCount() < MAX_AUTO_REQUEUES)
-                .toList();
-        int poisoned = failed.size() - toRequeue.size();
+        // UPDATE/COUNT en masse : charger les entités FAILED (payloads de FULL_SNAPSHOT compris)
+        // provoquait un OutOfMemoryError toutes les 5 min pendant une coupure broker (2026-10-13).
+        long poisoned = outboxRepo.countByStatusAndAutoRequeueCountGreaterThanEqual(
+                OutboxStatus.FAILED, MAX_AUTO_REQUEUES);
         if (poisoned > 0) {
             log.warn("Sync: {} événement(s) FAILED laissé(s) tel quel (>{} reprises automatiques déjà tentées) — reprise manuelle requise",
                     poisoned, MAX_AUTO_REQUEUES);
         }
-        toRequeue.forEach(e -> {
-            e.setStatus(OutboxStatus.PENDING);
-            e.setRetryCount(0);
-            e.setAutoRequeueCount(e.getAutoRequeueCount() + 1);
-        });
-        outboxRepo.saveAll(toRequeue);
-        if (!toRequeue.isEmpty()) log.info("Sync: {} événement(s) FAILED remis en PENDING automatiquement", toRequeue.size());
+        int requeued = outboxRepo.requeueFailedBelow(MAX_AUTO_REQUEUES);
+        if (requeued > 0) log.info("Sync: {} événement(s) FAILED remis en PENDING automatiquement", requeued);
     }
 
     /**

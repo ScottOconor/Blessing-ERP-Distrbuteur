@@ -11,10 +11,13 @@ import { ExcelExportService } from '../../../../core/services/excel-export.servi
 
 type ReportMode = 'analytique' | 'detaille';
 
+import { ProductAutocompleteComponent } from '../../../../shared/components/product-autocomplete/product-autocomplete.component';
+import { CategoryAutocompleteComponent } from '../../../../shared/components/category-autocomplete/category-autocomplete.component';
+
 @Component({
   selector: 'app-stock-analysis-report',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProductAutocompleteComponent, CategoryAutocompleteComponent],
   templateUrl: './stock-analysis-report.component.html',
   styleUrl:   './stock-analysis-report.component.scss'
 })
@@ -26,6 +29,13 @@ export class StockAnalysisReportComponent implements OnInit {
   warehouseIds: number[] = [];
   productId: number | null = null;
   categoryId: number | null = null;
+
+  /** L'article choisi doit appartenir à la catégorie choisie : sinon on le désélectionne. */
+  onCategoryChange(): void {
+    if (this.categoryId == null || this.productId == null) return;
+    const p = this.products.find(x => x.id === Number(this.productId));
+    if (p && p.categoryId !== Number(this.categoryId)) this.productId = null;
+  }
   mode: ReportMode = 'analytique';
 
   // Référentiels

@@ -36,19 +36,34 @@
 
       <!-- Chips type produit -->
       <div class="cat-chips">
+        <button class="cat-chip" [class.active]="selectedFilters.size === 0" (click)="clearFilters()">
+          <span class="material-icons">apps</span>
+          Tous
+          <span class="cat-count">{{ catCounts['autres'] }}</span>
+        </button>
         @for (tab of [
-          { k: 'autres',     label: 'Tous',        icon: 'apps'        },
           { k: 'articles',   label: 'Articles',     icon: 'local_bar'   },
           { k: 'guinness',   label: 'Guinness',     icon: 'sports_bar'  },
           { k: 'brasseries', label: 'Brasseries',   icon: 'factory'     },
           { k: 'emballages', label: 'Emballages',   icon: 'inventory_2' },
           { k: 'bouteilles', label: 'Bouteilles',   icon: 'liquor'      }
         ]; track tab.k) {
-          <button class="cat-chip" [class.active]="filterCat === tab.k"
-                  (click)="filterCat = tab.k; applyInventoryFilter()">
+          <button class="cat-chip" [class.active]="selectedFilters.has('grp:' + tab.k)"
+                  (click)="toggleFilter('grp:' + tab.k)">
             <span class="material-icons">{{ tab.icon }}</span>
             {{ tab.label }}
             <span class="cat-count">{{ catCounts[tab.k] }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Chips catégories d'articles (sélection multiple, cumulée avec les groupes ci-dessus) -->
+      <div class="cat-chips cat-chips-categories">
+        @for (c of categoryOptions; track c.name) {
+          <button class="cat-chip cat-chip-sm" [class.active]="selectedFilters.has('cat:' + c.name)"
+                  (click)="toggleFilter('cat:' + c.name)">
+            {{ c.name }}
+            <span class="cat-count">{{ c.count }}</span>
           </button>
         }
       </div>

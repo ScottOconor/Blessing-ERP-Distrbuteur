@@ -805,16 +805,19 @@ public class AccountingService {
         // est maintenant borné par la taille d'un lot, plus par celle de la période.
         for (int i = 0; i < allIds.size(); i += JOURNAL_ENTRIES_CHUNK_SIZE) {
             final List<Long> chunk = allIds.subList(i, Math.min(i + JOURNAL_ENTRIES_CHUNK_SIZE, allIds.size()));
+            // Pas de fetch de "company" (ni sur l'écriture ni sur ses lignes) : Company porte les
+            // logos en bytea (logo_data, app_logo_data), recopiés dans CHAQUE ligne du ResultSet —
+            // 2 × logo × nombre de lignes comptables par lot de 200 écritures. GET /moves tombait
+            // en OutOfMemoryError à chaque ouverture de l'écran (erp.log du 2026-10-14). toMoveDTO
+            // n'en lit que l'id, que le proxy LAZY connaît sans requête.
             Specification<AccountMove> spec = (root, query, cb) -> {
                 query.distinct(true);
                 root.fetch("journal", JoinType.LEFT);
-                root.fetch("company", JoinType.LEFT);
                 root.fetch("partner", JoinType.LEFT);
                 Fetch<AccountMove, AccountMoveLine> linesFetch = root.fetch("lines", JoinType.LEFT);
                 linesFetch.fetch("account", JoinType.LEFT);
                 linesFetch.fetch("partner", JoinType.LEFT);
                 linesFetch.fetch("journal", JoinType.LEFT);
-                linesFetch.fetch("company", JoinType.LEFT);
                 linesFetch.fetch("analyticAccount", JoinType.LEFT);
                 return root.get("id").in(chunk);
             };

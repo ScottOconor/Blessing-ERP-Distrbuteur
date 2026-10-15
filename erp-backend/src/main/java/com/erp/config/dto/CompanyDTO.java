@@ -15,7 +15,6 @@ public class CompanyDTO {
     private String telephone;
     private String email;
     private String logoUrl;
-    private byte[] logoData;
     private String logoContentType;
     private String appName;
     private boolean hasAppLogo;

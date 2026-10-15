@@ -52,6 +52,7 @@ public class StockService {
     private final ProductCategoryRepository categoryRepo;
     private final UnitOfMeasureRepository uomRepo;
     private final ProductRepository productRepo;
+    private final ProductPhotoDataRepository productPhotoRepo;
     private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
     private final WarehouseRepository warehouseRepo;
     private final StockLocationRepository locationRepo;
@@ -546,25 +547,24 @@ public class StockService {
     public void uploadProductPhoto(Long productId, byte[] data, String contentType) {
         Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
         tenantGuard.check(p.getCompanyId());
-        p.setPhotoData(data);
+        productPhotoRepo.findById(productId).orElseThrow().setPhotoData(data);
         p.setPhotoContentType(contentType);
-        productRepo.save(p);
     }
 
     @Transactional(readOnly = true)
     public ProductPhoto getProductPhoto(Long productId) {
         Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
-        if (p.getPhotoData() == null) return null;
-        return new ProductPhoto(p.getPhotoData(), p.getPhotoContentType());
+        byte[] data = productPhotoRepo.findById(productId).map(ProductPhotoData::getPhotoData).orElse(null);
+        if (data == null) return null;
+        return new ProductPhoto(data, p.getPhotoContentType());
     }
 
     @Transactional
     public void deleteProductPhoto(Long productId) {
         Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
         tenantGuard.check(p.getCompanyId());
-        p.setPhotoData(null);
+        productPhotoRepo.findById(productId).orElseThrow().setPhotoData(null);
         p.setPhotoContentType(null);
-        productRepo.save(p);
     }
 
     /**
@@ -623,7 +623,7 @@ public class StockService {
                 .exemptTvaAchat(Boolean.TRUE.equals(p.getExemptTvaAchat()))
                 .companyId(p.getCompanyId()).qtyOnHand(qtyOnHand)
                 .qtyReserved(reserved).qtyAvailable(available)
-                .hasPhoto(p.getPhotoData() != null)
+                .hasPhoto(p.isHasPhoto())
                 .createdAt(p.getCreatedAt())
                 .build();
     }

@@ -15,8 +15,35 @@ import java.util.List;
 
 public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> {
 
-    /** Utilisé pour ne pas renvoyer un snapshot complet quand rien ne s'est produit depuis le précédent. */
-    long countByCreatedAtAfter(LocalDateTime since);
+    /** Utilisé pour ne pas renvoyer un snapshot complet quand rien ne s'est produit depuis le précédent.
+     *  Les FULL_SNAPSHOT sont exclus : le snapshot crée lui-même ses événements outbox, qui
+     *  comptaient comme de l'« activité » et relançaient un snapshot toutes les heures, même la
+     *  nuit sans aucune opération (incident du 2026-10-13). */
+    long countByCreatedAtAfterAndEventTypeNot(LocalDateTime since, SyncEventType eventType);
+
+    /** Ids seuls (sans `payload`) : un FULL_SNAPSHOT pèse jusqu'à 8 Mo par partie — charger un lot
+     *  d'entités complètes épuisait le heap JVM quand le broker était injoignable et que les
+     *  parties s'accumulaient (incident du 2026-10-13, OutOfMemoryError toutes les 5 min).
+     *  Tri par id en second critère : deux événements insérés dans la MÊME transaction métier
+     *  (ex. ACCOUNT_MOVE_FROM_SALE puis SALE_INVOICE_POSTED) reçoivent des createdAt indépendants,
+     *  sans garantie d'ordre stable en cas d'égalité — l'id d'insertion donne l'ordre réel. */
+    @Query("SELECT e.id FROM OutboxEvent e WHERE e.status = :status ORDER BY e.createdAt ASC, e.id ASC")
+    List<Long> findIdsByStatus(@Param("status") OutboxStatus status, Pageable pageable);
+
+    long countByStatusAndAutoRequeueCountGreaterThanEqual(OutboxStatus status, int autoRequeueCount);
+
+    /** Reprise automatique en masse, sans charger les payloads. */
+    @Modifying
+    @Query("UPDATE OutboxEvent e SET e.status = com.erp.sync.entity.OutboxStatus.PENDING, e.retryCount = 0, "
+         + "e.autoRequeueCount = e.autoRequeueCount + 1 "
+         + "WHERE e.status = com.erp.sync.entity.OutboxStatus.FAILED AND e.autoRequeueCount < :maxAutoRequeues")
+    int requeueFailedBelow(@Param("maxAutoRequeues") int maxAutoRequeues);
+
+    /** Reprise manuelle en masse, sans charger les payloads. */
+    @Modifying
+    @Query("UPDATE OutboxEvent e SET e.status = com.erp.sync.entity.OutboxStatus.PENDING, e.retryCount = 0 "
+         + "WHERE e.status = com.erp.sync.entity.OutboxStatus.FAILED")
+    int requeueAllFailed();
 
     /**
      * Supprime une contrainte CHECK héritée sur event_type (ex : sync_outbox_events_event_type_check)
@@ -30,12 +57,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Query(value = "ALTER TABLE sync_outbox_events DROP CONSTRAINT IF EXISTS sync_outbox_events_event_type_check",
            nativeQuery = true)
     void dropStaleEventTypeCheckConstraint();
-
-    // Tri par id en second critère : deux événements insérés dans la MÊME transaction métier
-    // (ex. ACCOUNT_MOVE_FROM_SALE puis SALE_INVOICE_POSTED) reçoivent des createdAt indépendants,
-    // sans garantie d'ordre stable en cas d'égalité — l'id d'insertion (auto-incrémenté) donne
-    // l'ordre réel, déterministe, quelle que soit la résolution de l'horloge JVM.
-    List<OutboxEvent> findByStatusOrderByCreatedAtAscIdAsc(OutboxStatus status, Pageable pageable);
 
     long countByStatus(OutboxStatus status);
 

@@ -21,12 +21,7 @@
       <span class="material-icons">search</span>
       <input type="text" [(ngModel)]="search" (ngModelChange)="applyFilter()" placeholder="Rechercher..." />
     </div>
-    <select [(ngModel)]="filterProductId" (ngModelChange)="load()" class="filter-select">
-      <option [ngValue]="null">Tous les articles</option>
-      @for (p of products; track p.id) {
-        <option [ngValue]="p.id">{{ p.defaultCode ? '[' + p.defaultCode + '] ' : '' }}{{ p.name }}</option>
-      }
-    </select>
+    <app-product-autocomplete [products]="products" [(productId)]="filterProductId" (productIdChange)="load()" />
     <select [(ngModel)]="limit" (ngModelChange)="load()" class="filter-select">
       <option [value]="50">50 derniers</option>
       <option [value]="100">100 derniers</option>

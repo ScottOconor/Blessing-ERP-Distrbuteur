@@ -17,6 +17,12 @@ function moduleContext(router: Router): string | null {
   // Bons/factures : lecture des articles sans exiger le droit Stock › Produits
   if (url.startsWith('/sales')) return 'VENTES';
   if (url.startsWith('/purchases')) return 'ACHATS';
+  // Autres modules : lecture des listes de référence (articles, comptes, journaux…) avec
+  // n'importe quel droit de consultation du module
+  if (url.startsWith('/stock')) return 'STOCK';
+  if (url.startsWith('/accounting')) return 'COMPTABILITE';
+  if (url.startsWith('/hr')) return 'RH';
+  if (url.startsWith('/helpdesk')) return 'HELPDESK';
   return null;
 }
 

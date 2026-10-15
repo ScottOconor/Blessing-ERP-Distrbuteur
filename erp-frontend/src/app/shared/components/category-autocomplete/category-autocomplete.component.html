@@ -1,0 +1,25 @@
+<div class="pa-wrap">
+  <span class="material-icons pa-icon">search</span>
+  <input type="text" class="pa-input" autocomplete="off"
+         [placeholder]="selected() ? '' : placeholder()"
+         [value]="open() ? query() : (selected()?.name ?? '')"
+         (focus)="onFocus()"
+         (input)="onInput($any($event.target).value)"
+         (keydown)="onKeydown($event)" />
+  @if (categoryId() != null) {
+    <button type="button" class="pa-clear" title="Toutes les catégories" (click)="clear()">
+      <span class="material-icons">close</span>
+    </button>
+  }
+  @if (open()) {
+    <div class="pa-dropdown">
+      @for (c of suggestions(); track c.id; let i = $index) {
+        <div class="pa-item" [class.active]="i === activeIndex()" (mousedown)="$event.preventDefault(); select(c)">
+          <span class="pa-name">{{ c.name }}</span>
+        </div>
+      } @empty {
+        <div class="pa-empty">Aucune catégorie trouvée</div>
+      }
+    </div>
+  }
+</div>

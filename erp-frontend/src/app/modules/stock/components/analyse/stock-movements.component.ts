@@ -5,10 +5,12 @@ import { StockService, StockMove, Product } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ExcelExportService } from '../../../../core/services/excel-export.service';
 
+import { ProductAutocompleteComponent } from '../../../../shared/components/product-autocomplete/product-autocomplete.component';
+
 @Component({
   selector: 'app-stock-movements',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProductAutocompleteComponent],
   templateUrl: './stock-movements.component.html',
   styleUrl: './stock-movements.component.scss'
 })
