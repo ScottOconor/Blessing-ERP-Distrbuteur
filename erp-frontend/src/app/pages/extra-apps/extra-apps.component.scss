@@ -192,3 +192,18 @@
   }
   .material-icons { font-size: 19px; color: var(--app-color, var(--primary)); }
 }
+/* ── En-tête adapté à la place réelle (zoom, petit écran) — directive NavAutoCollapse ── */
+.brand-name-block { min-width: 0; }
+.brand-text, .brand-tagline { white-space: nowrap; }
+.header-brand { min-width: 0; }
+.extra-header.nav-compact, .extra-header.nav-collapsed {
+  .brand-tagline { display: none; }
+}
+.extra-header.nav-collapsed .btn-back {
+  font-size: 0; gap: 0; .material-icons { font-size: 18px; }
+}
+
+// Les éléments de droite ne se compriment pas (ils se chevauchaient) : le manque de place devient
+// un débordement mesurable, qui déclenche le niveau suivant.
+.extra-header .header-right { flex-shrink: 0; min-width: auto; }
+.extra-header .header-right > * { flex-shrink: 0; }

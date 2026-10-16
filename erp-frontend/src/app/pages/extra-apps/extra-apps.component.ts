@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { AppBrandingService } from '../../core/services/app-branding.service';
 import { ModuleService, BUSINESS_MODULES, BusinessModuleMeta } from '../../core/services/module.service';
+import { NavAutoCollapseDirective } from '../../shared/directives/nav-auto-collapse.directive';
 
 interface ExtraApp {
   id: string;
@@ -23,7 +24,7 @@ interface ModuleCard extends BusinessModuleMeta {
 @Component({
   selector: 'app-extra-apps',
   standalone: true,
-  imports: [CommonModule],
+  imports: [NavAutoCollapseDirective, CommonModule],
   templateUrl: './extra-apps.component.html',
   styleUrl: './extra-apps.component.scss'
 })

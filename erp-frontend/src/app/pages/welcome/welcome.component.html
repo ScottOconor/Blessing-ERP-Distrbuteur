@@ -1,6 +1,6 @@
 <div class="welcome-page">
   <!-- HEADER -->
-  <header class="welcome-header">
+  <header class="welcome-header" appNavAutoCollapse>
     <div class="header-brand">
       <div class="brand-icon" [class.has-logo]="branding.hasAppLogo">
         @if (branding.hasAppLogo) {
@@ -48,6 +48,11 @@
             <span class="material-icons">rocket_launch</span>
             K·I·R·A ERP v1.0
           </div>
+          <!-- Sur petit écran, le visuel cliquable de droite est masqué : accès par ce bouton. -->
+          <button type="button" class="hero-extra-btn" (click)="goToExtraApps()">
+            <span class="material-icons">apps</span>
+            Applications supplémentaires
+          </button>
         </div>
       </div>
       <!-- Icône de navigation vers les apps supplémentaires -->

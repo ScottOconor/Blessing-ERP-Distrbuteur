@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { AppBrandingService } from '../../core/services/app-branding.service';
 import { ModuleService, BUSINESS_MODULES, BusinessModuleMeta } from '../../core/services/module.service';
+import { NavAutoCollapseDirective } from '../../shared/directives/nav-auto-collapse.directive';
 
 interface Module extends BusinessModuleMeta {
   available: boolean;
@@ -13,7 +14,7 @@ interface Module extends BusinessModuleMeta {
 @Component({
   selector: 'app-welcome',
   standalone: true,
-  imports: [CommonModule],
+  imports: [NavAutoCollapseDirective, CommonModule],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.scss'
 })
