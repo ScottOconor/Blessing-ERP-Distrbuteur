@@ -521,6 +521,16 @@ public class SalesService {
                             BigDecimal tauxEnlev = ol.getFraisEnlevement().divide(ol.getQuantity(), 6, RoundingMode.HALF_UP);
                             fraisEnlev = tauxEnlev.multiply(qty).setScale(2, RoundingMode.HALF_UP);
                         }
+                        // TVA des frais : proratisée comme le HT — l'avoir reprend exactement ce qui
+                        // a été facturé (sans elle, l'avoir ne débitait pas le 443200 et créditait
+                        // le client de moins que la facture d'origine).
+                        BigDecimal fraisEnlevTVA = ZERO;
+                        if (ol.getFraisEnlevementTVA() != null && ol.getQuantity() != null
+                                && ol.getQuantity().compareTo(ZERO) > 0) {
+                            fraisEnlevTVA = ol.getFraisEnlevementTVA()
+                                    .divide(ol.getQuantity(), 6, RoundingMode.HALF_UP)
+                                    .multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                        }
                         BigDecimal fraisEnlevSupp = ZERO;
                         if (ol.getFraisEnlevementSupplement() != null && ol.getQuantity() != null
                                 && ol.getQuantity().compareTo(ZERO) > 0) {
@@ -556,6 +566,7 @@ public class SalesService {
                                 .montantTVA(montantTVA)
                                 .montantTTC(ttc)
                                 .fraisEnlevement(fraisEnlev)
+                                .fraisEnlevementTVA(fraisEnlevTVA)
                                 .fraisEnlevementSupplement(fraisEnlevSupp)
                                 .precompte(precompte)
                                 .consigne(ol.isConsigne())
@@ -591,6 +602,7 @@ public class SalesService {
                             .montantTTC(ol.getMontantTTC())
                             .precompte(ol.getPrecompte())
                             .fraisEnlevement(ol.getFraisEnlevement())
+                            .fraisEnlevementTVA(ol.getFraisEnlevementTVA())
                             .fraisEnlevementSupplement(ol.getFraisEnlevementSupplement())
                             .consigne(ol.isConsigne())
                             .guinessTaxe(ol.getGuinessTaxe())
