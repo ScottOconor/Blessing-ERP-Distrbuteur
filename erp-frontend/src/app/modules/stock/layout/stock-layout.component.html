@@ -1,5 +1,5 @@
 <div class="stock-layout">
-  <nav class="stk-navbar">
+  <nav class="stk-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <div class="stk-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {
           <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">

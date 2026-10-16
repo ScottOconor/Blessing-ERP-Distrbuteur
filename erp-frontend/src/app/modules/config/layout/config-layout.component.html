@@ -1,5 +1,5 @@
 <div class="cfg-layout">
-  <nav class="cfg-navbar">
+  <nav class="cfg-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <div class="cfg-brand" (click)="goHome()">
       <span class="material-icons">chevron_left</span>
       <div class="brand-icon"><span class="material-icons">settings</span></div>

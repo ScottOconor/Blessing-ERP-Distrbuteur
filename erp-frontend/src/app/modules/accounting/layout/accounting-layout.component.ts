@@ -5,11 +5,12 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { CompanyService } from '../../../core/services/company.service';
 import { AppBrandingService } from '../../../core/services/app-branding.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-collapse.directive';
 
 @Component({
   selector: 'app-accounting-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [NavAutoCollapseDirective, CommonModule, RouterOutlet],
   templateUrl: './accounting-layout.component.html',
   styleUrl: './accounting-layout.component.scss'
 })

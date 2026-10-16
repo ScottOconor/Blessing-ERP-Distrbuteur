@@ -1,5 +1,5 @@
 <div class="sync-layout">
-  <nav class="sync-navbar">
+  <nav class="sync-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <div class="sync-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {
           <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">

@@ -1,6 +1,6 @@
 <div class="sales-layout">
   <!-- TOP NAVBAR -->
-  <nav class="sls-navbar">
+  <nav class="sls-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <!-- Brand -->
     <div class="sls-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {

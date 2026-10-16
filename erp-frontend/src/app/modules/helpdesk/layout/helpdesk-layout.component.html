@@ -1,5 +1,5 @@
 <div class="hd-layout">
-  <nav class="hd-navbar">
+  <nav class="hd-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <div class="hd-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {
           <img [src]="branding.appLogoUrl" class="nav-app-logo" alt="">

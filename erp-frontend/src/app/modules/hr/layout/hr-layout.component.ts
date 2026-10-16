@@ -4,14 +4,15 @@ import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { AppBrandingService } from '../../../core/services/app-branding.service';
+import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-collapse.directive';
 
 @Component({
   selector: 'app-hr-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [NavAutoCollapseDirective, CommonModule, RouterOutlet],
   template: `
     <div class="hr-layout">
-      <nav class="hr-navbar">
+      <nav class="hr-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
         <div class="hr-brand" (click)="goHome()">
           <span class="material-icons">chevron_left</span>
           <div class="brand-icon"><span class="material-icons">badge</span></div>

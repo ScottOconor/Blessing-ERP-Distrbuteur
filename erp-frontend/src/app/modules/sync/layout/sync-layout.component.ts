@@ -4,11 +4,12 @@ import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { AppBrandingService } from '../../../core/services/app-branding.service';
+import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-collapse.directive';
 
 @Component({
   selector: 'app-sync-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [NavAutoCollapseDirective, CommonModule, RouterOutlet],
   templateUrl: './sync-layout.component.html',
   styleUrl: './sync-layout.component.scss'
 })

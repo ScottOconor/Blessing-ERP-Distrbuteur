@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-collapse.directive';
 
 @Component({
   selector: 'app-config-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [NavAutoCollapseDirective, CommonModule, RouterOutlet],
   templateUrl: './config-layout.component.html',
   styleUrl: './config-layout.component.scss'
 })

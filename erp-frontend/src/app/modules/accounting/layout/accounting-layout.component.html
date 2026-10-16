@@ -1,6 +1,6 @@
 <div class="accounting-layout">
   <!-- TOP NAVBAR -->
-  <nav class="acc-navbar">
+  <nav class="acc-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <!-- Brand -->
     <div class="acc-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {

@@ -46,8 +46,31 @@
     z-index: 40; opacity: 0; animation: navBackdropIn .25s ease forwards;
   }
 
+  // Mode hamburger : sous $bp, ou dès que la barre ne tient plus sur une ligne (classe
+  // nav-collapsed posée par la directive NavAutoCollapseDirective — zoom, nom long, etc.).
   @media (max-width: #{$bp}) {
-    .nav-hamburger { display: inline-flex; margin-left: auto; }
+    @include collapsed-rules;
+  }
+  .nav-collapsed {
+    @include collapsed-rules;
+  }
+
+  // Sur une seule ligne dans la barre : un nom trop long déclenche le niveau compact au lieu de
+  // passer sur deux lignes (il repasse à la ligne normalement dans le tiroir).
+  .user-pill, .user-name-sm, .company-name, .user-name, .company-btn { white-space: nowrap; }
+
+  // Niveau intermédiaire : nom d'utilisateur et société masqués (l'avatar et les boutons restent).
+  .nav-compact {
+    .user-name-sm, .company-name, .user-name { display: none !important; }
+    .company-btn > span:not(.material-icons) { display: none !important; }
+  }
+
+  // Pas de transition pendant les mesures de la directive (rien ne doit s'animer au retour).
+  .nav-no-anim, .nav-no-anim * { transition: none !important; }
+}
+
+@mixin collapsed-rules {
+    .nav-hamburger { display: inline-flex; margin-left: auto; margin-right: 8px; align-self: center; }
 
     // The drawer is a page-surface overlay, not part of the permanently-dark
     // top bar — it follows the app's light/dark theme like any other panel,
@@ -147,6 +170,8 @@
       // colors on desktop — no override needed.
     }
 
+    .user-pill, .user-name-sm, .company-name, .user-name { white-space: normal; }
+
     .user-pill {
       padding: 8px 2px; color: var(--text-primary) !important;
       .company-name { color: var(--text-muted) !important; }
@@ -171,8 +196,6 @@
       border-color: var(--border) !important; color: var(--text-secondary) !important;
       &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
     }
-
-  }
 }
 
 @keyframes navBackdropIn { from { opacity: 0; } to { opacity: 1; } }

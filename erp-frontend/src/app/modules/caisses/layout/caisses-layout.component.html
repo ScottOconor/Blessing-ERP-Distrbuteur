@@ -1,6 +1,6 @@
 <div class="caisses-layout">
   <!-- TOP NAVBAR -->
-  <nav class="cai-navbar">
+  <nav class="cai-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
     <!-- Brand -->
     <div class="cai-brand" (click)="goHome()">
               @if (branding.hasAppLogo) {
