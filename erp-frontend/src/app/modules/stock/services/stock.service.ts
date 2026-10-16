@@ -21,6 +21,11 @@ export interface UnitOfMeasure {
   companyId: number;
 }
 
+export interface DuplicateProductCode {
+  code: string;
+  products: { id: number; defaultCode: string; name: string; active: boolean }[];
+}
+
 export interface Product {
   id?: number;
   defaultCode?: string;
@@ -458,6 +463,13 @@ export class StockService {
   }
 
   // Products
+  getProduct(id: number): Observable<Product> {
+    return this.http.get<Product>(`${this.api}/products/${id}`);
+  }
+  /** Références portées par plusieurs articles (à corriger : la base ne garantit l'unicité qu'une fois résolues). */
+  getDuplicateCodes(companyId: number): Observable<DuplicateProductCode[]> {
+    return this.http.get<DuplicateProductCode[]>(`${this.api}/products/duplicate-codes`, { params: new HttpParams().set('companyId', companyId) });
+  }
   getProducts(companyId: number, warehouseId?: number): Observable<Product[]> {
     let params = new HttpParams().set('companyId', companyId);
     if (warehouseId) params = params.set('warehouseId', warehouseId);

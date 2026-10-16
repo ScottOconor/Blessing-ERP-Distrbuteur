@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest } from '../../services/stock.service';
+import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest, DuplicateProductCode } from '../../services/stock.service';
 import { SalesService, SalesClient, PrixClientArticle } from '../../../sales/services/sales.service';
 import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/services/purchase.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
@@ -114,8 +114,28 @@ export class ProductListComponent implements OnInit {
     this.load();
   }
 
+  /** Références en double (données antérieures au contrôle d'unicité) : signalées en tête d'écran. */
+  duplicateCodes: DuplicateProductCode[] = [];
+  showDuplicates = false;
+
+  private loadDuplicateCodes(): void {
+    if (this.serviceMode) return;
+    this.stockService.getDuplicateCodes(this.companyId).subscribe({
+      next: d => this.duplicateCodes = d,
+      error: () => this.duplicateCodes = []
+    });
+  }
+
+  /** Ouvre l'article à corriger (y compris un article désactivé, absent de la liste). */
+  editDuplicate(id: number): void {
+    const p = this.products.find(x => x.id === id);
+    if (p) { this.openEdit(p); return; }
+    this.stockService.getProduct(id).subscribe(prod => this.openEdit(prod));
+  }
+
   load(): void {
     this.loading = true;
+    this.loadDuplicateCodes();
     const whId = this.selectedWarehouseId !== '' ? +this.selectedWarehouseId : undefined;
     forkJoin({
       products: this.stockService.getProducts(this.companyId, whId),

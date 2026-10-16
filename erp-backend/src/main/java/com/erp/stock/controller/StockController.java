@@ -1,6 +1,7 @@
 package com.erp.stock.controller;
 
 import com.erp.common.repository.CompanyRepository;
+import com.erp.config.ProductCodeUniqueIndexInitializer;
 import com.erp.common.service.TenantGuard;
 import com.erp.stock.dto.*;
 import com.erp.stock.repository.StockPickingTypeRepository;
@@ -29,6 +30,7 @@ public class StockController {
     private final BordereauExportService bordereauExportService;
     private final StockPickingTypeRepository pickingTypeRepo;
     private final CompanyRepository companyRepository;
+    private final ProductCodeUniqueIndexInitializer productCodeIndex;
     private final TenantGuard tenantGuard;
 
     // ---- Categories ----
@@ -86,6 +88,12 @@ public class StockController {
         return ResponseEntity.ok(stockService.getProducts(companyId, warehouseId));
     }
 
+    /** Références portées par plusieurs articles : à corriger depuis l'écran Articles. */
+    @GetMapping("/products/duplicate-codes")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getDuplicateCodes(@RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(productCodeIndex.findDuplicates(companyId));
+    }
+
     @GetMapping("/products/{id}")
     public ResponseEntity<ProductDTO> getProduct(@PathVariable("id") Long id) {
         return ResponseEntity.ok(stockService.getProduct(id));
@@ -98,12 +106,15 @@ public class StockController {
 
     @PutMapping("/products/{id}")
     public ResponseEntity<ProductDTO> updateProduct(@PathVariable("id") Long id, @RequestBody ProductDTO dto) {
-        return ResponseEntity.ok(stockService.updateProduct(id, dto));
+        ProductDTO updated = stockService.updateProduct(id, dto);
+        productCodeIndex.ensureIndex(); // un doublon de référence a peut-être été corrigé
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/products/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable("id") Long id) {
         stockService.deleteProduct(id);
+        productCodeIndex.ensureIndex();
         return ResponseEntity.noContent().build();
     }
 

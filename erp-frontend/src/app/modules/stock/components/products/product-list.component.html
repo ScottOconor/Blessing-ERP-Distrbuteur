@@ -30,6 +30,34 @@
 
   @if (successMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ successMsg }}</div> }
 
+  @if (duplicateCodes.length) {
+    <div class="alert alert-warning dup-alert">
+      <span class="material-icons">warning</span>
+      <div class="dup-body">
+        <div>
+          <strong>{{ duplicateCodes.length }} référence(s) utilisée(s) par plusieurs articles.</strong>
+          Une référence doit être unique : modifiez la référence de l'un des articles (ou supprimez le doublon).
+          Tant qu'il en reste, la base ne peut pas bloquer de nouveaux doublons.
+          <button type="button" class="btn-link" (click)="showDuplicates = !showDuplicates">
+            {{ showDuplicates ? 'Masquer' : 'Voir la liste' }}
+          </button>
+        </div>
+        @if (showDuplicates) {
+          <ul class="dup-list">
+            @for (d of duplicateCodes; track d.code) {
+              <li>
+                <span class="font-mono"><strong>{{ d.code }}</strong></span> :
+                @for (p of d.products; track p.id; let last = $last) {
+                  <a class="dup-link" (click)="editDuplicate(p.id)" title="Modifier cet article">{{ p.name }}@if (!p.active) { <em> (désactivé)</em> }</a>@if (!last) {<span>, </span>}
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+
   <div class="toolbar">
     <input class="search-input" placeholder="Rechercher par nom, référence..." [(ngModel)]="search" (ngModelChange)="applyFilter()" />
     @if (!serviceMode && warehouses.length > 1) {

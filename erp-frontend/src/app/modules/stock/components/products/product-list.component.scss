@@ -162,3 +162,14 @@ textarea.form-control { resize: vertical; }
   font-size: 13px; font-weight: 500; color: var(--text-primary);
   .toggle-hint { color: var(--text-muted); font-weight: 400; font-size: 12px; }
 }
+
+/* Références en double */
+.dup-alert {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--warning-bg, #fff7e6); border: 1px solid var(--warning, #f5a524); color: var(--text-primary);
+  .material-icons { color: var(--warning, #d97706); }
+  .dup-body { flex: 1; font-size: 13px; line-height: 1.5; }
+  .btn-link { background: none; border: none; color: var(--primary); cursor: pointer; padding: 0 4px; font-weight: 600; }
+  .dup-list { margin: 8px 0 0; padding-left: 18px; }
+  .dup-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+}

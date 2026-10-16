@@ -526,7 +526,7 @@ public class ConfigExportService {
             Long categoryId = catName != null ? catIds.get(catName.toLowerCase()) : null;
             String type = str(row, "type") != null ? str(row, "type") : "product";
             Product p = code != null && !code.isBlank()
-                    ? productRepo.findFirstByCompanyIdAndDefaultCodeIgnoreCase(companyId, code).orElse(null)
+                    ? productRepo.findByNormalizedCode(companyId, code).stream().findFirst().orElse(null)
                     : productRepo.findFirstByCompanyIdAndNameIgnoreCaseAndCategoryIdAndType(
                             companyId, name.trim(), categoryId, type).orElse(null);
             if (p == null) {
