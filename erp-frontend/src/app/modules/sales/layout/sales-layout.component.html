@@ -16,10 +16,6 @@
     <!-- Nav divider -->
     <div class="nav-divider"></div>
 
-    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
-      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
-    </button>
-
     <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
       <!-- Main Navigation -->
       <nav class="sls-nav nav-links">
@@ -67,42 +63,46 @@
           }
         }
       </nav>
-
-      <!-- Right side -->
-      <div class="nav-right">
-        @if (companies.length > 1) {
-          <div class="company-selector" [class.open]="showCompanyPicker">
-            <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
-              <span class="material-icons">business</span>
-              <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
-              <span class="material-icons arrow">expand_more</span>
-            </button>
-            @if (showCompanyPicker) {
-              <div class="company-dropdown">
-                @for (c of companies; track c.id) {
-                  <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
-                    <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
-                    <span class="company-opt-name">{{ c.name }}</span>
-                    @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
-                  </button>
-                }
-              </div>
-            }
-          </div>
-        }
-        <div class="user-pill">
-          <div class="user-avatar-sm">{{ userInitials }}</div>
-          <span class="user-name-sm">{{ userName }}</span>
-          <span class="company-name">| {{ companyDisplayName }}</span>
-        </div>
-        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
-          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
-        </button>
-        <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
-          <span class="material-icons">logout</span>
-        </button>
-      </div>
     </div>
+
+    <!-- Right side -->
+    <div class="nav-right">
+      @if (companies.length > 1) {
+        <div class="company-selector" [class.open]="showCompanyPicker">
+          <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
+            <span class="material-icons">business</span>
+            <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
+            <span class="material-icons arrow">expand_more</span>
+          </button>
+          @if (showCompanyPicker) {
+            <div class="company-dropdown">
+              @for (c of companies; track c.id) {
+                <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
+                  <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                  <span class="company-opt-name">{{ c.name }}</span>
+                  @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+      <div class="user-pill">
+        <div class="user-avatar-sm">{{ userInitials }}</div>
+        <span class="user-name-sm">{{ userName }}</span>
+        <span class="company-name">| {{ companyDisplayName }}</span>
+      </div>
+      <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+        <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+      <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+        <span class="material-icons">logout</span>
+      </button>
+    </div>
+
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
   </nav>
   @if (mobileMenuOpen) {
     <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>

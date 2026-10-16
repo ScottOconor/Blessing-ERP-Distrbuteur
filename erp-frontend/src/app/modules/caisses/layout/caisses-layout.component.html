@@ -15,10 +15,6 @@
 
     <div class="nav-divider"></div>
 
-    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
-      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
-    </button>
-
     <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
       <!-- Main Navigation -->
       <nav class="cai-nav nav-links">
@@ -54,21 +50,25 @@
           }
         }
       </nav>
-
-      <!-- Right side -->
-      <div class="nav-right">
-        <div class="user-pill">
-          <div class="user-avatar-sm">{{ userInitials }}</div>
-          <span class="user-name-sm">{{ userName }}</span>
-        </div>
-        <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
-          <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
-        </button>
-        <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
-          <span class="material-icons">logout</span>
-        </button>
-      </div>
     </div>
+
+    <!-- Right side -->
+    <div class="nav-right">
+      <div class="user-pill">
+        <div class="user-avatar-sm">{{ userInitials }}</div>
+        <span class="user-name-sm">{{ userName }}</span>
+      </div>
+      <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+        <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+      </button>
+      <button class="btn-nav-logout" (click)="logout()" title="Se déconnecter">
+        <span class="material-icons">logout</span>
+      </button>
+    </div>
+
+    <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+      <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+    </button>
   </nav>
   @if (mobileMenuOpen) {
     <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>

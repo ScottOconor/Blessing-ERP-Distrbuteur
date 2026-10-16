@@ -1,17 +1,17 @@
 // Shared responsive behaviour for the module top navbars.
-// Below $bp, the horizontal nav + right-side controls move into an
-// off-canvas drawer opened by a hamburger button, instead of squeezing
-// or scrolling horizontally.
+// When the bar no longer fits (NavAutoCollapse directive) or below $bp, the
+// navigation links move into an off-canvas drawer opened by a hamburger
+// button; account, theme and logout stay visible in the bar.
 //
 // Markup contract expected in the layout template:
-//   <nav class="X-navbar">
+//   <nav class="X-navbar" appNavAutoCollapse (collapsedChange)="mobileMenuOpen = mobileMenuOpen && $event">
 //     <div class="X-brand">...</div>
 //     <div class="nav-divider"></div>
-//     <button class="nav-hamburger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.active]="mobileMenuOpen"> ... </button>
 //     <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
 //       <nav class="X-nav nav-links"> ...existing nav-link / nav-item-dropdown loop... </nav>
-//       <div class="nav-right"> ...existing right-side controls... </div>
 //     </div>
+//     <div class="nav-right"> ...compte, thème, déconnexion : restent dans la barre... </div>
+//     <button class="nav-hamburger" (click)="mobileMenuOpen = !mobileMenuOpen" [class.active]="mobileMenuOpen"> ... </button>
 //   </nav>
 //   @if (mobileMenuOpen) { <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div> }
 
@@ -97,16 +97,11 @@
       }
     }
 
-    .nav-links, .nav-right {
+    .nav-links {
       display: flex !important; flex-direction: column !important; align-items: stretch !important;
       flex: none !important; width: 100%; overflow: visible !important;
     }
 
-    .nav-right {
-      border-top: 1px solid var(--border);
-      margin: 10px 0 0 !important; padding: 14px 16px 0 !important;
-      gap: 10px !important;
-    }
 
     .nav-link {
       height: auto !important; width: 100%; padding: 13px 18px !important;
@@ -154,48 +149,12 @@
       &.open .dropdown-panel { display: flex !important; animation: navAccordionIn .22s ease; }
     }
 
-    .company-selector {
-      width: 100%;
-
-      .company-btn {
-        width: 100%; justify-content: space-between;
-        background: var(--bg-elevated) !important; border-color: var(--border) !important;
-        color: var(--text-primary) !important;
-      }
-      .company-dropdown {
-        position: static; box-shadow: none; border: none; margin-top: 6px;
-        width: 100%; animation: none; padding-left: 8px; background: var(--bg-elevated);
-      }
-      // .company-option already uses theme-aware --text-primary/--text-muted
-      // colors on desktop — no override needed.
-    }
-
-    .user-pill, .user-name-sm, .company-name, .user-name { white-space: normal; }
-
-    .user-pill {
-      padding: 8px 2px; color: var(--text-primary) !important;
-      .company-name { color: var(--text-muted) !important; }
-    }
-
-    // Helpdesk/Config/HR use `.user-name` (not `.user-pill > .user-name-sm`)
-    // for the same purpose.
-    .user-name { color: var(--text-primary) !important; }
-
-    .btn-theme-toggle {
-      border-color: var(--border) !important; color: var(--text-secondary) !important;
-      &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
-    }
-
-    .btn-nav-logout, .btn-logout {
-      border-color: var(--border) !important; color: var(--text-secondary) !important;
-      &:hover { background: var(--danger-bg) !important; border-color: var(--danger) !important; color: var(--danger) !important; }
-    }
-
-    // HR reuses one class for both the theme toggle and logout buttons.
-    .btn-icon-nav {
-      border-color: var(--border) !important; color: var(--text-secondary) !important;
-      &:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
-    }
+    // Compte, thème et déconnexion restent dans la barre (hors du tiroir) : version compacte,
+    // avatar seul, pour laisser la place au bouton menu.
+    .nav-right { margin-left: auto !important; flex: none !important; }
+    .nav-hamburger { margin-left: 8px; }
+    .user-name-sm, .company-name, .user-name { display: none !important; }
+    .company-btn > span:not(.material-icons) { display: none !important; }
 }
 
 @keyframes navBackdropIn { from { opacity: 0; } to { opacity: 1; } }

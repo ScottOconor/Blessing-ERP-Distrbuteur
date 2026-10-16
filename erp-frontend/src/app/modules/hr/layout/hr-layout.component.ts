@@ -20,10 +20,6 @@ import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-co
         </div>
         <div class="nav-divider"></div>
 
-        <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
-          <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
-        </button>
-
         <div class="nav-mobile-panel" [class.open]="mobileMenuOpen">
           <div class="hr-nav nav-links">
             @for (item of navItems; track item.route) {
@@ -33,15 +29,20 @@ import { NavAutoCollapseDirective } from '../../../shared/directives/nav-auto-co
               </a>
             }
           </div>
-          <div class="hr-user nav-right">
-            <div class="user-badge"><span class="user-initials">{{ authService.getUserInitials() }}</span></div>
-            <span class="user-name">{{ authService.getUserDisplayName() }}</span>
-            <button class="btn-icon-nav" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
-              <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
-            </button>
-            <button class="btn-icon-nav" (click)="logout()" title="Déconnexion"><span class="material-icons">logout</span></button>
-          </div>
         </div>
+
+        <div class="hr-user nav-right">
+          <div class="user-badge"><span class="user-initials">{{ authService.getUserInitials() }}</span></div>
+          <span class="user-name">{{ authService.getUserDisplayName() }}</span>
+          <button class="btn-icon-nav" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
+            <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+          </button>
+          <button class="btn-icon-nav" (click)="logout()" title="Déconnexion"><span class="material-icons">logout</span></button>
+        </div>
+
+        <button type="button" class="nav-hamburger" [class.active]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Ouvrir le menu">
+          <span class="material-icons">{{ mobileMenuOpen ? 'close' : 'menu' }}</span>
+        </button>
       </nav>
       @if (mobileMenuOpen) {
         <div class="nav-backdrop" (click)="mobileMenuOpen = false"></div>
