@@ -112,8 +112,15 @@ export class EnlevementListComponent implements OnInit {
   closeModal(): void { this.showModal = false; }
 
   saveConfig(): void {
-    if (!this.form.categoryId || !this.form.montantFixe) {
-      this.errMsg = 'Catégorie et montant fixe requis.'; return;
+    if (!this.form.categoryId) {
+      this.errMsg = 'La catégorie est requise.'; return;
+    }
+    // 0 FCFA est un montant valide (catégorie sans frais d'enlèvement mais avec un coût) :
+    // seul un champ vide est ramené à 0, un négatif est refusé.
+    this.form.montantFixe = this.form.montantFixe ?? 0;
+    this.form.coutEnlevement = this.form.coutEnlevement ?? 0;
+    if (this.form.montantFixe < 0 || this.form.coutEnlevement < 0) {
+      this.errMsg = 'Les montants ne peuvent pas être négatifs.'; return;
     }
     this.saving = true; this.errMsg = '';
     this.svc.save({ ...this.form, companyId: this.companyId }).subscribe({
