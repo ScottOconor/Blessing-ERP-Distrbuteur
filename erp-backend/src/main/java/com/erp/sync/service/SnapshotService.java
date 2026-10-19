@@ -63,6 +63,7 @@ public class SnapshotService {
     private final SalesOrderRepository           salesOrderRepo;
     private final PurchaseOrderRepository        purchaseOrderRepo;
     private final com.erp.stock.repository.WarehouseRepository warehouseRepo;
+    private final com.erp.stock.repository.ProductCategoryRepository categoryRepo;
 
     @Value("${sync.spoke.id}")   private String spokeId;
     @Value("${sync.spoke.name}") private String spokeName;
@@ -366,7 +367,6 @@ public class SnapshotService {
             log.warn("Erreur calcul marges société {} : {}", cid, e.getMessage());
         }
 
-        BigDecimal totalStock = orZ(stockQuantRepo.computeTotalStockValue(cid));
         List<StockQuant> quants = stockQuantRepo.findAllWithStock(cid);
         long totalRef = quants.size();
 
@@ -380,6 +380,15 @@ public class SnapshotService {
         Map<Long, com.erp.stock.entity.Product> productById = productRepo.findAllById(quantProductIds).stream()
                 .collect(Collectors.toMap(com.erp.stock.entity.Product::getId, p -> p, (a, b) -> a));
 
+        // Emballages = articles de la catégorie EMBALLAGES (nom contenant « emballag », même règle
+        // que StockService.applyEmballagesTvaExempt) ; la liste de codes reste un filet pour les
+        // articles pas encore classés. Avant : liste de codes seule → tout emballage créé depuis
+        // (nouveau code) comptait dans Produits.
+        Set<Long> emballageCategoryIds = categoryRepo.findByCompanyIdOrderByNameAsc(cid).stream()
+                .filter(c -> c.getName() != null && c.getName().toLowerCase().contains("emballag"))
+                .map(com.erp.stock.entity.ProductCategory::getId)
+                .collect(Collectors.toSet());
+
         BigDecimal valProduits  = BigDecimal.ZERO;
         BigDecimal valEmballages = BigDecimal.ZERO;
         List<SpokeSnapshotPayload.StockItem> topStock = new ArrayList<>();
@@ -392,7 +401,9 @@ public class SnapshotService {
                     : BigDecimal.ZERO;
             BigDecimal valeur = q.getQuantity().multiply(price);
             String     code   = p != null && p.getDefaultCode() != null ? p.getDefaultCode().strip().toUpperCase() : "";
-            String     cat    = EMBALLAGE_CODES.contains(code) ? "EMBALLAGE" : "PRODUIT";
+            boolean    emb    = (p != null && p.getCategoryId() != null && emballageCategoryIds.contains(p.getCategoryId()))
+                    || EMBALLAGE_CODES.contains(code);
+            String     cat    = emb ? "EMBALLAGE" : "PRODUIT";
 
             if ("EMBALLAGE".equals(cat)) valEmballages = valEmballages.add(valeur);
             else                         valProduits   = valProduits.add(valeur);
@@ -406,6 +417,11 @@ public class SnapshotService {
                     .valeurStock(valeur)
                     .build());
         }
+
+        // Total = Produits + Emballages, valorisés comme le rapport de stock du spoke (CMUP de
+        // l'entrepôt de chaque quant). Avant : total recalculé à part au prix standard
+        // (computeTotalStockValue) → il ne correspondait jamais à la somme des deux cartes.
+        BigDecimal totalStock = valProduits.add(valEmballages);
 
         topStock = topStock.stream()
                 .sorted(Comparator.comparing(SpokeSnapshotPayload.StockItem::getValeurStock).reversed())
