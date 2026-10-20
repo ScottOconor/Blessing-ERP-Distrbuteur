@@ -251,7 +251,7 @@
                               (focus)="openSuggestions(i, $event)"
                               (blur)="closeSuggestions(i)"
                               (input)="openSuggestions(i, $event)"
-                              (keydown.enter)="onProductSearchEnter(i, $event)"
+                              [id]="'pav-product-' + i" (keydown.enter)="onProductSearchEnter(i, $event)"
                               autocomplete="off" />
                             @if (line.productCode) {
                               <button class="btn-clr" (click)="clearLine(i)">
@@ -282,18 +282,18 @@
                         </div>
                       </td>
                       <td>
-                        <input type="number" class="inp ar" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" />
+                        <input type="number" class="inp ar" [id]="'pav-qty-' + i" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter(i, $event)" />
                         @if (lineStockQty[i] !== undefined) {
                           <span class="stock-tag" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
                             {{ lineStockQty[i] | number:'1.0-0' }} dispo
                           </span>
                         }
                       </td>
-                      <td><input type="number" class="inp ar" [ngModel]="lineCatHT[i]" (ngModelChange)="onCatHTChange(i, $event)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td><input type="number" class="inp ar" [ngModel]="lineCatHT[i]" (ngModelChange)="onCatHTChange(i, $event)" min="0" (keydown.enter)="onLineEnter(i, $event)" /></td>
                       <td class="ar" style="color:#e65100;font-weight:600">
                         @if ((line.rabaisUnitaire ?? 0) > 0) { – {{ line.rabaisUnitaire | number:'1.0-0' }} } @else { — }
                       </td>
-                      <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter($event)" /></td>
+                      <td><input type="number" class="inp ar" [(ngModel)]="line.tauxTVA" (ngModelChange)="onLineChange(line)" min="0" (keydown.enter)="onLineEnter(i, $event)" /></td>
                       <td class="ar amt">{{ line.montantHT | number:'1.0-0' }}</td>
                       <td class="ar amt-ttc">{{ line.montantTTC | number:'1.0-0' }}</td>
                       <td>

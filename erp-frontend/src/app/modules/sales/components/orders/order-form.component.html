@@ -225,7 +225,7 @@
                             (focus)="openSuggestions(i, $event)"
                             (blur)="closeSuggestions(i)"
                             (input)="openSuggestions(i, $event)"
-                            (keydown.enter)="onProductSearchEnter(i, $event)"
+                            [id]="'so-product-' + i" (keydown.enter)="onProductSearchEnter(i, $event)"
                             autocomplete="off" />
                           @if (line.productCode) {
                             <button class="btn-clear" (click)="clearLine(i)">
@@ -276,9 +276,9 @@
                   <td class="text-right">
                     @if (!isReadOnly && !isAutoConsigneLine(line)) {
                       <div class="qty-wrap">
-                        <input type="number" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)"
+                        <input type="number" [id]="'so-qty-' + i" [(ngModel)]="line.quantity" (ngModelChange)="onLineChange(line)"
                                class="input-cell text-right" [class.qty-warn]="hasStockWarning(i)" min="0"
-                               (keydown.enter)="onLineEnter($event)" />
+                               (keydown.enter)="onLineEnter(i, $event)" />
                         @if (line.productId && !line.consigne && !isServiceLine(line)) {
                           <span class="stock-tag" [class.stock-low]="lineStockQty[i] <= 0" [class.stock-ok]="lineStockQty[i] > 0">
                             {{ lineStockQty[i] }} dispo
@@ -294,7 +294,7 @@
                   <td class="text-right">
                     @if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
                       <input type="number" [(ngModel)]="linePrixTTC[$index]" (ngModelChange)="onPrixTTCChange($index)"
-                             class="input-cell text-right" min="0" (keydown.enter)="onLineEnter($event)" />
+                             class="input-cell text-right" min="0" (keydown.enter)="onLineEnter(i, $event)" />
                       <small class="prix-ht-hint">HT: {{ line.prixUnitaire | number:'1.2-2' }}</small>
                     } @else { {{ linePrixTTC[$index] | number:'1.0-0' }} }
                   </td>
@@ -309,7 +309,7 @@
                   <td class="text-right">
                     @if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
                       <input type="number" [(ngModel)]="line.tauxTVA" (ngModelChange)="onTauxTVAChange($index)"
-                             class="input-cell text-right" min="0" (keydown.enter)="onLineEnter($event)" />
+                             class="input-cell text-right" min="0" (keydown.enter)="onLineEnter(i, $event)" />
                     } @else { {{ line.tauxTVA || 0 }}% }
                   </td>
 
@@ -318,7 +318,7 @@
                       <span class="text-muted" title="Compte paramétré en Comptabilité › Comptes des services, appliqué à la validation de la facture">Compta</span>
                     } @else if (!isReadOnly && !isAutoConsigneLine(line) && !isDeconsigneLine(line)) {
                       <input type="text" [(ngModel)]="line.accountCode" class="input-cell" placeholder="701100"
-                             (keydown.enter)="onLineEnter($event)" />
+                             (keydown.enter)="onLineEnter(i, $event)" />
                     } @else { {{ line.accountCode || '—' }} }
                   </td>
 

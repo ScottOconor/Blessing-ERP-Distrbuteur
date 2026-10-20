@@ -290,21 +290,49 @@ export class OrderFormComponent implements OnInit {
     this.onSearchInput(i);
   }
 
+  /**
+   * Entrée dans la recherche article (comme dans Déclaration) : choisit la 1re suggestion si un
+   * texte est tapé, puis passe à la quantité de la même ligne. stopPropagation évite que la
+   * navigation globale « champ suivant » (app.component) déplace aussi le curseur.
+   */
   onProductSearchEnter(i: number, event: Event): void {
     event.preventDefault();
-    const suggestions = this.getSuggestions(i);
-    if (suggestions.length > 0) {
-      this.selectProduct(i, suggestions[0]);
+    event.stopPropagation();
+    const line = this.order.lines[i];
+    if (this.lineSearches[i]?.trim()) {
+      const suggestions = this.getSuggestions(i);
+      if (suggestions.length > 0) this.selectProduct(i, suggestions[0]);
+    } else if (this.isLineFilled(i)) {
+      // Ligne déjà renseignée, recherche vidée au focus : on garde l'article
+      this.lineSearches[i] = line.productCode ? `[${line.productCode}] ${line.description}` : line.description;
+      this.activeSuggestionIdx = null;
     }
+    if (this.isLineFilled(i)) this.focusLineField(`po-qty-${i}`);
   }
 
-  onLineEnter(event: Event): void {
+  /**
+   * Entrée dans un champ de la ligne : passe à l'article de la ligne suivante, en créant cette
+   * ligne seulement si c'est la dernière. Une ligne sans article renvoie sur sa recherche.
+   */
+  onLineEnter(i: number, event: Event): void {
     event.preventDefault();
-    this.addLine();
+    event.stopPropagation();
+    if (!this.isLineFilled(i)) { this.focusLineField(`po-product-${i}`); return; }
+    if (i + 1 >= this.order.lines.length) this.addLine();
+    this.focusLineField(`po-product-${i + 1}`);
+  }
+
+  private isLineFilled(i: number): boolean {
+    const line: any = this.order.lines[i];
+    return !!(line?.productId || line?.productCode || line?.description?.trim());
+  }
+
+  private focusLineField(id: string): void {
     setTimeout(() => {
-      const inputs = this.productInputs.toArray();
-      if (inputs.length > 0) inputs[inputs.length - 1].nativeElement.focus();
-    }, 50);
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      el?.focus();
+      if (el?.type === 'number') el.select();
+    });
   }
 
   closeSuggestions(i?: number): void {
