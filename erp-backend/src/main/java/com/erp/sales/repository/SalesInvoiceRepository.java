@@ -167,4 +167,31 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
     java.math.BigDecimal sumMontantDuClientsPeriode(@Param("cid") Long companyId,
                                                     @Param("from") LocalDate from,
                                                     @Param("to") LocalDate to);
+
+    /**
+     * Rapport des ventes : factures validées (y compris extournées — l'avoir correspondant
+     * vient en négatif) et, au besoin, avoirs validés, filtrés sur leur propre date.
+     */
+    @Query("""
+        SELECT i FROM SalesInvoice i
+        LEFT JOIN FETCH i.partner p
+        LEFT JOIN FETCH i.salesOrder so
+        LEFT JOIN FETCH i.originalInvoice oi
+        WHERE i.company.id = :companyId
+          AND i.date >= :dateFrom
+          AND i.date <= :dateTo
+          AND ((i.type = 'invoice' AND i.state IN ('posted', 'paid', 'partiellement_extournee', 'extournee'))
+            OR (:includeAvoirs = true AND i.type = 'credit_note' AND i.state IN ('posted', 'paid')))
+          AND (:warehouseId IS NULL OR i.warehouseId = :warehouseId)
+          AND (:partnerId IS NULL OR p.id = :partnerId)
+          AND (:sellerId IS NULL OR i.sellerId = :sellerId)
+        ORDER BY i.date, i.name
+        """)
+    List<SalesInvoice> findForRapportVentes(@Param("companyId") Long companyId,
+                                            @Param("dateFrom") LocalDate dateFrom,
+                                            @Param("dateTo") LocalDate dateTo,
+                                            @Param("includeAvoirs") boolean includeAvoirs,
+                                            @Param("warehouseId") Long warehouseId,
+                                            @Param("partnerId") Long partnerId,
+                                            @Param("sellerId") Long sellerId);
 }

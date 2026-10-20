@@ -1,5 +1,7 @@
 package com.erp.sales.controller;
 
+import com.erp.sales.dto.RapportVentesRequest;
+import com.erp.sales.dto.RapportVentesResponse;
 import com.erp.sales.dto.SalesStatsRequest;
 import com.erp.sales.dto.SalesStatsResponse;
 import com.erp.sales.service.SalesStatsService;
@@ -19,6 +21,13 @@ public class SalesStatsController {
     public ResponseEntity<SalesStatsResponse> getStatsVentes(
             @RequestBody SalesStatsRequest req) {
         return ResponseEntity.ok(statsService.getStats(req));
+    }
+
+    /** Rapport des ventes : une ligne par facture (HT, TTC, colis, casiers, PET) + total général */
+    @PostMapping("/rapport-ventes")
+    public ResponseEntity<RapportVentesResponse> getRapportVentes(
+            @RequestBody RapportVentesRequest req) {
+        return ResponseEntity.ok(statsService.getRapportVentes(req));
     }
 
     /** Anciens endpoints conservés pour compatibilité */

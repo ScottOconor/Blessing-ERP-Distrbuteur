@@ -56,6 +56,10 @@ export const salesRoutes: Routes = [
         loadComponent: () => import('./components/reports/stats-ventes/stats-ventes.component').then(m => m.StatsVentesComponent)
       },
       {
+        path: 'reports/rapport-ventes',
+        loadComponent: () => import('./components/reports/rapport-ventes/rapport-ventes.component').then(m => m.RapportVentesComponent)
+      },
+      {
         path: 'reports/rapport-ristournes',
         loadComponent: () => import('./components/reports/rapport-ristourne/rapport-ristourne.component').then(m => m.RapportRistourneComponent)
       },

@@ -348,6 +348,52 @@ export interface StatsVentesRequest {
   warehouseId?: number | null;
 }
 
+export interface RapportVentesRequest {
+  dateFrom: string;
+  dateTo: string;
+  companyId: number;
+  warehouseId?: number | null;
+  partnerId?: number | null;
+  sellerId?: number | null;
+  includeAvoirs: boolean;
+}
+
+export interface RapportVentesLine {
+  invoiceId: number;
+  date: string;
+  clientName: string;
+  clientRef?: string;
+  invoiceRef: string;
+  bonRef?: string;
+  originalInvoiceRef?: string;
+  warehouseName?: string;
+  avoir: boolean;
+  totalHT: number;
+  totalTTC: number;
+  montantEncaisse: number;
+  qteConsigne: number;
+  qteDeconsigne: number;
+  totalColis: number;
+  totalCasiers: number;
+  totalPET: number;
+}
+
+export interface RapportVentesResponse {
+  dateFrom: string;
+  dateTo: string;
+  lines: RapportVentesLine[];
+  nbFactures: number;
+  nbAvoirs: number;
+  totalHT: number;
+  totalTTC: number;
+  montantEncaisse: number;
+  qteConsigne: number;
+  qteDeconsigne: number;
+  totalColis: number;
+  totalCasiers: number;
+  totalPET: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SalesService {
   private apiUrl = `${environment.apiUrl}/api/sales`;
@@ -525,6 +571,10 @@ export class SalesService {
   // Stats Reports
   getStatsVentes(req: StatsVentesRequest): Observable<SalesStatsResponse> {
     return this.http.post<SalesStatsResponse>(`${this.apiUrl}/stats/stats-ventes`, req);
+  }
+
+  getRapportVentes(req: RapportVentesRequest): Observable<RapportVentesResponse> {
+    return this.http.post<RapportVentesResponse>(`${this.apiUrl}/stats/rapport-ventes`, req);
   }
 
   getEtatCommercial(req: { dateFrom: string; dateTo: string; companyId: number }): Observable<SalesStatsResponse> {

@@ -96,8 +96,10 @@ export class SalesLayoutComponent implements OnInit {
     }
 
     const reportChildren: any[] = [];
-    if (this.can('COMMANDES', 'VIEW') || this.can('FACTURES', 'VIEW'))
+    if (this.can('COMMANDES', 'VIEW') || this.can('FACTURES', 'VIEW')) {
+      reportChildren.push({ label: 'Rapport des ventes', icon: 'receipt_long', route: '/sales/reports/rapport-ventes' });
       reportChildren.push({ label: 'Stats de ventes',    icon: 'trending_up', route: '/sales/reports/stats-ventes' });
+    }
     if (this.can('RISTOURNES', 'VIEW'))
       reportChildren.push({ label: 'État des Ristournes', icon: 'redeem',     route: '/sales/reports/rapport-ristournes' });
     if (reportChildren.length)

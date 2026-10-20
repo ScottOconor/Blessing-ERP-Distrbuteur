@@ -111,4 +111,7 @@ public interface SalesInvoiceLineRepository extends JpaRepository<SalesInvoiceLi
         @Param("createdBy") String createdBy,
         @Param("warehouseId") Long warehouseId
     );
+
+    @Query("SELECT l FROM SalesInvoiceLine l WHERE l.invoice.id IN :invoiceIds")
+    List<SalesInvoiceLine> findByInvoiceIds(@Param("invoiceIds") java.util.Collection<Long> invoiceIds);
 }

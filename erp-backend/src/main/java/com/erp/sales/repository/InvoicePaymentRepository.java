@@ -29,4 +29,10 @@ public interface InvoicePaymentRepository extends JpaRepository<InvoicePayment, 
     @Query("SELECT p.accountMove.id FROM InvoicePayment p " +
            "WHERE p.invoice.partner.id = :partnerId AND p.accountMove IS NOT NULL")
     Set<Long> findAccountMoveIdsByPartner(@Param("partnerId") Long partnerId);
+
+    /** Encaissements réels par facture : paiements validés, hors imputations d'avoirs. */
+    @Query("SELECT p.invoice.id, COALESCE(SUM(p.amount), 0) FROM InvoicePayment p " +
+           "WHERE p.invoice.id IN :invoiceIds AND p.state = 'posted' AND p.creditNoteId IS NULL " +
+           "GROUP BY p.invoice.id")
+    List<Object[]> sumCashPaymentsByInvoiceIds(@Param("invoiceIds") java.util.Collection<Long> invoiceIds);
 }

@@ -1,0 +1,235 @@
+<div class="page-container">
+
+  <!-- ═══ EN-TÊTE ══════════════════════════════════════════════════════════ -->
+  <div class="page-header">
+    <h1 class="page-title">
+      <span class="material-icons">receipt_long</span>
+      Rapport des ventes
+    </h1>
+    @if (generated && data && data.lines.length > 0) {
+      <div class="export-actions">
+        <button class="btn-export btn-excel" (click)="exportExcel()">
+          <span class="material-icons">table_view</span> Excel
+        </button>
+        <button class="btn-export btn-pdf" (click)="exportPdf()">
+          <span class="material-icons">picture_as_pdf</span> PDF
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ PANNEAU FILTRES ════════════════════════════════════════════════════ -->
+  <div class="filter-panel">
+
+    <!-- Période -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">date_range</span> Période
+      </div>
+      <div class="group-chips">
+        @for (p of PERIODES; track p.k) {
+          <button class="group-chip" [class.active]="periode === p.k" (click)="setPeriode(p.k)">{{ p.label }}</button>
+        }
+      </div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>Du</label>
+          <input type="date" class="form-input" [(ngModel)]="dateFrom" (ngModelChange)="periode = 'custom'">
+        </div>
+        <div class="input-group">
+          <label>Au</label>
+          <input type="date" class="form-input" [(ngModel)]="dateTo" (ngModelChange)="periode = 'custom'">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="panel-section">
+      <div class="section-title">
+        <span class="material-icons">filter_alt</span> Filtres
+      </div>
+      <div class="filters-grid">
+        <div class="input-group">
+          <label>Entrepôt</label>
+          <select class="form-input" [(ngModel)]="selectedWarehouseId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (w of warehouses; track w.id) {
+              <option [ngValue]="w.id">{{ w.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Client</label>
+          <select class="form-input" [(ngModel)]="selectedPartnerId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (c of clients; track c.id) {
+              <option [ngValue]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Vendeur</label>
+          <select class="form-input" [(ngModel)]="selectedSellerId">
+            <option [ngValue]="null">— Tous —</option>
+            @for (s of sellers; track s.id) {
+              <option [ngValue]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Avoirs</label>
+          <label class="toggle-chip" [class.active]="includeAvoirs">
+            <input type="checkbox" [(ngModel)]="includeAvoirs"> Déduire les avoirs
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel-footer">
+      <button class="btn-reset" (click)="reset()">
+        <span class="material-icons">restart_alt</span> Réinitialiser
+      </button>
+      <button class="btn-generate" (click)="generate()" [disabled]="loading">
+        @if (loading) {
+          <span class="material-icons spin">hourglass_empty</span> Génération…
+        } @else {
+          <span class="material-icons">play_arrow</span> Générer
+        }
+      </button>
+    </div>
+
+    @if (errorMsg) {
+      <div class="alert-error">
+        <span class="material-icons">error_outline</span> {{ errorMsg }}
+      </div>
+    }
+  </div>
+
+  <!-- ═══ RÉSULTATS ══════════════════════════════════════════════════════════ -->
+  @if (generated && data) {
+    @if (data.lines.length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">search_off</span>
+        <p>Aucune vente sur cette période avec ces filtres.</p>
+      </div>
+    } @else {
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-label">Factures</span>
+          <span class="kpi-val">{{ data.nbFactures }}</span>
+        </div>
+        @if (data.nbAvoirs > 0) {
+          <div class="kpi-card kpi-avoir">
+            <span class="kpi-label">Avoirs</span>
+            <span class="kpi-val">{{ data.nbAvoirs }}</span>
+          </div>
+        }
+        <div class="kpi-card kpi-ttc">
+          <span class="kpi-label">Total TTC</span>
+          <span class="kpi-val">{{ data.totalTTC | number:'1.0-0' }} <small>FCFA</small></span>
+        </div>
+        <div class="kpi-card kpi-enc">
+          <span class="kpi-label">Encaissé</span>
+          <span class="kpi-val">{{ data.montantEncaisse | number:'1.0-0' }} <small>FCFA</small></span>
+        </div>
+        <div class="kpi-card kpi-cons">
+          <span class="kpi-label">Consigne</span>
+          <span class="kpi-val">{{ data.qteConsigne | number:'1.0-2' }}</span>
+        </div>
+        <div class="kpi-card kpi-cons">
+          <span class="kpi-label">Déconsigne</span>
+          <span class="kpi-val">{{ data.qteDeconsigne | number:'1.0-2' }}</span>
+        </div>
+        <div class="kpi-card kpi-qty">
+          <span class="kpi-label">Colis</span>
+          <span class="kpi-val">{{ data.totalColis | number:'1.0-2' }}</span>
+        </div>
+        <div class="kpi-card kpi-qty">
+          <span class="kpi-label">PET</span>
+          <span class="kpi-val">{{ data.totalPET | number:'1.0-2' }}</span>
+        </div>
+        <div class="kpi-card kpi-qty">
+          <span class="kpi-label">Casiers</span>
+          <span class="kpi-val">{{ data.totalCasiers | number:'1.0-2' }}</span>
+        </div>
+      </div>
+
+      <div class="group-block">
+        <div class="group-header">
+          <div class="group-name">
+            {{ rows.length }} document(s)
+            <span class="ref-tag">{{ printDateLabel }}</span>
+          </div>
+          <div class="search-box">
+            <span class="material-icons">search</span>
+            <input type="text" [(ngModel)]="search" placeholder="Client, facture…">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="col-client">Nom du client</th>
+                <th>Réf. facture</th>
+                <th class="col-num">Total TTC</th>
+                <th class="col-num">Montant encaissé</th>
+                <th class="col-num">Qté consigne</th>
+                <th class="col-num">Qté déconsigne</th>
+                <th class="col-num">Total colis</th>
+                <th class="col-num">Total PET</th>
+                <th class="col-num">Total casiers</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of rows; track l.invoiceId) {
+                <tr [class.avoir-row]="l.avoir">
+                  <td>
+                    {{ l.clientName }}
+                    @if (l.clientRef) { <span class="ref-tag">{{ l.clientRef }}</span> }
+                  </td>
+                  <td>
+                    <span class="code-tag">{{ l.invoiceRef }}</span>
+                    @if (l.avoir) { <span class="avoir-badge">Avoir{{ l.originalInvoiceRef ? ' sur ' + l.originalInvoiceRef : '' }}</span> }
+                    <div class="sub-info">{{ l.date | date:'dd/MM/yyyy' }}@if (l.warehouseName) { · {{ l.warehouseName }} }</div>
+                  </td>
+                  <td class="num">{{ l.totalTTC | number:'1.0-0' }}</td>
+                  <td class="num">{{ l.montantEncaisse | number:'1.0-0' }}</td>
+                  <td class="num">{{ l.qteConsigne | number:'1.0-2' }}</td>
+                  <td class="num">{{ l.qteDeconsigne | number:'1.0-2' }}</td>
+                  <td class="num">{{ l.totalColis | number:'1.0-2' }}</td>
+                  <td class="num">{{ l.totalPET | number:'1.0-2' }}</td>
+                  <td class="num">{{ l.totalCasiers | number:'1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="2">TOTAL GÉNÉRAL</td>
+                <td class="num">{{ totals.ttc | number:'1.0-0' }}</td>
+                <td class="num">{{ totals.encaisse | number:'1.0-0' }}</td>
+                <td class="num">{{ totals.consigne | number:'1.0-2' }}</td>
+                <td class="num">{{ totals.deconsigne | number:'1.0-2' }}</td>
+                <td class="num">{{ totals.colis | number:'1.0-2' }}</td>
+                <td class="num">{{ totals.pet | number:'1.0-2' }}</td>
+                <td class="num">{{ totals.casiers | number:'1.0-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <p class="legend">
+        Colis = toutes les quantités de produits vendus (hors emballages, consignes et bouteilles vides).
+        PET = produits des catégories PET · Casiers = produits vendus au casier.
+        Montant encaissé = paiements reçus sur la facture à ce jour (hors imputations d'avoirs ; remboursements en négatif sur les avoirs).
+        Qté consigne / déconsigne = emballages sortis chez le client / rendus par le client.
+        @if (includeAvoirs) { Les avoirs sont déduits (en rouge). }
+      </p>
+    }
+  }
+
+</div>

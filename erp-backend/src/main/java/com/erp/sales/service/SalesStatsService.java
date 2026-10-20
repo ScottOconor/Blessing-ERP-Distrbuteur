@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 public class SalesStatsService {
 
     private final SalesInvoiceLineRepository lineRepo;
+    private final com.erp.sales.repository.SalesInvoiceRepository invoiceRepo;
+    private final com.erp.sales.repository.InvoicePaymentRepository paymentRepo;
     private final ProductRepository productRepo;
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
@@ -404,5 +406,147 @@ public class SalesStatsService {
                 return line.getInvoice().getPartner() != null
                     ? line.getInvoice().getPartner().getName() : "Inconnu";
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Rapport des ventes : une ligne par facture (client, réf. facture, réf. bon,
+    // HT, TTC, colis, casiers, PET) + total général.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public RapportVentesResponse getRapportVentes(RapportVentesRequest req) {
+        tenantGuard.check(req.getCompanyId());
+        Long companyId = req.getCompanyId();
+
+        List<com.erp.sales.entity.SalesInvoice> invoices = invoiceRepo.findForRapportVentes(
+            companyId, req.getDateFrom(), req.getDateTo(), req.isIncludeAvoirs(),
+            req.getWarehouseId(), req.getPartnerId(), req.getSellerId());
+
+        // Lignes chargées par paquets (limite de paramètres du IN côté PostgreSQL)
+        List<Long> invoiceIds = invoices.stream().map(com.erp.sales.entity.SalesInvoice::getId).toList();
+        Map<Long, List<SalesInvoiceLine>> linesByInvoice = new HashMap<>();
+        Map<Long, BigDecimal> encaisseByInvoice = new HashMap<>();
+        for (int from = 0; from < invoiceIds.size(); from += 1000) {
+            List<Long> chunk = invoiceIds.subList(from, Math.min(from + 1000, invoiceIds.size()));
+            for (Object[] r : paymentRepo.sumCashPaymentsByInvoiceIds(chunk)) {
+                encaisseByInvoice.put((Long) r[0], (BigDecimal) r[1]);
+            }
+            for (SalesInvoiceLine l : lineRepo.findByInvoiceIds(chunk)) {
+                linesByInvoice.computeIfAbsent(l.getInvoice().getId(), k -> new ArrayList<>()).add(l);
+            }
+        }
+
+        // Catalogue de la société : unité (casier) et catégorie (PET / emballage) par article
+        Map<Long, Product> productsById = new HashMap<>();
+        Map<String, Product> productsByCode = new HashMap<>();
+        for (Product p : productRepo.findByCompanyIdOrderByNameAsc(companyId)) {
+            productsById.put(p.getId(), p);
+            if (p.getDefaultCode() != null) productsByCode.putIfAbsent(p.getDefaultCode().trim().toUpperCase(), p);
+        }
+        Map<Long, String> catNames = new HashMap<>();
+        categoryRepo.findAll().forEach(c -> catNames.put(c.getId(), c.getName()));
+        Map<Long, String> warehouseNames = new HashMap<>();
+        invoices.stream().map(com.erp.sales.entity.SalesInvoice::getWarehouseId).filter(Objects::nonNull).distinct()
+            .forEach(wid -> warehouseRepo.findById(wid).ifPresent(w -> warehouseNames.put(wid, w.getName())));
+
+        List<RapportVentesLine> lines = new ArrayList<>();
+        BigDecimal gHT = ZERO, gTTC = ZERO, gColis = ZERO, gCasiers = ZERO, gPET = ZERO;
+        BigDecimal gConsigne = ZERO, gDeconsigne = ZERO, gEncaisse = ZERO;
+        int nbFactures = 0, nbAvoirs = 0;
+
+        for (com.erp.sales.entity.SalesInvoice inv : invoices) {
+            boolean avoir = "credit_note".equals(inv.getType());
+            BigDecimal sign = avoir ? NEG_ONE : BigDecimal.ONE;
+            if (avoir) nbAvoirs++; else nbFactures++;
+
+            BigDecimal colis = ZERO, casiers = ZERO, pet = ZERO, consigne = ZERO, deconsigne = ZERO;
+            for (SalesInvoiceLine l : linesByInvoice.getOrDefault(inv.getId(), Collections.emptyList())) {
+                Product p = l.getProductId() != null ? productsById.get(l.getProductId()) : null;
+                if (p == null && l.getProductCode() != null) p = productsByCode.get(l.getProductCode().trim().toUpperCase());
+
+                // Emballage testé avant le filtre article/service : les consignes sont souvent
+                // typées « service » au catalogue, voire sans article lié.
+                Long catId = l.getCategoryId() != null ? l.getCategoryId() : (p != null ? p.getCategoryId() : null);
+                String cat = catId != null ? catNames.getOrDefault(catId, "") : "";
+                if (isEmballage(l, cat, companyId)) {
+                    // Quantité positive = emballage consigné chez le client, négative = déconsigne
+                    BigDecimal q = l.getQuantity() != null ? l.getQuantity() : ZERO;
+                    if (q.signum() > 0) consigne = consigne.add(q.multiply(sign));
+                    else deconsigne = deconsigne.add(q.negate().multiply(sign));
+                    continue;
+                }
+                if (p == null || "service".equals(p.getType())) continue;
+
+                BigDecimal qty = (l.getQuantity() != null ? l.getQuantity() : ZERO).abs().multiply(sign);
+                colis = colis.add(qty);
+                if (isPet(cat)) {
+                    pet = pet.add(qty);
+                } else if (p.getUomName() != null && p.getUomName().trim().toUpperCase().startsWith("CASIER")) {
+                    casiers = casiers.add(qty);
+                }
+            }
+
+            BigDecimal ht  = (inv.getTotalHT()  != null ? inv.getTotalHT()  : ZERO).abs().multiply(sign);
+            BigDecimal ttc = (inv.getTotalTTC() != null ? inv.getTotalTTC() : ZERO).abs().multiply(sign);
+            // Sur un avoir, un paiement est un remboursement au client : décaissement, donc négatif
+            BigDecimal encaisse = encaisseByInvoice.getOrDefault(inv.getId(), ZERO).abs().multiply(sign);
+
+            lines.add(RapportVentesLine.builder()
+                .invoiceId(inv.getId())
+                .date(inv.getDate())
+                .clientName(inv.getPartner() != null ? inv.getPartner().getName() : "Inconnu")
+                .clientRef(inv.getPartner() != null ? inv.getPartner().getRef() : null)
+                .invoiceRef(inv.getName())
+                .bonRef(inv.getSalesOrder() != null ? inv.getSalesOrder().getName() : null)
+                .originalInvoiceRef(inv.getOriginalInvoice() != null ? inv.getOriginalInvoice().getName() : null)
+                .warehouseName(inv.getWarehouseId() != null ? warehouseNames.get(inv.getWarehouseId()) : null)
+                .avoir(avoir)
+                .totalHT(ht.setScale(2, RoundingMode.HALF_UP))
+                .totalTTC(ttc.setScale(2, RoundingMode.HALF_UP))
+                .montantEncaisse(encaisse.setScale(2, RoundingMode.HALF_UP))
+                .qteConsigne(consigne.setScale(2, RoundingMode.HALF_UP))
+                .qteDeconsigne(deconsigne.setScale(2, RoundingMode.HALF_UP))
+                .totalColis(colis.setScale(2, RoundingMode.HALF_UP))
+                .totalCasiers(casiers.setScale(2, RoundingMode.HALF_UP))
+                .totalPET(pet.setScale(2, RoundingMode.HALF_UP))
+                .build());
+
+            gHT = gHT.add(ht); gTTC = gTTC.add(ttc);
+            gColis = gColis.add(colis); gCasiers = gCasiers.add(casiers); gPET = gPET.add(pet);
+            gConsigne = gConsigne.add(consigne); gDeconsigne = gDeconsigne.add(deconsigne);
+            gEncaisse = gEncaisse.add(encaisse);
+        }
+
+        return RapportVentesResponse.builder()
+            .dateFrom(req.getDateFrom())
+            .dateTo(req.getDateTo())
+            .lines(lines)
+            .nbFactures(nbFactures)
+            .nbAvoirs(nbAvoirs)
+            .totalHT(gHT.setScale(2, RoundingMode.HALF_UP))
+            .totalTTC(gTTC.setScale(2, RoundingMode.HALF_UP))
+            .montantEncaisse(gEncaisse.setScale(2, RoundingMode.HALF_UP))
+            .qteConsigne(gConsigne.setScale(2, RoundingMode.HALF_UP))
+            .qteDeconsigne(gDeconsigne.setScale(2, RoundingMode.HALF_UP))
+            .totalColis(gColis.setScale(2, RoundingMode.HALF_UP))
+            .totalCasiers(gCasiers.setScale(2, RoundingMode.HALF_UP))
+            .totalPET(gPET.setScale(2, RoundingMode.HALF_UP))
+            .build();
+    }
+
+    /**
+     * Emballage / consigne, exclu des colis : ligne consignée, code consigne, catégorie
+     * « Emballages », ou bouteille vide vendue à l'unité (catégories « BOUTEILLE SABC »,
+     * « AUTRE BOUTEILLE »… — mais pas « FAMILLE GUINNESS BOUTEILLE 12 », vendue en casier).
+     */
+    private boolean isEmballage(SalesInvoiceLine l, String category, Long companyId) {
+        if (l.isConsigne() || com.erp.common.ConsigneCodes.isConsigne(l.getProductCode(), companyId)) return true;
+        String cat = category.toUpperCase();
+        if (cat.contains("EMBALLAGE")) return true;
+        return cat.startsWith("BOUTEILLE") || cat.startsWith("AUTRE BOUTEILLE");
+    }
+
+    /** Produits PET : catégories « PET Grand model », « PET petit model »… */
+    private boolean isPet(String category) {
+        return category.toUpperCase().matches("(^|.*[^A-Z])PET([^A-Z].*|$)");
     }
 }
