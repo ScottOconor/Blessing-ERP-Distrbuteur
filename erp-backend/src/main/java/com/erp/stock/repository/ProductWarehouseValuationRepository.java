@@ -15,4 +15,6 @@ public interface ProductWarehouseValuationRepository extends JpaRepository<Produ
     List<ProductWarehouseValuation> findByProductIdAndCompanyId(Long productId, Long companyId);
 
     List<ProductWarehouseValuation> findByWarehouseIdAndCompanyId(Long warehouseId, Long companyId);
+
+    List<ProductWarehouseValuation> findByCompanyId(Long companyId);
 }

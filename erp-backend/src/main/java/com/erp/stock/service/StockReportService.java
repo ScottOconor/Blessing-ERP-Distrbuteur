@@ -25,7 +25,6 @@ public class StockReportService {
     private final StockMoveRepository moveRepo;
     private final ProductRepository productRepo;
     private final ProductValuationService productValuationService;
-    private final com.erp.stock.repository.ProductWarehouseValuationRepository warehouseValuationRepo;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -66,9 +65,11 @@ public class StockReportService {
             Map<Long, BigDecimal> initOutByProduct = toBigDecimalMap(moveRepo.sumOutgoingBeforeBatch(productIds, locIds, dtFrom));
             Map<Long, BigDecimal> inQtyByProduct   = toBigDecimalMap(moveRepo.sumInQtyBetweenBatch(productIds, locIds, dtFrom, dtTo));
             Map<Long, BigDecimal> outQtyByProduct  = toBigDecimalMap(moveRepo.sumOutQtyBetweenBatch(productIds, locIds, dtFrom, dtTo));
-            Map<Long, BigDecimal> cmupByProduct = warehouseValuationRepo.findByWarehouseIdAndCompanyId(warehouseId, companyId)
-                    .stream().collect(Collectors.toMap(ProductWarehouseValuation::getProductId,
-                            v -> nvl(v.getStandardPrice())));
+            // Valorisation aux prix de la période (historique CMUP), pas au CMUP courant : le stock
+            // de 2025 est valorisé au CMUP de 2025 même si le coût a changé depuis.
+            ProductValuationService.CostTimeline costs = productValuationService.loadCostTimeline(warehouseId, productIds);
+            Map<Long, List<StockMove>> periodMoves = moveRepo.findMovementsBetweenBatch(productIds, locIds, dtFrom, dtTo)
+                    .stream().collect(Collectors.groupingBy(StockMove::getProductId));
 
             List<StockReportLineDTO> lines = new ArrayList<>();
             BigDecimal totInitQty = ZERO, totInQty = ZERO, totOutQty = ZERO;
@@ -89,11 +90,24 @@ public class StockReportService {
                 if (initQty.compareTo(ZERO) == 0 && inQty.compareTo(ZERO) == 0 && outQty.compareTo(ZERO) == 0)
                     continue;
 
-                BigDecimal cost = cmupByProduct.containsKey(pid) ? cmupByProduct.get(pid) : nvl(product.getStandardPrice());
-                BigDecimal initVal  = round(initQty.multiply(cost));
-                BigDecimal inVal    = round(inQty.multiply(cost));
-                BigDecimal outVal   = round(outQty.multiply(cost));
-                BigDecimal finalVal = round(finalQty.multiply(cost));
+                // Valeur d'ouverture au coût en vigueur avant la période, puis chaque mouvement fait
+                // passer la valeur du stock de (qté × coût avant) à (qté × coût après) : l'écart est la
+                // valeur de l'entrée (qté × prix d'achat quand l'entrée a recalculé le CMUP) ou de la
+                // sortie (qté × CMUP du moment). Ainsi initiale + entrées − sorties = finale.
+                BigDecimal initVal = round(initQty.multiply(costs.costBefore(pid, dtFrom)));
+                BigDecimal inVal = ZERO, outVal = ZERO;
+                BigDecimal runQty = initQty, runVal = initVal;
+                for (StockMove m : periodMoves.getOrDefault(pid, List.of())) {
+                    boolean isIn = locIds.contains(m.getLocationDestId());
+                    runQty = isIn ? runQty.add(m.getQtyDone()) : runQty.subtract(m.getQtyDone());
+                    BigDecimal newVal = round(runQty.multiply(costs.costAt(pid, m.getPicking().getDateDone())));
+                    if (isIn) inVal = inVal.add(newVal.subtract(runVal));
+                    else      outVal = outVal.add(runVal.subtract(newVal));
+                    runVal = newVal;
+                }
+                BigDecimal finalVal = runVal;
+                BigDecimal cost = finalQty.compareTo(ZERO) != 0
+                        ? finalVal.divide(finalQty, 4, RoundingMode.HALF_UP) : costs.costAt(pid, dtTo);
 
                 StockReportLineDTO line = new StockReportLineDTO();
                 line.setProductId(pid);
@@ -185,7 +199,9 @@ public class StockReportService {
                 Long locId = entry.getKey();
                 String locName = entry.getValue();
                 Long locWarehouseId = locIdToWarehouseId.get(locId);
-                BigDecimal cost = nvl(productValuationService.getWarehouseCmup(pid, locWarehouseId, product));
+                // Coût en vigueur à la date de chaque mouvement (historique CMUP), pas le CMUP courant.
+                ProductValuationService.CostTimeline costs = productValuationService.loadCostTimeline(locWarehouseId, List.of(pid));
+                BigDecimal initCost = costs.costBefore(pid, dtFrom);
 
                 BigDecimal initIn  = moveRepo.sumIncomingBeforeLoc(pid, locId, dtFrom);
                 BigDecimal initOut = moveRepo.sumOutgoingBeforeLoc(pid, locId, dtFrom);
@@ -195,7 +211,7 @@ public class StockReportService {
                 if (initQty.compareTo(ZERO) == 0 && moves.isEmpty()) continue;
 
                 BigDecimal runQty = initQty;
-                BigDecimal runVal = round(initQty.multiply(cost));
+                BigDecimal runVal = round(initQty.multiply(initCost));
                 List<StockDetailedMoveDTO> moveDTOs = new ArrayList<>();
 
                 for (StockMove m : moves) {
@@ -207,7 +223,7 @@ public class StockReportService {
                     BigDecimal qtyOut = isOut ? m.getQtyDone() : ZERO;
                     BigDecimal delta  = isIn  ? m.getQtyDone() : m.getQtyDone().negate();
                     runQty = runQty.add(delta);
-                    runVal = runVal.add(round(delta.multiply(cost)));
+                    runVal = round(runQty.multiply(costs.costAt(pid, m.getPicking().getDateDone())));
 
                     StockDetailedMoveDTO md = new StockDetailedMoveDTO();
                     md.setDate(m.getPicking().getDateDone() != null
@@ -229,7 +245,7 @@ public class StockReportService {
                 StockDetailedLocationDTO locDTO = new StockDetailedLocationDTO();
                 locDTO.setLocationName(locName);
                 locDTO.setInitialQty(initQty);
-                locDTO.setInitialValue(round(initQty.multiply(cost)));
+                locDTO.setInitialValue(round(initQty.multiply(initCost)));
                 locDTO.setMovements(moveDTOs);
                 locDTO.setFinalQty(runQty);
                 locDTO.setFinalValue(runVal);

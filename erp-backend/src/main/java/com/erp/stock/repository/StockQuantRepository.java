@@ -25,6 +25,11 @@ public interface StockQuantRepository extends JpaRepository<StockQuant, Long> {
            "GROUP BY q.productId")
     List<Object[]> sumQuantityByProductForWarehouse(@Param("cid") Long companyId, @Param("wid") Long warehouseId);
 
+    /** Quantité totale d'un article dans un entrepôt (tous ses emplacements internes) — base de pondération du CMUP. */
+    @Query("SELECT COALESCE(SUM(q.quantity), 0) FROM StockQuant q, StockLocation l " +
+           "WHERE l.id = q.locationId AND q.productId = :pid AND l.warehouseId = :wid AND l.usage = 'internal'")
+    java.math.BigDecimal sumQuantityForProductInWarehouse(@Param("pid") Long productId, @Param("wid") Long warehouseId);
+
     @Query("SELECT q FROM StockQuant q WHERE q.companyId = :cid")
     List<StockQuant> findAllByCompanyId(@Param("cid") Long companyId);
 

@@ -247,6 +247,28 @@ export interface StockLossRequest {
   lines: StockLossLineRequest[];
 }
 
+/** Une ligne d'historique de prix (CMUP par entrepôt, prix de revient, prix de vente). */
+export interface ProductPriceHistory {
+  id: number;
+  productId: number;
+  warehouseId?: number;
+  priceType: 'CMUP' | 'STANDARD' | 'SALE';
+  oldPrice?: number;
+  newPrice: number;
+  qtyBefore?: number;
+  qtyIn?: number;
+  priceIn?: number;
+  effectiveDate: string;
+  source: 'ENTREE' | 'MANUEL' | 'RECONSTRUCTION' | 'ALIGNEMENT';
+  reference?: string;
+  createdBy?: string;
+}
+
+export interface PriceHistoryRebuildResult {
+  entries: number;
+  aligned: number;
+}
+
 export interface ValuationLayer {
   id?: number;
   productId: number;
@@ -687,6 +709,18 @@ export class StockService {
     let params = new HttpParams().set('companyId', companyId);
     if (productId) params = params.set('productId', productId);
     return this.http.get<ValuationLayer[]>(`${this.api}/valuation`, { params });
+  }
+
+  getPriceHistory(productId: number, companyId: number): Observable<ProductPriceHistory[]> {
+    return this.http.get<ProductPriceHistory[]>(`${this.api}/products/${productId}/price-history`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  rebuildPriceHistory(companyId: number): Observable<PriceHistoryRebuildResult> {
+    return this.http.post<PriceHistoryRebuildResult>(`${this.api}/products/price-history/rebuild`, null, {
+      params: new HttpParams().set('companyId', companyId)
+    });
   }
 
   // Réception directe (sans facture achat)

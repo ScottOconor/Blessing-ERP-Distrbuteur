@@ -7,13 +7,16 @@ import com.erp.stock.entity.Product;
 import com.erp.stock.repository.ProductCategoryRepository;
 import com.erp.stock.repository.ProductRepository;
 import com.erp.stock.repository.WarehouseRepository;
+import com.erp.stock.service.ProductValuationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,7 +30,7 @@ public class SalesStatsService {
     private final ProductRepository productRepo;
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
-    private final com.erp.stock.service.ProductValuationService productValuationService;
+    private final ProductValuationService productValuationService;
     private final com.erp.common.service.TenantGuard tenantGuard;
     private static final BigDecimal ZERO    = BigDecimal.ZERO;
     private static final BigDecimal NEG_ONE = BigDecimal.ONE.negate();
@@ -72,19 +75,21 @@ public class SalesStatsService {
         for (SalesInvoiceLine l : invoiceLines) if (l.getProductId() != null) allProductIds.add(l.getProductId());
         for (SalesInvoiceLine l : avoirLines)   if (l.getProductId() != null) allProductIds.add(l.getProductId());
 
-        // CMUP par entrepôt : quand la requête est filtrée sur un entrepôt précis, le coût de
-        // revient reflète CET entrepôt. Sans filtre (plusieurs entrepôts agrégés), le coût
-        // "produit" global reste une approximation raisonnable — la marge par ligne ne peut de
-        // toute façon pas être ventilée par entrepôt sans restructurer tout le pipeline
-        // d'agrégation (regroupé par gk = client/vendeur/etc., pas par entrepôt).
-        Map<Long, BigDecimal> costByProductId = new HashMap<>();
-        if (!allProductIds.isEmpty()) {
-            productRepo.findAllById(allProductIds)
-                .forEach(p -> costByProductId.put(p.getId(),
-                    req.getWarehouseId() != null
-                        ? productValuationService.getWarehouseCmup(p.getId(), req.getWarehouseId(), p)
-                        : (p.getStandardPrice() != null ? p.getStandardPrice() : ZERO)));
-        }
+        // Coût de revient de chaque ligne = CMUP de l'entrepôt de la facture EN VIGUEUR À LA DATE de
+        // la facture (historique des prix), pas le CMUP d'aujourd'hui : une vente de janvier garde sa
+        // marge de janvier même si le coût a bougé depuis. Facture sans entrepôt → prix de revient
+        // global de l'article à cette date.
+        Map<Long, List<SalesInvoiceLine>> linesByWarehouse = new HashMap<>();
+        for (SalesInvoiceLine l : invoiceLines) linesByWarehouse.computeIfAbsent(l.getInvoice().getWarehouseId(), k -> new ArrayList<>()).add(l);
+        for (SalesInvoiceLine l : avoirLines)   linesByWarehouse.computeIfAbsent(l.getInvoice().getWarehouseId(), k -> new ArrayList<>()).add(l);
+        Map<Long, ProductValuationService.CostTimeline> costsByWarehouse = new HashMap<>();
+        linesByWarehouse.forEach((whId, lines) -> costsByWarehouse.put(whId, productValuationService.loadCostTimeline(whId,
+                lines.stream().map(SalesInvoiceLine::getProductId).filter(Objects::nonNull).collect(Collectors.toSet()))));
+        Function<SalesInvoiceLine, BigDecimal> unitCostOf = l -> {
+            if (l.getProductId() == null || l.getInvoice().getDate() == null) return ZERO;
+            return costsByWarehouse.get(l.getInvoice().getWarehouseId())
+                .costAt(l.getProductId(), l.getInvoice().getDate().atTime(LocalTime.MAX));
+        };
 
         // Pré-charger noms de catégories et entrepôts (factures + avoirs)
         Map<Long, String> catNames = new HashMap<>();
@@ -103,7 +108,7 @@ public class SalesStatsService {
             .ifPresent(w -> warehouseNames.put(wid, w.getName())));
 
         // ── Accumulation séparée factures / avoirs ───────────────────────────────
-        // amounts[gk][pk] = [qty, caHT, caTTC, remise]
+        // amounts[gk][pk] = [qty, caHT, caTTC, remise, cout]
         Map<String, Map<String, BigDecimal[]>> invoiceAmounts = new LinkedHashMap<>();
         Map<String, Map<String, BigDecimal[]>> avoirAmounts   = new LinkedHashMap<>();
         // meta[gk][pk] = [productCode, description, productId]
@@ -113,11 +118,11 @@ public class SalesStatsService {
         Map<String, String[]> groupMeta = new LinkedHashMap<>();
 
         for (SalesInvoiceLine l : invoiceLines) {
-            accumulateLine(l, BigDecimal.ONE, groupBy, catNames, warehouseNames, companyId,
+            accumulateLine(l, BigDecimal.ONE, groupBy, catNames, warehouseNames, companyId, unitCostOf,
                 invoiceAmounts, invoiceMeta, groupMeta);
         }
         for (SalesInvoiceLine l : avoirLines) {
-            accumulateLine(l, NEG_ONE, groupBy, catNames, warehouseNames, companyId,
+            accumulateLine(l, NEG_ONE, groupBy, catNames, warehouseNames, companyId, unitCostOf,
                 avoirAmounts, avoirMeta, groupMeta);
         }
 
@@ -173,9 +178,9 @@ public class SalesStatsService {
                 String description = pm != null ? pm[1] : pk;
                 Long   productId   = (pm != null && pm[2] != null) ? Long.parseLong(pm[2]) : null;
 
-                BigDecimal prixRevient = productId != null
-                    ? costByProductId.getOrDefault(productId, ZERO) : ZERO;
-                BigDecimal cout    = prixRevient.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal cout    = vals[4].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal prixRevient = qty.compareTo(ZERO) != 0
+                    ? cout.divide(qty, 4, RoundingMode.HALF_UP) : ZERO;
                 BigDecimal margeHT = caHT.subtract(cout).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal tauxMarge = caHT.compareTo(ZERO) != 0
                     ? margeHT.divide(caHT, 4, RoundingMode.HALF_UP)
@@ -231,9 +236,9 @@ public class SalesStatsService {
                 String description = pm != null ? pm[1] : pk;
                 Long   productId   = (pm != null && pm[2] != null) ? Long.parseLong(pm[2]) : null;
 
-                BigDecimal prixRevient = productId != null
-                    ? costByProductId.getOrDefault(productId, ZERO) : ZERO;
-                BigDecimal cout    = prixRevient.multiply(qty).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal cout    = vals[4].setScale(2, RoundingMode.HALF_UP);
+                BigDecimal prixRevient = qty.compareTo(ZERO) != 0
+                    ? cout.divide(qty, 4, RoundingMode.HALF_UP) : ZERO;
                 BigDecimal margeHT = caHT.subtract(cout).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal tauxMarge = caHT.compareTo(ZERO) != 0
                     ? margeHT.divide(caHT, 4, RoundingMode.HALF_UP)
@@ -342,7 +347,7 @@ public class SalesStatsService {
     private void accumulateLine(
             SalesInvoiceLine l, BigDecimal sign,
             String groupBy, Map<Long, String> catNames, Map<Long, String> warehouseNames,
-            Long companyId,
+            Long companyId, Function<SalesInvoiceLine, BigDecimal> unitCostOf,
             Map<String, Map<String, BigDecimal[]>> amounts,
             Map<String, Map<String, String[]>> meta,
             Map<String, String[]> groupMeta) {
@@ -365,10 +370,12 @@ public class SalesStatsService {
             remise = ZERO;
         }
 
+        BigDecimal cout = qty.multiply(unitCostOf.apply(l));
+
         amounts.computeIfAbsent(gk, k -> new LinkedHashMap<>())
-            .merge(pk, new BigDecimal[]{qty, caHT, caTTC, remise},
+            .merge(pk, new BigDecimal[]{qty, caHT, caTTC, remise, cout},
                 (a, b) -> new BigDecimal[]{
-                    a[0].add(b[0]), a[1].add(b[1]), a[2].add(b[2]), a[3].add(b[3])
+                    a[0].add(b[0]), a[1].add(b[1]), a[2].add(b[2]), a[3].add(b[3]), a[4].add(b[4])
                 });
 
         meta.computeIfAbsent(gk, k -> new LinkedHashMap<>())

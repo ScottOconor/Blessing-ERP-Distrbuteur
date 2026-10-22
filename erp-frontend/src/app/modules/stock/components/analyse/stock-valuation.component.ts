@@ -19,9 +19,15 @@ export class StockValuationComponent implements OnInit {
   search = '';
   filterProductId: number | null = null;
 
+  isAdmin = false;
+  rebuilding = false;
+  rebuildMsg = '';
+  rebuildError = '';
+
   constructor(private stockService: StockService, private authService: AuthService) {}
 
   ngOnInit(): void {
+    this.isAdmin = this.authService.isAdmin();
     const cid = this.authService.getCompanyId();
     this.stockService.getProducts(cid).subscribe({ next: (p) => this.products = p });
     this.load();
@@ -37,6 +43,26 @@ export class StockValuationComponent implements OnInit {
         this.loading = false;
       },
       error: () => { this.loading = false; }
+    });
+  }
+
+  /** Rejoue tous les mouvements de stock pour reconstruire l'historique CMUP (rapports aux prix de la période). */
+  rebuildPriceHistory(): void {
+    if (!confirm('Reconstruire l\'historique des CMUP à partir de tous les mouvements de stock ?\n' +
+                 'Le CMUP actuel des articles n\'est pas modifié.')) return;
+    this.rebuilding = true;
+    this.rebuildMsg = '';
+    this.rebuildError = '';
+    this.stockService.rebuildPriceHistory(this.authService.getCompanyId()).subscribe({
+      next: r => {
+        this.rebuilding = false;
+        this.rebuildMsg = `${r.entries} changement(s) de CMUP reconstruits` +
+          (r.aligned > 0 ? ` — ${r.aligned} article(s)/entrepôt(s) recalé(s) sur le CMUP actuel` : '') + '.';
+      },
+      error: e => {
+        this.rebuilding = false;
+        this.rebuildError = e?.error?.message || 'La reconstruction a échoué.';
+      }
     });
   }
 

@@ -5,7 +5,9 @@ import com.erp.config.ProductCodeUniqueIndexInitializer;
 import com.erp.common.service.TenantGuard;
 import com.erp.stock.dto.*;
 import com.erp.stock.repository.StockPickingTypeRepository;
+import com.erp.stock.entity.ProductPriceHistory;
 import com.erp.stock.service.BordereauExportService;
+import com.erp.stock.service.ProductValuationService;
 import com.erp.stock.service.StockReportService;
 import com.erp.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +30,7 @@ public class StockController {
 
     private final StockService stockService;
     private final StockReportService stockReportService;
+    private final ProductValuationService productValuationService;
     private final BordereauExportService bordereauExportService;
     private final StockPickingTypeRepository pickingTypeRepo;
     private final CompanyRepository companyRepository;
@@ -97,6 +101,23 @@ public class StockController {
     @GetMapping("/products/{id}")
     public ResponseEntity<ProductDTO> getProduct(@PathVariable("id") Long id) {
         return ResponseEntity.ok(stockService.getProduct(id));
+    }
+
+    /** Historique des prix d'un article (CMUP par entrepôt, prix de revient, prix de vente), plus récent d'abord. */
+    @GetMapping("/products/{id}/price-history")
+    public ResponseEntity<List<ProductPriceHistory>> getPriceHistory(
+            @PathVariable("id") Long id, @RequestParam("companyId") Long companyId) {
+        tenantGuard.check(companyId);
+        return ResponseEntity.ok(productValuationService.getHistory(id, companyId));
+    }
+
+    /** Reconstruit l'historique CMUP de la société à partir de tous ses mouvements de stock passés. */
+    @PostMapping("/products/price-history/rebuild")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<ProductValuationService.RebuildResult> rebuildPriceHistory(
+            @RequestParam("companyId") Long companyId) {
+        tenantGuard.check(companyId);
+        return ResponseEntity.ok(productValuationService.rebuildCmupHistory(companyId));
     }
 
     @PostMapping("/products")

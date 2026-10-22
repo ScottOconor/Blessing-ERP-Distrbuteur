@@ -173,3 +173,6 @@ textarea.form-control { resize: vertical; }
   .dup-list { margin: 8px 0 0; padding-left: 18px; }
   .dup-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
 }
+
+.tarifs-block-history { border-color: rgba(92,107,192,.3); }
+.history-scroll { max-height: 280px; overflow: auto; }

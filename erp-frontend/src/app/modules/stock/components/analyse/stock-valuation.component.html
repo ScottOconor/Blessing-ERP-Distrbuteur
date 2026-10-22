@@ -4,8 +4,20 @@
       <h1 class="page-title">Valorisation de stock</h1>
       <p class="page-subtitle">Couches de valorisation CMUP — historique des coûts</p>
     </div>
-    <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+    <div style="display:flex;gap:8px">
+      @if (isAdmin) {
+        <button class="btn-secondary" (click)="rebuildPriceHistory()" [disabled]="rebuilding"
+                title="Recalcule l'historique des CMUP depuis le premier mouvement de stock">
+          <span class="material-icons">{{ rebuilding ? 'hourglass_empty' : 'history' }}</span>
+          @if (rebuilding) { Reconstruction… } @else { Reconstruire l'historique des prix }
+        </button>
+      }
+      <button class="btn-secondary" (click)="load()"><span class="material-icons">refresh</span></button>
+    </div>
   </div>
+
+  @if (rebuildMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ rebuildMsg }}</div> }
+  @if (rebuildError) { <div class="alert alert-danger">{{ rebuildError }}</div> }
 
   <!-- KPIs -->
   <div class="kpi-row">

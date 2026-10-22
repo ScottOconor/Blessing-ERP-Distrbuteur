@@ -176,4 +176,18 @@ public interface StockMoveRepository extends JpaRepository<StockMove, Long> {
            "AND m.state = 'done' AND m.picking.dateDone >= :df AND m.picking.dateDone <= :dt " +
            "AND m.locationId IN :locIds AND m.locationDestId NOT IN :locIds GROUP BY m.productId")
     List<Object[]> sumOutQtyBetweenBatch(@Param("pids") List<Long> productIds, @Param("locIds") List<Long> locIds, @Param("df") LocalDateTime dateFrom, @Param("dt") LocalDateTime dateTo);
+
+    /** Tous les mouvements effectués d'une société, chronologiques — reconstruction de l'historique CMUP. */
+    @Query("SELECT m FROM StockMove m JOIN FETCH m.picking p WHERE m.companyId = :cid " +
+           "AND m.state = 'done' AND p.dateDone IS NOT NULL ORDER BY p.dateDone ASC, m.id ASC")
+    List<StockMove> findAllDoneChronological(@Param("cid") Long companyId);
+
+    /** Mouvements entrant/sortant d'un ensemble d'emplacements sur la période, pour plusieurs produits,
+     *  hors mouvements internes à cet ensemble (mêmes critères que sumIn/OutQtyBetweenBatch). */
+    @Query("SELECT m FROM StockMove m JOIN FETCH m.picking p WHERE m.productId IN :pids " +
+           "AND m.state = 'done' AND p.dateDone >= :df AND p.dateDone <= :dt " +
+           "AND ((m.locationDestId IN :locIds AND m.locationId NOT IN :locIds) " +
+           "  OR (m.locationId IN :locIds AND m.locationDestId NOT IN :locIds)) " +
+           "ORDER BY p.dateDone ASC, m.id ASC")
+    List<StockMove> findMovementsBetweenBatch(@Param("pids") List<Long> productIds, @Param("locIds") List<Long> locIds, @Param("df") LocalDateTime dateFrom, @Param("dt") LocalDateTime dateTo);
 }

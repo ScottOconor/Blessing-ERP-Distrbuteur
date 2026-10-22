@@ -463,6 +463,8 @@ public class StockService {
         p.setCategoryId(dto.getCategoryId());
         p.setUnitOfMeasureId(dto.getUnitOfMeasureId());
         p.setUomName(resolveUomName(dto.getUnitOfMeasureId(), dto.getUomName()));
+        BigDecimal oldStandardPrice = p.getStandardPrice();
+        BigDecimal oldSalePrice = p.getSalePrice();
         p.setStandardPrice(dto.getStandardPrice() != null ? dto.getStandardPrice() : ZERO);
         p.setSalePrice(dto.getSalePrice() != null ? dto.getSalePrice() : ZERO);
         p.setType(type);
@@ -473,6 +475,8 @@ public class StockService {
         p.setExemptTvaAchat(dto.isExemptTvaAchat());
         p.setCompanyId(companyId);
         Product saved = productRepo.save(p);
+        productValuationService.logGlobalPriceChange(saved, ProductPriceHistory.TYPE_STANDARD, oldStandardPrice, saved.getStandardPrice());
+        productValuationService.logGlobalPriceChange(saved, ProductPriceHistory.TYPE_SALE, oldSalePrice, saved.getSalePrice());
 
         // Créer un quant dans le magasin principal avec qty=0 pour que le produit apparaisse dans les inventaires
         if ("product".equals(saved.getType()) || "consu".equals(saved.getType())) {
@@ -517,8 +521,14 @@ public class StockService {
         } else if (dto.getUomName() != null) {
             p.setUomName(dto.getUomName());
         }
-        if (dto.getStandardPrice() != null) p.setStandardPrice(dto.getStandardPrice());
-        if (dto.getSalePrice() != null) p.setSalePrice(dto.getSalePrice());
+        if (dto.getStandardPrice() != null) {
+            productValuationService.logGlobalPriceChange(p, ProductPriceHistory.TYPE_STANDARD, p.getStandardPrice(), dto.getStandardPrice());
+            p.setStandardPrice(dto.getStandardPrice());
+        }
+        if (dto.getSalePrice() != null) {
+            productValuationService.logGlobalPriceChange(p, ProductPriceHistory.TYPE_SALE, p.getSalePrice(), dto.getSalePrice());
+            p.setSalePrice(dto.getSalePrice());
+        }
         if (dto.getType() != null) p.setType(dto.getType());
         if (dto.getStockAccountCode() != null) p.setStockAccountCode(dto.getStockAccountCode());
         if (dto.getDescription() != null) p.setDescription(dto.getDescription());
@@ -1030,11 +1040,11 @@ public class StockService {
                 move.setState("done");
                 if (qteRecue.compareTo(ZERO) > 0) {
                     applyStockMovement(move.getProductId(), move.getLocationId(), mainLocationId,
-                            qteRecue, move.getPriceUnit(), companyId, picking.getName(), "incoming");
+                            qteRecue, move.getPriceUnit(), companyId, picking.getName(), "incoming", effectiveDate);
                 }
                 if (reste.compareTo(ZERO) > 0 && avarLocationId != null) {
                     applyStockMovement(move.getProductId(), move.getLocationId(), avarLocationId,
-                            reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "incoming");
+                            reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "incoming", effectiveDate);
                 }
             }
             picking.setState("done");
@@ -1125,7 +1135,7 @@ public class StockService {
             // Appliquer le stock entrant Fournisseur → Dépôt Achat
             if (qteCommandee.compareTo(ZERO) > 0) {
                 applyStockMovement(move.getProductId(), move.getLocationId(), depotAchatLocationId,
-                        qteCommandee, move.getPriceUnit(), companyId, picking.getName(), "incoming");
+                        qteCommandee, move.getPriceUnit(), companyId, picking.getName(), "incoming", effectiveDate);
             }
 
             // Transfert Dépôt Achat → Magasin principal
@@ -1134,7 +1144,7 @@ public class StockService {
                 // le mouvement enregistré doit refléter la quantité réellement transférée, jamais plus
                 // que ce qui est disponible au Dépôt Achat, pour rester cohérent avec le quant réel.
                 BigDecimal qteAppliquee = applyStockMovement(move.getProductId(), depotAchatLocationId, mainLocationId,
-                        qteRecue, move.getPriceUnit(), companyId, picking.getName(), "incoming");
+                        qteRecue, move.getPriceUnit(), companyId, picking.getName(), "incoming", effectiveDate);
                 if (qteAppliquee.compareTo(ZERO) > 0) {
                     StockMove tm = StockMove.builder()
                             .picking(transferMain)
@@ -1161,7 +1171,7 @@ public class StockService {
                 // typeCode "incoming" (comme pour le transfert vers le magasin principal ci-dessus) :
                 // sans ça, le CMUP de l'entrepôt Avaries n'est jamais recalculé sur cette réception.
                 BigDecimal qteAppliquee = applyStockMovement(move.getProductId(), depotAchatLocationId, avarLocationId,
-                        reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "incoming");
+                        reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "incoming", effectiveDate);
                 if (qteAppliquee.compareTo(ZERO) > 0) {
                     StockMove ta = StockMove.builder()
                             .picking(transferAvar)
@@ -1294,7 +1304,7 @@ public class StockService {
 
             // Mise à jour stock + CMUP
             applyStockMovement(product.getId(), srcLocationId, finalDestLocationId,
-                    li.getQuantity(), pu, companyId, pickingName, "incoming");
+                    li.getQuantity(), pu, companyId, pickingName, "incoming", picking.getDateDone());
         }
 
         if (picking.getMoves().isEmpty()) {
@@ -1335,14 +1345,15 @@ public class StockService {
 
     /** Recalcule le CMUP d'un produit dans un entrepôt — délègue à ProductValuationService. */
     private BigDecimal recalcWarehouseCmup(Long productId, Long warehouseId, Long companyId,
-                                            BigDecimal currentQty, BigDecimal incomingQty, BigDecimal incomingPrice) {
+                                            BigDecimal incomingQty, BigDecimal incomingPrice,
+                                            LocalDateTime effectiveDate, String reference) {
         return productValuationService.recalcWarehouseCmup(productId, warehouseId, companyId,
-                currentQty, incomingQty, incomingPrice);
+                incomingQty, incomingPrice, effectiveDate, reference);
     }
 
     private BigDecimal applyStockMovement(Long productId, Long srcLocationId, Long destLocationId,
                                      BigDecimal qty, BigDecimal priceUnit,
-                                     Long companyId, String ref, String typeCode) {
+                                     Long companyId, String ref, String typeCode, LocalDateTime effectiveDate) {
         Product product = productRepo.findById(productId).orElse(null);
         if (product == null || qty.compareTo(ZERO) <= 0) return ZERO;
 
@@ -1366,7 +1377,8 @@ public class StockService {
                 Long destWarehouseId = resolveWarehouseId(destLocationId);
                 BigDecimal pu = priceUnit != null ? priceUnit : getWarehouseCmup(productId, destWarehouseId, product);
                 if (destWarehouseId != null) {
-                    recalcWarehouseCmup(productId, destWarehouseId, companyId, destQ.getQuantity(), appliedQty, pu);
+                    recalcWarehouseCmup(productId, destWarehouseId, companyId, appliedQty, pu,
+                            effectiveDate, ref);
                 }
             }
             destQ.setQuantity(destQ.getQuantity().add(appliedQty));
@@ -1741,6 +1753,12 @@ public class StockService {
         List<StockMove> moves = picking.getMoves();
         if (moves.isEmpty()) throw new IllegalStateException("Aucune ligne à valider");
 
+        // Date effective = date planifiée du transfert (respecte l'antidatage) ou maintenant par défaut —
+        // calculée une seule fois pour que l'historique CMUP et dateDone portent exactement la même date.
+        LocalDateTime effectiveDate = picking.getScheduledDate() != null
+                ? picking.getScheduledDate().atTime(LocalTime.now())
+                : LocalDateTime.now();
+
         // Détection transfert inter-dépôts (entrepôts différents) → flux en 2 étapes (déstockage source immédiat,
         // puis confirmation de réception à destination).
         if ("internal".equals(picking.getPickingTypeCode()) && !picking.isTransferReception()) {
@@ -1816,7 +1834,7 @@ public class StockService {
                 if ("incoming".equals(picking.getPickingTypeCode()) || srcLoc == null || !"internal".equals(srcLoc.getUsage())) {
                     if (destWarehouseId != null) {
                         recalcWarehouseCmup(move.getProductId(), destWarehouseId, picking.getCompanyId(),
-                                destQuant.getQuantity(), qty, priceUnit);
+                                qty, priceUnit, effectiveDate, picking.getName());
                     }
                 }
 
@@ -1855,10 +1873,7 @@ public class StockService {
         Long moveAccountId = createStockAccountingEntry(picking);
         picking.setAccountMoveId(moveAccountId);
         picking.setState("done");
-        // Date effective = date planifiée du transfert (respecte l'antidatage) ou maintenant par défaut
-        picking.setDateDone(picking.getScheduledDate() != null
-                ? picking.getScheduledDate().atTime(LocalTime.now())
-                : LocalDateTime.now());
+        picking.setDateDone(effectiveDate);
         picking.setValidatedBy(auditService.getCurrentUsername());
         picking.setValidatedAt(LocalDateTime.now());
 
@@ -2079,6 +2094,11 @@ public class StockService {
             }
         }
 
+        // Date effective = date planifiée du transfert d'origine (respecte l'antidatage) ou maintenant par défaut
+        LocalDateTime effectiveDate = reception.getScheduledDate() != null
+                ? reception.getScheduledDate().atTime(LocalTime.now())
+                : LocalDateTime.now();
+
         for (StockMove move : reception.getMoves()) {
             BigDecimal demanded = move.getQtyDemanded() != null ? move.getQtyDemanded() : ZERO;
             BigDecimal received = receivedMap.getOrDefault(move.getId(), demanded);
@@ -2096,7 +2116,7 @@ public class StockService {
                         Long destWarehouseId = resolveWarehouseId(destLocationId);
                         if (destWarehouseId != null) {
                             recalcWarehouseCmup(move.getProductId(), destWarehouseId, companyId,
-                                    destQ.getQuantity(), received, move.getPriceUnit());
+                                    received, move.getPriceUnit(), effectiveDate, reception.getName());
                         }
                     }
                     destQ.setQuantity(destQ.getQuantity().add(received));
@@ -2122,10 +2142,6 @@ public class StockService {
         Long accountMoveId = createStockAccountingEntry(reception);
         reception.setAccountMoveId(accountMoveId);
         reception.setState("done");
-        // Date effective = date planifiée du transfert d'origine (respecte l'antidatage) ou maintenant par défaut
-        LocalDateTime effectiveDate = reception.getScheduledDate() != null
-                ? reception.getScheduledDate().atTime(LocalTime.now())
-                : LocalDateTime.now();
         reception.setDateDone(effectiveDate);
         StockPicking savedReception = pickingRepo.save(reception);
 
@@ -3163,6 +3179,11 @@ public class StockService {
 
         List<StockMove> moves = picking.getMoves();
 
+        // Date effective = date planifiée de l'expédition (respecte l'antidatage) ou maintenant par défaut
+        LocalDateTime effectiveDate = picking.getScheduledDate() != null
+                ? picking.getScheduledDate().atTime(LocalTime.now())
+                : LocalDateTime.now();
+
         for (StockMove move : moves) {
             BigDecimal qty = move.getQtyDone();
             if (qty == null || qty.compareTo(ZERO) <= 0) continue;
@@ -3186,7 +3207,7 @@ public class StockService {
                 Long destWarehouseId = resolveWarehouseId(destLocId);
                 if (destWarehouseId != null) {
                     recalcWarehouseCmup(move.getProductId(), destWarehouseId, picking.getCompanyId(),
-                            destQuant.getQuantity(), qty, price);
+                            qty, price, effectiveDate, picking.getName());
                 }
                 destQuant.setQuantity(destQuant.getQuantity().add(qty));
                 quantRepo.save(destQuant);
@@ -3207,11 +3228,6 @@ public class StockService {
         // ── Écriture comptable d'entrée (réception de marchandises) ─────────
         Long accountMoveId = createInterCompanyAccountingEntry(picking, picking.getCompanyId(), "incoming");
         picking.setAccountMoveId(accountMoveId);
-
-        // Date effective = date planifiée de l'expédition (respecte l'antidatage) ou maintenant par défaut
-        LocalDateTime effectiveDate = picking.getScheduledDate() != null
-                ? picking.getScheduledDate().atTime(LocalTime.now())
-                : LocalDateTime.now();
 
         picking.setState("done");
         picking.setDateDone(effectiveDate);

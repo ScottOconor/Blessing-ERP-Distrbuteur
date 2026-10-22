@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest, DuplicateProductCode } from '../../services/stock.service';
+import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest, DuplicateProductCode, ProductPriceHistory } from '../../services/stock.service';
 import { SalesService, SalesClient, PrixClientArticle } from '../../../sales/services/sales.service';
 import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/services/purchase.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
@@ -88,6 +88,12 @@ export class ProductListComponent implements OnInit {
   get newFournisseurRabais(): number {
     return Math.max(0, (this.form.standardPrice ?? 0) - this.newPrixFournisseur);
   }
+
+  // === Historique des prix (section dans le modal article) ===
+  showPriceHistorySection = false;
+  priceHistory: ProductPriceHistory[] = [];
+  loadingPriceHistory = false;
+  private priceHistoryLoaded = false;
 
   private companyId!: number;
   canCreate = false;
@@ -226,6 +232,9 @@ export class ProductListComponent implements OnInit {
     this.resetPhotoState();
     this.showTarifsSection = false;
     this.showFournisseurTarifsSection = false;
+    this.showPriceHistorySection = false;
+    this.priceHistory = [];
+    this.priceHistoryLoaded = false;
     this.productPrices = [];
     this.productFournisseurPrices = [];
     this.newPriceClientId = null;
@@ -237,6 +246,32 @@ export class ProductListComponent implements OnInit {
     }
     this.loadProductPrices(p.id!);
     this.loadProductFournisseurPrices(p.id!);
+  }
+
+  togglePriceHistory(): void {
+    this.showPriceHistorySection = !this.showPriceHistorySection;
+    if (!this.showPriceHistorySection || this.priceHistoryLoaded || !this.editingProduct?.id) return;
+    this.loadingPriceHistory = true;
+    this.stockService.getPriceHistory(this.editingProduct.id, this.companyId).subscribe({
+      next: h => { this.priceHistory = h; this.priceHistoryLoaded = true; this.loadingPriceHistory = false; },
+      error: () => { this.loadingPriceHistory = false; }
+    });
+  }
+
+  priceTypeLabel(h: ProductPriceHistory): string {
+    if (h.priceType === 'CMUP') {
+      const wh = this.warehouses.find(w => w.id === h.warehouseId);
+      return 'CMUP' + (wh ? ' — ' + wh.name : '');
+    }
+    return h.priceType === 'SALE' ? 'Prix de vente' : 'Prix de revient';
+  }
+
+  priceSourceLabel(h: ProductPriceHistory): string {
+    switch (h.source) {
+      case 'MANUEL': return 'Modification fiche';
+      case 'ALIGNEMENT': return 'Recalage CMUP';
+      default: return h.reference || 'Entrée de stock';
+    }
   }
 
   closeModal(): void {

@@ -547,6 +547,55 @@
               </div>
             }
           </div>
+
+          <!-- ── Historique des prix ── -->
+          <div class="tarifs-block tarifs-block-history">
+            <div class="tarifs-toggle" (click)="togglePriceHistory()">
+              <span class="material-icons">{{ showPriceHistorySection ? 'expand_less' : 'expand_more' }}</span>
+              <span class="tarifs-toggle-label">
+                <span class="material-icons" style="font-size:16px;color:#5c6bc0">history</span>
+                Historique des prix
+              </span>
+            </div>
+            @if (showPriceHistorySection) {
+              <div class="tarifs-content">
+                @if (loadingPriceHistory) {
+                  <div class="tarifs-loading">Chargement…</div>
+                } @else if (priceHistory.length === 0) {
+                  <div class="tarifs-loading">Aucun changement de prix enregistré pour cet article.</div>
+                } @else {
+                  <div class="history-scroll">
+                    <table class="tarifs-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Prix</th>
+                          <th class="text-right">Ancien</th>
+                          <th class="text-right">Nouveau</th>
+                          <th class="text-right">Entrée</th>
+                          <th>Origine</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (h of priceHistory; track h.id) {
+                          <tr>
+                            <td>{{ h.effectiveDate | date:'dd/MM/yyyy HH:mm' }}</td>
+                            <td>{{ priceTypeLabel(h) }}</td>
+                            <td class="text-right text-muted">{{ h.oldPrice != null ? (h.oldPrice | number:'1.0-2') : '—' }}</td>
+                            <td class="text-right font-bold">{{ h.newPrice | number:'1.0-2' }}</td>
+                            <td class="text-right text-muted">
+                              @if (h.qtyIn != null) { {{ h.qtyIn | number:'1.0-2' }} × {{ h.priceIn | number:'1.0-2' }} } @else { — }
+                            </td>
+                            <td>{{ priceSourceLabel(h) }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </div>
+            }
+          </div>
         }
       </div>
       <div class="modal-footer">
