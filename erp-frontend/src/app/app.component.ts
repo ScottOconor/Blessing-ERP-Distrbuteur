@@ -3,7 +3,6 @@ import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AppBrandingService } from './core/services/app-branding.service';
 import { AuthService } from './core/auth/auth.service';
-import { initSelectSearch } from './core/ui/select-search';
 import { LowStockAlertComponent } from './shared/components/low-stock-alert/low-stock-alert.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
 
@@ -31,7 +30,9 @@ const SKIP_TYPES = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'f
     <app-toast></app-toast>
     <router-outlet></router-outlet>
     @if (authService.isLoggedIn()) {
-      <app-low-stock-alert></app-low-stock-alert>
+      @defer (on idle) {
+        <app-low-stock-alert></app-low-stock-alert>
+      }
     }
   `,
   styles: [`
@@ -59,6 +60,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private lastActivity = Date.now();
   private checkTimer: any = null;
   private stopSelectSearch: (() => void) | null = null;
+  private destroyed = false;
 
   constructor(
     private brandingService: AppBrandingService,
@@ -70,12 +72,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.brandingService.apply();
     this.markActivity();
     this.checkTimer = setInterval(() => this.checkIdle(), CHECK_INTERVAL);
-    // Toutes les listes déroulantes deviennent des champs de recherche (cf. select-search.ts)
-    this.stopSelectSearch = initSelectSearch();
+    // Toutes les listes déroulantes deviennent des champs de recherche (cf. select-search.ts),
+    // chargé à part pour ne pas alourdir le bundle initial
+    import('./core/ui/select-search').then(m => {
+      if (!this.destroyed) this.stopSelectSearch = m.initSelectSearch();
+    });
   }
 
   ngOnDestroy(): void {
     if (this.checkTimer) clearInterval(this.checkTimer);
+    this.destroyed = true;
     this.stopSelectSearch?.();
   }
 
