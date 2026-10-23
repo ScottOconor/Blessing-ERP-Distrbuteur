@@ -409,6 +409,14 @@ public class StockController {
         return ResponseEntity.ok(stockService.getQuants(companyId, locationId, productId));
     }
 
+    // ---- Alerte stock bas ----
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<LowStockItemDTO>> getLowStock(
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(name = "threshold", defaultValue = "5") java.math.BigDecimal threshold) {
+        return ResponseEntity.ok(stockService.getLowStock(companyId, threshold));
+    }
+
     // ---- Dashboard ----
     @GetMapping("/dashboard")
     public ResponseEntity<StockDashboardDTO> getDashboard(@RequestParam("companyId") Long companyId) {

@@ -122,6 +122,7 @@ public class PermissionService {
         new PermissionRule("PUT",    "/api/stock/locations/**",      "STOCK","MOUVEMENTS","EDIT"),
         new PermissionRule("DELETE", "/api/stock/locations/**",      "STOCK","MOUVEMENTS","EDIT"),
         new PermissionRule("GET",    "/api/stock/quants",            "STOCK","MOUVEMENTS","VIEW"),
+        new PermissionRule("GET",    "/api/stock/low-stock",         "STOCK","MOUVEMENTS","VIEW"),
         new PermissionRule("GET",    "/api/stock/pickings",          "STOCK","MOUVEMENTS","VIEW"),
         new PermissionRule("GET",    "/api/stock/pickings/**",       "STOCK","MOUVEMENTS","VIEW"),
         new PermissionRule("POST",   "/api/stock/pickings",          "STOCK","MOUVEMENTS","CREATE"),
@@ -442,6 +443,7 @@ public class PermissionService {
                 || uri.equals("/api/stock/locations")
                 || uri.equals("/api/stock/picking-types")
                 || uri.equals("/api/stock/quants")
+                || uri.equals("/api/stock/low-stock")
                 || uri.equals("/api/accounting/accounts") || uri.startsWith("/api/accounting/accounts/")
                 || uri.equals("/api/accounting/journals") || uri.startsWith("/api/accounting/journals/")
                 || uri.equals("/api/accounting/partners") || uri.startsWith("/api/accounting/partners/")

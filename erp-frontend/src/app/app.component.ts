@@ -3,6 +3,8 @@ import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AppBrandingService } from './core/services/app-branding.service';
 import { AuthService } from './core/auth/auth.service';
+import { initSelectSearch } from './core/ui/select-search';
+import { LowStockAlertComponent } from './shared/components/low-stock-alert/low-stock-alert.component';
 import { ToastComponent } from './shared/components/toast/toast.component';
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;  // 30 minutes d'inactivité → déconnexion
@@ -17,7 +19,7 @@ const SKIP_TYPES = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'f
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, ToastComponent],
+  imports: [RouterOutlet, CommonModule, ToastComponent, LowStockAlertComponent],
   template: `
     @if (showIdleWarning) {
       <div class="idle-warning">
@@ -28,6 +30,9 @@ const SKIP_TYPES = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'f
     }
     <app-toast></app-toast>
     <router-outlet></router-outlet>
+    @if (authService.isLoggedIn()) {
+      <app-low-stock-alert></app-low-stock-alert>
+    }
   `,
   styles: [`
     :host { display: block; height: 100%; }
@@ -53,10 +58,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private lastActivity = Date.now();
   private checkTimer: any = null;
+  private stopSelectSearch: (() => void) | null = null;
 
   constructor(
     private brandingService: AppBrandingService,
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router
   ) {}
 
@@ -64,10 +70,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.brandingService.apply();
     this.markActivity();
     this.checkTimer = setInterval(() => this.checkIdle(), CHECK_INTERVAL);
+    // Toutes les listes déroulantes deviennent des champs de recherche (cf. select-search.ts)
+    this.stopSelectSearch = initSelectSearch();
   }
 
   ngOnDestroy(): void {
     if (this.checkTimer) clearInterval(this.checkTimer);
+    this.stopSelectSearch?.();
   }
 
   // ── Activité utilisateur ─────────────────────────────────────────
@@ -137,7 +146,7 @@ export class AppComponent implements OnInit, OnDestroy {
         'input:not([disabled]):not([type="hidden"]):not([type="button"])' +
         ':not([type="submit"]):not([type="reset"]):not([type="checkbox"])' +
         ':not([type="radio"]):not([type="file"]),' +
-        'select:not([disabled]),' +
+        'select:not([disabled]):not(.ss-hidden),' +
         'textarea:not([disabled])'
       )
     ).filter(el => {

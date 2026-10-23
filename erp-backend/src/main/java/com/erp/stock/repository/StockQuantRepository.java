@@ -30,6 +30,19 @@ public interface StockQuantRepository extends JpaRepository<StockQuant, Long> {
            "WHERE l.id = q.locationId AND q.productId = :pid AND l.warehouseId = :wid AND l.usage = 'internal'")
     java.math.BigDecimal sumQuantityForProductInWarehouse(@Param("pid") Long productId, @Param("wid") Long warehouseId);
 
+    /** Articles stockables actifs dont le stock total (emplacements internes) est < seuil,
+     *  y compris ceux sans aucun quant (stock 0) → [productId, code, name, qty]. */
+    @Query(value = "SELECT p.id, p.default_code, p.name, " +
+           "COALESCE(SUM(CASE WHEN l.usage = 'internal' THEN q.quantity END), 0) AS qty " +
+           "FROM products p " +
+           "LEFT JOIN stock_quants q ON q.product_id = p.id AND q.company_id = p.company_id " +
+           "LEFT JOIN stock_locations l ON l.id = q.location_id " +
+           "WHERE p.company_id = :cid AND p.active = true AND p.type = 'product' " +
+           "GROUP BY p.id, p.default_code, p.name " +
+           "HAVING COALESCE(SUM(CASE WHEN l.usage = 'internal' THEN q.quantity END), 0) < :threshold " +
+           "ORDER BY qty ASC, p.name ASC", nativeQuery = true)
+    List<Object[]> findLowStockProducts(@Param("cid") Long companyId, @Param("threshold") java.math.BigDecimal threshold);
+
     @Query("SELECT q FROM StockQuant q WHERE q.companyId = :cid")
     List<StockQuant> findAllByCompanyId(@Param("cid") Long companyId);
 
