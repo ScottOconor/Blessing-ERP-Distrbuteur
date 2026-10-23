@@ -12,7 +12,8 @@ const MIN_GAP_MS = 30 * 1000;         // au plus une requête par 30 s lors des 
 
 interface LowStockItem { productId: number; code: string | null; name: string; quantity: number; }
 
-/** Alerte flottante, visible sur tous les écrans : articles dont le stock est inférieur à 5. */
+/** Alerte flottante, visible sur tous les écrans : articles du magasin principal dont le stock est
+ *  inférieur à 5 (articles n'ayant jamais eu de stock exclus, cf. StockQuantRepository.findLowStockProducts). */
 @Component({
   selector: 'app-low-stock-alert',
   standalone: true,
@@ -28,7 +29,7 @@ interface LowStockItem { productId: number; code: string | null; name: string; q
         <div class="lsa-panel">
           <div class="lsa-head">
             <span class="material-icons">warning</span>
-            <strong>Stock inférieur à {{ threshold }}</strong>
+            <strong>Magasin principal — stock &lt; {{ threshold }}</strong>
             <span class="lsa-count">{{ items.length }}</span>
             <button class="lsa-close" (click)="expanded = false" title="Réduire">
               <span class="material-icons">close</span>

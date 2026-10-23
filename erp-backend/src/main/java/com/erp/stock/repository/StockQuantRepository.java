@@ -30,18 +30,23 @@ public interface StockQuantRepository extends JpaRepository<StockQuant, Long> {
            "WHERE l.id = q.locationId AND q.productId = :pid AND l.warehouseId = :wid AND l.usage = 'internal'")
     java.math.BigDecimal sumQuantityForProductInWarehouse(@Param("pid") Long productId, @Param("wid") Long warehouseId);
 
-    /** Articles stockables actifs dont le stock total (emplacements internes) est < seuil,
-     *  y compris ceux sans aucun quant (stock 0) → [productId, code, name, qty]. */
-    @Query(value = "SELECT p.id, p.default_code, p.name, " +
-           "COALESCE(SUM(CASE WHEN l.usage = 'internal' THEN q.quantity END), 0) AS qty " +
+    /** Articles stockables actifs dont le stock dans le magasin principal (emplacements internes) est
+     *  < seuil. Seuls les articles ayant déjà eu au moins un mouvement validé dans ce magasin sont
+     *  retenus : un article toujours resté à 0 n'est pas une alerte → [productId, code, name, qty]. */
+    @Query(value = "SELECT p.id, p.default_code, p.name, COALESCE(SUM(q.quantity), 0) AS qty " +
            "FROM products p " +
            "LEFT JOIN stock_quants q ON q.product_id = p.id AND q.company_id = p.company_id " +
-           "LEFT JOIN stock_locations l ON l.id = q.location_id " +
+           "  AND q.location_id IN (SELECT l.id FROM stock_locations l WHERE l.warehouse_id = :wid AND l.usage = 'internal') " +
            "WHERE p.company_id = :cid AND p.active = true AND p.type = 'product' " +
+           "  AND EXISTS (SELECT 1 FROM stock_moves m JOIN stock_locations ml " +
+           "    ON ml.id = m.location_dest_id OR ml.id = m.location_id " +
+           "    WHERE m.product_id = p.id AND m.company_id = p.company_id AND m.state = 'done' " +
+           "      AND ml.warehouse_id = :wid AND ml.usage = 'internal') " +
            "GROUP BY p.id, p.default_code, p.name " +
-           "HAVING COALESCE(SUM(CASE WHEN l.usage = 'internal' THEN q.quantity END), 0) < :threshold " +
+           "HAVING COALESCE(SUM(q.quantity), 0) < :threshold " +
            "ORDER BY qty ASC, p.name ASC", nativeQuery = true)
-    List<Object[]> findLowStockProducts(@Param("cid") Long companyId, @Param("threshold") java.math.BigDecimal threshold);
+    List<Object[]> findLowStockProducts(@Param("cid") Long companyId, @Param("wid") Long warehouseId,
+                                        @Param("threshold") java.math.BigDecimal threshold);
 
     @Query("SELECT q FROM StockQuant q WHERE q.companyId = :cid")
     List<StockQuant> findAllByCompanyId(@Param("cid") Long companyId);

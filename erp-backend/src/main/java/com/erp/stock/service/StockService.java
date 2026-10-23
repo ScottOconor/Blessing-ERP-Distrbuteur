@@ -2306,9 +2306,12 @@ public class StockService {
     // ============================================================
 
     @Transactional(readOnly = true)
-    /** Articles dont le stock est inférieur au seuil (alerte de stock bas affichée sur tous les écrans). */
+    /** Articles du magasin principal dont le stock est inférieur au seuil (alerte de stock bas affichée sur tous les écrans). */
     public List<LowStockItemDTO> getLowStock(Long companyId, BigDecimal threshold) {
-        return quantRepo.findLowStockProducts(companyId, threshold).stream()
+        // Uniquement le magasin principal (entrepôt par défaut)
+        Warehouse main = warehouseRepo.findFirstByCompanyIdAndIsDefaultTrue(companyId).orElse(null);
+        if (main == null) return List.of();
+        return quantRepo.findLowStockProducts(companyId, main.getId(), threshold).stream()
                 .map(r -> new LowStockItemDTO(((Number) r[0]).longValue(), (String) r[1], (String) r[2],
                         r[3] == null ? BigDecimal.ZERO : new BigDecimal(r[3].toString())))
                 .collect(Collectors.toList());
