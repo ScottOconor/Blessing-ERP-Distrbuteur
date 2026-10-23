@@ -454,7 +454,10 @@ public class SalesService {
         boolean isPartiel = req != null && "partiel".equals(req.getAvoirType())
                 && req.getLines() != null && !req.getLines().isEmpty();
 
-        LocalDate avoirDate = original.getDate();
+        // Date saisie à la création de l'avoir ; à défaut (annulation PDV), date de la facture d'origine
+        LocalDate avoirDate = req != null && req.getDate() != null ? req.getDate()
+                : (original.getDate() != null ? original.getDate() : LocalDate.now());
+        fiscalLockGuard.assertPeriodOpen(original.getCompany(), avoirDate);
         String avoirName = generateAvoirName(original.getCompany().getId(), avoirDate);
 
         SalesInvoice avoir = SalesInvoice.builder()
@@ -1816,9 +1819,11 @@ public class SalesService {
                     toInvoiceDTOWithPayments(credit));
 
             // Enregistrer la compensation comme paiement sur la facture (traçabilité)
-            String pmtName = generatePaymentName(invoice.getCompany().getId(), LocalDate.now());
+            // Compensation datée à l'avoir
+            LocalDate pmtDate = credit.getDate() != null ? credit.getDate() : LocalDate.now();
+            String pmtName = generatePaymentName(invoice.getCompany().getId(), pmtDate);
             paymentRepo.save(InvoicePayment.builder()
-                    .name(pmtName).date(LocalDate.now()).amount(toApply)
+                    .name(pmtName).date(pmtDate).amount(toApply)
                     .memo("Crédit " + credit.getName())
                     .state("posted")
                     .invoice(invoice)

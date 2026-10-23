@@ -244,7 +244,10 @@ export class InvoiceDetailComponent implements OnInit {
 
   openPaymentForm(): void {
     this.payment.amount = this.invoice?.montantDu || 0;
-    this.payment.date = new Date().toISOString().split('T')[0];
+    // Remboursement d'un avoir : daté à l'avoir par défaut
+    this.payment.date = (this.isAvoir && this.invoice?.date)
+      ? String(this.invoice.date).split('T')[0]
+      : new Date().toISOString().split('T')[0];
     this.showPaymentForm = true;
   }
 

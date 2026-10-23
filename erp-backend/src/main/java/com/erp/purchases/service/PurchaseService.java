@@ -1492,7 +1492,9 @@ public class PurchaseService {
         // L'avoir reprend la date de la facture d'origine (pas la date du jour) : le retour de
         // stock et l'écriture comptable qui en découlent à la validation doivent être datés à la
         // même période comptable que l'opération d'achat qu'ils annulent.
-        LocalDate avoirDate = original.getDate() != null ? original.getDate() : LocalDate.now();
+        // Date saisie à la création de l'avoir prioritaire sur celle de la facture d'origine
+        LocalDate avoirDate = req != null && req.getDate() != null ? req.getDate()
+                : (original.getDate() != null ? original.getDate() : LocalDate.now());
         fiscalLockGuard.assertPeriodOpen(original.getCompany(), avoirDate);
         String avoirName = generateAvoirName(original.getCompany().getId(), avoirDate);
 
@@ -1845,9 +1847,11 @@ public class PurchaseService {
             republishInvoiceSync(credit);
 
             // Enregistrer la compensation comme paiement sur la facture (traçabilité)
-            String pmtName = generatePaymentName(invoice.getCompany().getId(), LocalDate.now());
+            // Compensation datée à l'avoir
+            LocalDate pmtDate = credit.getDate() != null ? credit.getDate() : LocalDate.now();
+            String pmtName = generatePaymentName(invoice.getCompany().getId(), pmtDate);
             paymentRepo.save(PurchaseInvoicePayment.builder()
-                    .name(pmtName).date(LocalDate.now()).amount(toApply)
+                    .name(pmtName).date(pmtDate).amount(toApply)
                     .memo("Crédit " + credit.getName())
                     .state("posted")
                     .invoice(invoice)
