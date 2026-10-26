@@ -65,6 +65,28 @@ public class SyncDispatcherScheduler {
     /** Type d'ERP, figé dans le code : le hub refuse de rattacher ce spoke à une entreprise d'un autre type. */
     public static final String SPOKE_CATEGORY = "DISTRIBUTEUR";
 
+    /** Valeur livrée par défaut dans application.properties, à remplacer à l'installation. */
+    private static final String UNCONFIGURED_SPOKE_ID = "CHANGEME";
+
+    @Value("${spring.rabbitmq.username:}") private String rabbitUser;
+    private volatile long lastIdentityWarning;
+
+    /**
+     * Identifiant d'installation absent ou laissé à CHANGEME : rien n'est envoyé au Hub (les
+     * événements restent en attente, rien n'est perdu). Sinon, plusieurs installations mal
+     * configurées publieraient sous le même identifiant et leurs données seraient mélangées au Hub.
+     */
+    private boolean spokeIdConfigured() {
+        if (spokeId != null && !spokeId.isBlank() && !UNCONFIGURED_SPOKE_ID.equalsIgnoreCase(spokeId.trim())) return true;
+        long now = System.currentTimeMillis();
+        if (now - lastIdentityWarning > 3_600_000L) {
+            lastIdentityWarning = now;
+            log.error("Synchronisation Hub suspendue : sync.spoke.id n'est pas renseigné (valeur « {} »). "
+                    + "Renseignez l'identifiant de l'installation (voir config/application.properties.example).", spokeId);
+        }
+        return false;
+    }
+
     /** Délai d'attente de la confirmation du broker pour chaque événement envoyé. */
     private static final long CONFIRM_TIMEOUT_SECONDS = 10;
 
@@ -172,6 +194,13 @@ public class SyncDispatcherScheduler {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void sendRegistration() {
+        if (!spokeIdConfigured()) return;
+        if (!spokeId.equals(rabbitUser)) {
+            log.warn("Identité de l'installation non prouvée auprès du Hub : le compte RabbitMQ « {} » ne porte "
+                    + "pas l'identifiant de l'installation « {} ». Créez un compte RabbitMQ nommé « {} » pour que "
+                    + "le Hub puisse vérifier l'origine des messages (indispensable s'il passe en mode strict).",
+                    rabbitUser, spokeId, spokeId);
+        }
         try {
             SyncMessage reg = new SyncMessage();
             reg.setSpokeId(spokeId);
@@ -193,6 +222,7 @@ public class SyncDispatcherScheduler {
 
     @Scheduled(fixedRate = 30_000, initialDelay = 10_000)
     public void sendHeartbeat() {
+        if (!spokeIdConfigured()) return;
         try {
             SyncMessage hb = new SyncMessage();
             hb.setOutboxId(null);
@@ -222,6 +252,7 @@ public class SyncDispatcherScheduler {
      */
     @Scheduled(fixedDelayString = "${sync.dispatch.interval-ms:30000}")
     public void dispatch() {
+        if (!spokeIdConfigured()) return;
         // Ids seuls puis chargement un par un : un lot de BATCH_SIZE entités complètes (parties de
         // FULL_SNAPSHOT jusqu'à 8 Mo chacune) suffisait à épuiser le heap (incident du 2026-10-13).
         List<Long> pending = outboxRepo.findIdsByStatus(
