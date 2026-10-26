@@ -1,5 +1,6 @@
 package com.erp.hr.init;
 
+import com.erp.common.service.SeedTransaction;
 import com.erp.hr.entity.Department;
 import com.erp.hr.entity.JobPosition;
 import com.erp.hr.repository.DepartmentRepository;
@@ -17,7 +18,14 @@ import org.springframework.stereotype.Component;
  * direct) : à choisir par l'utilisateur selon sa propre grille/convention collective.
  *
  * {@code synchronized} pour la même raison que {@link PayrollSeeder} : éviter les doublons en cas
- * d'appels concurrents avant qu'aucun n'ait rien inséré.
+ * d'appels concurrents avant qu'aucun n'ait rien inséré. Ce verrou ne protège toutefois que
+ * l'appel en cours de process — pas la transaction englobante (les appelants, {@code HrService},
+ * sont {@code @Transactional}) : deux requêtes concurrentes peuvent donc toutes deux passer le
+ * test « déjà seedé ? » avant que l'une des deux ait committé. {@code Department}/{@code JobPosition}
+ * portent une contrainte unique {@code (company_id, name)} : en cas de course, l'insert perdant lève
+ * {@link DataIntegrityViolationException} ; l'initialisation s'exécute dans sa propre transaction
+ * ({@link SeedTransaction}) pour que cette erreur n'annule pas la requête de l'appelant (l'autre
+ * appel a déjà tout créé).
  */
 @Component
 @RequiredArgsConstructor
@@ -25,20 +33,23 @@ public class OrganisationSeeder {
 
     private final DepartmentRepository departmentRepo;
     private final JobPositionRepository jobRepo;
+    private final SeedTransaction seedTransaction;
 
     public synchronized void seedDepartmentsIfEmpty(Long companyId) {
         if (!departmentRepo.findByCompanyIdOrderByNameAsc(companyId).isEmpty()) return;
 
-        Department direction   = departmentRepo.save(dept("Direction Générale", "DG", companyId));
-        Department rh          = departmentRepo.save(dept("Ressources Humaines", "RH", companyId));
-        Department compta      = departmentRepo.save(dept("Comptabilité et Finances", "CPTA", companyId));
-        Department commercial  = departmentRepo.save(dept("Commercial et Ventes", "COM", companyId));
-        Department achats      = departmentRepo.save(dept("Achats", "ACH", companyId));
-        Department logistique  = departmentRepo.save(dept("Logistique et Stock", "LOG", companyId));
-        Department it          = departmentRepo.save(dept("Informatique", "IT", companyId));
+        seedTransaction.run("départements et postes, société " + companyId, () -> {
+            Department direction   = departmentRepo.save(dept("Direction Générale", "DG", companyId));
+            Department rh          = departmentRepo.save(dept("Ressources Humaines", "RH", companyId));
+            Department compta      = departmentRepo.save(dept("Comptabilité et Finances", "CPTA", companyId));
+            Department commercial  = departmentRepo.save(dept("Commercial et Ventes", "COM", companyId));
+            Department achats      = departmentRepo.save(dept("Achats", "ACH", companyId));
+            Department logistique  = departmentRepo.save(dept("Logistique et Stock", "LOG", companyId));
+            Department it          = departmentRepo.save(dept("Informatique", "IT", companyId));
 
-        // Postes de base, rattachés au département correspondant (créés seulement si aucun poste n'existe déjà).
-        seedJobsIfEmpty(companyId, direction, rh, compta, commercial, achats, logistique, it);
+            // Postes de base, rattachés au département correspondant (créés seulement si aucun poste n'existe déjà).
+            seedJobsIfEmpty(companyId, direction, rh, compta, commercial, achats, logistique, it);
+        });
     }
 
     private void seedJobsIfEmpty(Long companyId, Department direction, Department rh, Department compta,

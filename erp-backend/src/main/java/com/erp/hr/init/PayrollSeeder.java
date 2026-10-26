@@ -1,5 +1,6 @@
 package com.erp.hr.init;
 
+import com.erp.common.service.SeedTransaction;
 import com.erp.hr.entity.SalaryRule;
 import com.erp.hr.entity.SalaryRuleCategory;
 import com.erp.hr.repository.SalaryRuleCategoryRepository;
@@ -63,6 +64,7 @@ public class PayrollSeeder {
 
     private final SalaryRuleCategoryRepository categoryRepo;
     private final SalaryRuleRepository ruleRepo;
+    private final SeedTransaction seedTransaction;
 
     // Gains
     private static final String ACC_SALAIRE   = "661100"; // Appointements, salaires et commissions
@@ -93,58 +95,69 @@ public class PayrollSeeder {
      * deux ait rien inséré → doublons. Le verrou sérialise les appels ; comme chaque repository
      * Spring Data committe sa propre transaction dès son retour, le second appel voit forcément
      * les lignes déjà insérées par le premier une fois le verrou libéré.
+     *
+     * Ce verrou ne protège toutefois que l'appel en cours de process, pas la transaction englobante
+     * (les appelants — {@code HrService}, {@code PayrollService} — sont {@code @Transactional}) :
+     * deux requêtes concurrentes peuvent donc toutes deux passer le test "déjà seedé ?" avant que
+     * l'une des deux ait committé (READ_COMMITTED). {@code SalaryRuleCategory}/{@code SalaryRule}
+     * portent une contrainte unique {@code (company_id, code)} : en cas de course, l'insert perdant
+     * lève {@link DataIntegrityViolationException} ; l'initialisation s'exécute dans sa propre
+     * transaction ({@link SeedTransaction}) pour que cette erreur n'annule pas la requête de
+     * l'appelant (l'autre appel a déjà seedé — rien à faire).
      */
     public synchronized void seedIfEmpty(Long companyId) {
         if (categoryRepo.countByCompanyId(companyId) > 0 || ruleRepo.countByCompanyId(companyId) > 0) return;
 
-        List<SalaryRuleCategory> cats = new ArrayList<>();
-        cats.add(cat("Salaire de base", "BASIC", 10, companyId));
-        cats.add(cat("Indemnités & primes", "ALW", 20, companyId));
-        cats.add(cat("Salaire brut", "GROSS", 30, companyId));
-        cats.add(cat("Retenues salariales", "DED", 40, companyId));
-        cats.add(cat("Net à payer", "NET", 50, companyId));
-        cats.add(cat("Charges patronales", "COMP", 60, companyId));
-        categoryRepo.saveAll(cats);
+        seedTransaction.run("règles de paie, société " + companyId, () -> {
+            List<SalaryRuleCategory> cats = new ArrayList<>();
+            cats.add(cat("Salaire de base", "BASIC", 10, companyId));
+            cats.add(cat("Indemnités & primes", "ALW", 20, companyId));
+            cats.add(cat("Salaire brut", "GROSS", 30, companyId));
+            cats.add(cat("Retenues salariales", "DED", 40, companyId));
+            cats.add(cat("Net à payer", "NET", 50, companyId));
+            cats.add(cat("Charges patronales", "COMP", 60, companyId));
+            categoryRepo.saveAll(cats);
 
-        List<SalaryRule> rules = new ArrayList<>();
+            List<SalaryRule> rules = new ArrayList<>();
 
-        // ── Gains — chacun posté individuellement à son compte de charge réel ──
-        rules.add(withDebit(builtin("Salaire de Base", "BASIC", 10, "BASIC", "BASIC", null, companyId), ACC_SALAIRE));
-        rules.add(withDebit(field("Indemnité de Transport", "TRANS", 20, "primeTransport", companyId), ACC_TRANSPORT));
-        rules.add(withDebit(field("Indemnité de Logement", "LOG", 21, "primeLogement", companyId), ACC_LOGEMENT));
-        rules.add(withDebit(field("Indemnité de Représentation", "REP", 22, "primeRepresentation", companyId), ACC_REPRES));
-        rules.add(withDebit(field("Prime de Fonction", "FONC", 23, "primeFonction", companyId), ACC_PRIMES));
-        rules.add(withDebit(field("Prime d'Ancienneté", "ANC", 24, "primeAnciennete", companyId), ACC_PRIMES));
-        rules.add(withDebit(field("Autres Primes", "AUTRES", 25, "autresPrimes", companyId), ACC_AUTRES_IND));
+            // ── Gains — chacun posté individuellement à son compte de charge réel ──
+            rules.add(withDebit(builtin("Salaire de Base", "BASIC", 10, "BASIC", "BASIC", null, companyId), ACC_SALAIRE));
+            rules.add(withDebit(field("Indemnité de Transport", "TRANS", 20, "primeTransport", companyId), ACC_TRANSPORT));
+            rules.add(withDebit(field("Indemnité de Logement", "LOG", 21, "primeLogement", companyId), ACC_LOGEMENT));
+            rules.add(withDebit(field("Indemnité de Représentation", "REP", 22, "primeRepresentation", companyId), ACC_REPRES));
+            rules.add(withDebit(field("Prime de Fonction", "FONC", 23, "primeFonction", companyId), ACC_PRIMES));
+            rules.add(withDebit(field("Prime d'Ancienneté", "ANC", 24, "primeAnciennete", companyId), ACC_PRIMES));
+            rules.add(withDebit(field("Autres Primes", "AUTRES", 25, "autresPrimes", companyId), ACC_AUTRES_IND));
 
-        // Brut : sous-total informatif, sans compte (déjà couvert par les gains individuels ci-dessus).
-        rules.add(builtin("Salaire Brut", "GROSS", 100, "GROSS", "GROSS", null, companyId));
+            // Brut : sous-total informatif, sans compte (déjà couvert par les gains individuels ci-dessus).
+            rules.add(builtin("Salaire Brut", "GROSS", 100, "GROSS", "GROSS", null, companyId));
 
-        // ── Retenues salariales (crédit) — les taux (%) sont éditables depuis Configuration paie ──
-        rules.add(ceiling(pct(ded("Retenue CNPS", "CNPS_EMP", 200, "CNPS_EMP", ACC_CNPS_PVID, companyId), "4.2"), CNPS_CEILING_DEFAULT));
-        rules.add(pct(ded("Crédit Foncier salarié", "CFC_EMP", 205, "CFC_EMP", ACC_IMPOT_SAL, companyId), "1"));
-        rules.add(brackets(ded("Redevance Audiovisuelle (RAV)", "RAV", 210, "RAV", ACC_AUTRES_IMP, companyId), RAV_BRACKETS_DEFAULT));
-        SalaryRule irpp = ded("IRPP", "IRPP", 300, "IRPP", ACC_IRPP, companyId);
-        irpp.setAmountFix(IRPP_THRESHOLD_DEFAULT); // seuil d'imposition (RNI en-dessous duquel : 0 FCFA)
-        irpp.setBracketsConfig(IRPP_BRACKETS_DEFAULT);
-        rules.add(irpp);
-        rules.add(pct(ded("CAC", "CAC", 305, "CAC", ACC_AUTRES_IMP, companyId), "10"));
+            // ── Retenues salariales (crédit) — les taux (%) sont éditables depuis Configuration paie ──
+            rules.add(ceiling(pct(ded("Retenue CNPS", "CNPS_EMP", 200, "CNPS_EMP", ACC_CNPS_PVID, companyId), "4.2"), CNPS_CEILING_DEFAULT));
+            rules.add(pct(ded("Crédit Foncier salarié", "CFC_EMP", 205, "CFC_EMP", ACC_IMPOT_SAL, companyId), "1"));
+            rules.add(brackets(ded("Redevance Audiovisuelle (RAV)", "RAV", 210, "RAV", ACC_AUTRES_IMP, companyId), RAV_BRACKETS_DEFAULT));
+            SalaryRule irpp = ded("IRPP", "IRPP", 300, "IRPP", ACC_IRPP, companyId);
+            irpp.setAmountFix(IRPP_THRESHOLD_DEFAULT); // seuil d'imposition (RNI en-dessous duquel : 0 FCFA)
+            irpp.setBracketsConfig(IRPP_BRACKETS_DEFAULT);
+            rules.add(irpp);
+            rules.add(pct(ded("CAC", "CAC", 305, "CAC", ACC_AUTRES_IMP, companyId), "10"));
 
-        // Net (crédit)
-        SalaryRule net = builtin("Net à Payer", "NET", 500, "NET", "NET", null, companyId);
-        net.setAccountCreditCode(ACC_NET);
-        rules.add(net);
+            // Net (crédit)
+            SalaryRule net = builtin("Net à Payer", "NET", 500, "NET", "NET", null, companyId);
+            net.setAccountCreditCode(ACC_NET);
+            rules.add(net);
 
-        // ── Charges patronales — CNPS scindée par branche pour un DIPE exploitable ──
-        rules.add(ceiling(pct(patronal("CNPS Patronale - PVID", "PVID_PAT", 600, "PVID_PAT", ACC_CNPS_PVID, companyId), "7"), CNPS_CEILING_DEFAULT));
-        rules.add(ceiling(pct(patronal("CNPS Patronale - Allocations Familiales", "AF_PAT", 601, "AF_PAT", ACC_CNPS_AF, companyId), "7"), CNPS_CEILING_DEFAULT));
-        rules.add(ceiling(pct(patronal("CNPS Patronale - ATMP", "ATMP_PAT", 602, "ATMP_PAT", ACC_CNPS_ATMP, companyId), "2.5"), CNPS_CEILING_DEFAULT));
-        // CFC et FNE patronaux : des IMPÔTS assis sur les salaires, pas des cotisations sociales
-        // → débit 641300 (Taxes sur appointements et salaires), pas 664100.
-        rules.add(pct(patronal("Crédit Foncier patronal", "CFC_PAT", 603, "CFC_PAT", ACC_TAXE_SAL, ACC_IMPOT_SAL, companyId), "1.5"));
-        rules.add(pct(patronal("FNE Patronal", "FNE_PAT", 604, "FNE_PAT", ACC_TAXE_SAL, ACC_AUTRES_TAXE_ETAT, companyId), "1"));
+            // ── Charges patronales — CNPS scindée par branche pour un DIPE exploitable ──
+            rules.add(ceiling(pct(patronal("CNPS Patronale - PVID", "PVID_PAT", 600, "PVID_PAT", ACC_CNPS_PVID, companyId), "7"), CNPS_CEILING_DEFAULT));
+            rules.add(ceiling(pct(patronal("CNPS Patronale - Allocations Familiales", "AF_PAT", 601, "AF_PAT", ACC_CNPS_AF, companyId), "7"), CNPS_CEILING_DEFAULT));
+            rules.add(ceiling(pct(patronal("CNPS Patronale - ATMP", "ATMP_PAT", 602, "ATMP_PAT", ACC_CNPS_ATMP, companyId), "2.5"), CNPS_CEILING_DEFAULT));
+            // CFC et FNE patronaux : des IMPÔTS assis sur les salaires, pas des cotisations sociales
+            // → débit 641300 (Taxes sur appointements et salaires), pas 664100.
+            rules.add(pct(patronal("Crédit Foncier patronal", "CFC_PAT", 603, "CFC_PAT", ACC_TAXE_SAL, ACC_IMPOT_SAL, companyId), "1.5"));
+            rules.add(pct(patronal("FNE Patronal", "FNE_PAT", 604, "FNE_PAT", ACC_TAXE_SAL, ACC_AUTRES_TAXE_ETAT, companyId), "1"));
 
-        ruleRepo.saveAll(rules);
+            ruleRepo.saveAll(rules);
+        });
     }
 
     /** Plafond CNPS légal par défaut (FCFA) — CNPS_EMP, CNPS_PAT, PVID_PAT, AF_PAT, ATMP_PAT. */
