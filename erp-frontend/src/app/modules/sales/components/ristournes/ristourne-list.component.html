@@ -581,7 +581,7 @@
 
 <!-- ===================== RISTOURNE MODAL ===================== -->
 @if (showRstModal) {
-  <div class="modal-overlay" (click.self)="showRstModal = false">
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && (showRstModal = false)">
     <div class="modal-box">
       <div class="modal-header">
         <span class="material-icons">redeem</span>
@@ -642,7 +642,7 @@
 
 <!-- ===================== GUINNESS GÉNÉRATION MODAL ===================== -->
 @if (showGuinessModal) {
-  <div class="modal-overlay" (click.self)="showGuinessModal = false">
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && (showGuinessModal = false)">
     <div class="modal-box" style="max-width:460px">
       <div class="modal-header">
         <span class="material-icons">sports_bar</span>

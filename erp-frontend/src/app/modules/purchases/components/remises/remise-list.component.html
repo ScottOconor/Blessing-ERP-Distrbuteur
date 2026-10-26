@@ -305,7 +305,7 @@
 
 <!-- ===================== REMISE MODAL ===================== -->
 @if (showRmsModal) {
-  <div class="modal-overlay" (click.self)="showRmsModal = false">
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && (showRmsModal = false)">
     <div class="modal-box">
       <div class="modal-header">
         <span class="material-icons">discount</span>
@@ -356,7 +356,7 @@
 
 <!-- ===================== GUINNESS GÉNÉRATION MODAL ===================== -->
 @if (showGuinessModal) {
-  <div class="modal-overlay" (click.self)="showGuinessModal = false">
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && (showGuinessModal = false)">
     <div class="modal-box" style="max-width:460px">
       <div class="modal-header">
         <span class="material-icons">sports_bar</span>

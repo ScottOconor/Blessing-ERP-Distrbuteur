@@ -570,7 +570,7 @@
 
 <!-- ══ Modal : Enregistrer un paiement fournisseur ══ -->
 @if (showPaymentForm && invoice) {
-  <div class="pay-overlay" (click).self="closePaymentForm()">
+  <div class="pay-overlay" (click)="$event.target === $event.currentTarget && closePaymentForm()">
     <div class="pay-modal">
       <div class="pay-modal-hdr">
         <div class="pay-modal-title">
@@ -636,7 +636,7 @@
 
 <!-- ══ Modal : Rattacher un versement (Lettrage Achats) ══ -->
 @if (showReconcileModal && invoice) {
-  <div class="pay-overlay" (click).self="showReconcileModal = false">
+  <div class="pay-overlay" (click)="$event.target === $event.currentTarget && (showReconcileModal = false)">
     <div class="pay-modal" style="max-width:760px">
       <div class="pay-modal-hdr">
         <div class="pay-modal-title">

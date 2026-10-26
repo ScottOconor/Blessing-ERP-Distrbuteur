@@ -639,7 +639,7 @@
 
 <!-- ══ Modal : Rattacher un versement (Lettrage) ══ -->
 @if (showReconcileModal && invoice) {
-  <div class="pay-overlay" (click).self="showReconcileModal = false">
+  <div class="pay-overlay" (click)="$event.target === $event.currentTarget && (showReconcileModal = false)">
     <div class="pay-modal" style="max-width:680px">
       <div class="pay-modal-hdr" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">
         <div class="pay-modal-title">
@@ -745,7 +745,7 @@
 
 <!-- ══ Modal : Enregistrer un paiement ══ -->
 @if (showPaymentForm && invoice) {
-  <div class="pay-overlay" (click).self="closePaymentForm()">
+  <div class="pay-overlay" (click)="$event.target === $event.currentTarget && closePaymentForm()">
     <div class="pay-modal">
       <div class="pay-modal-hdr">
         <div class="pay-modal-title">
@@ -811,7 +811,7 @@
 
 <!-- ══ Modal : Appliquer un crédit ══ -->
 @if (showCreditForm && invoice) {
-  <div class="pay-overlay" (click).self="showCreditForm = false">
+  <div class="pay-overlay" (click)="$event.target === $event.currentTarget && (showCreditForm = false)">
     <div class="pay-modal">
       <div class="pay-modal-hdr credit-hdr">
         <div class="pay-modal-title">

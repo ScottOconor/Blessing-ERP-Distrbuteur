@@ -285,7 +285,7 @@
 
 <!-- ===== ENLÈVEMENT MODAL ===== -->
 @if (showEnlModal) {
-  <div class="modal-overlay" (click.self)="showEnlModal = false">
+  <div class="modal-overlay" (click)="$event.target === $event.currentTarget && (showEnlModal = false)">
     <div class="modal-box modal-wide">
       <div class="modal-header">
         <span class="material-icons">local_shipping</span>

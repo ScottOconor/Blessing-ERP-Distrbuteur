@@ -1,4 +1,4 @@
-<div class="pp-overlay" (click).self="close()">
+<div class="pp-overlay" (click)="$event.target === $event.currentTarget && close()">
   <div class="pp-modal">
 
     <!-- ── Header ── -->
