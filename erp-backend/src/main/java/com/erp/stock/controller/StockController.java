@@ -142,7 +142,8 @@ public class StockController {
     @PostMapping("/products/{id}/photo")
     public ResponseEntity<Void> uploadProductPhoto(@PathVariable("id") Long id,
                                                      @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
-        stockService.uploadProductPhoto(id, file.getBytes(), file.getContentType());
+        byte[] data = file.getBytes();
+        stockService.uploadProductPhoto(id, data, com.erp.common.service.ImageFiles.detectType(data));
         return ResponseEntity.ok().build();
     }
 
@@ -151,7 +152,8 @@ public class StockController {
         var photo = stockService.getProductPhoto(id);
         if (photo == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, photo.contentType() != null ? photo.contentType() : MediaType.IMAGE_PNG_VALUE)
+                .header(HttpHeaders.CONTENT_TYPE, com.erp.common.service.ImageFiles.servedType(photo.contentType()))
+                .header("Content-Security-Policy", com.erp.common.service.ImageFiles.CONTENT_SECURITY_POLICY)
                 .header(HttpHeaders.CACHE_CONTROL, "max-age=86400")
                 .body(photo.data());
     }
