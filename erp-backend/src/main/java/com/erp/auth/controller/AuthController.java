@@ -4,15 +4,19 @@ import com.erp.auth.dto.AuthRequest;
 import com.erp.auth.dto.AuthResponse;
 import com.erp.auth.entity.User;
 import com.erp.auth.service.JwtService;
+import com.erp.auth.service.LoginRateLimiter;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.config.repository.RolePermissionRepository;
 import com.erp.common.service.SingleCompany;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,12 +36,30 @@ public class AuthController {
     private final UserDetailsServiceImpl   userDetailsService;
     private final RolePermissionRepository rolePermissionRepository;
     private final com.erp.caisse.repository.CaisseRepository caisseRepository;
+    private final LoginRateLimiter         loginRateLimiter;
     private final SingleCompany            singleCompany;
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletRequest http) {
+        String username = request.getUsername();
+        String ip = http.getRemoteAddr();
+
+        if (loginRateLimiter.isBlocked(username, ip)) {
+            log.warn("Connexion refusée (trop de tentatives) : {} depuis {}", username, ip);
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Trop de tentatives échouées. Réessayez dans "
+                            + loginRateLimiter.remainingWindowMinutes(username, ip) + " minute(s)."));
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        } catch (AuthenticationException ex) {
+            loginRateLimiter.recordFailure(username, ip);
+            throw ex;
+        }
+
+        loginRateLimiter.recordSuccess(username, ip);
 
         User user = userDetailsService.findUserEntity(request.getUsername());
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
