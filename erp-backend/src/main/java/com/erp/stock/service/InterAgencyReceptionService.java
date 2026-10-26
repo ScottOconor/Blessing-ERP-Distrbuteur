@@ -30,6 +30,7 @@ public class InterAgencyReceptionService {
     private final ProductValuationService  productValuationService;
     private final StockPickingTypeRepository pickingTypeRepo;
     private final StockPickingRepository   pickingRepo;
+    private final com.erp.common.service.DocumentNumberLock documentNumberLock;
     private final ProductRepository        productRepo;
     private final StockQuantRepository     quantRepo;
 
@@ -85,7 +86,9 @@ public class InterAgencyReceptionService {
         Long pickingTypeId = incomingTypes.isEmpty() ? null : incomingTypes.get(0).getId();
 
         // 7. Numéro de séquence
-        Integer count = pickingRepo.countInterCompanyByCompany(company.getId());
+        // Plus grand numéro REC-IC/ sous verrou (un comptage redonnait un numéro déjà pris).
+        documentNumberLock.lock("stock.picking." + company.getId() + ".REC-IC");
+        Integer count = pickingRepo.findMaxSeq(company.getId(), "REC-IC");
         String name = "REC-IC/" + String.format("%05d", (count != null ? count : 0) + 1);
 
         // 8. Construire le picking de réception

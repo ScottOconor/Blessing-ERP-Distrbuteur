@@ -13,6 +13,11 @@ public interface RistournePaiementRepository extends JpaRepository<RistournePaie
 
     List<RistournePaiement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
+    /** Plus grand numéro attribué (RST-2026-00042 -> 42), toutes années confondues, 0 si aucun. */
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(name FROM '^RST-[0-9]{4}-([0-9]+)$') AS BIGINT)), 0) " +
+                   "FROM ristourne_paiements WHERE company_id = :cid", nativeQuery = true)
+    long findMaxNameSequence(@Param("cid") Long companyId);
+
     /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
      *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
     @Query("SELECT r FROM RistournePaiement r WHERE r.companyId = :companyId " +

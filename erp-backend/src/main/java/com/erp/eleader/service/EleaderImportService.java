@@ -53,6 +53,7 @@ public class EleaderImportService {
     private final ProductRepository           productRepo;
     private final AccountJournalRepository    journalRepo;
     private final CompanyRepository           companyRepo;
+    private final com.erp.common.service.DocumentNumberLock documentNumberLock;
     private final SyncEventPublisher          syncEventPublisher;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -382,7 +383,8 @@ public class EleaderImportService {
     }
 
     private String generateReference(Long companyId) {
-        long count = logRepo.countByCompanyId(companyId) + 1;
+        documentNumberLock.lock("eleader.import." + companyId);
+        long count = logRepo.findMaxReferenceSequence(companyId) + 1;
         return String.format("ELIMP/%05d", count);
     }
 

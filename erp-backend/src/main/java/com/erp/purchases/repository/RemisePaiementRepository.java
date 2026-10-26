@@ -13,6 +13,11 @@ public interface RemisePaiementRepository extends JpaRepository<RemisePaiement, 
 
     List<RemisePaiement> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
+    /** Plus grand numéro attribué (RMS-2026-00042 -> 42), toutes années confondues, 0 si aucun. */
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(name FROM '^RMS-[0-9]{4}-([0-9]+)$') AS BIGINT)), 0) " +
+                   "FROM remise_paiements WHERE company_id = :cid", nativeQuery = true)
+    long findMaxNameSequence(@Param("cid") Long companyId);
+
     /** Version bornée en SQL — voir SalesInvoiceRepository.findByCompanyIdAndStateNotSince pour le
      *  contexte complet (même correctif OOM snapshot, incidents Blessing de septembre 2026). */
     @Query("SELECT r FROM RemisePaiement r WHERE r.companyId = :companyId " +

@@ -1,5 +1,6 @@
 package com.erp.accounting.service;
 
+import com.erp.common.service.DocumentNumberLock;
 import com.erp.accounting.dto.*;
 import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
@@ -38,6 +39,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional
 public class AccountingService {
+
+    private final DocumentNumberLock documentNumberLock;
 
     private final AccountAccountRepository accountRepo;
     private final AccountJournalRepository journalRepo;
@@ -969,6 +972,7 @@ public class AccountingService {
     // ===================== SEQUENCE GENERATION =====================
 
     private String generateMoveNumber(AccountJournal journal, LocalDate date) {
+        documentNumberLock.lock("accounting.move." + journal.getId());
         int year = date.getYear();
         String prefix = journal.getCode().toUpperCase();
         Integer maxSeq = moveRepo.findMaxSequenceByJournalAndYear(journal.getId(), year);

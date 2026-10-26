@@ -1,5 +1,6 @@
 package com.erp.helpdesk.service;
 
+import com.erp.common.service.DocumentNumberLock;
 import com.erp.audit.service.AuditService;
 import com.erp.common.service.TenantGuard;
 import com.erp.config.service.HubConfigService;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class HelpdeskService {
+
+    private final DocumentNumberLock documentNumberLock;
 
     private final TicketRepository ticketRepo;
     private final TicketCommentRepository commentRepo;
@@ -259,7 +262,8 @@ public class HelpdeskService {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String generateNumber(Long companyId) {
-        long count = ticketRepo.countByCompanyId(companyId) + 1;
+        documentNumberLock.lock("helpdesk.ticket." + companyId);
+        long count = ticketRepo.findMaxNumberSequence(companyId) + 1;
         String year = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"));
         return String.format("HD-%s-%04d", year, count);
     }

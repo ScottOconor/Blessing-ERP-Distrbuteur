@@ -3,6 +3,7 @@ package com.erp.hr.service;
 import com.erp.audit.service.AuditService;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.common.service.TenantGuard;
+import com.erp.common.service.DocumentNumberLock;
 import com.erp.hr.entity.*;
 import com.erp.hr.init.OrganisationSeeder;
 import com.erp.hr.init.PayrollSeeder;
@@ -20,6 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional
 public class HrService {
+
+    private final DocumentNumberLock documentNumberLock;
 
     private final EmployeeRepository employeeRepo;
     private final DepartmentRepository departmentRepo;
@@ -101,8 +104,8 @@ public class HrService {
     }
 
     private String generateMatricule(Long companyId) {
-        companyRepo.findByIdForUpdate(companyId);
-        long next = employeeRepo.countByCompanyId(companyId) + 1;
+        documentNumberLock.lock("hr.employee." + companyId);
+        long next = employeeRepo.findMaxMatriculeSequence(companyId) + 1;
         return String.format("EMP-%04d", next);
     }
 

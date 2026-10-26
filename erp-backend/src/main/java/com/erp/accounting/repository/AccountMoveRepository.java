@@ -51,4 +51,11 @@ public interface AccountMoveRepository extends JpaRepository<AccountMove, Long>,
                    "AND name ~ '[0-9]{5}$'",
            nativeQuery = true)
     Integer findMaxSequenceByJournalAndYear(@Param("journalId") Long journalId, @Param("year") int year);
+
+    /** Plus grand numéro des pièces nommées PREFIXE + nombre (ex. « AJ/2026/ » + 42 -> 42), 0 si aucune. */
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(name FROM CHARACTER_LENGTH(:prefix) + 1) AS INTEGER)), 0) " +
+                   "FROM account_moves WHERE company_id = :cid AND name LIKE CONCAT(:prefix, '%') " +
+                   "AND SUBSTRING(name FROM CHARACTER_LENGTH(:prefix) + 1) ~ '^[0-9]+$'",
+           nativeQuery = true)
+    Integer findMaxSequenceByCompanyAndPrefix(@Param("cid") Long companyId, @Param("prefix") String prefix);
 }

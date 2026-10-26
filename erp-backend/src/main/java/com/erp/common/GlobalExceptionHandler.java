@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -56,6 +57,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.warn("Conflit d'intégrité : {}", ex.getMostSpecificCause().getMessage());
         // Contrainte unique/FK violée — le plus souvent deux requêtes concurrentes créant la même
         // ligne (ex : même quant produit/emplacement, même numéro de pièce) — 409 propre plutôt
         // qu'un 500 générique qui masquerait qu'il suffit de recharger et réessayer.
@@ -72,6 +74,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleAuthError(Exception ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("message", "Identifiants incorrects"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", ex.getMessage() != null ? ex.getMessage() : "Accès refusé"));
     }
 
     @ExceptionHandler(Exception.class)

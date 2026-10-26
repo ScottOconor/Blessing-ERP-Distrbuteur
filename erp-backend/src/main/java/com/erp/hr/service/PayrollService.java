@@ -1,5 +1,6 @@
 package com.erp.hr.service;
 
+import com.erp.common.service.DocumentNumberLock;
 import com.erp.accounting.entity.AccountAccount;
 import com.erp.accounting.entity.AccountJournal;
 import com.erp.accounting.entity.AccountMove;
@@ -35,6 +36,8 @@ import java.util.*;
 @Slf4j
 @Transactional
 public class PayrollService {
+
+    private final DocumentNumberLock documentNumberLock;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
@@ -520,7 +523,8 @@ public class PayrollService {
     }
 
     private String generatePayslipName(Long companyId) {
-        long next = payslipRepo.countByCompanyId(companyId) + 1;
+        documentNumberLock.lock("hr.payslip." + companyId);
+        long next = payslipRepo.findMaxNameSequence(companyId) + 1;
         return String.format("BULL-%d-%05d", Year.now().getValue(), next);
     }
 }

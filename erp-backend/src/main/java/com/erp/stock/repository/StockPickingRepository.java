@@ -22,7 +22,11 @@ public interface StockPickingRepository extends JpaRepository<StockPicking, Long
     @Query("SELECT p FROM StockPicking p WHERE p.companyId = :cid AND p.pickingTypeCode = :code AND p.state = :state ORDER BY p.createdAt DESC")
     List<StockPicking> findByCompanyTypeAndState(@Param("cid") Long companyId, @Param("code") String code, @Param("state") String state);
 
-    @Query(value = "SELECT COUNT(*) FROM stock_pickings WHERE company_id = :cid AND name LIKE CONCAT(:prefix, '/%')", nativeQuery = true)
+    /** Plus grand numéro attribué pour ce préfixe (PREFIXE/00042 -> 42). Un COUNT(*) servait ici :
+     *  après la suppression d'un bon, il redonnait un numéro déjà porté par un autre bon. */
+    @Query(value = "SELECT COALESCE(MAX(CAST(SUBSTRING(name FROM '/([0-9]+)$') AS INTEGER)), 0) " +
+                   "FROM stock_pickings WHERE company_id = :cid AND name LIKE CONCAT(:prefix, '/%') " +
+                   "AND name ~ '/[0-9]+$'", nativeQuery = true)
     Integer findMaxSeq(@Param("cid") Long companyId, @Param("prefix") String prefix);
 
     long countByPickingTypeId(Long pickingTypeId);

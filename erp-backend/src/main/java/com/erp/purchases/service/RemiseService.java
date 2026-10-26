@@ -54,6 +54,7 @@ public class RemiseService {
     private final SyncEventPublisher syncPublisher;
     @Lazy private final PurchaseService purchaseService;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.service.DocumentNumberLock documentNumberLock;
     private final CompanyRepository companyRepo;
     private final FiscalLockGuard fiscalLockGuard;
 
@@ -774,8 +775,10 @@ public class RemiseService {
     }
 
     private String generateRmsName(Long companyId) {
-        companyRepo.findByIdForUpdate(companyId);
-        long count = paiementRepo.findByCompanyIdOrderByCreatedAtDesc(companyId).size() + 1;
+        // Plus grand numéro sous verrou consultatif : un comptage redonnait un numéro déjà pris
+        // après une suppression.
+        documentNumberLock.lock("purchases.remise_payment." + companyId);
+        long count = paiementRepo.findMaxNameSequence(companyId) + 1;
         return String.format("RMS-%d-%05d", java.time.Year.now().getValue(), count);
     }
 

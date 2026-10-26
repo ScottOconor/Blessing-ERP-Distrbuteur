@@ -1,5 +1,6 @@
 package com.erp.purchases.service;
 
+import com.erp.common.service.DocumentNumberLock;
 import com.erp.accounting.entity.*;
 import com.erp.accounting.repository.*;
 import com.erp.accounting.service.AccountingService;
@@ -64,6 +65,8 @@ import java.util.stream.Stream;
 @Transactional
 @Slf4j
 public class PurchaseService {
+
+    private final DocumentNumberLock documentNumberLock;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String DEFAULT_EXPENSE_ACCOUNT   = "601100";
@@ -923,6 +926,7 @@ public class PurchaseService {
         if (outgoingTypes.isEmpty()) return;
         Long outgoingPickingTypeId = outgoingTypes.get(0).getId();
 
+        documentNumberLock.lock("stock.picking." + companyId + ".RET/ACH");
         Integer seq = pickingRepo.findMaxSeq(companyId, "RET/ACH");
         String pickingName = "RET/ACH/" + String.format("%05d", (seq == null ? 0 : seq) + 1);
 
@@ -1122,6 +1126,7 @@ public class PurchaseService {
         if (outgoingTypes.isEmpty()) return;
         Long outgoingPickingTypeId = outgoingTypes.get(0).getId();
 
+        documentNumberLock.lock("stock.picking." + companyId + ".RET/ACH");
         Integer seq = pickingRepo.findMaxSeq(companyId, "RET/ACH");
         String pickingName = "RET/ACH/" + String.format("%05d", (seq == null ? 0 : seq) + 1);
 
@@ -1249,6 +1254,7 @@ public class PurchaseService {
         if (incomingTypes.isEmpty()) return;
         Long incomingPickingTypeId = incomingTypes.get(0).getId();
 
+        documentNumberLock.lock("stock.picking." + companyId + ".ANN/ACH");
         Integer seq = pickingRepo.findMaxSeq(companyId, "ANN/ACH");
         String pickingName = "ANN/ACH/" + String.format("%05d", (seq == null ? 0 : seq) + 1);
 
@@ -2710,10 +2716,7 @@ public class PurchaseService {
     }
 
     private String generateOrderName(Long companyId, LocalDate date) {
-        // cf. SalesService : verrou pessimiste sur la société, sérialise ce générateur jusqu'au
-        // commit de la transaction appelante pour éviter que deux requêtes concurrentes lisent le
-        // même max avant qu'aucune n'ait écrit.
-        companyRepo.findByIdForUpdate(companyId);
+        documentNumberLock.lock("purchases.order." + companyId);
         int year = date.getYear();
         Integer max = orderRepo.findMaxSequenceByCompanyAndYear(companyId, year);
         int next = (max != null ? max : 0) + 1;
@@ -2721,7 +2724,7 @@ public class PurchaseService {
     }
 
     private String generateInvoiceName(Long companyId, LocalDate date) {
-        companyRepo.findByIdForUpdate(companyId);
+        documentNumberLock.lock("purchases.invoice." + companyId);
         int year = date.getYear();
         Integer max = invoiceRepo.findMaxSequenceByCompanyTypeAndYear(companyId, "invoice", year);
         int next = (max != null ? max : 0) + 1;
@@ -2729,7 +2732,7 @@ public class PurchaseService {
     }
 
     private String generateAvoirName(Long companyId, LocalDate date) {
-        companyRepo.findByIdForUpdate(companyId);
+        documentNumberLock.lock("purchases.credit_note." + companyId);
         int year = date.getYear();
         Integer max = invoiceRepo.findMaxSequenceByCompanyTypeAndYear(companyId, "credit_note", year);
         int next = (max != null ? max : 0) + 1;
@@ -2737,7 +2740,7 @@ public class PurchaseService {
     }
 
     private String generatePaymentName(Long companyId, LocalDate date) {
-        companyRepo.findByIdForUpdate(companyId);
+        documentNumberLock.lock("purchases.payment." + companyId);
         int year = date.getYear();
         Integer max = paymentRepo.findMaxSequenceByCompanyAndYear(companyId, year);
         int next = (max != null ? max : 0) + 1;
@@ -2745,8 +2748,14 @@ public class PurchaseService {
     }
 
     private String generatePickingName(StockPickingType pt, Long companyId) {
-        companyRepo.findByIdForUpdate(companyId);
         String prefix = pt.getSequencePrefix() != null ? pt.getSequencePrefix() : "WH/IN/";
+        documentNumberLock.lock("stock.picking." + companyId + "." + prefix);
+        if (prefix.endsWith("/")) {
+            // Plus grand numéro attribué plutôt qu'un COUNT(*) qui, après la suppression d'un bon,
+            // redonnait un numéro déjà porté par un autre bon.
+            Integer maxSeq = pickingRepo.findMaxSeq(companyId, prefix.substring(0, prefix.length() - 1));
+            return String.format("%s%05d", prefix, (maxSeq != null ? maxSeq : 0) + 1);
+        }
         long count = pickingRepo.countByPickingTypeId(pt.getId());
         return String.format("%s%05d", prefix, count + 1);
     }
