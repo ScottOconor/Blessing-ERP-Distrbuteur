@@ -7,6 +7,7 @@ import com.erp.auth.service.PasswordPolicy;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -50,7 +51,9 @@ public class ChangePasswordController {
 
     @Data
     public static class ChangePasswordRequest {
+        @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
         private String currentPassword;
+        @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
         private String newPassword;
     }
 }

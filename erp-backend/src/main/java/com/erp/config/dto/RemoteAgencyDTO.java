@@ -22,6 +22,7 @@ public class RemoteAgencyDTO {
     @Max(value = 65535, message = "Le port doit être compris entre 1 et 65535")
     private Integer       port;
     @NotBlank(message = "La clé API est obligatoire")
+    @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
     private String        apiKey;
     private String        location;
     private String        contactPerson;

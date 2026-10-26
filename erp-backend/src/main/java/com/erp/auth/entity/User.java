@@ -21,6 +21,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
     private String password;
 
     private String fullName;

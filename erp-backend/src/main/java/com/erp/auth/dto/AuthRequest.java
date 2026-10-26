@@ -13,5 +13,6 @@ public class AuthRequest {
     private String username;
 
     @NotBlank
+    @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
     private String password;
 }

@@ -30,7 +30,7 @@ public class PermissionFilter extends OncePerRequestFilter {
     // n'y a donc pas d'Authentication à vérifier ici. Le reste de /api/sync/** (SyncStatusController,
     // tableau de bord admin) N'EST PLUS bypassé : il passe par le contrôle de permission normal.
     private static final String[] BYPASS_PREFIXES = {
-        "/api/auth/", "/api/health", "/api/inter-agency/", "/actuator/", "/api/sync/helpdesk/"
+        "/api/auth/", "/api/health", "/api/inter-agency/", "/api/sync/helpdesk/"
     };
 
     // Lecture seule du nom/logo société : GET UNIQUEMENT, jamais PUT/POST (création, mise à jour,

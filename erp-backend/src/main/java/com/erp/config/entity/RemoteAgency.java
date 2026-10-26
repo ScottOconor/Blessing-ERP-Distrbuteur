@@ -37,6 +37,7 @@ public class RemoteAgency {
 
     /** Clé d'API pour l'authentification inter-agences */
     @Column(name = "api_key")
+    @ToString.Exclude // jamais dans les journaux (toString affiché en DEBUG)
     private String apiKey;
 
     /** Ville / localisation */

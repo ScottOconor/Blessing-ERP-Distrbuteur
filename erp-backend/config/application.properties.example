@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Configuration d'une installation Blessing ERP Distributeurs (production)
+#
+# Copier ce fichier en config/application.properties À CÔTÉ DU JAR (ce nom est exclu de git),
+# remplir les valeurs, puis restreindre ses droits : chmod 600 config/application.properties
+# Les variables d'environnement KIRA_DB_PASSWORD / KIRA_RABBITMQ_PASSWORD peuvent remplacer les
+# deux mots de passe ci-dessous.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+# Base PostgreSQL de l'installation. Utiliser un compte propriétaire de la base mais NON
+# superutilisateur (un avertissement est journalisé au démarrage sinon), par exemple :
+#   CREATE ROLE kira_app LOGIN PASSWORD '...';
+#   CREATE DATABASE kira OWNER kira_app;
+spring.datasource.url=jdbc:postgresql://localhost:5432/kira
+spring.datasource.username=kira_app
+spring.datasource.password=
+
+# Broker RabbitMQ du Hub : identifiants PROPRES à cette installation (ne pas réutiliser ceux
+# d'une autre installation ; voir la configuration des comptes côté Hub).
+spring.rabbitmq.host=
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=
+spring.rabbitmq.password=
+
+# Identité de l'installation auprès du Hub : obligatoire, unique, jamais la valeur par défaut
+# CHANGEME (l'envoi des événements reste suspendu tant qu'elle n'est pas renseignée).
+sync.spoke.id=
+sync.spoke.name=
+
+# Derrière un reverse proxy (Apache, Nginx) qui transmet X-Forwarded-For / X-Forwarded-Proto :
+# indispensable pour que la limitation des connexions voie l'adresse réelle des postes.
+# Ne PAS activer si le serveur est joignable directement (ces en-têtes seraient falsifiables).
+#server.forward-headers-strategy=native
+
+# Origines autorisées à appeler l'API depuis un autre site (vide : aucune ; l'interface servie
+# par ce serveur n'en a pas besoin).
+#cors.allowed-origins=
+
+# Limitation des tentatives de connexion (valeurs par défaut indiquées).
+#security.login.max-failures-per-account=5
+#security.login.max-failures-per-ip=30
+#security.login.window-minutes=15

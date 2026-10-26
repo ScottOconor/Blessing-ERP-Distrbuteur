@@ -90,7 +90,6 @@ public class SecurityConfig {
                 // Le reste de /api/sync/** (SyncStatusController, tableau de bord admin) exige
                 // désormais une authentification + permission (CONFIG.AUDIT), voir PermissionService.
                 .requestMatchers("/api/sync/helpdesk/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/*.js", "/*.css", "/*.ico", "/*.png", "/*.svg").permitAll()
                 .requestMatchers("/", "/index.html").permitAll()
                 .requestMatchers("/api/**").authenticated()
