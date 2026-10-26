@@ -145,6 +145,10 @@ public class BackupService {
                     }
                     zis.closeEntry();
                 }
+            } catch (ZipException | EOFException e) {
+                // Archive tronquée (transfert interrompu) ou endommagée : refus explicite (400) au lieu
+                // d'une erreur 500 portant le message technique de la décompression.
+                throw new IllegalArgumentException("Archive de sauvegarde corrompue ou incomplète");
             }
 
             if (sqlFilename == null) {
