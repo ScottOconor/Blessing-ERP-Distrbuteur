@@ -4,23 +4,31 @@ import com.erp.audit.entity.AuditLog;
 import com.erp.audit.repository.AuditLogRepository;
 import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AuditService {
 
     private final AuditLogRepository auditLogRepo;
     private final UserRepository     userRepo;
+    private final TransactionTemplate requiresNew;
+
+    public AuditService(AuditLogRepository auditLogRepo, UserRepository userRepo,
+                        PlatformTransactionManager transactionManager) {
+        this.auditLogRepo = auditLogRepo;
+        this.userRepo = userRepo;
+        this.requiresNew = new TransactionTemplate(transactionManager);
+        this.requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     /** Username du principal connecté, "système" si anonyme. */
     public String getCurrentUsername() {
@@ -44,24 +52,30 @@ public class AuditService {
      * Enregistre une entrée d'audit dans une transaction INDÉPENDANTE
      * (REQUIRES_NEW) pour que l'échec d'une opération métier n'efface pas
      * l'entrée, et inversement.
+     *
+     * La transaction est ouverte À L'INTÉRIEUR du try (TransactionTemplate) : avec
+     * @Transactional sur la méthode, l'exception attrapée ici marquait la transaction en échec
+     * et sa validation levait ensuite UnexpectedRollbackException chez l'appelant — l'échec de
+     * l'audit faisait alors échouer l'opération métier (constaté : téléchargement de sauvegarde).
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String entityType, Long entityId, String entityRef,
                     String action, String actionLabel,
                     String details, Long companyId) {
         try {
-            AuditLog entry = AuditLog.builder()
-                    .entityType(entityType)
-                    .entityId(entityId)
-                    .entityRef(entityRef)
-                    .action(action)
-                    .actionLabel(actionLabel)
-                    .performedBy(getCurrentUsername())
-                    .performedByFullname(getCurrentFullname())
-                    .details(details)
-                    .companyId(companyId)
-                    .build();
-            auditLogRepo.save(entry);
+            requiresNew.executeWithoutResult(status -> {
+                AuditLog entry = AuditLog.builder()
+                        .entityType(entityType)
+                        .entityId(entityId)
+                        .entityRef(entityRef)
+                        .action(action)
+                        .actionLabel(actionLabel)
+                        .performedBy(getCurrentUsername())
+                        .performedByFullname(getCurrentFullname())
+                        .details(details)
+                        .companyId(companyId)
+                        .build();
+                auditLogRepo.save(entry);
+            });
         } catch (Exception e) {
             log.error("Erreur AuditLog entityType={} entityId={} action={}: {}",
                     entityType, entityId, action, e.getMessage());
@@ -69,7 +83,6 @@ public class AuditService {
     }
 
     /** Raccourci pour les actions sans détails supplémentaires. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String entityType, Long entityId, String entityRef,
                     String action, String actionLabel, Long companyId) {
         log(entityType, entityId, entityRef, action, actionLabel, null, companyId);
