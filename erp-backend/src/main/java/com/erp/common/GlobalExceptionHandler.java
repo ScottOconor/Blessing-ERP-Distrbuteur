@@ -3,10 +3,12 @@ package com.erp.common;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -143,6 +145,14 @@ public class GlobalExceptionHandler {
 
     private static ResponseEntity<Map<String, String>> badRequest(String message) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
+    }
+
+    /** Base de données injoignable : 503 explicite (le client peut réessayer) au lieu d'une erreur 500. */
+    @ExceptionHandler({DataAccessResourceFailureException.class, CannotCreateTransactionException.class})
+    public ResponseEntity<Map<String, String>> handleDatabaseUnavailable(Exception ex) {
+        log.warn("Base de données indisponible : {}", redact(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of("message", "Base de données momentanément indisponible. Réessayez dans quelques instants."));
     }
 
     @ExceptionHandler(Exception.class)

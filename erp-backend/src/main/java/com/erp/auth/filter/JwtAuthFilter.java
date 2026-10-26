@@ -3,17 +3,20 @@ package com.erp.auth.filter;
 import com.erp.auth.TenantAuthenticationDetails;
 import com.erp.auth.service.JwtService;
 import com.erp.auth.service.UserDetailsServiceImpl;
+import jakarta.persistence.PersistenceException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -60,6 +63,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+        } catch (DataAccessException | TransactionException | PersistenceException e) {
+            // Base injoignable : ce n'est pas un jeton invalide. Répondre 401 déconnectait
+            // l'utilisateur pendant une simple coupure de la base.
+            log.warn("Vérification du jeton impossible, base de données indisponible : {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"message\":\"Base de données momentanément indisponible. Réessayez dans quelques instants.\"}");
+            return;
         } catch (Exception e) {
             log.warn("JWT validation failed: {}", e.getMessage());
         }

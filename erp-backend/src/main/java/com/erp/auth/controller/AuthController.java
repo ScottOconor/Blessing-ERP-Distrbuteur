@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -54,6 +55,12 @@ public class AuthController {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        } catch (InternalAuthenticationServiceException ex) {
+            // Erreur technique (base injoignable...) : ni « identifiants incorrects », ni échec compté
+            // pour la limitation des tentatives — sinon une coupure bloquait les utilisateurs.
+            log.warn("Connexion impossible, erreur technique : {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", "Service momentanément indisponible. Réessayez dans quelques instants."));
         } catch (AuthenticationException ex) {
             loginRateLimiter.recordFailure(username, ip);
             throw ex;
