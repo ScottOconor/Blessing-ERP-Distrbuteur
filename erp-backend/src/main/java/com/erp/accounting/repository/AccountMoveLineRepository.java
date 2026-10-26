@@ -45,7 +45,35 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
 
-@Query("SELECT l FROM AccountMoveLine l " +
+    /** Ligne comptable réduite aux champs envoyés au Hub dans le snapshot. */
+    interface SnapshotLine {
+        Long getId();
+        LocalDate getDate();
+        String getMoveRef();
+        String getAccountCode();
+        String getAccountName();
+        String getPartnerName();
+        String getLibelle();
+        String getJournalCode();
+        BigDecimal getDebit();
+        BigDecimal getCredit();
+    }
+
+    /** Mêmes lignes et même ordre que findPostedByCompanyAndDateRange, sans charger d'entités : le
+     *  snapshot horaire chargeait toutes les lignes des 60 derniers jours avec leurs écriture,
+     *  compte, tiers et journal (OutOfMemoryError mesurée avec 1 Go à ~180 000 lignes). */
+    @Query("SELECT l.id AS id, l.date AS date, m.name AS moveRef, a.code AS accountCode, a.name AS accountName, " +
+           "p.name AS partnerName, l.name AS libelle, j.code AS journalCode, l.debit AS debit, l.credit AS credit " +
+           "FROM AccountMoveLine l JOIN l.move m LEFT JOIN l.account a LEFT JOIN l.partner p LEFT JOIN l.journal j " +
+           "WHERE l.company.id = :companyId AND l.date BETWEEN :from AND :to AND m.state = 'posted' " +
+           "ORDER BY a.code, l.date, m.name")
+    List<SnapshotLine> findSnapshotLines(@Param("companyId") Long companyId,
+                                         @Param("from") LocalDate from,
+                                         @Param("to") LocalDate to);
+
+    /** Seule `account` est déréférencée par les appelants (balances via buildBalanceByCode). */
+    @Query("SELECT l FROM AccountMoveLine l " +
+           "LEFT JOIN FETCH l.account " +
            "WHERE l.company.id = :companyId " +
            "AND l.date < :date " +
            "AND l.move.state = 'posted' " +

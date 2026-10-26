@@ -671,16 +671,16 @@ public class SnapshotService {
         LocalDate accountMoveLinesFrom = today.minusDays(60);
         List<SpokeSnapshotPayload.AccountMoveLineItem> accountMoveLines;
         try {
-            accountMoveLines = moveLineRepo.findPostedByCompanyAndDateRange(cid, accountMoveLinesFrom, today).stream()
+            accountMoveLines = moveLineRepo.findSnapshotLines(cid, accountMoveLinesFrom, today).stream()
                 .map(l -> SpokeSnapshotPayload.AccountMoveLineItem.builder()
                         .id(l.getId())
                         .date(l.getDate())
-                        .moveRef(l.getMove() != null ? l.getMove().getName() : null)
-                        .accountCode(l.getAccount() != null ? l.getAccount().getCode() : null)
-                        .accountName(l.getAccount() != null ? l.getAccount().getName() : null)
-                        .partnerName(l.getPartner() != null ? l.getPartner().getName() : null)
-                        .libelle(l.getName())
-                        .journalCode(l.getJournal() != null ? l.getJournal().getCode() : null)
+                        .moveRef(l.getMoveRef())
+                        .accountCode(l.getAccountCode())
+                        .accountName(l.getAccountName())
+                        .partnerName(l.getPartnerName())
+                        .libelle(l.getLibelle())
+                        .journalCode(l.getJournalCode())
                         .debit(l.getDebit())
                         .credit(l.getCredit())
                         .build())

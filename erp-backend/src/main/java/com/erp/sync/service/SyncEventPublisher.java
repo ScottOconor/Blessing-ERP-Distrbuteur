@@ -110,7 +110,7 @@ public class SyncEventPublisher {
      * à chaque snapshot), des dizaines de Go alloués par snapshot, ~15 min de construction avec une
      * connexion JDBC retenue, et OutOfMemoryError en boucle chez le client (2026-10-13).
      */
-    private java.util.List<SpokeSnapshotPayload> splitSnapshotBySize(SpokeSnapshotPayload snapshot, int maxBytes) throws com.fasterxml.jackson.core.JsonProcessingException {
+    java.util.List<SpokeSnapshotPayload> splitSnapshotBySize(SpokeSnapshotPayload snapshot, int maxBytes) throws com.fasterxml.jackson.core.JsonProcessingException {
         // Base de chaque partie = copie INTÉGRALE du snapshot (toBuilder) : tous les indicateurs
         // scalaires et les petites listes affichées telles quelles par le Hub (caisses,
         // caissesActuelles, topStock, ventes du jour) sont présents dans chaque partie, et seules
