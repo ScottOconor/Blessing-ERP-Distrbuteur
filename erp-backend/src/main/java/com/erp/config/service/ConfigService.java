@@ -87,6 +87,9 @@ public class ConfigService {
 
     @Transactional
     public CompanyDTO createCompany(CompanyDTO dto) {
+        // Une installation = une seule société (voir SingleCompany), créée au premier démarrage.
+        if (companyRepository.count() > 0)
+            throw new IllegalStateException("Une seule société par installation : modifiez la société existante.");
         Company c = companyRepository.save(Company.builder()
                 .name(dto.getName()).sigle(dto.getSigle()).rccm(dto.getRccm())
                 .nif(dto.getNif()).adresse(dto.getAdresse()).telephone(dto.getTelephone())

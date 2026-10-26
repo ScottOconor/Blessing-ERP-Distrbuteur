@@ -67,30 +67,10 @@
 
     <!-- Right side -->
     <div class="nav-right">
-      @if (companies.length > 1) {
-        <div class="company-selector" [class.open]="showCompanyPicker">
-          <button class="company-btn" (click)="showCompanyPicker = !showCompanyPicker; $event.stopPropagation()">
-            <span class="material-icons">business</span>
-            <span>{{ activeCompany?.sigle || activeCompany?.name || 'Entreprise' }}</span>
-            <span class="material-icons arrow">expand_more</span>
-          </button>
-          @if (showCompanyPicker) {
-            <div class="company-dropdown">
-              @for (c of companies; track c.id) {
-                <button class="company-option" [class.selected]="c.id === activeCompany?.id" (click)="switchCompany(c.id)">
-                  <span class="material-icons">{{ c.id === activeCompany?.id ? 'check_circle' : 'radio_button_unchecked' }}</span>
-                  <span class="company-opt-name">{{ c.name }}</span>
-                  @if (c.sigle) { <span class="company-sigle">{{ c.sigle }}</span> }
-                </button>
-              }
-            </div>
-          }
-        </div>
-      }
       <div class="user-pill">
         <div class="user-avatar-sm">{{ userInitials }}</div>
         <span class="user-name-sm">{{ userName }}</span>
-        <span class="company-name">| {{ activeCompany?.name || companyName }}</span>
+        <span class="company-name">| {{ companyDisplayName || companyName }}</span>
       </div>
       <button class="btn-theme-toggle" (click)="themeService.toggle()" [title]="themeService.isDark() ? 'Mode jour' : 'Mode nuit'">
         <span class="material-icons">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</span>

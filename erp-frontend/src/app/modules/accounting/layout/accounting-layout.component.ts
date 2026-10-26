@@ -19,12 +19,8 @@ export class AccountingLayoutComponent implements OnInit {
   userInitials = '';
   companyName = 'Mon Entreprise';
   activeDropdown: string | null = null;
-  showCompanyPicker = false;
   mobileMenuOpen = false;
   navItems: any[] = [];
-
-  companies: { id: number; name: string; sigle: string }[] = [];
-  get activeCompany(): { id: number; name: string; sigle: string } | null { return null; }
 
   get companyLogoUrl(): string { return this.companyService.getLogoUrl(); }
   get companyDisplayName(): string { return this.companyService.getCached()?.name ?? ''; }
@@ -113,21 +109,12 @@ export class AccountingLayoutComponent implements OnInit {
   onDocumentClick(event: MouseEvent): void {
     const t = event.target as HTMLElement;
     if (!t.closest('.nav-item-dropdown')) this.activeDropdown = null;
-    if (!t.closest('.company-selector')) this.showCompanyPicker = false;
   }
 
   navigateTo(route: string): void {
     this.activeDropdown = null;
     this.mobileMenuOpen = false;
     this.router.navigateByUrl(route);
-  }
-
-  switchCompany(id: number): void {
-    this.authService.setActiveCompanyId(id);
-    this.showCompanyPicker = false;
-    this.mobileMenuOpen = false;
-    const url = this.router.url;
-    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => this.router.navigateByUrl(url));
   }
 
   goHome(): void { this.mobileMenuOpen = false; this.router.navigate(['/welcome']); }

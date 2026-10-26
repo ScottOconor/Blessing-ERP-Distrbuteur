@@ -6,6 +6,7 @@ import com.erp.auth.entity.User;
 import com.erp.auth.service.JwtService;
 import com.erp.auth.service.UserDetailsServiceImpl;
 import com.erp.config.repository.RolePermissionRepository;
+import com.erp.common.service.SingleCompany;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class AuthController {
     private final UserDetailsServiceImpl   userDetailsService;
     private final RolePermissionRepository rolePermissionRepository;
     private final com.erp.caisse.repository.CaisseRepository caisseRepository;
+    private final SingleCompany            singleCompany;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
@@ -63,6 +65,7 @@ public class AuthController {
                 .roleCode(roleCode)
                 .roleLabel(user.getRole() != null ? user.getRole().getLabel() : null)
                 .mustChangePassword(user.isMustChangePassword())
+                .companyId(singleCompany.getId())
                 .permissions(perms)
                 .caisseId(user.getCaisseId())
                 .caisseName(user.getCaisseId() != null

@@ -12,6 +12,8 @@ export interface AuthSession {
   roleCode: string;
   roleLabel: string;
   mustChangePassword: boolean;
+  /** Société unique de l'installation (le serveur impose de toute façon la sienne). */
+  companyId?: number;
   permissions?: Permission[];
 }
 
@@ -21,7 +23,6 @@ const PRIVILEGED_ROLES = ['SUPER_ADMIN', 'ADMIN'];
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/api/auth`;
   private SESSION_KEY = 'erp_session';
-  private ACTIVE_COMPANY_KEY = 'erp_active_company';
 
   constructor(private http: HttpClient) {}
 
@@ -33,7 +34,6 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.SESSION_KEY);
-    localStorage.removeItem(this.ACTIVE_COMPANY_KEY);
   }
 
   getToken(): string | null {
@@ -55,18 +55,9 @@ export class AuthService {
     try { return JSON.parse(raw); } catch { return null; }
   }
 
-  /** companyId actif pour toutes les requêtes API (spoke mono-agence, défaut = 1) */
+  /** Société unique de l'installation, reçue à la connexion (1 pour une session ouverte avant). */
   getCompanyId(): number {
-    const active = localStorage.getItem(this.ACTIVE_COMPANY_KEY);
-    if (active) {
-      const parsed = +active;
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
-    return 1;
-  }
-
-  setActiveCompanyId(id: number): void {
-    localStorage.setItem(this.ACTIVE_COMPANY_KEY, String(id));
+    return this.getSession()?.companyId ?? 1;
   }
 
   /** Retourne null — informations d'entreprise à récupérer via ConfigService si besoin */

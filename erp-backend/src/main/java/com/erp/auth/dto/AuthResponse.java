@@ -13,6 +13,8 @@ public class AuthResponse {
     private String  roleCode;
     private String  roleLabel;
     private boolean mustChangePassword;
+    /** Société unique de l'installation, utilisée par le frontend pour ses appels. */
+    private Long    companyId;
 
     /** Caisse à laquelle l'utilisateur est rattaché (null = aucune). */
     private Long    caisseId;

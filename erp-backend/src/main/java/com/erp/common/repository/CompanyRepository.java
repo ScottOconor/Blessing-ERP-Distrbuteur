@@ -28,6 +28,10 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Company c WHERE c.id = :id")
     Optional<Company> findByIdForUpdate(@Param("id") Long id);
+    /** Société unique de l'installation (voir SingleCompany). */
+    Optional<Company> findFirstByOrderByIdAsc();
+
+    boolean existsByIdAndActiveTrue(Long id);
 
     /** Snapshot incrémental (SnapshotService) : appelée depuis buildAndPublish(), qui tourne dans
      *  une transaction @Transactional(readOnly = true) — REQUIRES_NEW est nécessaire ici pour que
