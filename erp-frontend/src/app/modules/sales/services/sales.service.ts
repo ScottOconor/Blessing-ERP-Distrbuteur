@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 // Interfaces
 export interface SalesOrderLine {
@@ -477,8 +478,9 @@ export class SalesService {
   }
 
   // Paiements
-  createPayment(payment: { invoiceId: number; journalId: number; date: string; amount: number; memo?: string; companyId: number }): Observable<InvoicePayment> {
-    return this.http.post<InvoicePayment>(`${this.apiUrl}/payments`, payment);
+  createPayment(payment: { invoiceId: number; journalId: number; date: string; amount: number; memo?: string; companyId: number },
+                idempotencyKey?: string | null): Observable<InvoicePayment> {
+    return this.http.post<InvoicePayment>(`${this.apiUrl}/payments`, payment, idempotencyHeaders(idempotencyKey));
   }
   getPaymentsByInvoice(invoiceId: number): Observable<InvoicePayment[]> {
     return this.http.get<InvoicePayment[]>(`${this.apiUrl}/payments/invoice/${invoiceId}`);

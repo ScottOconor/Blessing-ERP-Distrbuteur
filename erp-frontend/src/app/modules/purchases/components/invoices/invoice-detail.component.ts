@@ -12,6 +12,7 @@ import { PrintPreviewComponent, PrintDocType } from '../../../../shared/componen
 import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
 import { CONSIGNE_CODES } from '../../../../shared/constants/consigne-codes';
+import { newIdempotencyKey } from '../../../../core/utils/idempotency-key';
 
 @Component({
   selector: 'app-purchase-invoice-detail',
@@ -21,6 +22,8 @@ import { CONSIGNE_CODES } from '../../../../shared/constants/consigne-codes';
   styleUrl: './invoice-detail.component.scss'
 })
 export class PurchaseInvoiceDetailComponent implements OnInit {
+  /** Clé d'idempotence de la saisie en cours (voir newIdempotencyKey) : conservée jusqu'au succès. */
+  private paymentKey: string | null = null;
   invoiceId!: number;
   invoice: PurchaseInvoice | null = null;
   cashBankJournals: AccountJournal[] = [];
@@ -230,14 +233,16 @@ export class PurchaseInvoiceDetailComponent implements OnInit {
     this.savingPayment = true;
     this.errorMsg = '';
 
+    this.paymentKey ??= newIdempotencyKey();
     this.purchaseService.createPayment({
       invoiceId: this.invoiceId,
       journalId: this.payment.journalId,
       date: this.payment.date,
       amount: this.payment.amount,
       memo: this.payment.memo
-    }).subscribe({
+    }, this.paymentKey).subscribe({
       next: () => {
+        this.paymentKey = null;
         this.savingPayment = false;
         this.showPaymentForm = false;
         this.showSuccess(this.isAvoir ? 'Remboursement enregistré' : 'Paiement enregistré');

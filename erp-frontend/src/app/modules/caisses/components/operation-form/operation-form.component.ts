@@ -8,6 +8,7 @@ import { CaisseService, CaisseDTO, AddOperationRequest } from '../../services/ca
 import { Partner } from '../../../../core/models/account.model';
 import { AmountInputDirective } from '../../../../shared/directives/amount-input.directive';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
+import { newIdempotencyKey } from '../../../../core/utils/idempotency-key';
 
 @Component({
   selector: 'app-operation-form',
@@ -17,6 +18,8 @@ import { formatFCFA } from '../../../../core/utils/currency-format.util';
   styleUrl: './operation-form.component.scss'
 })
 export class OperationFormComponent implements OnInit {
+  /** Clé d'idempotence de la saisie en cours (voir newIdempotencyKey) : conservée jusqu'au succès. */
+  private operationKey: string | null = null;
   type: 'ENTREE' | 'SORTIE' = 'ENTREE';
   caisses: CaisseDTO[] = [];
   accounts: any[] = [];
@@ -191,8 +194,10 @@ export class OperationFormComponent implements OnInit {
   submit(): void {
     if (!this.form.caisseId || !this.form.montant || !this.form.compteContrepartieId) return;
     this.saving = true;
-    this.caisseService.addOperation(this.form).subscribe({
+    this.operationKey ??= newIdempotencyKey();
+    this.caisseService.addOperation(this.form, this.operationKey).subscribe({
       next: () => {
+        this.operationKey = null;
         this.saving = false;
         this.router.navigate(['/caisses/brouillard'], {
           queryParams: { caisseId: this.form.caisseId, date: this.form.date }

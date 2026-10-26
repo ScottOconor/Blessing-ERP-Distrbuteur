@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 export interface CaisseDTO {
   id?: number;
@@ -201,8 +202,8 @@ export class CaisseService {
     return this.http.get<CaisseOperationDTO[]>(`${this.base}/operations`, { params });
   }
 
-  addOperation(req: AddOperationRequest): Observable<CaisseOperationDTO> {
-    return this.http.post<CaisseOperationDTO>(`${this.base}/operations`, req);
+  addOperation(req: AddOperationRequest, idempotencyKey?: string | null): Observable<CaisseOperationDTO> {
+    return this.http.post<CaisseOperationDTO>(`${this.base}/operations`, req, idempotencyHeaders(idempotencyKey));
   }
 
   cloturerCaisse(id: number, companyId: number, req?: ClotureCaisseRequest): Observable<CaisseSessionDTO> {

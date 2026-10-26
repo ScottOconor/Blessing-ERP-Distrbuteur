@@ -1,5 +1,6 @@
 package com.erp.caisse.controller;
 
+import com.erp.common.service.IdempotencyService;
 import com.erp.caisse.dto.*;
 import com.erp.caisse.entity.OperationType;
 import com.erp.caisse.service.BrouillardPdfService;
@@ -23,6 +24,7 @@ public class CaisseController {
 
     private final CaisseService caisseService;
     private final BrouillardPdfService brouillardPdfService;
+    private final IdempotencyService idempotencyService;
 
     // ── Caisses CRUD ──
 
@@ -76,12 +78,15 @@ public class CaisseController {
         return caisseService.getAllOperations(companyId, type);
     }
 
+    /** Idempotency-Key (facultatif) : un renvoi de la même demande ne crée pas une seconde opération. */
     @PostMapping("/operations")
-    public CaisseOperationDTO addOperation(
+    public ResponseEntity<?> addOperation(
             @RequestBody @Valid AddOperationRequest req,
-            Principal principal) {
+            Principal principal,
+            @RequestHeader(value = IdempotencyService.HEADER, required = false) String idempotencyKey) {
         String userName = principal != null ? principal.getName() : "système";
-        return caisseService.addOperation(req, userName);
+        return idempotencyService.execute(idempotencyKey, "POST /api/caisses/operations", req,
+                () -> caisseService.addOperation(req, userName));
     }
 
     // ── Ouverture / Clôture ──

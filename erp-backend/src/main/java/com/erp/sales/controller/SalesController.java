@@ -1,5 +1,6 @@
 package com.erp.sales.controller;
 
+import com.erp.common.service.IdempotencyService;
 import com.erp.accounting.dto.PartnerDTO;
 import com.erp.sales.dto.*;
 import com.erp.sales.service.RistourneService;
@@ -21,6 +22,7 @@ public class SalesController {
 
     private final SalesService salesService;
     private final RistourneService ristourneService;
+    private final IdempotencyService idempotencyService;
 
     // ===================== BONS DE COMMANDE =====================
 
@@ -177,9 +179,12 @@ public class SalesController {
         return ResponseEntity.ok(salesService.getPaymentsByInvoice(invoiceId));
     }
 
+    /** Idempotency-Key (facultatif) : un renvoi de la même demande ne crée pas un second paiement. */
     @PostMapping("/payments")
-    public ResponseEntity<InvoicePaymentDTO> createPayment(@RequestBody InvoicePaymentRequest request) {
-        return ResponseEntity.ok(salesService.createPayment(request));
+    public ResponseEntity<?> createPayment(@RequestBody InvoicePaymentRequest request,
+                                           @RequestHeader(value = IdempotencyService.HEADER, required = false) String idempotencyKey) {
+        return idempotencyService.execute(idempotencyKey, "POST /api/sales/payments", request,
+                () -> salesService.createPayment(request));
     }
 
     @DeleteMapping("/payments/{id}")

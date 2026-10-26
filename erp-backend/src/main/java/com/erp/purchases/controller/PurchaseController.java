@@ -1,5 +1,6 @@
 package com.erp.purchases.controller;
 
+import com.erp.common.service.IdempotencyService;
 import com.erp.purchases.dto.*;
 import com.erp.purchases.dto.PrixFournisseurArticleDTO;
 import com.erp.purchases.service.PurchaseService;
@@ -21,18 +22,9 @@ public class PurchaseController {
 
     private final PurchaseService purchaseService;
     private final RemiseService remiseService;
+    private final IdempotencyService idempotencyService;
 
-    // ===================== FOURNISSEURS =====================
-
-    /** Retourne le taux de précompte achat configuré pour ce fournisseur. */
-    @GetMapping("/suppliers/{partnerId}/precompte-rate")
-    public ResponseEntity<Map<String, BigDecimal>> getSupplierPrecompteRate(
-            @PathVariable("partnerId") Long partnerId,
-            @RequestParam("companyId") Long companyId) {
-        BigDecimal rate = purchaseService.getPartnerPurchasePrecompteTaux(partnerId, companyId);
-        return ResponseEntity.ok(Map.of("tauxPrecompte", rate));
-    }
-
+    // ===================== FOURNISSEURS ==============
     // ===================== COMMANDES D'ACHAT =====================
 
     /** Streaming — voir getAllInvoices plus bas pour le pourquoi. */
@@ -166,9 +158,12 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.getPaymentsByInvoice(invoiceId));
     }
 
+    /** Idempotency-Key (facultatif) : un renvoi de la même demande ne crée pas un second paiement. */
     @PostMapping("/payments")
-    public ResponseEntity<PurchaseInvoiceDTO.PaymentDTO> createPayment(@RequestBody PurchaseInvoicePaymentRequest req) {
-        return ResponseEntity.ok(purchaseService.createPayment(req));
+    public ResponseEntity<?> createPayment(@RequestBody PurchaseInvoicePaymentRequest req,
+                                           @RequestHeader(value = IdempotencyService.HEADER, required = false) String idempotencyKey) {
+        return idempotencyService.execute(idempotencyKey, "POST /api/purchases/payments", req,
+                () -> purchaseService.createPayment(req));
     }
 
     @DeleteMapping("/payments/{id}")

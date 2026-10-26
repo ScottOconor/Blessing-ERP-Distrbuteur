@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 export interface PurchaseOrderLine {
   id?: number;
@@ -359,8 +360,8 @@ export class PurchaseService {
     date: string;
     amount: number;
     memo?: string;
-  }): Observable<PurchaseInvoicePayment> {
-    return this.http.post<PurchaseInvoicePayment>(`${this.base}/payments`, req);
+  }, idempotencyKey?: string | null): Observable<PurchaseInvoicePayment> {
+    return this.http.post<PurchaseInvoicePayment>(`${this.base}/payments`, req, idempotencyHeaders(idempotencyKey));
   }
 
   getPaymentsByInvoice(invoiceId: number): Observable<PurchaseInvoicePayment[]> {

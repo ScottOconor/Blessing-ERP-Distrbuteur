@@ -6,6 +6,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { SalesService, InvoicePayment, SalesInvoice } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { environment } from '../../../../../environments/environment';
+import { newIdempotencyKey } from '../../../../core/utils/idempotency-key';
 
 interface Journal { id: number; name: string; code: string; type: string; }
 interface ClientOption { id: number; name: string; invoiceCount: number; }
@@ -18,6 +19,8 @@ interface ClientOption { id: number; name: string; invoiceCount: number; }
   styleUrl: './sales-payment-list.component.scss'
 })
 export class SalesPaymentListComponent implements OnInit {
+  /** Clé d'idempotence de la saisie en cours (voir newIdempotencyKey) : conservée jusqu'au succès. */
+  private paymentKey: string | null = null;
   payments: InvoicePayment[] = [];
   filtered: InvoicePayment[] = [];
   loading = false;
@@ -200,6 +203,7 @@ export class SalesPaymentListComponent implements OnInit {
       this.payError = 'Tous les champs sont requis.'; return;
     }
     this.savingPay = true; this.payError = '';
+    this.paymentKey ??= newIdempotencyKey();
     this.salesService.createPayment({
       invoiceId: this.selectedInvoice.id,
       journalId: this.payForm.journalId,
@@ -207,8 +211,8 @@ export class SalesPaymentListComponent implements OnInit {
       amount:    this.payForm.amount,
       memo:      this.payForm.memo || undefined,
       companyId: this.companyId
-    }).subscribe({
-      next: () => { this.savingPay = false; this.showNewModal = false; this.load(); },
+    }, this.paymentKey).subscribe({
+      next: () => { this.paymentKey = null; this.savingPay = false; this.showNewModal = false; this.load(); },
       error: e  => { this.savingPay = false; this.payError = e?.error?.message || 'Erreur lors de la création.'; }
     });
   }
