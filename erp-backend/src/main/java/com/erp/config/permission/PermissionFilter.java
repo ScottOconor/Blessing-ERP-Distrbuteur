@@ -57,6 +57,24 @@ public class PermissionFilter extends OncePerRequestFilter {
         "GET /api/config/modules"
     );
 
+    /** Routes ouvertes à tout utilisateur connecté sans règle de permission (vérifié par PermissionCoverageTest). */
+    static boolean isOpenToAuthenticated(String method, String uri) {
+        if ("GET".equals(method)) {
+            for (String prefix : GET_ONLY_BYPASS_PREFIXES) {
+                if (uri.startsWith(prefix)) return true;
+            }
+        }
+        return EXACT_SELF_SERVICE_BYPASS.contains(method + " " + uri);
+    }
+
+    /** Routes traitées hors contrôle de permission (publiques ou authentifiées par clé API). */
+    static boolean isBypassed(String uri) {
+        for (String prefix : BYPASS_PREFIXES) {
+            if (uri.startsWith(prefix)) return true;
+        }
+        return false;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
@@ -64,17 +82,8 @@ public class PermissionFilter extends OncePerRequestFilter {
         String uri = req.getRequestURI();
 
         if (!uri.startsWith("/api/")) { chain.doFilter(req, res); return; }
-        for (String prefix : BYPASS_PREFIXES) {
-            if (uri.startsWith(prefix)) { chain.doFilter(req, res); return; }
-        }
-        if ("GET".equals(req.getMethod())) {
-            for (String prefix : GET_ONLY_BYPASS_PREFIXES) {
-                if (uri.startsWith(prefix)) { chain.doFilter(req, res); return; }
-            }
-        }
-        if (EXACT_SELF_SERVICE_BYPASS.contains(req.getMethod() + " " + uri)) {
-            chain.doFilter(req, res); return;
-        }
+        if (isBypassed(uri)) { chain.doFilter(req, res); return; }
+        if (isOpenToAuthenticated(req.getMethod(), uri)) { chain.doFilter(req, res); return; }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
