@@ -51,6 +51,7 @@ public class SyncDispatcherScheduler {
     private final InterAgencyKeyService  interAgencyKeyService;
 
     @Value("${sync.spoke.id:SPOKE_001}")          private String spokeId;
+    @Value("${spring.rabbitmq.username:}") private String rabbitUser;
     @Value("${sync.spoke.name:Blessing ERP Distributeurs}") private String spokeName;
     @Value("${server.port:8085}")                 private int    serverPort;
     @Value("${sync.spoke.public-url:}")           private String configuredPublicUrl;
@@ -215,6 +216,12 @@ public class SyncDispatcherScheduler {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void sendRegistration() {
+        if (!spokeId.equals(rabbitUser)) {
+            log.warn("Identité de l'installation non prouvée auprès du Hub : le compte RabbitMQ « {} » ne porte "
+                    + "pas l'identifiant de l'installation « {} ». Créez un compte RabbitMQ nommé « {} » pour que "
+                    + "le Hub puisse vérifier l'origine des messages (indispensable s'il passe en mode strict).",
+                    rabbitUser, spokeId, spokeId);
+        }
         try {
             SyncMessage reg = new SyncMessage();
             reg.setSpokeId(spokeId);
