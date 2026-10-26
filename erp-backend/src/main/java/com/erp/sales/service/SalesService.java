@@ -385,8 +385,9 @@ public class SalesService {
                 : Map.of();
         Map<Long, String> warehouseNameCache = new HashMap<>();
         Map<Long, java.math.BigDecimal[]> partnerBalanceCache = new HashMap<>();
+        ListLookups listLookups = ListLookups.create();
         return invoices.stream()
-                .map(inv -> buildInvoiceDTO(inv, List.of(), catNames, warehouseNameCache, partnerBalanceCache))
+                .map(inv -> buildInvoiceDTO(inv, List.of(), catNames, warehouseNameCache, partnerBalanceCache, listLookups))
                 .collect(Collectors.toList());
     }
 
@@ -405,12 +406,13 @@ public class SalesService {
         Map<Long, String> warehouseNameCache = warehouseRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
                 .collect(Collectors.toMap(Warehouse::getId, Warehouse::getName, (a, b) -> a, HashMap::new));
         Map<Long, java.math.BigDecimal[]> partnerBalanceCache = new HashMap<>();
+        ListLookups listLookups = ListLookups.create();
 
         try (JsonGenerator gen = objectMapper.getFactory().createGenerator(responseOut);
              Stream<SalesInvoice> stream = invoiceRepo.streamByCompanyIdAndType(companyId, type)) {
             gen.writeStartArray();
             stream.forEach(inv -> {
-                SalesInvoiceDTO dto = buildInvoiceDTO(inv, List.of(), catNames, warehouseNameCache, partnerBalanceCache);
+                SalesInvoiceDTO dto = buildInvoiceDTO(inv, List.of(), catNames, warehouseNameCache, partnerBalanceCache, listLookups);
                 try {
                     objectMapper.writeValue(gen, dto);
                 } catch (IOException e) {
@@ -3838,13 +3840,13 @@ public class SalesService {
     }
 
     private SalesInvoiceDTO toInvoiceDTO(SalesInvoice invoice) {
-        return buildInvoiceDTO(invoice, List.of(), null, null, null);
+        return buildInvoiceDTO(invoice, List.of(), null, null, null, null);
     }
 
     private SalesInvoiceDTO toInvoiceDTOWithPayments(SalesInvoice invoice) {
         List<InvoicePaymentDTO> payments = paymentRepo.findByInvoiceIdOrderByDateDesc(invoice.getId())
                 .stream().map(this::toPaymentDTO).collect(Collectors.toList());
-        return buildInvoiceDTO(invoice, payments, null, null, null);
+        return buildInvoiceDTO(invoice, payments, null, null, null, null);
     }
 
     /** Republie l'état courant de la facture (état, montant payé/dû) vers le Hub après toute
@@ -3864,9 +3866,43 @@ public class SalesService {
      * de toutes les catégories à chaque facture. Passer null partout reproduit exactement le
      * comportement d'origine (facture unique).
      */
+    /**
+     * Noms déjà résolus pendant la génération d'une liste de factures (créateur, vendeur, unité des
+     * articles) : sans eux, chaque facture relisait les siens — 3 449 requêtes
+     * SQL mesurées pour une liste de 572 factures. null pour une facture isolée.
+     */
+    private record ListLookups(Map<String, String> userNames,
+                               Map<Long, String> sellerNames, Map<Long, String> uomNames) {
+        static ListLookups create() {
+            return new ListLookups(new HashMap<>(), new HashMap<>(), new HashMap<>());
+        }
+
+        /** Valeur en cache (null compris), sinon chargée puis mémorisée ; sans cache, chargée directement. */
+        static <K> String lookup(Map<K, String> cache, K key, java.util.function.Function<K, String> loader) {
+            if (cache == null) return loader.apply(key);
+            if (cache.containsKey(key)) return cache.get(key);
+            String value = loader.apply(key);
+            cache.put(key, value);
+            return value;
+        }
+    }
+
+    private Map<Long, String> resolveUomNames(Set<Long> productIds, ListLookups lookups) {
+        if (productIds.isEmpty()) return Map.of();
+        Map<Long, String> cache = lookups != null ? lookups.uomNames() : new HashMap<>();
+        Set<Long> missing = productIds.stream().filter(id -> !cache.containsKey(id)).collect(Collectors.toSet());
+        if (!missing.isEmpty()) {
+            missing.forEach(id -> cache.put(id, null));
+            stockProductRepo.findAllById(missing).forEach(p -> cache.put(p.getId(), p.getUomName()));
+        }
+        Map<Long, String> result = new HashMap<>();
+        productIds.forEach(id -> { if (cache.get(id) != null) result.put(id, cache.get(id)); });
+        return result;
+    }
+
     private SalesInvoiceDTO buildInvoiceDTO(SalesInvoice invoice, List<InvoicePaymentDTO> payments,
             Map<Long, String> catNamesPreloaded, Map<Long, String> warehouseNameCache,
-            Map<Long, java.math.BigDecimal[]> partnerBalanceCache) {
+            Map<Long, java.math.BigDecimal[]> partnerBalanceCache, ListLookups lookups) {
         Long companyId = invoice.getCompany() != null ? invoice.getCompany().getId() : null;
 
         // Résoudre le nom de l'entrepôt
@@ -3909,10 +3945,7 @@ public class SalesService {
                 .map(com.erp.sales.entity.SalesInvoiceLine::getProductId)
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<Long, String> uomNames = productIds.isEmpty() ? Map.of()
-                : stockProductRepo.findAllById(productIds).stream()
-                    .filter(p -> p.getUomName() != null)
-                    .collect(Collectors.toMap(com.erp.stock.entity.Product::getId, com.erp.stock.entity.Product::getUomName, (a, b) -> a));
+        Map<Long, String> uomNames = resolveUomNames(productIds, lookups);
 
         List<SalesInvoiceDTO.LineDTO> lines = invoice.getLines().stream()
                 .map(l -> SalesInvoiceDTO.LineDTO.builder()
@@ -3956,7 +3989,8 @@ public class SalesService {
                 .warehouseName(warehouseName)
                 .sellerId(invoice.getSellerId())
                 .sellerName(invoice.getSellerId() != null
-                        ? sellerRepo.findById(invoice.getSellerId()).map(Seller::getName).orElse(null)
+                        ? ListLookups.lookup(lookups == null ? null : lookups.sellerNames(), invoice.getSellerId(),
+                            id -> sellerRepo.findById(id).map(Seller::getName).orElse(null))
                         : null)
                 .partnerBalance(partnerBalance)
                 .partnerCreditDisponible(partnerCreditDisponible)
@@ -3979,9 +4013,10 @@ public class SalesService {
                 .payments(payments).createdAt(invoice.getCreatedAt())
                 .createdBy(invoice.getCreatedBy())
                 .createdByName(invoice.getCreatedBy() != null
-                        ? userRepository.findByUsername(invoice.getCreatedBy())
+                        ? ListLookups.lookup(lookups == null ? null : lookups.userNames(), invoice.getCreatedBy(),
+                            username -> userRepository.findByUsername(username)
                                 .map(u -> u.getFullName() != null && !u.getFullName().isBlank() ? u.getFullName() : u.getUsername())
-                                .orElse(invoice.getCreatedBy())
+                                .orElse(username))
                         : null)
                 .updatedBy(invoice.getUpdatedBy())
                 .updatedAt(invoice.getUpdatedAt())
