@@ -48,10 +48,10 @@ public class BackupController {
 
     /**
      * Restaure la base de données depuis un fichier ZIP de sauvegarde.
-     * Réservé aux administrateurs.
+     * Réservé au SUPER_ADMIN : la restauration remplace toute la base (utilisateurs compris).
      */
     @PostMapping("/restore")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> restoreBackup(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Aucun fichier fourni"));
@@ -60,11 +60,13 @@ public class BackupController {
             return ResponseEntity.badRequest().body(Map.of("error", "Le fichier doit être un ZIP"));
         }
         try {
-            String message = backupService.restoreFromZip(file.getBytes());
+            String message = backupService.restoreFromZip(file.getInputStream());
             return ResponseEntity.ok(Map.of("message", message));
         } catch (IllegalArgumentException e) {
             log.warn("Fichier de restauration invalide : {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Erreur lors de la restauration", e);
             return ResponseEntity.internalServerError()

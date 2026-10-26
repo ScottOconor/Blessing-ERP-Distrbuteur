@@ -49,54 +49,57 @@
     </div>
   </div>
 
-  <div class="card card-danger">
-    <div class="card-header danger">
-      <span class="material-icons">restore</span>
-      Restaurer la base de données
-    </div>
-    <div class="card-body">
-      <div class="warning-banner">
-        <span class="material-icons">warning</span>
-        <div>
-          <strong>Attention :</strong> Cette opération remplace <strong>toutes les données actuelles</strong> par celles du fichier de sauvegarde.
-          Après la restauration, rechargez la page.
+  <!-- Restauration complète : réservée au SUPER_ADMIN (contrôlé aussi côté serveur) -->
+  @if (isSuperAdmin) {
+      <div class="card card-danger">
+        <div class="card-header danger">
+          <span class="material-icons">restore</span>
+          Restaurer la base de données
         </div>
-      </div>
+        <div class="card-body">
+          <div class="warning-banner">
+            <span class="material-icons">warning</span>
+            <div>
+              <strong>Attention :</strong> Cette opération remplace <strong>toutes les données actuelles</strong> par celles du fichier de sauvegarde.
+              Après la restauration, rechargez la page.
+            </div>
+          </div>
 
-      @if (!confirmRestore) {
-        <div class="file-section">
-          <label class="file-label" for="restore-file-input">
-            <span class="material-icons">folder_open</span>
-            @if (selectedFile) { {{ selectedFile.name }} } @else { Sélectionner un fichier ZIP de sauvegarde }
-          </label>
-          <input id="restore-file-input" type="file" accept=".zip"
-                 class="file-input" (change)="onFileSelected($event)" />
-          @if (selectedFile) {
-            <button class="btn-danger" (click)="askConfirmRestore()">
-              <span class="material-icons">restore</span>
-              Restaurer depuis ce fichier
-            </button>
+          @if (!confirmRestore) {
+            <div class="file-section">
+              <label class="file-label" for="restore-file-input">
+                <span class="material-icons">folder_open</span>
+                @if (selectedFile) { {{ selectedFile.name }} } @else { Sélectionner un fichier ZIP de sauvegarde }
+              </label>
+              <input id="restore-file-input" type="file" accept=".zip"
+                     class="file-input" (change)="onFileSelected($event)" />
+              @if (selectedFile) {
+                <button class="btn-danger" (click)="askConfirmRestore()">
+                  <span class="material-icons">restore</span>
+                  Restaurer depuis ce fichier
+                </button>
+              }
+            </div>
+          }
+
+          @if (confirmRestore) {
+            <div class="confirm-box">
+              <span class="material-icons confirm-icon">warning</span>
+              <p>Vous êtes sur le point de restaurer la base de données depuis :<br>
+                <strong>{{ selectedFile?.name }}</strong></p>
+              <p class="confirm-warn">Cette action est irréversible. Toutes les données actuelles seront écrasées.</p>
+              <div class="confirm-actions">
+                <button class="btn-secondary" (click)="cancelRestore()">Annuler</button>
+                <button class="btn-danger" (click)="doRestore()" [disabled]="restoring">
+                  <span class="material-icons">{{ restoring ? 'hourglass_empty' : 'restore' }}</span>
+                  {{ restoring ? 'Restauration en cours...' : 'Confirmer la restauration' }}
+                </button>
+              </div>
+            </div>
           }
         </div>
-      }
-
-      @if (confirmRestore) {
-        <div class="confirm-box">
-          <span class="material-icons confirm-icon">warning</span>
-          <p>Vous êtes sur le point de restaurer la base de données depuis :<br>
-            <strong>{{ selectedFile?.name }}</strong></p>
-          <p class="confirm-warn">Cette action est irréversible. Toutes les données actuelles seront écrasées.</p>
-          <div class="confirm-actions">
-            <button class="btn-secondary" (click)="cancelRestore()">Annuler</button>
-            <button class="btn-danger" (click)="doRestore()" [disabled]="restoring">
-              <span class="material-icons">{{ restoring ? 'hourglass_empty' : 'restore' }}</span>
-              {{ restoring ? 'Restauration en cours...' : 'Confirmer la restauration' }}
-            </button>
-          </div>
-        </div>
-      }
-    </div>
-  </div>
+      </div>
+  }
 
   <!-- ══════════════════════════════════════════════════════════ -->
   <!-- SAUVEGARDE CONFIGURATION MÉTIER                            -->
