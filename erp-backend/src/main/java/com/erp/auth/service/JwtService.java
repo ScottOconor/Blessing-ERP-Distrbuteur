@@ -99,17 +99,39 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .setClaims(extraClaims)
+                .claim(ISSUED_AT_MS, now)
                 .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + jwtExpiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return extractUsername(token).equals(userDetails.getUsername())
+                && !isTokenExpired(token)
+                && !issuedBeforeCredentialsChange(token, userDetails)
+                && userDetails.isEnabled()
+                && userDetails.isAccountNonLocked();
+    }
+
+    /** Instant d'émission à la milliseconde : le champ standard iat n'a qu'une précision à la seconde,
+     *  ce qui laissait valide un jeton émis dans la seconde même d'un changement de mot de passe. */
+    private static final String ISSUED_AT_MS = "iatMs";
+
+    /** Jeton émis avant le dernier changement de mot de passe : refusé, la session ouverte avec
+     *  l'ancien mot de passe est révoquée. Les jetons sans iatMs (antérieurs) sont comparés à la seconde. */
+    private boolean issuedBeforeCredentialsChange(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof KiraUserDetails kira) || kira.getCredentialsChangedAt() == null) return false;
+        Claims claims = extractAllClaims(token);
+        long changedAtMs = kira.getCredentialsChangedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        Long issuedAtMs = claims.get(ISSUED_AT_MS, Long.class);
+        if (issuedAtMs != null) return issuedAtMs < changedAtMs;
+        Date issuedAt = claims.getIssuedAt();
+        return issuedAt == null || issuedAt.getTime() / 1000 < changedAtMs / 1000;
     }
 
     private boolean isTokenExpired(String token) {

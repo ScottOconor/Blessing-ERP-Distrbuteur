@@ -4,6 +4,7 @@ import com.erp.accounting.init.OhadaDataInitializer;
 import com.erp.auth.SecurityUtils;
 import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
+import com.erp.auth.service.PasswordPolicy;
 import com.erp.common.entity.Company;
 import com.erp.common.entity.CompanyLogo;
 import com.erp.common.repository.CompanyLogoRepository;
@@ -193,6 +194,7 @@ public class ConfigService {
             throw new IllegalArgumentException("Le mot de passe est obligatoire");
         if (userRepository.existsByUsername(req.getUsername()))
             throw new IllegalArgumentException("Nom d'utilisateur déjà utilisé");
+        PasswordPolicy.validate(req.getPassword(), req.getUsername());
         if (req.getEmail() != null && userRepository.existsByEmail(req.getEmail()))
             throw new IllegalArgumentException("Email déjà utilisé");
 
@@ -221,8 +223,12 @@ public class ConfigService {
         assertCanGrant(user.getRole());
         if (req.getFullName() != null) user.setFullName(req.getFullName());
         if (req.getEmail()    != null) user.setEmail(req.getEmail());
-        if (req.getPassword() != null && !req.getPassword().isBlank())
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            PasswordPolicy.validate(req.getPassword(), user.getUsername());
             user.setPassword(passwordEncoder.encode(req.getPassword()));
+            // Mot de passe réinitialisé par un administrateur : les sessions ouvertes sont révoquées.
+            user.setCredentialsChangedAt(java.time.LocalDateTime.now());
+        }
         if (req.getRoleId() != null) {
             Role role = roleRepository.findById(req.getRoleId())
                     .orElseThrow(() -> new IllegalArgumentException("Rôle introuvable"));

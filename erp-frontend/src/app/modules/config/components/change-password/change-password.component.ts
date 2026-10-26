@@ -76,19 +76,25 @@ export class ChangePasswordComponent {
     if (this.newPwd !== this.confirm) {
       this.errorMsg = 'Les mots de passe ne correspondent pas'; return;
     }
-    if (this.newPwd.length < 6) {
-      this.errorMsg = 'Le mot de passe doit contenir au moins 6 caractères'; return;
+    // Mêmes règles que le serveur (PasswordPolicy), qui reste seul juge
+    if (this.newPwd.length < 8 || !/\p{L}/u.test(this.newPwd) || !/\d/.test(this.newPwd)) {
+      this.errorMsg = 'Le mot de passe doit contenir au moins 8 caractères, dont une lettre et un chiffre'; return;
     }
     this.saving = true;
     this.errorMsg = '';
     const api = `${environment.apiUrl}/api/config/change-password`;
-    this.http.post(api, { currentPassword: this.current, newPassword: this.newPwd }).subscribe({
-      next: () => {
+    this.http.post<{ token?: string }>(api, { currentPassword: this.current, newPassword: this.newPwd }).subscribe({
+      next: (res) => {
         this.saving = false;
         this.successMsg = 'Mot de passe changé avec succès';
-        // Mettre à jour la session locale
+        // Mettre à jour la session locale : le serveur révoque les jetons émis avant le
+        // changement et renvoie le nouveau jeton de la session en cours.
         const session = this.authService.getSession();
-        if (session) { session.mustChangePassword = false; localStorage.setItem('erp_session', JSON.stringify(session)); }
+        if (session) {
+          session.mustChangePassword = false;
+          if (res?.token) session.token = res.token;
+          localStorage.setItem('erp_session', JSON.stringify(session));
+        }
         setTimeout(() => this.router.navigate(['/welcome']), 1500);
       },
       error: (e) => { this.saving = false; this.errorMsg = e.error?.message || 'Mot de passe actuel incorrect'; }

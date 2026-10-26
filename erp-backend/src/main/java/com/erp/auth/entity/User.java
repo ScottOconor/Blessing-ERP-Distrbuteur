@@ -45,6 +45,13 @@ public class User {
     @Column(nullable = false, columnDefinition = "boolean not null default false")
     private boolean mustChangePassword = false;
 
+    /**
+     * Dernier changement de mot de passe (par l'utilisateur ou un administrateur). Les jetons
+     * émis avant cette date sont refusés (JwtService.isTokenValid) : avant, un jeton volé restait
+     * valable jusqu'à 24 h même après un changement de mot de passe. Null = jamais changé.
+     */
+    private java.time.LocalDateTime credentialsChangedAt;
+
     /** Caisse à laquelle l'utilisateur est rattaché (optionnel). */
     @Column(name = "caisse_id")
     private Long caisseId;

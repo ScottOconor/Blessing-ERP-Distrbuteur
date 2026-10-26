@@ -43,12 +43,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             }
         }
 
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .authorities(authorities)
-                .disabled(!user.isActive())
-                .build();
+        return new KiraUserDetails(user.getUsername(), user.getPassword(), user.isActive(),
+                authorities, user.getCredentialsChangedAt());
     }
 
     public User findUserEntity(String username) {
