@@ -266,6 +266,7 @@
 
 .badge-pending { background: var(--warning-bg); color: var(--warning); }
 .badge-sent    { background: var(--success-bg); color: var(--success); }
+.badge-confirmed { background: var(--success-bg); color: var(--success); font-weight: 600; }
 .badge-failed  { background: var(--danger-bg);  color: var(--danger);  }
 
 .btn-retry-one {

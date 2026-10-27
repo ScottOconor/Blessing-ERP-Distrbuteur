@@ -119,26 +119,28 @@ public class SyncStatusController {
     public ResponseEntity<SyncSummaryDTO> summary() {
         long pending = outboxRepo.countByStatus(OutboxStatus.PENDING);
         long sent    = outboxRepo.countByStatus(OutboxStatus.SENT);
+        long confirmed = outboxRepo.countByStatus(OutboxStatus.CONFIRMED);
         long failed  = outboxRepo.countByStatus(OutboxStatus.FAILED);
 
         Map<String, SyncSummaryDTO.ModuleStats> byModule = new LinkedHashMap<>();
         for (Map.Entry<String, List<SyncEventType>> entry : MODULE_TYPES.entrySet()) {
             List<Object[]> rows = outboxRepo.countByStatusForTypes(entry.getValue());
-            long mp = 0, ms = 0, mf = 0;
+            long mp = 0, ms = 0, mc = 0, mf = 0;
             for (Object[] row : rows) {
                 OutboxStatus s = (OutboxStatus) row[0];
                 long cnt = (Long) row[1];
                 if (s == OutboxStatus.PENDING) mp = cnt;
                 else if (s == OutboxStatus.SENT) ms = cnt;
+                else if (s == OutboxStatus.CONFIRMED) mc = cnt;
                 else if (s == OutboxStatus.FAILED) mf = cnt;
             }
             byModule.put(entry.getKey(), SyncSummaryDTO.ModuleStats.builder()
-                    .pending(mp).sent(ms).failed(mf).build());
+                    .pending(mp).sent(ms).confirmed(mc).failed(mf).build());
         }
 
         return ResponseEntity.ok(SyncSummaryDTO.builder()
-                .total(pending + sent + failed)
-                .pending(pending).sent(sent).failed(failed)
+                .total(pending + sent + confirmed + failed)
+                .pending(pending).sent(sent).confirmed(confirmed).failed(failed)
                 .byModule(byModule).build());
     }
 
@@ -208,6 +210,7 @@ public class SyncStatusController {
         return ResponseEntity.ok(Map.of(
             "pending", outboxRepo.countByStatus(OutboxStatus.PENDING),
             "sent",    outboxRepo.countByStatus(OutboxStatus.SENT),
+            "confirmed", outboxRepo.countByStatus(OutboxStatus.CONFIRMED),
             "failed",  outboxRepo.countByStatus(OutboxStatus.FAILED)
         ));
     }
@@ -293,7 +296,9 @@ public class SyncStatusController {
     @GetMapping("/progress")
     public ResponseEntity<Map<String, Object>> progress() {
         long pending = outboxRepo.countByStatus(OutboxStatus.PENDING);
-        long sent    = outboxRepo.countByStatus(OutboxStatus.SENT);
+        // Livrés = acceptés par le broker (SENT) ou confirmés par le Hub (CONFIRMED)
+        long confirmed = outboxRepo.countByStatus(OutboxStatus.CONFIRMED);
+        long sent    = outboxRepo.countByStatus(OutboxStatus.SENT) + confirmed;
         long failed  = outboxRepo.countByStatus(OutboxStatus.FAILED);
         long total   = pending + sent + failed;
 
@@ -304,6 +309,7 @@ public class SyncStatusController {
         result.put("checkedAt",      LocalDateTime.now().toString());
         result.put("pending",        pending);
         result.put("sent",           sent);
+        result.put("confirmed",      confirmed);
         result.put("failed",         failed);
         result.put("total",          total);
         result.put("progressPct",    progressPct);
@@ -322,7 +328,7 @@ public class SyncStatusController {
                 OutboxStatus s = (OutboxStatus) row[0];
                 long cnt = (Long) row[1];
                 if (s == OutboxStatus.PENDING) mp = cnt;
-                else if (s == OutboxStatus.SENT) ms = cnt;
+                else if (s == OutboxStatus.SENT || s == OutboxStatus.CONFIRMED) ms += cnt;
                 else if (s == OutboxStatus.FAILED) mf = cnt;
             }
             modules.put(entry.getKey(), Map.of("pending", mp, "sent", ms, "failed", mf));

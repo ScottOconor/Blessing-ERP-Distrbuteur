@@ -48,8 +48,9 @@
     <div class="kpi kpi-sent">
       <div class="kpi-icon"><span class="material-icons">check_circle</span></div>
       <div class="kpi-body">
-        <span class="kpi-val">{{ summary?.sent ?? '—' }}</span>
+        <span class="kpi-val">{{ summary ? summary.sent + (summary.confirmed ?? 0) : '—' }}</span>
         <span class="kpi-lbl">Envoyés au Hub</span>
+        @if (summary?.confirmed) { <span class="kpi-lbl">dont {{ summary?.confirmed }} confirmés par le Hub</span> }
       </div>
     </div>
     <div class="kpi kpi-failed" [class.kpi-failed-alert]="(summary?.failed ?? 0) > 0">

@@ -27,6 +27,10 @@ spring.rabbitmq.password=
 sync.spoke.id=
 sync.spoke.name=
 
+# Confirmation par le Hub du traitement des événements (docs/sync-confirmation.md) : à n'activer que
+# lorsque le Hub prend en charge ce contrat. Vide = désactivé (fonctionnement sans confirmation).
+#sync.confirmation.url=https://<hub>/api/hub/sync/confirmations
+
 # Derrière un reverse proxy (Apache, Nginx) qui transmet X-Forwarded-For / X-Forwarded-Proto :
 # indispensable pour que la limitation des connexions voie l'adresse réelle des postes.
 # Ne PAS activer si le serveur est joignable directement (ces en-têtes seraient falsifiables).

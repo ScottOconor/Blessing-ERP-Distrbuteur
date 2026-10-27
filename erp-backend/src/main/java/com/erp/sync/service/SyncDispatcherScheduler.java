@@ -47,11 +47,12 @@ public class SyncDispatcherScheduler {
      *  MAX_RETRIES tentatives par cycle), un événement FAILED est considéré définitivement
      *  empoisonné et n'est plus remis en PENDING tout seul — il reste visible en FAILED pour
      *  une reprise manuelle explicite plutôt que de boucler indéfiniment. */
-    private static final int MAX_AUTO_REQUEUES = 20;
+    static final int MAX_AUTO_REQUEUES = 20;
 
     private final OutboxEventRepository  outboxRepo;
     private final RabbitTemplate         rabbitTemplate;
     private final InterAgencyKeyService  interAgencyKeyService;
+    private final HubConfirmationService hubConfirmation;
 
     @Value("${sync.spoke.id:SPOKE_001}")          private String spokeId;
     @Value("${sync.spoke.name:Blessing ERP Distributeurs}") private String spokeName;
@@ -154,8 +155,9 @@ public class SyncDispatcherScheduler {
     public void dropStaleEventTypeCheckConstraint() {
         try {
             outboxRepo.dropStaleEventTypeCheckConstraint();
+            outboxRepo.dropStaleStatusCheckConstraint();
         } catch (Exception e) {
-            log.warn("Impossible de supprimer la contrainte sync_outbox_events_event_type_check : {}", e.getMessage());
+            log.warn("Impossible de supprimer les contraintes CHECK de sync_outbox_events : {}", e.getMessage());
         }
     }
 
@@ -410,6 +412,8 @@ public class SyncDispatcherScheduler {
      * sa propre copie) et les laisser s'accumuler indéfiniment ne fait que grossir la table
      * sync_outbox_events sans raison (bloat Postgres, autovacuum, requêtes plus lentes). PENDING et
      * FAILED ne sont jamais purgés — seuls les événements déjà transmis avec succès le sont.
+     * Avec la confirmation du Hub active (HubConfirmationService), seuls les CONFIRMED sont purgés :
+     * un SENT jamais confirmé reste disponible pour être renvoyé.
      */
     @Scheduled(fixedDelayString = "${sync.outbox.sent-purge-interval-ms:86400000}",
                initialDelayString = "${sync.outbox.sent-purge-initial-delay-ms:120000}")
@@ -417,8 +421,9 @@ public class SyncDispatcherScheduler {
     public void purgeOldSentEvents() {
         int retentionDays = sentRetentionDays;
         LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
-        int n = outboxRepo.deleteByStatusAndCreatedAtBefore(OutboxStatus.SENT, cutoff);
-        if (n > 0) log.info("Sync: {} événement(s) SENT de plus de {} jour(s) purgé(s)", n, retentionDays);
+        OutboxStatus delivered = hubConfirmation.isActive() ? OutboxStatus.CONFIRMED : OutboxStatus.SENT;
+        int n = outboxRepo.deleteByStatusAndCreatedAtBefore(delivered, cutoff);
+        if (n > 0) log.info("Sync: {} événement(s) {} de plus de {} jour(s) purgé(s)", n, delivered, retentionDays);
     }
 
     /** Détecte un rejet broker "message trop gros" (406 PRECONDITION_FAILED, taille > max size

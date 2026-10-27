@@ -57,6 +57,7 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
     { value: '' as const,         label: 'Tous',        cls: '' },
     { value: 'PENDING' as const,  label: 'En attente',  cls: 'pending' },
     { value: 'SENT' as const,     label: 'Envoyés',     cls: 'sent' },
+    { value: 'CONFIRMED' as const, label: 'Confirmés par le Hub', cls: 'sent' },
     { value: 'FAILED' as const,   label: 'Échoués',     cls: 'failed' },
   ];
 
@@ -261,11 +262,11 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
   }
 
   statusClass(s: string): string {
-    return ({ PENDING: 'badge-pending', SENT: 'badge-sent', FAILED: 'badge-failed' } as Record<string, string>)[s] ?? '';
+    return ({ PENDING: 'badge-pending', SENT: 'badge-sent', CONFIRMED: 'badge-confirmed', FAILED: 'badge-failed' } as Record<string, string>)[s] ?? '';
   }
 
   statusLabel(s: string): string {
-    return ({ PENDING: 'En attente', SENT: 'Envoyé', FAILED: 'Échoué' } as Record<string, string>)[s] ?? s;
+    return ({ PENDING: 'En attente', SENT: 'Envoyé', CONFIRMED: 'Confirmé par le Hub', FAILED: 'Échoué' } as Record<string, string>)[s] ?? s;
   }
 
   fmtDate(d: string | null): string {

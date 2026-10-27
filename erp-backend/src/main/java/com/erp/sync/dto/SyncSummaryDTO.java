@@ -11,6 +11,8 @@ public class SyncSummaryDTO {
     long total;
     long pending;
     long sent;
+    /** Traitement confirmé par le Hub (mode de confirmation actif). */
+    long confirmed;
     long failed;
     Map<String, ModuleStats> byModule;
 
@@ -19,6 +21,7 @@ public class SyncSummaryDTO {
     public static class ModuleStats {
         long pending;
         long sent;
+        long confirmed;
         long failed;
     }
 }

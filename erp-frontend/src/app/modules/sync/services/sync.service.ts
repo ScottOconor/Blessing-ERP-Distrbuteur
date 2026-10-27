@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
-export type SyncStatus = 'PENDING' | 'SENT' | 'FAILED';
+/** CONFIRMED : traitement confirmé par le Hub (mode de confirmation facultatif côté serveur). */
+export type SyncStatus = 'PENDING' | 'SENT' | 'CONFIRMED' | 'FAILED';
 export type SyncModule = 'VENTES' | 'ACHATS' | 'COMPTABILITE' | 'STOCK' | 'CAISSES' | 'REFERENTIELS';
 
 export interface SyncEvent {
@@ -21,12 +22,13 @@ export interface SyncEvent {
   payload?: string | null;
 }
 
-export interface ModuleStats { pending: number; sent: number; failed: number; }
+export interface ModuleStats { pending: number; sent: number; confirmed?: number; failed: number; }
 
 export interface SyncSummary {
   total: number;
   pending: number;
   sent: number;
+  confirmed?: number;
   failed: number;
   byModule: Record<SyncModule, ModuleStats>;
 }
