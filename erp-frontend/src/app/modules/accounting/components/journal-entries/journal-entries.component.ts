@@ -6,7 +6,7 @@ import { AccountingService } from '../../services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountMove } from '../../../../core/models/move.model';
 import { AccountJournal } from '../../../../core/models/account.model';
-import * as XLSX from 'xlsx';
+import { exportObjectsToExcel } from '../../../../core/utils/excel-import.util';
 
 @Component({
   selector: 'app-journal-entries',
@@ -105,11 +105,7 @@ export class JournalEntriesComponent implements OnInit {
       'Total Crédit': m.totalCredit || 0,
       'Statut': this.getStateLabel(m.state)
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [20, 14, 20, 24, 24, 16, 16, 12].map(wch => ({ wch }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Pièces');
-    XLSX.writeFile(wb, `ecritures_${JournalEntriesComponent.today()}.xlsx`);
+    exportObjectsToExcel(data, 'Pièces', [20, 14, 20, 24, 24, 16, 16, 12], `ecritures_${JournalEntriesComponent.today()}.xlsx`);
   }
 
   postMove(id: number, event: Event): void {

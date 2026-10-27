@@ -17,7 +17,7 @@
       <label class="btn-outline" [class.disabled]="importing" title="Importer depuis Excel" style="cursor:pointer;margin:0">
         <span class="material-icons">{{ importing ? 'hourglass_empty' : 'upload_file' }}</span>
         {{ importing ? 'Import…' : 'Importer Excel' }}
-        <input #fileInput type="file" accept=".xlsx,.xls" style="display:none" (change)="onImport($event)" [disabled]="importing">
+        <input #fileInput type="file" accept=".xlsx" style="display:none" (change)="onImport($event)" [disabled]="importing">
       </label>
       <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénère les lignes analytiques depuis les écritures validées">
         <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>

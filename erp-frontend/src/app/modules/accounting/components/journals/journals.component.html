@@ -12,7 +12,7 @@
       <label class="btn btn-outline" [class.loading]="previewing || importing" title="Importer depuis Excel">
         <span class="material-icons">upload_file</span>
         {{ previewing ? 'Lecture...' : importing ? 'Import...' : 'Importer' }}
-        <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" style="display:none" [disabled]="previewing || importing">
+        <input type="file" accept=".xlsx" (change)="onFileSelected($event)" style="display:none" [disabled]="previewing || importing">
       </label>
       <button class="btn btn-primary" (click)="openCreate()">
         <span class="material-icons">add</span>
