@@ -3,7 +3,8 @@ passe / désactivation. Instance ISOLÉE, comptes fictifs créés pour l'occasio
 import sys,uuid; sys.path.insert(0,'.')
 from api import *
 t=login('superadmin',ADMIN_PASSWORD)
-vr=[r for r in call("GET","/api/config/roles",t)[1] if r['label']=='Vendeur'][0]['id']
+roles=[r for r in call("GET","/api/config/roles",t)[1] if r['label']=='Vendeur']
+vr=roles[0]['id'] if roles else call("POST","/api/config/roles",t,{"label":"Vendeur","active":True,"permissions":[{"module":"VENTES","resource":"FACTURES","action":"VIEW"}]})[1]['id']
 u="s8_"+uuid.uuid4().hex[:6]
 st,r=call("POST","/api/config/users",t,{"username":u,"email":u+"@test.invalid","fullName":u,"password":"abc","roleId":vr}); print("création avec mot de passe 'abc' ->",st, r if st!=200 else "")
 uid=r['id'] if st==200 else None

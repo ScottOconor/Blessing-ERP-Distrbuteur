@@ -5,9 +5,10 @@ import sys,datetime,uuid; sys.path.insert(0,'.')
 from api import *
 t=login('superadmin',sys.argv[1]); today=str(datetime.date.today()); key=sys.argv[2] if len(sys.argv)>2 else None
 J={x['code']:x['id'] for x in call("GET","/api/accounting/journals?companyId=1",t)[1]}
-inv=[i for i in call("GET","/api/sales/invoices?companyId=1",t)[1] if i.get('state')=='posted' and str(i.get('date','')).startswith(today[:4]) and (i.get('montantDu') or 0)>600][0]
+AMOUNT=50  # deux envois : la facture doit avoir un reste dû d'au moins 2 × AMOUNT
+inv=[i for i in call("GET","/api/sales/invoices?companyId=1",t)[1] if i.get('state')=='posted' and str(i.get('date','')).startswith(today[:4]) and (i.get('montantDu') or 0)>2*AMOUNT][0]
 before=len(call("GET",f"/api/sales/payments/invoice/{inv['id']}",t)[1])
-body={"invoiceId":inv['id'],"journalId":J['CAI'],"date":today,"amount":300,"companyId":1,"memo":"renvoi"}
+body={"invoiceId":inv['id'],"journalId":J['CAI'],"date":today,"amount":AMOUNT,"companyId":1,"memo":"renvoi"}
 hdr={"Idempotency-Key":key} if key else None
 r1=call("POST","/api/sales/payments",t,body,hdr); r2=call("POST","/api/sales/payments",t,body,hdr)
 after=call("GET",f"/api/sales/payments/invoice/{inv['id']}",t)[1]
