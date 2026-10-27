@@ -105,7 +105,7 @@
     <div class="card">
       @if (loading) {
         <div class="empty"><span class="material-icons spin">refresh</span><p>Chargement...</p></div>
-      } @else if (pickings.length === 0) {
+      } @else if (totalElements === 0) {
         <div class="empty"><span class="material-icons">move_to_inbox</span><p>Aucune réception</p></div>
       } @else {
         <table class="data-table">
@@ -153,6 +153,11 @@
                     </tr>
                   }
                 }
+                @if (isExpanded(row.key) && hasMoreGroupItems(row.key)) {
+                  <tr class="detail-row"><td colspan="20" style="text-align:center">
+                    <button type="button" class="filter-btn" (click)="loadMoreGroupItems(row.key)">Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})</button>
+                  </td></tr>
+                }
               }
             } @else {
               @for (p of pickings; track p.id) {
@@ -178,6 +183,7 @@
             }
           </tbody>
         </table>
+      @if (!groupBy) { <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="réceptions" (pageChange)="goToPage($event)"></app-pager> }
       }
     </div>
   }

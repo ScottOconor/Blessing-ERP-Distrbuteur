@@ -51,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (m of filtered; track m.id) {
+          @for (m of pageOf(filtered); track m.id) {
             <tr>
               <td>
                 <span class="type-badge" [class]="getMoveType(m)">{{ getMoveTypeLabel(m) }}</span>
@@ -75,6 +75,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="uiPageFor(filtered.length)" [size]="uiPageSize" [total]="filtered.length" label="mouvements" (pageChange)="uiPage = $event"></app-pager>
     </div>
   }
 </div>

@@ -5,7 +5,7 @@
         <span class="material-icons">receipt_long</span>
         Factures fournisseurs
       </h1>
-      <span class="record-count">{{ filteredInvoices.length }} facture(s)</span>
+      <span class="record-count">{{ totalElements }} facture(s)</span>
     </div>
   </div>
 
@@ -46,7 +46,7 @@
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
-    } @else if (filteredInvoices.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state">
         <span class="material-icons">receipt_long</span>
         <p>Aucune facture — confirmez une commande d'achat pour en créer une automatiquement.</p>
@@ -90,6 +90,11 @@
                     <td>{{ inv.partnerName }}</td>
                     <td>
                       @if (inv.purchaseOrderName) {
+                                                                           @if (isExpanded(row.key) && hasMoreGroupItems(row.key)) {
+                                                                             <tr class="detail-row"><td colspan="20" style="text-align:center">
+                                                                               <button type="button" class="filter-btn" (click)="loadMoreGroupItems(row.key)">Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})</button>
+                                                                             </td></tr>
+                                                                           }
                         <span class="link-ref">{{ inv.purchaseOrderName }}</span>
                       } @else { <span class="text-muted">—</span> }
                     </td>
@@ -157,6 +162,7 @@
           }
         </tbody>
       </table>
+      @if (!groupBy) { <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="factures" (pageChange)="goToPage($event)"></app-pager> }
     }
   </div>
 </div>

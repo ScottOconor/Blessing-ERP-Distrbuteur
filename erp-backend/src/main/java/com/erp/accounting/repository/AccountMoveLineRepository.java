@@ -171,6 +171,11 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
             @Param("companyId") Long companyId,
             @Param("date") LocalDate date);
 
+    /** Totaux débit/crédit des pièces d'une page de liste : [id de la pièce, Σ débit, Σ crédit]. */
+    @Query("SELECT l.move.id, COALESCE(SUM(l.debit), 0), COALESCE(SUM(l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.move.id IN :moveIds GROUP BY l.move.id")
+    List<Object[]> sumDebitCreditByMoveIds(@Param("moveIds") List<Long> moveIds);
+
     /** Déréférence account, move, journal et partner (Grand Livre). Tri complété par l.id : sans lui,
      *  les lignes d'une même pièce changeaient de place d'une impression à l'autre, et le solde
      *  progressif affiché sur chaque ligne avec (même chose pour les requêtes des tiers ci-dessus). */

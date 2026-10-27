@@ -61,4 +61,15 @@ public class HelpdeskController {
     public ResponseEntity<TicketStatsDTO> getStats(@RequestParam("companyId") Long companyId) {
         return ResponseEntity.ok(helpdeskService.getStats(companyId));
     }
+
+    /** Tickets paginés côté serveur : un non-administrateur ne voit que ses propres tickets. */
+    @GetMapping("/tickets/page")
+    public ResponseEntity<com.erp.common.list.ListPage<TicketDTO>> getTicketsPage(@RequestParam java.util.Map<String, String> params,
+                                                                                  Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN") || a.getAuthority().equals("ROLE_ADMIN"));
+        java.util.Map<String, String> p = new java.util.HashMap<>(params);
+        if (!isAdmin) p.put("createdBy", authentication.getName());
+        return ResponseEntity.ok(helpdeskService.pageTickets(p));
+    }
 }

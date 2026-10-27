@@ -3,7 +3,7 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title"><span class="material-icons">payments</span>Paiements clients</h1>
-      <span class="record-count">{{ filtered.length }} paiement(s)</span>
+      <span class="record-count">{{ totalElements }} paiement(s)</span>
     </div>
     <div class="header-right">
       <button class="btn-new" (click)="openNewPayment()">
@@ -65,7 +65,7 @@
   <div class="card">
     @if (loading) {
       <div class="empty-state"><span class="material-icons spin">refresh</span><p>Chargement…</p></div>
-    } @else if (filtered.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state"><span class="material-icons">payments</span><p>Aucun paiement trouvé.</p></div>
     } @else {
       <table class="data-table">
@@ -102,6 +102,7 @@
           </tr>
         </tfoot>
       </table>
+      <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="paiements" (pageChange)="goToPage($event)"></app-pager>
     }
   </div>
 </div>

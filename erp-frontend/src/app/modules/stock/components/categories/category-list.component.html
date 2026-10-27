@@ -41,7 +41,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (c of categories; track c.id) {
+          @for (c of pageOf(categories); track c.id) {
             <tr>
               <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(c)" (change)="sel.toggle(c)" /></td>
               <td><span class="code-badge">{{ c.code || '—' }}</span></td>
@@ -61,6 +61,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="uiPageFor(categories.length)" [size]="uiPageSize" [total]="categories.length" label="catégories" (pageChange)="uiPage = $event"></app-pager>
     </div>
   }
 </div>

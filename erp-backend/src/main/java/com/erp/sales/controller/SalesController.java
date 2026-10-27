@@ -345,4 +345,53 @@ public class SalesController {
         int cleared = salesService.releaseAllReservations(companyId);
         return ResponseEntity.ok(cleared + " réservation(s) de stock remise(s) à zéro");
     }
+
+    // ===================== LISTES PAGINÉES =====================
+    // Paramètres : voir ListQueryService (page, size, state, dateFrom, dateTo, search, groupBy/groupKey…).
+
+    @GetMapping("/orders/page")
+    public ResponseEntity<com.erp.common.list.ListPage<SalesOrderDTO>> getOrdersPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(salesService.pageOrders(params));
+    }
+
+    @GetMapping("/orders/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getOrdersGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(salesService.groupOrders(params));
+    }
+
+    @GetMapping("/payments/page")
+    public ResponseEntity<com.erp.common.list.ListPage<InvoicePaymentDTO>> getPaymentsPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(salesService.pagePayments(params));
+    }
+
+    @GetMapping("/payments/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getPaymentsGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(salesService.groupPayments(params));
+    }
+
+    /** Avoirs : même liste paginée que les factures, type credit_note (droits Ventes › Avoirs). */
+    @GetMapping("/avoirs/page")
+    public ResponseEntity<InvoiceListDTO.Page> getAvoirsPage(@RequestParam("companyId") Long companyId,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo,
+            @RequestParam(value = "journalId", required = false) Long journalId,
+            @RequestParam(value = "groupBy", required = false) String groupBy,
+            @RequestParam(value = "groupKey", required = false) String groupKey,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size) {
+        return ResponseEntity.ok(invoiceListService.page(new SalesInvoiceListService.Filter(companyId, "credit_note", null,
+                state, dateFrom, dateTo, journalId, groupBy, groupKey), page, size));
+    }
+
+    @GetMapping("/avoirs/groups")
+    public ResponseEntity<List<InvoiceListDTO.Group>> getAvoirsGroups(@RequestParam("companyId") Long companyId,
+            @RequestParam("groupBy") String groupBy,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo,
+            @RequestParam(value = "journalId", required = false) Long journalId) {
+        return ResponseEntity.ok(invoiceListService.groups(new SalesInvoiceListService.Filter(companyId, "credit_note", null,
+                state, dateFrom, dateTo, journalId, groupBy, null)));
+    }
 }

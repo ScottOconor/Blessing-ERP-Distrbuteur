@@ -194,4 +194,15 @@ public class CaisseController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
+
+    /** Opérations paginées côté serveur (voir ListQueryService ; filtres caisseId et type en plus). */
+    @GetMapping("/operations/page")
+    public com.erp.common.list.ListPage<CaisseOperationDTO> getOperationsPage(@RequestParam java.util.Map<String, String> params) {
+        return caisseService.pageOperations(params);
+    }
+
+    @GetMapping("/operations/groups")
+    public List<com.erp.common.list.ListPage.Group> getOperationsGroups(@RequestParam java.util.Map<String, String> params) {
+        return caisseService.groupOperations(params);
+    }
 }

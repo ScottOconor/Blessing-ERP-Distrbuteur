@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { StockService, StockAdjustment, StockAdjustmentRequest, StockLocation, Product, Warehouse, InventorySheetRequest } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -21,7 +23,7 @@ interface InventoryLine {
 @Component({
   selector: 'app-adjustment-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './adjustment-list.component.html',
   styleUrl: './adjustment-list.component.scss'
 })
@@ -131,16 +133,44 @@ export class AdjustmentListComponent implements OnInit {
     });
   }
 
+  // Historique paginé côté serveur (filtre de dates appliqué par le serveur).
+  historyPage = 0;
+  readonly historyPageSize = PAGE_SIZE;
+  historyTotal = 0;
+
   loadHistory(): void {
     this.loadingHistory = true;
-    this.stockService.getAdjustments(this.authService.getCompanyId()).subscribe({
-      next: (adj) => {
-        this.allAdjustments = adj;
-        this.applyHistoryFilter();
+    this.stockService.getAdjustmentsPage({
+      companyId: this.authService.getCompanyId(), dateFrom: this.dateFrom, dateTo: this.dateTo,
+      page: this.historyPage, size: this.historyPageSize
+    }).subscribe({
+      next: (r) => {
+        this.allAdjustments = r.content;
+        this.adjustments = r.content;
+        this.historyTotal = r.totalElements;
         this.loadingHistory = false;
       },
       error: () => { this.loadingHistory = false; }
     });
+  }
+
+  // ── Feuille d'inventaire affichée par pages (toutes les lignes restent comptées, validées et imprimées) ──
+  uiPage = 0;
+  readonly uiPageSize = PAGE_SIZE;
+
+  /** Page courante, ramenée à la dernière page existante quand un filtre réduit la feuille. */
+  uiPageFor(count: number): number {
+    return Math.min(this.uiPage, Math.max(0, Math.ceil(count / this.uiPageSize) - 1));
+  }
+
+  pageOf<T>(rows: T[]): T[] {
+    const p = this.uiPageFor(rows.length);
+    return rows.slice(p * this.uiPageSize, (p + 1) * this.uiPageSize);
+  }
+
+  goToHistoryPage(page: number): void {
+    this.historyPage = page;
+    this.loadHistory();
   }
 
   get filteredLocations(): StockLocation[] {
@@ -249,12 +279,8 @@ export class AdjustmentListComponent implements OnInit {
   }
 
   applyHistoryFilter(): void {
-    this.adjustments = this.allAdjustments.filter(a => {
-      const d = a.createdAt?.split('T')[0] ?? '';
-      if (this.dateFrom && d < this.dateFrom) return false;
-      if (this.dateTo && d > this.dateTo) return false;
-      return true;
-    });
+    this.historyPage = 0;
+    this.loadHistory();
   }
 
   clearHistoryFilter(): void { this.dateFrom = ''; this.dateTo = ''; this.applyHistoryFilter(); }

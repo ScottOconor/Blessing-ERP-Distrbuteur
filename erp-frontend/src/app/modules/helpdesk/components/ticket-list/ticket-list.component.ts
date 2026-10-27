@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { HelpdeskService, Ticket, TicketStatus, TicketPriority, TicketCategory } from '../../services/helpdesk.service';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 
 @Component({
   selector: 'app-ticket-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './ticket-list.component.html',
   styleUrl: './ticket-list.component.scss'
 })
@@ -41,25 +43,38 @@ export class TicketListComponent implements OnInit {
     });
   }
 
+  // Pagination côté serveur (un non-administrateur ne reçoit que ses tickets, imposé par le serveur).
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+
+  /** Nouveaux filtres : première page. */
   load(): void {
+    this.page = 0;
+    this.loadPage();
+  }
+
+  loadPage(): void {
     this.loading = true;
-    const companyId  = this.authService.getCompanyId();
-    const isAdmin    = this.authService.isAdmin();
-    const username   = this.authService.getSession()?.username ?? '';
-    const createdBy  = isAdmin ? undefined : username;
-    const assignedTo = isAdmin && this.myTicketsOnly ? username : undefined;
-    this.helpdeskService.getTickets(companyId, this.filterStatus || undefined, assignedTo, createdBy).subscribe({
-      next: (data) => { this.tickets = data; this.loading = false; },
+    const isAdmin  = this.authService.isAdmin();
+    const username = this.authService.getSession()?.username ?? '';
+    this.helpdeskService.getTicketsPage({
+      companyId: this.authService.getCompanyId(),
+      status: this.filterStatus, priority: this.filterPriority, category: this.filterCategory,
+      assignedTo: isAdmin && this.myTicketsOnly ? username : null,
+      page: this.page, size: this.pageSize
+    }).subscribe({
+      next: (r) => { this.tickets = r.content; this.totalElements = r.totalElements; this.loading = false; },
       error: () => { this.loading = false; }
     });
   }
 
-  get filtered(): Ticket[] {
-    return this.tickets.filter(t =>
-      (!this.filterPriority || t.priority === this.filterPriority) &&
-      (!this.filterCategory || t.category === this.filterCategory)
-    );
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadPage();
   }
+
+  get filtered(): Ticket[] { return this.tickets; }
 
   openNew(): void {
     this.newTicket = this.emptyTicket();

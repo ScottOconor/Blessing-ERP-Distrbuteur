@@ -203,6 +203,8 @@ public class PermissionService {
         new PermissionRule("PUT",    "/api/caisses/denominations/**","CAISSE","COUPURES","EDIT"),
         new PermissionRule("DELETE", "/api/caisses/denominations/**","CAISSE","COUPURES","DELETE"),
         new PermissionRule("GET",    "/api/caisses/operations",      "CAISSE","OPERATIONS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/operations/page", "CAISSE","OPERATIONS","VIEW"),
+        new PermissionRule("GET",    "/api/caisses/operations/groups","CAISSE","OPERATIONS","VIEW"),
         new PermissionRule("GET",    "/api/caisses/*/operations",    "CAISSE","OPERATIONS","VIEW"),
         new PermissionRule("POST",   "/api/caisses/operations",      "CAISSE","OPERATIONS","CREATE"),
         new PermissionRule("POST",   "/api/caisses/*/ouvrir",        "CAISSE","SESSIONS","CREATE"),

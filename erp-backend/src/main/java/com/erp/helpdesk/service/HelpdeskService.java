@@ -41,6 +41,7 @@ public class HelpdeskService {
     private final AuditService auditService;
     private final HubConfigService hubConfigService;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.list.ListQueryService listQuery;
 
     @Value("${sync.spoke.id:SPOKE}")
     private String spokeId;
@@ -301,5 +302,21 @@ public class HelpdeskService {
                 .fromHub(c.isFromHub())
                 .createdAt(c.getCreatedAt())
                 .build();
+    }
+
+    // ===================== LISTE PAGINÉE DES TICKETS (ListQueryService) =====================
+
+    private static final com.erp.common.list.ListDefinition TICKET_LIST = new com.erp.common.list.ListDefinition("Ticket", null, "e.companyId")
+            .search("e.ticketNumber", "e.title", "e.createdByUsername", "e.assignedToUsername")
+            .filter("status", "e.status", TicketStatus.class).filter("priority", "e.priority", TicketPriority.class)
+            .filter("category", "e.category", com.erp.helpdesk.entity.TicketCategory.class)
+            .filter("assignedTo", "e.assignedToUsername", String.class).filter("createdBy", "e.createdByUsername", String.class)
+            .orderBy("e.createdAt DESC, e.id DESC");
+
+    /** createdBy : imposé par le contrôleur pour un utilisateur qui n'est pas administrateur. */
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<TicketDTO> pageTickets(Map<String, String> params) {
+        return listQuery.page(TICKET_LIST, params, ticketRepo::findAllById,
+                list -> list.stream().map(t -> toDTO(t, false)).toList());
     }
 }

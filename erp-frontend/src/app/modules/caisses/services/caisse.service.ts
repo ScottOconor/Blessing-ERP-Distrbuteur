@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 export interface CaisseDTO {
@@ -175,6 +176,14 @@ export class CaisseService {
   private base = `${environment.apiUrl}/api/caisses`;
 
   constructor(private http: HttpClient) {}
+
+  // ── Listes paginées côté serveur (voir core/utils/server-list) ──
+  getOperationsPage(query: ListQuery): Observable<ListPage<CaisseOperationDTO>> {
+    return getListPage<CaisseOperationDTO>(this.http, `${this.base}/operations/page`, query);
+  }
+  getOperationsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.base}/operations/groups`, query);
+  }
 
   getCaisses(companyId: number): Observable<CaisseDTO[]> {
     return this.http.get<CaisseDTO[]>(this.base, { params: { companyId } });

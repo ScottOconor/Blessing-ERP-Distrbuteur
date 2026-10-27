@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 // Interfaces
@@ -431,6 +432,20 @@ export class SalesService {
 
   constructor(private http: HttpClient) {}
 
+  // ── Listes paginées côté serveur (voir core/utils/server-list) ──
+  getOrdersPage(query: ListQuery): Observable<ListPage<SalesOrder>> {
+    return getListPage<SalesOrder>(this.http, `${this.apiUrl}/orders/page`, query);
+  }
+  getOrdersGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.apiUrl}/orders/groups`, query);
+  }
+  getPaymentsPage(query: ListQuery): Observable<ListPage<InvoicePayment>> {
+    return getListPage<InvoicePayment>(this.http, `${this.apiUrl}/payments/page`, query);
+  }
+  getPaymentsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.apiUrl}/payments/groups`, query);
+  }
+
   // Orders
   getOrders(companyId: number): Observable<SalesOrder[]> {
     return this.http.get<SalesOrder[]>(`${this.apiUrl}/orders`, {
@@ -468,6 +483,15 @@ export class SalesService {
   getInvoicePage(q: InvoiceListQuery, page: number, size: number): Observable<InvoicePage> {
     return this.http.get<InvoicePage>(`${this.apiUrl}/invoices/page`,
       { params: this.invoiceListParams(q).set('page', page).set('size', size) });
+  }
+  /** Avoirs paginés (même service que les factures, type credit_note, droits Ventes › Avoirs). */
+  getAvoirPage(q: InvoiceListQuery, page: number, size: number): Observable<InvoicePage> {
+    return this.http.get<InvoicePage>(`${this.apiUrl}/avoirs/page`,
+      { params: this.invoiceListParams(q).set('page', page).set('size', size) });
+  }
+  getAvoirGroups(q: InvoiceListQuery, groupBy: string): Observable<InvoiceGroup[]> {
+    return this.http.get<InvoiceGroup[]>(`${this.apiUrl}/avoirs/groups`,
+      { params: this.invoiceListParams({ ...q, groupBy: undefined, groupKey: undefined }).set('groupBy', groupBy) });
   }
   getInvoiceGroups(q: InvoiceListQuery, groupBy: string): Observable<InvoiceGroup[]> {
     return this.http.get<InvoiceGroup[]>(`${this.apiUrl}/invoices/groups`,

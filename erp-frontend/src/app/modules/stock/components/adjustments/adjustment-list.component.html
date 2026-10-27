@@ -137,7 +137,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (line of filteredLines; track line.productId + '-' + line.locationId) {
+            @for (line of pageOf(filteredLines); track line.productId + '-' + line.locationId) {
               <tr [class.row-diff]="getDiff(line) !== 0">
                 <td class="text-muted small">{{ line.locationName }}</td>
                 <td>
@@ -172,6 +172,7 @@
             }
           </tbody>
         </table>
+        <app-pager [page]="uiPageFor(filteredLines.length)" [size]="uiPageSize" [total]="filteredLines.length" label="lignes" (pageChange)="uiPage = $event"></app-pager>
       </div>
       @if (linesWithDiff.length > 0) {
         <div class="diff-summary">
@@ -202,7 +203,7 @@
       <div class="card">
         <div class="card-header">
           <span>Historique des ajustements</span>
-          <span class="count-badge">{{ adjustments.length }}</span>
+          <span class="count-badge">{{ historyTotal }}</span>
         </div>
         <table class="adj-table">
           <thead>
@@ -246,11 +247,12 @@
                 <td class="text-muted small">{{ a.notes || '—' }}</td>
               </tr>
             }
-            @if (adjustments.length === 0) {
+            @if (historyTotal === 0) {
               <tr><td colspan="9" class="empty-state">Aucun ajustement enregistré</td></tr>
             }
           </tbody>
         </table>
+        <app-pager [page]="historyPage" [size]="historyPageSize" [total]="historyTotal" label="ajustements" (pageChange)="goToHistoryPage($event)"></app-pager>
       </div>
     }
   }

@@ -49,6 +49,7 @@ public class CaisseService {
     private final SyncEventPublisher syncEventPublisher;
     private final AuditService auditService;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.list.ListQueryService listQuery;
     private final UsageGuard usageGuard;
     private final UserRepository userRepository;
     private final SellerRepository sellerRepo;
@@ -1054,5 +1055,26 @@ public class CaisseService {
             journalRepo.findById(s.getJournalId()).ifPresent(j -> dto.setJournalName(j.getName()));
         }
         return dto;
+    }
+
+    // ===================== LISTE PAGINÉE DES OPÉRATIONS (ListQueryService) =====================
+
+    private static final com.erp.common.list.ListDefinition OPERATION_LIST = new com.erp.common.list.ListDefinition("CaisseOperation", "LEFT JOIN Caisse c ON c.id = e.caisseId", "e.companyId")
+            .date("e.date").search("e.libelle", "e.reference", "e.tiersName")
+            .filter("caisseId", "e.caisseId", Long.class).filter("type", "e.type", OperationType.class)
+            .group("caisse", "e.caisseId", "c.name", Long.class)
+            .group("type", "e.type", "e.type", OperationType.class)
+            .sum("montant", "e.montant")
+            .orderBy("e.date DESC, e.createdAt DESC, e.id DESC");
+
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<CaisseOperationDTO> pageOperations(Map<String, String> params) {
+        return listQuery.page(OPERATION_LIST, params, operationRepo::findAllById,
+                list -> list.stream().map(this::toOperationDTO).toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupOperations(Map<String, String> params) {
+        return listQuery.groups(OPERATION_LIST, params);
     }
 }

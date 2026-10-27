@@ -757,4 +757,42 @@ public class StockController {
         LocalDate to   = LocalDate.parse(dateTo);
         return ResponseEntity.ok(stockReportService.getDetailedReport(companyId, warehouseIds, from, to, productId, categoryId));
     }
+
+    // ===================== LISTES PAGINÉES =====================
+    // Paramètres : voir ListQueryService (page, size, state, dateFrom, dateTo, search, groupBy/groupKey…).
+
+    @GetMapping("/receptions/page")
+    public ResponseEntity<com.erp.common.list.ListPage<StockPickingDTO>> getReceptionsPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.pagePickings("receptions", params));
+    }
+
+    @GetMapping("/receptions/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getReceptionsGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.groupPickings("receptions", params));
+    }
+
+    @GetMapping("/transferts/page")
+    public ResponseEntity<com.erp.common.list.ListPage<StockPickingDTO>> getTransfertsPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.pagePickings("transferts", params));
+    }
+
+    @GetMapping("/transferts/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getTransfertsGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.groupPickings("transferts", params));
+    }
+
+    @GetMapping("/inter-company/expeditions/page")
+    public ResponseEntity<com.erp.common.list.ListPage<StockPickingDTO>> getExpeditionsPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.pagePickings("expeditions", params));
+    }
+
+    @GetMapping("/inter-company/expeditions/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getExpeditionsGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.groupPickings("expeditions", params));
+    }
+
+    @GetMapping("/adjustments/page")
+    public ResponseEntity<com.erp.common.list.ListPage<StockAdjustmentDTO>> getAdjustmentsPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(stockService.pageAdjustments(params));
+    }
 }

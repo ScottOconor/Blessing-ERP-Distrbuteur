@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GroupedList, ListGroup, ListQuery, PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { StockService, StockPicking, Product, Warehouse, DirectReceptionRequest, DirectReceptionLineItem } from '../../services/stock.service';
@@ -8,7 +10,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 @Component({
   selector: 'app-reception-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './reception-list.component.html',
   styleUrl: './reception-list.component.scss'
 })
@@ -49,10 +51,7 @@ export class ReceptionListComponent implements OnInit {
     this.loading = true;
     this.loadingPending = true;
 
-    this.stockService.getReceptions(companyId).subscribe({
-      next: (p) => { this.allPickings = p; this.applyFilter(); this.loading = false; },
-      error: () => { this.loading = false; }
-    });
+    this.loadListPage();
 
     this.stockService.getPendingReceptions(companyId).subscribe({
       next: (p) => { this.pendingPickings = p; this.loadingPending = false; },
@@ -71,12 +70,8 @@ export class ReceptionListComponent implements OnInit {
   }
 
   applyFilter(): void {
-    this.pickings = this.allPickings.filter(p => {
-      const d = p.scheduledDate?.split('T')[0] ?? '';
-      if (this.dateFrom && d < this.dateFrom) return false;
-      if (this.dateTo && d > this.dateTo) return false;
-      return true;
-    });
+    this.page = 0;
+    this.loadListPage();
   }
 
   clearDateFilter(): void { this.dateFrom = ''; this.dateTo = ''; this.applyFilter(); }
@@ -89,6 +84,69 @@ export class ReceptionListComponent implements OnInit {
     return { draft: 'Brouillon', confirmed: 'En attente', done: 'Validé', cancelled: 'Annulé' }[s] || s;
   }
 
+  // ── Pagination côté serveur (filtres, totaux et regroupements calculés par le serveur) ──
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+  listTotals: Record<string, number> = {};
+  groupedRows: { key: string; label: string; count: number; items: StockPicking[] }[] = [];
+  private readonly groupServerKeys: Record<string, string> = {};
+  private readonly grouped = new GroupedList<StockPicking>((key, page) =>
+    this.stockService.getReceptionsPage({ ...this.listQuery(), groupBy: this.serverGroup(), groupKey: key, page, size: this.pageSize }));
+
+  private listQuery(): ListQuery {
+    return {
+      companyId: this.authService.getCompanyId(),
+      dateFrom: this.dateFrom,
+      dateTo: this.dateTo,
+    };
+  }
+
+  private serverGroup(): string { return this.groupServerKeys[this.groupBy] ?? this.groupBy; }
+
+  loadListPage(): void {
+    this.loading = true;
+    if (this.groupBy) {
+      this.stockService.getReceptionsGroups({ ...this.listQuery(), groupBy: this.serverGroup() }).subscribe({
+        next: (groups: ListGroup[]) => {
+          this.grouped.reset(groups);
+          this.groupedRows = groups
+            .map(g => ({ key: g.key, label: this.groupLabel(g), count: g.count, items: [] as StockPicking[] }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+          this.totalElements = this.grouped.count;
+          this.loading = false;
+        },
+        error: () => { this.loading = false; }
+      });
+      return;
+    }
+    this.stockService.getReceptionsPage({ ...this.listQuery(), page: this.page, size: this.pageSize }).subscribe({
+      next: (r: any) => {
+        this.pickings = r.content;
+        this.allPickings = r.content;
+        this.totalElements = r.totalElements;
+        this.listTotals = r.totals ?? {};
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadListPage();
+  }
+
+  private groupLabel(g: ListGroup): string {
+    if (g.key === 'none') return g.label;
+    if (this.groupBy === 'mois') return this.fmtMonth(g.key);
+    if (this.groupBy === 'statut') return this.stateLabel(g.key);
+    return g.label;
+  }
+
+  hasMoreGroupItems(key: string): boolean { return this.grouped.hasMore(key); }
+  loadMoreGroupItems(key: string): void { this.grouped.loadMore(key); }
+
   // ── Group By ─────────────────────────────────────────────────────────────────
   groupBy = '';
   expandedGroups = new Set<string>();
@@ -100,54 +158,17 @@ export class ReceptionListComponent implements OnInit {
     { key: 'destination', label: 'Destination',  icon: 'warehouse' }
   ];
 
-  get groupedRows(): { key: string; label: string; count: number; items: StockPicking[] }[] {
-    if (!this.groupBy) return [];
-    const source = this.pickings;
-    const map = new Map<string, { key: string; label: string; count: number; items: StockPicking[] }>();
-    for (const item of source) {
-      let key: string, label: string;
-      switch (this.groupBy) {
-        case 'mois':
-          key = (item.scheduledDate || '').substring(0, 7);
-          label = key ? this.fmtMonth(key) : '(Sans date)';
-          break;
-        case 'fournisseur':
-          key = label = item.partnerName || '(Sans fournisseur)';
-          break;
-        case 'statut':
-          key = item.state || '?';
-          label = this.stateLabel(key);
-          break;
-        case 'destination':
-          key = label = item.locationDestName || '(Sans destination)';
-          break;
-        default: key = label = '?';
-      }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, items: [] });
-      const g = map.get(key)!;
-      g.count++;
-      g.items.push(item);
-    }
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => a.label.localeCompare(b.label));
-    return arr;
-  }
-
   setGroupBy(key: string): void {
     this.groupBy = this.groupBy === key ? '' : key;
-    this.expandedGroups.clear();
+    this.page = 0;
+    this.loadListPage();
   }
 
-  toggleGroup(key: string): void {
-    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
-    else this.expandedGroups.add(key);
-  }
+  toggleGroup(key: string): void { this.grouped.toggle(key); }
 
-  isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
+  isExpanded(key: string): boolean { return this.grouped.isExpanded(key); }
 
-  getGroupItems(key: string): StockPicking[] {
-    return this.groupedRows.find(g => g.key === key)?.items ?? [];
-  }
+  getGroupItems(key: string): StockPicking[] { return this.grouped.rows(key); }
 
   fmtMonth(ym: string): string {
     const [y, m] = ym.split('-');
@@ -226,11 +247,7 @@ export class ReceptionListComponent implements OnInit {
         this.directSaving = false;
         this.showDirectModal = false;
         // Refresh historique
-        this.loading = true;
-        this.stockService.getReceptions(companyId).subscribe({
-          next: (p) => { this.allPickings = p; this.applyFilter(); this.loading = false; },
-          error: () => { this.loading = false; }
-        });
+        this.loadListPage();
         this.activeTab = 'all';
       },
       error: (err) => {

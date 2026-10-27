@@ -243,4 +243,47 @@ public class PurchaseController {
         purchaseService.deletePrixFournisseur(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ===================== LISTES PAGINÉES =====================
+    // Paramètres : voir ListQueryService (page, size, state, dateFrom, dateTo, search, groupBy/groupKey…).
+
+    @GetMapping("/orders/page")
+    public ResponseEntity<com.erp.common.list.ListPage<PurchaseOrderDTO>> getOrdersPage(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.pageOrders(params));
+    }
+
+    @GetMapping("/orders/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getOrdersGroups(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.groupOrders(params));
+    }
+
+    @GetMapping("/invoices/page")
+    public ResponseEntity<com.erp.common.list.ListPage<PurchaseInvoiceDTO>> getInvoicesPage(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.pageInvoices(false, params));
+    }
+
+    @GetMapping("/invoices/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getInvoicesGroups(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.groupInvoices(false, params));
+    }
+
+    @GetMapping("/avoirs/page")
+    public ResponseEntity<com.erp.common.list.ListPage<PurchaseInvoiceDTO>> getAvoirsPage(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.pageInvoices(true, params));
+    }
+
+    @GetMapping("/avoirs/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getAvoirsGroups(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.groupInvoices(true, params));
+    }
+
+    @GetMapping("/payments/page")
+    public ResponseEntity<com.erp.common.list.ListPage<PurchaseInvoiceDTO.PaymentDTO>> getPaymentsPage(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.pagePayments(params));
+    }
+
+    @GetMapping("/payments/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getPaymentsGroups(@RequestParam Map<String, String> params) {
+        return ResponseEntity.ok(purchaseService.groupPayments(params));
+    }
 }

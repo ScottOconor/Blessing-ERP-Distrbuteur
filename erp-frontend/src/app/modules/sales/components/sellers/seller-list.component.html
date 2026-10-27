@@ -69,7 +69,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (seller of filteredSellers; track seller.id) {
+          @for (seller of pageOf(filteredSellers); track seller.id) {
             <tr>
               <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(seller)" (change)="sel.toggle(seller)" /></td>
               <td class="text-muted font-mono">{{ seller.ref || '—' }}</td>
@@ -92,6 +92,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="uiPageFor(filteredSellers.length)" [size]="uiPageSize" [total]="filteredSellers.length" label="vendeurs" (pageChange)="uiPage = $event"></app-pager>
     }
   </div>
 </div>

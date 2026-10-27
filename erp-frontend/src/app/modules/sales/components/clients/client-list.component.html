@@ -74,7 +74,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (client of filteredClients; track client.id) {
+          @for (client of pageOf(filteredClients); track client.id) {
             <tr>
               <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(client)" (change)="sel.toggle(client)" /></td>
               <td class="text-muted font-mono">{{ client.ref || '—' }}</td>
@@ -120,6 +120,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="uiPageFor(filteredClients.length)" [size]="uiPageSize" [total]="filteredClients.length" label="clients" (pageChange)="uiPage = $event"></app-pager>
     }
   </div>
 </div>

@@ -9,7 +9,7 @@
         <p class="page-sub">Détail des mouvements par compte analytique</p>
       </div>
     </div>
-    @if (lines.length > 0) {
+    @if (totalElements > 0) {
       <div class="header-actions">
         <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénérer depuis les écritures validées">
           <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
@@ -47,7 +47,7 @@
             @else { <span class="material-icons">search</span> }
             Rechercher
           </button>
-          @if (lines.length === 0) {
+          @if (totalElements === 0) {
             <button class="btn-outline" (click)="recalculate()" [disabled]="recalculating" title="Régénérer depuis les écritures validées">
               <span class="material-icons">{{ recalculating ? 'hourglass_empty' : 'refresh' }}</span>
             </button>
@@ -64,7 +64,7 @@
       <p>Chargement…</p>
     </div>
 
-  } @else if (lines.length === 0) {
+  } @else if (totalElements === 0) {
     <div class="empty-state">
       <span class="material-icons">receipt_long</span>
       <p>Aucune ligne analytique sur la période sélectionnée</p>
@@ -76,7 +76,7 @@
         <div class="card-title-left">
           <span class="material-icons" style="color:#2563eb;font-size:20px">table_rows</span>
           <span>Lignes analytiques</span>
-          <span class="badge-count">{{ lines.length }}</span>
+          <span class="badge-count">{{ totalElements }}</span>
         </div>
       </div>
       <div class="table-wrap">
@@ -119,10 +119,11 @@
           </tbody>
         </table>
       </div>
+      <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="lignes" (pageChange)="goToPage($event)"></app-pager>
 
       <!-- Grand total ────────────────────────────────────────────────── -->
       <div class="grand-total">
-        <span class="gt-label">TOTAL — {{ lines.length }} ligne(s)</span>
+        <span class="gt-label">TOTAL — {{ totalElements }} ligne(s)</span>
         <div class="gt-values">
           <div class="gt-item"><span>Débit</span><strong class="debit-val">{{ totalDebit | number:'1.2-2' }}</strong></div>
           <div class="gt-item"><span>Crédit</span><strong class="credit-val">{{ totalCredit | number:'1.2-2' }}</strong></div>

@@ -6,7 +6,7 @@
       </span>
       <div>
         <h1>Historique des {{ type === 'ENTREE' ? 'entrées' : 'sorties' }}</h1>
-        <p>{{ operations.length }} opération(s)</p>
+        <p>{{ totalElements }} opération(s)</p>
       </div>
     </div>
     <button class="btn-new" [class.entree]="type === 'ENTREE'" [class.sortie]="type === 'SORTIE'" (click)="newOperation()">
@@ -35,14 +35,14 @@
     <div class="loading-row"><span class="material-icons spin">sync</span> Chargement…</div>
   }
 
-  @if (!loading && operations.length === 0) {
+  @if (!loading && totalElements === 0) {
     <div class="empty-state">
       <span class="material-icons">{{ type === 'ENTREE' ? 'add_circle' : 'remove_circle' }}</span>
       <p>Aucune {{ type === 'ENTREE' ? 'entrée' : 'sortie' }} enregistrée.</p>
     </div>
   }
 
-  @if (!loading && operations.length > 0) {
+  @if (!loading && totalElements > 0) {
     <div class="table-wrap">
       <table class="op-table">
         <thead>
@@ -88,6 +88,7 @@
           </tr>
         </tfoot>
       </table>
+      <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="opérations" (pageChange)="goToPage($event)"></app-pager>
     </div>
   }
 </div>

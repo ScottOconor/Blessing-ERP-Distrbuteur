@@ -34,6 +34,7 @@ public class AnalyticService {
     private final AccountMoveRepository moveRepo;
     private final AccountMoveLineRepository moveLineRepo;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.list.ListQueryService listQuery;
     private final UsageGuard usageGuard;
 
     // ===================== COMPTES ANALYTIQUES =====================
@@ -277,5 +278,23 @@ public class AnalyticService {
                 .generalAccountName(line.getGeneralAccount() != null ? line.getGeneralAccount().getName() : null)
                 .companyId(line.getCompany() != null ? line.getCompany().getId() : null)
                 .build();
+    }
+
+    // ===================== LISTE PAGINÉE DES LIGNES (ListQueryService) =====================
+
+    private static final com.erp.common.list.ListDefinition LINE_LIST = new com.erp.common.list.ListDefinition(
+            "AnalyticLine", "LEFT JOIN e.analyticAccount aa LEFT JOIN e.generalAccount ga", "e.company.id")
+            .date("e.date").search("e.name", "aa.code", "aa.name", "ga.code")
+            .filter("analyticAccountId", "aa.id", Long.class)
+            .sum("debit", "CASE WHEN e.amount > 0 THEN e.amount ELSE 0 END")
+            .sum("credit", "CASE WHEN e.amount < 0 THEN -e.amount ELSE 0 END")
+            .sum("solde", "e.amount")
+            .orderBy("e.date DESC, e.id DESC");
+
+    /** Lignes analytiques paginées : totaux débit / crédit / solde de toutes les lignes filtrées. */
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<AnalyticLineDTO> pageLines(java.util.Map<String, String> params) {
+        return listQuery.page(LINE_LIST, params, analyticLineRepo::findAllById,
+                lines -> lines.stream().map(this::toLineDTO).toList());
     }
 }

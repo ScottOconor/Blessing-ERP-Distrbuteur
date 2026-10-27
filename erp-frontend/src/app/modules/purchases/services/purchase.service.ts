@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 import { idempotencyHeaders } from '../../../core/utils/idempotency-key';
 
 export interface PurchaseOrderLine {
@@ -262,6 +263,32 @@ export class PurchaseService {
       `${this.base}/suppliers/${partnerId}/precompte-rate`,
       { params: new HttpParams().set('companyId', companyId) }
     );
+  }
+
+  // ── Listes paginées côté serveur (voir core/utils/server-list) ──
+  getOrdersPage(query: ListQuery): Observable<ListPage<PurchaseOrder>> {
+    return getListPage<PurchaseOrder>(this.http, `${this.base}/orders/page`, query);
+  }
+  getOrdersGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.base}/orders/groups`, query);
+  }
+  getInvoicesPage(query: ListQuery): Observable<ListPage<PurchaseInvoice>> {
+    return getListPage<PurchaseInvoice>(this.http, `${this.base}/invoices/page`, query);
+  }
+  getInvoicesGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.base}/invoices/groups`, query);
+  }
+  getAvoirsPage(query: ListQuery): Observable<ListPage<PurchaseInvoice>> {
+    return getListPage<PurchaseInvoice>(this.http, `${this.base}/avoirs/page`, query);
+  }
+  getAvoirsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.base}/avoirs/groups`, query);
+  }
+  getPaymentsPage(query: ListQuery): Observable<ListPage<PurchaseInvoicePayment>> {
+    return getListPage<PurchaseInvoicePayment>(this.http, `${this.base}/payments/page`, query);
+  }
+  getPaymentsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.base}/payments/groups`, query);
   }
 
   // ===================== COMMANDES =====================

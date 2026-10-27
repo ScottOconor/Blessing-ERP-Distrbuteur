@@ -5,7 +5,7 @@
         <span class="material-icons">undo</span>
         Avoirs fournisseurs
       </h1>
-      <span class="record-count">{{ filteredAvoirs.length }} avoir(s)</span>
+      <span class="record-count">{{ totalElements }} avoir(s)</span>
     </div>
     <div class="header-right">
       @if (totalAvoirs() > 0) {
@@ -55,7 +55,7 @@
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
-    } @else if (filteredAvoirs.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state">
         <span class="material-icons">undo</span>
         <p>Aucun avoir. Cliquez sur "Nouvel avoir" pour en créer un.</p>
@@ -96,6 +96,11 @@
                     <td>{{ avoir.partnerName }}</td>
                     <td>
                       @if (avoir.originalInvoiceName) {
+                                                                               @if (isExpanded(row.key) && hasMoreGroupItems(row.key)) {
+                                                                                 <tr class="detail-row"><td colspan="20" style="text-align:center">
+                                                                                   <button type="button" class="filter-btn" (click)="loadMoreGroupItems(row.key)">Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})</button>
+                                                                                 </td></tr>
+                                                                               }
                         <span class="link-ref">{{ avoir.originalInvoiceName }}</span>
                       } @else { <span class="text-muted">—</span> }
                     </td>
@@ -145,6 +150,7 @@
           }
         </tbody>
       </table>
+      @if (!groupBy) { <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="avoirs" (pageChange)="goToPage($event)"></app-pager> }
     }
   </div>
 </div>

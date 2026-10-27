@@ -1,5 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { StockService, Product, ProductCategory, UnitOfMeasure, Warehouse, StockAdjustmentRequest, DuplicateProductCode, ProductPriceHistory } from '../../services/stock.service';
@@ -21,7 +23,7 @@ const SERVICE_SAMPLE  = ['Installation', 'SRV-INST', '15000', '0', '', 'Forfait'
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './product-list.component.html',
   styleUrl: './product-list.component.scss'
 })
@@ -669,5 +671,19 @@ export class ProductListComponent implements OnInit {
 
   prodTypeLabel(t: string): string {
     return ({ product: 'Article stockable', service: 'Service / Emballage', consu: 'Consommable' } as Record<string, string>)[t] || t;
+  }
+
+  // ── Affichage par pages (données déjà chargées : recherche, sélection et export portent sur toutes les lignes) ──
+  uiPage = 0;
+  readonly uiPageSize = PAGE_SIZE;
+
+  /** Page courante, ramenée à la dernière page existante quand un filtre réduit la liste. */
+  uiPageFor(count: number): number {
+    return Math.min(this.uiPage, Math.max(0, Math.ceil(count / this.uiPageSize) - 1));
+  }
+
+  pageOf<T>(rows: T[]): T[] {
+    const p = this.uiPageFor(rows.length);
+    return rows.slice(p * this.uiPageSize, (p + 1) * this.uiPageSize);
   }
 }

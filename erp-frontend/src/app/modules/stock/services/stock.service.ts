@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 
 export interface ProductCategory {
   id?: number;
@@ -455,6 +456,29 @@ export class StockService {
   private api = `${environment.apiUrl}/api/stock`;
 
   constructor(private http: HttpClient) {}
+
+  // ── Listes paginées côté serveur (voir core/utils/server-list) ──
+  getReceptionsPage(query: ListQuery): Observable<ListPage<StockPicking>> {
+    return getListPage<StockPicking>(this.http, `${this.api}/receptions/page`, query);
+  }
+  getReceptionsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.api}/receptions/groups`, query);
+  }
+  getTransfertsPage(query: ListQuery): Observable<ListPage<StockPicking>> {
+    return getListPage<StockPicking>(this.http, `${this.api}/transferts/page`, query);
+  }
+  getTransfertsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.api}/transferts/groups`, query);
+  }
+  getExpeditionsPage(query: ListQuery): Observable<ListPage<StockPicking>> {
+    return getListPage<StockPicking>(this.http, `${this.api}/inter-company/expeditions/page`, query);
+  }
+  getExpeditionsGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.api}/inter-company/expeditions/groups`, query);
+  }
+  getAdjustmentsPage(query: ListQuery): Observable<ListPage<StockAdjustment>> {
+    return getListPage<StockAdjustment>(this.http, `${this.api}/adjustments/page`, query);
+  }
 
   // Categories
   getCategories(companyId: number): Observable<ProductCategory[]> {

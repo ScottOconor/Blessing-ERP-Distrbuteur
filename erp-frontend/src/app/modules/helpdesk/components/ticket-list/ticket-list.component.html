@@ -5,7 +5,7 @@
         <span class="material-icons">{{ myTicketsOnly ? 'person_pin' : 'list_alt' }}</span>
         {{ myTicketsOnly ? 'Mes tickets' : 'Tous les tickets' }}
       </h1>
-      <p class="page-sub">{{ filtered.length }} ticket(s) affiché(s)</p>
+      <p class="page-sub">{{ totalElements }} ticket(s)</p>
     </div>
     <div class="header-actions">
       <button class="btn-primary" (click)="openNew()">
@@ -23,14 +23,14 @@
       <option value="RESOLU">Résolu</option>
       <option value="FERME">Fermé</option>
     </select>
-    <select [(ngModel)]="filterPriority" class="form-control filter-sel">
+    <select [(ngModel)]="filterPriority" (ngModelChange)="load()" class="form-control filter-sel">
       <option value="">Toutes priorités</option>
       <option value="BASSE">Basse</option>
       <option value="MOYENNE">Moyenne</option>
       <option value="HAUTE">Haute</option>
       <option value="CRITIQUE">Critique</option>
     </select>
-    <select [(ngModel)]="filterCategory" class="form-control filter-sel">
+    <select [(ngModel)]="filterCategory" (ngModelChange)="load()" class="form-control filter-sel">
       <option value="">Toutes catégories</option>
       <option value="INCIDENT">Incident</option>
       <option value="DEMANDE">Demande</option>
@@ -40,7 +40,7 @@
 
   @if (loading) {
     <div class="loading"><span class="material-icons spin">refresh</span> Chargement...</div>
-  } @else if (filtered.length === 0) {
+  } @else if (totalElements === 0) {
     <div class="empty-state">
       <span class="material-icons">inbox</span>
       <p>Aucun ticket trouvé</p>
@@ -75,6 +75,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="tickets" (pageChange)="goToPage($event)"></app-pager>
     </div>
   }
 </div>

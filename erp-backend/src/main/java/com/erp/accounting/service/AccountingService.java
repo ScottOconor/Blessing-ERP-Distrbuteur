@@ -59,6 +59,7 @@ public class AccountingService {
     private final UsageGuard usageGuard;
     private final jakarta.persistence.EntityManager em;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.erp.common.list.ListQueryService listQuery;
 
     // ===================== ACCOUNTS =====================
 
@@ -881,6 +882,50 @@ public class AccountingService {
     private static final class MoveListCache {
         Map<Long, List<AnalyticDistributionItem>> distributionsByLineId = Map.of();
         Map<Long, List<AnalyticLine>> analyticLinesByLineId = Map.of();
+    }
+
+    /** Liste des pièces paginée côté serveur (écran Pièces comptables) : même tri que la liste complète. */
+    private static final com.erp.common.list.ListDefinition MOVE_LIST = new com.erp.common.list.ListDefinition(
+            "AccountMove", "LEFT JOIN e.partner p LEFT JOIN e.journal j", "e.company.id")
+            .date("e.date").state("e.state").journal("j.id", "j.name").partner("p.id", "p.name")
+            .search("e.name", "e.ref", "p.name")
+            .orderBy("e.date DESC, e.name DESC, e.id DESC");
+
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<AccountMoveDTO> pageJournalEntries(Map<String, String> params) {
+        return listQuery.page(MOVE_LIST, params,
+                ids -> listQuery.loadByIds(AccountMove.class, "LEFT JOIN FETCH e.journal LEFT JOIN FETCH e.partner", ids),
+                this::toMoveListDTOs);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupJournalEntries(Map<String, String> params) {
+        return listQuery.groups(MOVE_LIST, params);
+    }
+
+    /** En-têtes de pièces pour une liste : sans les lignes, totaux débit/crédit calculés en base. */
+    private List<AccountMoveDTO> toMoveListDTOs(List<AccountMove> moves) {
+        Map<Long, BigDecimal[]> sums = new java.util.HashMap<>();
+        moveLineRepo.sumDebitCreditByMoveIds(moves.stream().map(AccountMove::getId).toList())
+                .forEach(r -> sums.put((Long) r[0], new BigDecimal[]{(BigDecimal) r[1], (BigDecimal) r[2]}));
+        return moves.stream().map(m -> {
+            BigDecimal[] s = sums.getOrDefault(m.getId(), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            return AccountMoveDTO.builder()
+                    .id(m.getId()).name(m.getName()).date(m.getDate()).ref(m.getRef()).state(m.getState())
+                    .journalId(m.getJournal() != null ? m.getJournal().getId() : null)
+                    .journalName(m.getJournal() != null ? m.getJournal().getName() : null)
+                    .companyId(m.getCompany() != null ? m.getCompany().getId() : null)
+                    .partnerId(m.getPartner() != null ? m.getPartner().getId() : null)
+                    .partnerName(m.getPartner() != null ? m.getPartner().getName() : null)
+                    .lines(List.of())
+                    .createdAt(m.getCreatedAt()).createdBy(m.getCreatedBy())
+                    .updatedBy(m.getUpdatedBy()).updatedAt(m.getUpdatedAt())
+                    .totalDebit(s[0]).totalCredit(s[1])
+                    .reversalId(m.getReversalId()).isReversal(m.isReversal())
+                    .postedBy(m.getPostedBy()).postedAt(m.getPostedAt())
+                    .resetToDraftBy(m.getResetToDraftBy()).resetToDraftAt(m.getResetToDraftAt())
+                    .build();
+        }).toList();
     }
 
     @Transactional(readOnly = true)

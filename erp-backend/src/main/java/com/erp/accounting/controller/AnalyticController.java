@@ -61,6 +61,12 @@ public class AnalyticController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
+    /** Lignes paginées côté serveur (voir ListQueryService ; filtre analyticAccountId, dates dateFrom/dateTo). */
+    @GetMapping("/lines/page")
+    public ResponseEntity<com.erp.common.list.ListPage<AnalyticLineDTO>> getLinesPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(analyticService.pageLines(params));
+    }
+
     // ===== RECALCUL =====
 
     /**

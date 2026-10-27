@@ -5,6 +5,7 @@ import { AccountAccount, AccountJournal, Partner } from '../../../core/models/ac
 import { ImportResult } from '../../../core/models/import-result.model';
 import { AccountMove } from '../../../core/models/move.model';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 
 export interface JournalPreviewRow {
   code: string;
@@ -115,6 +116,13 @@ export class AccountingService {
   }
 
   // ===== ECRITURES =====
+  /** Pièces paginées côté serveur (en-têtes et totaux, sans les lignes). */
+  getMovesPage(query: ListQuery): Observable<ListPage<AccountMove>> {
+    return getListPage<AccountMove>(this.http, `${this.apiUrl}/moves/page`, query);
+  }
+  getMovesGroups(query: ListQuery): Observable<ListGroup[]> {
+    return getListGroups(this.http, `${this.apiUrl}/moves/groups`, query);
+  }
   getMoves(companyId: number, params?: any): Observable<AccountMove[]> {
     let httpParams = new HttpParams().set('companyId', companyId);
     if (params) {

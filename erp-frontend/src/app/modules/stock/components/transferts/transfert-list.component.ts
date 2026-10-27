@@ -1,15 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GroupedList, ListGroup, ListQuery, PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { StockService, StockPicking } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-transfert-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './transfert-list.component.html',
   styleUrl: './transfert-list.component.scss'
 })
@@ -43,28 +44,20 @@ export class TransfertListComponent implements OnInit {
 
   load(): void {
     this.loading = true;
-    forkJoin({
-      transferts: this.stockService.getTransferts(this.companyId),
-      receptions: this.stockService.getTransferReceptions(this.companyId, this.showAllReceptions)
-    }).subscribe({
-      next: ({ transferts, receptions }) => {
-        this.allTransferts = transferts;
+    this.stockService.getTransferReceptions(this.companyId, this.showAllReceptions).subscribe({
+      next: (receptions) => {
         this.allReceptions = receptions;
-        this.applyTransfertFilter();
         this.applyReceptionFilter();
-        this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => {}
     });
+    this.page = 0;
+    this.loadListPage();
   }
 
   applyTransfertFilter(): void {
-    this.transferts = this.allTransferts.filter(p => {
-      const d = p.scheduledDate?.split('T')[0] ?? '';
-      if (this.dateFrom && d < this.dateFrom) return false;
-      if (this.dateTo && d > this.dateTo) return false;
-      return true;
-    });
+    this.page = 0;
+    this.loadListPage();
   }
 
   applyReceptionFilter(): void {
@@ -94,6 +87,76 @@ export class TransfertListComponent implements OnInit {
     } as Record<string, string>)[s] || s;
   }
 
+  /** Référence affichée : pour un transfert inter-dépôts, combine la sortie et l'entrée
+   *  (ex: "MP/OUT/00001 → DA/IN/00001") pour montrer en un coup d'œil que c'est une seule
+   *  opération avec ses deux volets techniques ; sinon, juste le nom du picking. */
+  transferRef(p: StockPicking): string {
+    return p.linkedPickingName ? `${p.name} → ${p.linkedPickingName}` : (p.name || '—');
+  }
+
+  // ── Pagination côté serveur (filtres, totaux et regroupements calculés par le serveur) ──
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+  listTotals: Record<string, number> = {};
+  groupedRows: { key: string; label: string; count: number; items: StockPicking[] }[] = [];
+  private readonly groupServerKeys: Record<string, string> = {'destination': 'destination_entrepot'};
+  private readonly grouped = new GroupedList<StockPicking>((key, page) =>
+    this.stockService.getTransfertsPage({ ...this.listQuery(), groupBy: this.serverGroup(), groupKey: key, page, size: this.pageSize }));
+
+  private listQuery(): ListQuery {
+    return {
+      companyId: this.companyId,
+      dateFrom: this.dateFrom,
+      dateTo: this.dateTo,
+    };
+  }
+
+  private serverGroup(): string { return this.groupServerKeys[this.groupBy] ?? this.groupBy; }
+
+  loadListPage(): void {
+    this.loading = true;
+    if (this.groupBy) {
+      this.stockService.getTransfertsGroups({ ...this.listQuery(), groupBy: this.serverGroup() }).subscribe({
+        next: (groups: ListGroup[]) => {
+          this.grouped.reset(groups);
+          this.groupedRows = groups
+            .map(g => ({ key: g.key, label: this.groupLabel(g), count: g.count, items: [] as StockPicking[] }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+          this.totalElements = this.grouped.count;
+          this.loading = false;
+        },
+        error: () => { this.loading = false; }
+      });
+      return;
+    }
+    this.stockService.getTransfertsPage({ ...this.listQuery(), page: this.page, size: this.pageSize }).subscribe({
+      next: (r: any) => {
+        this.transferts = r.content;
+        this.allTransferts = r.content;
+        this.totalElements = r.totalElements;
+        this.listTotals = r.totals ?? {};
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadListPage();
+  }
+
+  private groupLabel(g: ListGroup): string {
+    if (g.key === 'none') return g.label;
+    if (this.groupBy === 'mois') return this.fmtMonth(g.key);
+    if (this.groupBy === 'statut') return this.stateLabel(g.key);
+    return g.label;
+  }
+
+  hasMoreGroupItems(key: string): boolean { return this.grouped.hasMore(key); }
+  loadMoreGroupItems(key: string): void { this.grouped.loadMore(key); }
+
   // ── Group By ─────────────────────────────────────────────────────────────────
   groupBy = '';
   expandedGroups = new Set<string>();
@@ -105,54 +168,17 @@ export class TransfertListComponent implements OnInit {
     { key: 'statut',      label: 'Statut',         icon: 'label' }
   ];
 
-  get groupedRows(): { key: string; label: string; count: number; items: StockPicking[] }[] {
-    if (!this.groupBy) return [];
-    const source = this.transferts;
-    const map = new Map<string, { key: string; label: string; count: number; items: StockPicking[] }>();
-    for (const item of source) {
-      let key: string, label: string;
-      switch (this.groupBy) {
-        case 'mois':
-          key = (item.scheduledDate || '').substring(0, 7);
-          label = key ? this.fmtMonth(key) : '(Sans date)';
-          break;
-        case 'source':
-          key = label = item.sourceWarehouseName || item.locationName || '(Sans source)';
-          break;
-        case 'destination':
-          key = label = item.destWarehouseName || item.locationDestName || '(Sans destination)';
-          break;
-        case 'statut':
-          key = item.state || '?';
-          label = this.stateLabel(key);
-          break;
-        default: key = label = '?';
-      }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, items: [] });
-      const g = map.get(key)!;
-      g.count++;
-      g.items.push(item);
-    }
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => a.label.localeCompare(b.label));
-    return arr;
-  }
-
   setGroupBy(key: string): void {
     this.groupBy = this.groupBy === key ? '' : key;
-    this.expandedGroups.clear();
+    this.page = 0;
+    this.loadListPage();
   }
 
-  toggleGroup(key: string): void {
-    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
-    else this.expandedGroups.add(key);
-  }
+  toggleGroup(key: string): void { this.grouped.toggle(key); }
 
-  isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
+  isExpanded(key: string): boolean { return this.grouped.isExpanded(key); }
 
-  getGroupItems(key: string): StockPicking[] {
-    return this.groupedRows.find(g => g.key === key)?.items ?? [];
-  }
+  getGroupItems(key: string): StockPicking[] { return this.grouped.rows(key); }
 
   fmtMonth(ym: string): string {
     const [y, m] = ym.split('-');

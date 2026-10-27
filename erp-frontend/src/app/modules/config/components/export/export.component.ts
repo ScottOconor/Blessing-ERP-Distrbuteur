@@ -11,6 +11,7 @@ import { PurchaseService } from '../../../purchases/services/purchase.service';
 import { RemiseService } from '../../../purchases/services/remise.service';
 import { AccountJournal, Partner } from '../../../../core/models/account.model';
 import { exportRowsToExcel } from '../../../../core/utils/excel-export.util';
+import { fetchAllPages } from '../../../../core/utils/server-list';
 
 interface ExportItem {
   id: string;
@@ -292,7 +293,7 @@ export class ExportComponent implements OnInit {
   // ── Ventes ───────────────────────────────────────────────────────────────
 
   private async exportCommandesVentes(item: ExportItem): Promise<void> {
-    let orders = this.filterByDate(await this.toPromise(this.salesService.getOrders(this.companyId)), o => o.date, item.dateFrom, item.dateTo);
+    let orders = await fetchAllPages((page, size) => this.salesService.getOrdersPage({ companyId: this.companyId, dateFrom: item.dateFrom, dateTo: item.dateTo, page, size }));
     if (item.partnerId) orders = orders.filter(o => o.partnerId === item.partnerId);
     if (item.warehouseId) orders = orders.filter(o => o.warehouseId === item.warehouseId);
     const rows = orders.map(o => [o.name || '', o.date, o.partnerName || '', this.stateLabel(o.state), o.warehouseName || '', o.journalName || '', o.totalHT ?? 0, o.totalTVA ?? 0, o.totalTTC ?? 0]);
@@ -302,7 +303,7 @@ export class ExportComponent implements OnInit {
   }
 
   private async exportFacturesVentes(item: ExportItem): Promise<void> {
-    let invoices = this.filterByDate(await this.toPromise(this.salesService.getInvoices(this.companyId)), i => i.date, item.dateFrom, item.dateTo);
+    let invoices = await fetchAllPages((page, size) => this.salesService.getInvoicePage({ companyId: this.companyId, dateFrom: item.dateFrom || undefined, dateTo: item.dateTo || undefined }, page, size));
     if (item.partnerId) invoices = invoices.filter(i => i.partnerId === item.partnerId);
     if (item.warehouseId) invoices = invoices.filter(i => i.warehouseId === item.warehouseId);
     const rows = invoices.map(i => [i.name || '', i.date, i.partnerName || '', this.stateLabel(i.state), i.warehouseName || '', i.totalHT ?? 0, i.totalTVA ?? 0, i.totalTTC ?? 0, i.montantPaye ?? 0, i.montantDu ?? 0]);
@@ -312,7 +313,7 @@ export class ExportComponent implements OnInit {
   }
 
   private async exportAvoirsVentes(item: ExportItem): Promise<void> {
-    let avoirs = this.filterByDate(await this.toPromise(this.salesService.getAvoirs(this.companyId)), i => i.date, item.dateFrom, item.dateTo);
+    let avoirs = await fetchAllPages((page, size) => this.salesService.getAvoirPage({ companyId: this.companyId, dateFrom: item.dateFrom || undefined, dateTo: item.dateTo || undefined }, page, size));
     if (item.partnerId) avoirs = avoirs.filter(i => i.partnerId === item.partnerId);
     if (item.warehouseId) avoirs = avoirs.filter(i => i.warehouseId === item.warehouseId);
     const rows = avoirs.map(i => [i.name || '', i.date, i.partnerName || '', this.stateLabel(i.state), i.warehouseName || '', i.totalHT ?? 0, i.totalTVA ?? 0, i.totalTTC ?? 0]);
@@ -353,14 +354,14 @@ export class ExportComponent implements OnInit {
   // ── Achats ───────────────────────────────────────────────────────────────
 
   private async exportCommandesAchats(item: ExportItem): Promise<void> {
-    let orders = this.filterByDate(await this.toPromise(this.purchaseService.getOrders(this.companyId)), o => o.date, item.dateFrom, item.dateTo);
+    let orders = await fetchAllPages((page, size) => this.purchaseService.getOrdersPage({ companyId: this.companyId, dateFrom: item.dateFrom, dateTo: item.dateTo, page, size }));
     if (item.partnerId) orders = orders.filter(o => o.partnerId === item.partnerId);
     const rows = orders.map(o => [o.name || '', o.date, o.partnerName || '', this.stateLabel(o.state), o.receptionWarehouseName || '', o.totalHT ?? 0, o.totalTVA ?? 0, o.totalTTC ?? 0]);
     await exportRowsToExcel('Bons de commande achats', ['Numéro', 'Date', 'Fournisseur', 'État', 'Entrepôt', 'Total HT', 'Total TVA', 'Total TTC'], rows, this.fileName('commandes-achats', item));
   }
 
   private async exportFacturesAchats(item: ExportItem): Promise<void> {
-    let invoices = this.filterByDate(await this.toPromise(this.purchaseService.getInvoices(this.companyId)), i => i.date, item.dateFrom, item.dateTo);
+    let invoices = await fetchAllPages((page, size) => this.purchaseService.getInvoicesPage({ companyId: this.companyId, dateFrom: item.dateFrom, dateTo: item.dateTo, page, size }));
     if (item.partnerId) invoices = invoices.filter(i => i.partnerId === item.partnerId);
     if (item.warehouseId) invoices = invoices.filter(i => i.warehouseId === item.warehouseId);
     const rows = invoices.map(i => [i.name || '', i.date, i.partnerName || '', this.stateLabel(i.state), i.warehouseName || '', i.totalHT ?? 0, i.totalTVA ?? 0, i.totalTTC ?? 0, i.montantPaye ?? 0, i.montantDu ?? 0]);
@@ -370,7 +371,7 @@ export class ExportComponent implements OnInit {
   }
 
   private async exportAvoirsAchats(item: ExportItem): Promise<void> {
-    let avoirs = this.filterByDate(await this.toPromise(this.purchaseService.getAvoirs(this.companyId)), i => i.date, item.dateFrom, item.dateTo);
+    let avoirs = await fetchAllPages((page, size) => this.purchaseService.getAvoirsPage({ companyId: this.companyId, dateFrom: item.dateFrom, dateTo: item.dateTo, page, size }));
     if (item.partnerId) avoirs = avoirs.filter(i => i.partnerId === item.partnerId);
     if (item.warehouseId) avoirs = avoirs.filter(i => i.warehouseId === item.warehouseId);
     const rows = avoirs.map(i => [i.name || '', i.date, i.partnerName || '', this.stateLabel(i.state), i.warehouseName || '', i.totalHT ?? 0, i.totalTVA ?? 0, i.totalTTC ?? 0]);

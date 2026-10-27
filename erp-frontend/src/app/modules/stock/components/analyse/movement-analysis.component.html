@@ -131,7 +131,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (row of summaryRows; track row.key) {
+          @for (row of pageOf(summaryRows); track row.key) {
 
             <!-- Ligne de groupe -->
             <tr class="group-header-row" (click)="toggleGroup(row.key)">
@@ -214,6 +214,7 @@
           </tr>
         </tfoot>
       </table>
+<app-pager [page]="uiPageFor(summaryRows.length)" [size]="uiPageSize" [total]="summaryRows.length" label="lignes" (pageChange)="uiPage = $event"></app-pager>
     </div>
 
   }

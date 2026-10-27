@@ -85,6 +85,7 @@ public class StockService {
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.list.ListQueryService listQuery;
     private final UsageGuard usageGuard;
 
     // ============================================================
@@ -3837,5 +3838,65 @@ public class StockService {
                 .partnerName(picking != null ? picking.getPartnerName() : null)
                 .availableQty(available)
                 .build();
+    }
+
+    // ===================== LISTES PAGINÉES (ListQueryService) =====================
+
+    /** Bons d'un type (incoming, internal) hors réceptions de transfert, comme la liste complète. */
+    private static com.erp.common.list.ListDefinition pickingList(String code) {
+        return new com.erp.common.list.ListDefinition("StockPicking",
+                "LEFT JOIN StockLocation ls ON ls.id = e.locationId LEFT JOIN StockLocation ld ON ld.id = e.locationDestId "
+                + "LEFT JOIN Warehouse ws ON ws.id = ls.warehouseId LEFT JOIN Warehouse wd ON wd.id = ld.warehouseId", "e.companyId")
+                .where("e.pickingTypeCode = :fCode", "fCode", code)
+                .where("e.transferReception = false OR e.transferReception IS NULL")
+                .date("e.scheduledDate").state("e.state").partner("e.partnerName", "e.partnerName")
+                .search("e.name", "e.origin", "e.partnerName")
+                .group("destination", "e.locationDestId", "ld.name", Long.class)
+                .group("source", "ls.warehouseId", "ws.name", Long.class)
+                .group("destination_entrepot", "ld.warehouseId", "wd.name", Long.class)
+                .orderBy("e.createdAt DESC, e.id DESC");
+    }
+
+    private static final com.erp.common.list.ListDefinition RECEPTION_LIST = pickingList("incoming");
+    private static final com.erp.common.list.ListDefinition TRANSFERT_LIST = pickingList("internal");
+    private static final com.erp.common.list.ListDefinition EXPEDITION_LIST = new com.erp.common.list.ListDefinition("StockPicking", "LEFT JOIN RemoteAgency ra ON ra.id = e.remoteAgencyId", "e.companyId")
+            .where("e.pickingTypeCode = 'inter_company'")
+            .date("e.scheduledDate").state("e.state").partner("e.partnerName", "e.partnerName")
+            .search("e.name", "e.origin", "e.partnerName", "ra.name")
+            .filter("incoming", "COALESCE(e.transferReception, false)", Boolean.class)
+            .group("agence", "COALESCE(ra.name, e.partnerName)", "COALESCE(ra.name, e.partnerName)", String.class)
+            .orderBy("e.createdAt DESC, e.id DESC");
+    private static final com.erp.common.list.ListDefinition ADJUSTMENT_LIST = new com.erp.common.list.ListDefinition("StockAdjustment", "LEFT JOIN Product pr ON pr.id = e.productId", "e.companyId")
+            .date("CAST(e.createdAt AS LocalDate)").search("pr.name", "pr.defaultCode", "e.notes")
+            .sum("valeur", "e.valueDiff")
+            .orderBy("e.createdAt DESC, e.id DESC");
+
+    private com.erp.common.list.ListDefinition pickingDefinition(String kind) {
+        return switch (kind) {
+            case "receptions" -> RECEPTION_LIST;
+            case "transferts" -> TRANSFERT_LIST;
+            case "expeditions" -> EXPEDITION_LIST;
+            default -> throw new IllegalArgumentException("Liste inconnue : " + kind);
+        };
+    }
+
+    /** kind : receptions, transferts ou expeditions (inter-agences) ; même DTO que la liste complète. */
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<StockPickingDTO> pagePickings(String kind, Map<String, String> params) {
+        return listQuery.page(pickingDefinition(kind), params, pickingRepo::findAllById, chunk -> {
+            PickingDtoCaches caches = new PickingDtoCaches();
+            return chunk.stream().map(p -> toPickingDTO(p, false, caches)).toList();
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupPickings(String kind, Map<String, String> params) {
+        return listQuery.groups(pickingDefinition(kind), params);
+    }
+
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<StockAdjustmentDTO> pageAdjustments(Map<String, String> params) {
+        return listQuery.page(ADJUSTMENT_LIST, params, adjustmentRepo::findAllById,
+                list -> list.stream().map(this::toAdjustmentDTO).toList());
     }
 }

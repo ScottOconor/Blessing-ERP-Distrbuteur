@@ -114,6 +114,17 @@ public class AccountController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
+    /** Liste paginée côté serveur (voir ListQueryService pour les paramètres). */
+    @GetMapping("/moves/page")
+    public ResponseEntity<com.erp.common.list.ListPage<AccountMoveDTO>> getMovesPage(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(accountingService.pageJournalEntries(params));
+    }
+
+    @GetMapping("/moves/groups")
+    public ResponseEntity<List<com.erp.common.list.ListPage.Group>> getMovesGroups(@RequestParam java.util.Map<String, String> params) {
+        return ResponseEntity.ok(accountingService.groupJournalEntries(params));
+    }
+
     @GetMapping("/moves/{id}")
     public ResponseEntity<AccountMoveDTO> getMove(@PathVariable("id") Long id) {
         return ResponseEntity.ok(accountingService.getJournalEntry(id));

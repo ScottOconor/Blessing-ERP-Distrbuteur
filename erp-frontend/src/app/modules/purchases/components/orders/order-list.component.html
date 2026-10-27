@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h1>Commandes fournisseurs</h1>
-      <p class="subtitle">{{ filteredOrders.length }} commande(s)</p>
+      <p class="subtitle">{{ totalElements }} commande(s)</p>
     </div>
     <button class="btn-primary" (click)="newOrder()">
       <span class="material-icons">add</span>
@@ -60,7 +60,7 @@
   <!-- Table -->
   @if (loading) {
     <div class="loading-state"><span class="spinner"></span> Chargement...</div>
-  } @else if (filteredOrders.length === 0) {
+  } @else if (totalElements === 0) {
     <div class="empty-state">
       <span class="material-icons">shopping_cart</span>
       <p>Aucune commande trouvée.</p>
@@ -108,6 +108,11 @@
                   </tr>
                 }
               }
+              @if (isExpanded(row.key) && hasMoreGroupItems(row.key)) {
+                <tr class="detail-row"><td colspan="20" style="text-align:center">
+                  <button type="button" class="filter-btn" (click)="loadMoreGroupItems(row.key)">Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})</button>
+                </td></tr>
+              }
             }
           } @else {
             @for (order of filteredOrders; track order.id) {
@@ -125,6 +130,7 @@
           }
         </tbody>
       </table>
+      @if (!groupBy) { <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="commandes" (pageChange)="goToPage($event)"></app-pager> }
     </div>
   }
 </div>

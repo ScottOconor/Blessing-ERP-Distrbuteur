@@ -1,5 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { from } from 'rxjs';
+import { ListQuery, PAGE_SIZE, fetchAllPages } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient, HttpParams } from '@angular/common/http';
@@ -14,7 +17,7 @@ interface SupplierOption { id: number; name: string; invoiceCount: number; }
 @Component({
   selector: 'app-payment-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './payment-list.component.html',
   styleUrl: './payment-list.component.scss'
 })
@@ -70,29 +73,49 @@ export class PaymentListComponent implements OnInit {
     this.load();
   }
 
+  // ── Pagination côté serveur : filtres, recherche et totaux calculés par le serveur ──
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+  total = 0;
+  activeCount = 0;
+  reversedCount = 0;
+  private filterTimer?: ReturnType<typeof setTimeout>;
+
+  private listQuery(): ListQuery {
+    return { companyId: this.auth.getCompanyId(), state: this.stateFilter, dateFrom: this.dateFrom, dateTo: this.dateTo, search: this.searchPartner.trim() };
+  }
+
   load(): void {
     this.loading = true;
-    this.purchaseService.getAllPayments(this.auth.getCompanyId()).subscribe({
-      next: data => { this.payments = data; this.applyFilter(); this.loading = false; },
-      error: ()   => { this.loading = false; }
+    this.purchaseService.getPaymentsPage({ ...this.listQuery(), page: this.page, size: this.pageSize }).subscribe({
+      next: r => { this.payments = r.content; this.filtered = r.content; this.totalElements = r.totalElements; this.loading = false; },
+      error: () => { this.loading = false; }
     });
+    this.refreshStats();
+  }
+
+  /** Total et nombres de paiements validés / annulés parmi les paiements filtrés. */
+  private refreshStats(): void {
+    const q = { ...this.listQuery(), page: 0, size: 1 };
+    if (this.stateFilter === 'reversed') { this.total = 0; this.activeCount = 0; }
+    else this.purchaseService.getPaymentsPage({ ...q, state: 'posted' }).subscribe(r => {
+      this.total = Number(r.totals?.['amount']) || 0; this.activeCount = r.totalElements; });
+    if (this.stateFilter === 'posted') this.reversedCount = 0;
+    else this.purchaseService.getPaymentsPage({ ...q, state: 'reversed' }).subscribe(r => this.reversedCount = r.totalElements);
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.load();
   }
 
   setStateFilter(v: 'all' | 'posted' | 'reversed'): void { this.stateFilter = v; this.applyFilter(); }
 
+  /** Nouveaux filtres : première page, rechargée peu après la saisie. */
   applyFilter(): void {
-    this.filtered = this.payments.filter(p => {
-      if (this.stateFilter !== 'all' && p.state !== this.stateFilter) return false;
-      if (this.dateFrom && (p.date ?? '') < this.dateFrom) return false;
-      if (this.dateTo   && (p.date ?? '') > this.dateTo)   return false;
-      if (this.searchPartner) {
-        const q = this.searchPartner.toLowerCase();
-        if (!(p.partnerName || '').toLowerCase().includes(q) &&
-            !(p.invoiceName || '').toLowerCase().includes(q) &&
-            !(p.name        || '').toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
+    clearTimeout(this.filterTimer);
+    this.filterTimer = setTimeout(() => { this.page = 0; this.load(); }, 300);
   }
 
   clearFilter(): void {
@@ -100,9 +123,6 @@ export class PaymentListComponent implements OnInit {
     this.applyFilter();
   }
 
-  get total():         number { return this.filtered.filter(p => p.state !== 'reversed').reduce((s, p) => s + (p.amount ?? 0), 0); }
-  get activeCount():   number { return this.filtered.filter(p => p.state !== 'reversed').length; }
-  get reversedCount(): number { return this.filtered.filter(p => p.state === 'reversed').length; }
 
   stateLabel(s?: string): string { return s === 'reversed' ? 'Annulé' : 'Validé'; }
   stateClass(s?: string): string { return s === 'reversed' ? 'badge-cancelled' : 'badge-posted'; }
@@ -142,7 +162,7 @@ export class PaymentListComponent implements OnInit {
 
   private loadInvoicesAndJournals(): void {
     this.loadingInvoices = true;
-    this.purchaseService.getInvoices(this.auth.getCompanyId()).subscribe({
+    from(fetchAllPages<PurchaseInvoice>((page, size) => this.purchaseService.getInvoicesPage({ companyId: this.auth.getCompanyId(), state: 'posted', page, size }))).subscribe({
       next: inv => {
         this.invoicesAll = inv.filter(i => i.state === 'posted' && (i.montantDu ?? 0) > 0.01);
         this.loadingInvoices = false;

@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { StockService, StockMove } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -23,7 +25,7 @@ interface MoveSummaryRow {
 @Component({
   selector: 'app-movement-analysis',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './movement-analysis.component.html',
   styleUrl: './movement-analysis.component.scss'
 })
@@ -202,5 +204,19 @@ export class MovementAnalysisComponent implements OnInit {
   exportPdf(): void {
     // TODO: implement exportMovementAnalysis in pdf service
     window.print();
+  }
+
+  // ── Affichage par pages (données déjà chargées) ──
+  uiPage = 0;
+  readonly uiPageSize = PAGE_SIZE;
+
+  /** Page courante, ramenée à la dernière page existante quand un filtre réduit la liste. */
+  uiPageFor(count: number): number {
+    return Math.min(this.uiPage, Math.max(0, Math.ceil(count / this.uiPageSize) - 1));
+  }
+
+  pageOf<T>(rows: T[]): T[] {
+    const p = this.uiPageFor(rows.length);
+    return rows.slice(p * this.uiPageSize, (p + 1) * this.uiPageSize);
   }
 }

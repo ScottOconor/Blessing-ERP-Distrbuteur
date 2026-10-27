@@ -41,6 +41,8 @@ export interface AnalyticBalanceLine {
   solde: number;
 }
 
+import { ListPage, ListQuery, getListPage } from '../../../core/utils/server-list';
+
 @Injectable({ providedIn: 'root' })
 export class AnalyticService {
   private apiUrl = `${environment.apiUrl}/api/analytic`;
@@ -68,6 +70,11 @@ export class AnalyticService {
   }
 
   // ===== LIGNES ANALYTIQUES =====
+
+  /** Lignes paginées côté serveur, avec totaux débit / crédit / solde de toutes les lignes filtrées. */
+  getLinesPage(query: ListQuery): Observable<ListPage<AnalyticLine>> {
+    return getListPage<AnalyticLine>(this.http, `${this.apiUrl}/lines/page`, query);
+  }
 
   getLines(companyId: number, params?: { analyticAccountId?: number; from?: string; to?: string }): Observable<AnalyticLine[]> {
     let httpParams = new HttpParams().set('companyId', companyId);

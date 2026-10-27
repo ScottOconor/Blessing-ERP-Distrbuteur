@@ -6,7 +6,7 @@
         <span class="material-icons">receipt</span>
         Bons de commande
       </h1>
-      <span class="record-count">{{ filteredOrders.length }} bon(s)</span>
+      <span class="record-count">{{ totalElements }} bon(s)</span>
     </div>
     @if (canCreate) {
       <button class="btn-primary" (click)="newOrder()">
@@ -70,7 +70,7 @@
         <span class="material-icons spin">refresh</span>
         Chargement...
       </div>
-    } @else if (filteredOrders.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state">
         <span class="material-icons">receipt_long</span>
         <p>Aucun bon de commande</p>
@@ -119,6 +119,11 @@
                     <td>
                       @if (order.invoiceName) {
                         <a class="link-invoice" (click)="viewInvoice(order); $event.stopPropagation()">
+                                                  @if (isExpanded(row.key) && hasMoreGroupItems(row.key)) {
+                                                    <tr class="detail-row"><td colspan="20" style="text-align:center">
+                                                      <button type="button" class="filter-btn" (click)="loadMoreGroupItems(row.key)">Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})</button>
+                                                    </td></tr>
+                                                  }
                           {{ order.invoiceName }}
                         </a>
                       } @else {
@@ -213,6 +218,7 @@
           }
         </tbody>
       </table>
+      @if (!groupBy) { <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="bons" (pageChange)="goToPage($event)"></app-pager> }
     }
   </div>
 </div>

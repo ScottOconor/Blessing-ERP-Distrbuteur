@@ -5,11 +5,13 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CaisseService, CaisseOperationDTO, CaisseDTO } from '../../services/caisse.service';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 
 @Component({
   selector: 'app-operation-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './operation-list.component.html',
   styleUrl: './operation-list.component.scss'
 })
@@ -39,19 +41,37 @@ export class OperationListComponent implements OnInit {
     this.load();
   }
 
+  // Pagination côté serveur : filtres et total calculés par le serveur (caisse imposée pour un caissier).
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+  totalMontant = 0;
+
+  /** Nouveaux filtres : première page. */
   load(): void {
+    this.page = 0;
+    this.loadPage();
+  }
+
+  loadPage(): void {
     this.loading = true;
-    this.caisseService.getAllOperations(this.companyId, this.type).subscribe({
-      next: data => {
-        let filtered = data;
-        if (this.filterCaisseId) filtered = filtered.filter(o => o.caisseId === this.filterCaisseId);
-        if (this.filterDateFrom) filtered = filtered.filter(o => o.date >= this.filterDateFrom);
-        if (this.filterDateTo)   filtered = filtered.filter(o => o.date <= this.filterDateTo);
-        this.operations = filtered;
+    this.caisseService.getOperationsPage({
+      companyId: this.companyId, type: this.type, caisseId: this.filterCaisseId || null,
+      dateFrom: this.filterDateFrom, dateTo: this.filterDateTo, page: this.page, size: this.pageSize
+    }).subscribe({
+      next: r => {
+        this.operations = r.content;
+        this.totalElements = r.totalElements;
+        this.totalMontant = Number(r.totals?.['montant']) || 0;
         this.loading = false;
       },
       error: () => { this.loading = false; }
     });
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadPage();
   }
 
   newOperation(): void {
@@ -62,7 +82,4 @@ export class OperationListComponent implements OnInit {
     return formatFCFA(v);
   }
 
-  get totalMontant(): number {
-    return this.operations.reduce((acc, o) => acc + (o.montant || 0), 0);
-  }
 }

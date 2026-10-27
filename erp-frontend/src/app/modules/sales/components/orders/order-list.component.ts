@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { GroupedList, ListGroup, ListQuery, PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SalesService, SalesOrder } from '../../services/sales.service';
@@ -9,7 +11,7 @@ import { formatFCFA } from '../../../../core/utils/currency-format.util';
 @Component({
   selector: 'app-order-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './order-list.component.html',
   styleUrl: './order-list.component.scss'
 })
@@ -48,25 +50,13 @@ export class OrderListComponent implements OnInit {
   }
 
   loadOrders(): void {
-    this.loading = true;
-    const companyId = this.authService.getCompanyId();
-    this.salesService.getOrders(companyId).subscribe({
-      next: (data) => {
-        this.orders = data;
-        this.applyFilter();
-        this.loading = false;
-      },
-      error: () => { this.loading = false; }
-    });
+    this.page = 0;
+    this.loadListPage();
   }
 
   applyFilter(): void {
-    this.filteredOrders = this.orders.filter(o => {
-      if (this.stateFilter !== 'all' && o.state !== this.stateFilter) return false;
-      if (this.dateFrom && o.date < this.dateFrom) return false;
-      if (this.dateTo && o.date > this.dateTo) return false;
-      return true;
-    });
+    this.page = 0;
+    this.loadListPage();
   }
 
   setFilter(state: string): void {
@@ -174,6 +164,70 @@ export class OrderListComponent implements OnInit {
     setTimeout(() => this.successMsg = '', 4000);
   }
 
+  // ── Pagination côté serveur (filtres, totaux et regroupements calculés par le serveur) ──
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  totalElements = 0;
+  listTotals: Record<string, number> = {};
+  groupedRows: { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesOrder[] }[] = [];
+  private readonly groupServerKeys: Record<string, string> = {};
+  private readonly grouped = new GroupedList<SalesOrder>((key, page) =>
+    this.salesService.getOrdersPage({ ...this.listQuery(), groupBy: this.serverGroup(), groupKey: key, page, size: this.pageSize }));
+
+  private listQuery(): ListQuery {
+    return {
+      companyId: this.authService.getCompanyId(),
+      state: this.stateFilter,
+      dateFrom: this.dateFrom,
+      dateTo: this.dateTo,
+    };
+  }
+
+  private serverGroup(): string { return this.groupServerKeys[this.groupBy] ?? this.groupBy; }
+
+  loadListPage(): void {
+    this.loading = true;
+    if (this.groupBy) {
+      this.salesService.getOrdersGroups({ ...this.listQuery(), groupBy: this.serverGroup() }).subscribe({
+        next: (groups: ListGroup[]) => {
+          this.grouped.reset(groups);
+          this.groupedRows = groups
+            .map(g => ({ key: g.key, label: this.groupLabel(g), count: g.count, totalHT: Number(g.totals?.['ht']) || 0, totalTTC: Number(g.totals?.['ttc']) || 0, items: [] as SalesOrder[] }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+          this.totalElements = this.grouped.count;
+          this.loading = false;
+        },
+        error: () => { this.loading = false; }
+      });
+      return;
+    }
+    this.salesService.getOrdersPage({ ...this.listQuery(), page: this.page, size: this.pageSize }).subscribe({
+      next: (r: any) => {
+        this.filteredOrders = r.content;
+        this.orders = r.content;
+        this.totalElements = r.totalElements;
+        this.listTotals = r.totals ?? {};
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadListPage();
+  }
+
+  private groupLabel(g: ListGroup): string {
+    if (g.key === 'none') return g.label;
+    if (this.groupBy === 'mois') return this.fmtMonth(g.key);
+    if (this.groupBy === 'statut') return this.getStateLabel(g.key);
+    return g.label;
+  }
+
+  hasMoreGroupItems(key: string): boolean { return this.grouped.hasMore(key); }
+  loadMoreGroupItems(key: string): void { this.grouped.loadMore(key); }
+
   // ── Group By ─────────────────────────────────────────────────────────────────
   groupBy = '';
   expandedGroups = new Set<string>();
@@ -185,55 +239,17 @@ export class OrderListComponent implements OnInit {
     { key: 'entrepot', label: 'Entrepôt',  icon: 'warehouse' }
   ];
 
-  get groupedRows(): { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesOrder[] }[] {
-    if (!this.groupBy) return [];
-    const map = new Map<string, { key: string; label: string; count: number; totalHT: number; totalTTC: number; items: SalesOrder[] }>();
-    for (const item of this.filteredOrders) {
-      let key: string, label: string;
-      switch (this.groupBy) {
-        case 'mois':
-          key = (item.date || '').substring(0, 7);
-          label = key ? this.fmtMonth(key) : '(Sans date)';
-          break;
-        case 'client':
-          key = label = item.partnerName || '(Sans client)';
-          break;
-        case 'statut':
-          key = item.state || '?';
-          label = this.getStateLabel(item.state || '');
-          break;
-        case 'entrepot':
-          key = label = (item as any).warehouseName || '(Sans entrepôt)';
-          break;
-        default: key = label = '?';
-      }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, totalHT: 0, totalTTC: 0, items: [] });
-      const g = map.get(key)!;
-      g.count++;
-      g.totalHT  += item.totalHT  || 0;
-      g.totalTTC += item.totalTTC || 0;
-      g.items.push(item);
-    }
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => a.label.localeCompare(b.label));
-    return arr;
-  }
-
   setGroupBy(key: string): void {
     this.groupBy = this.groupBy === key ? '' : key;
-    this.expandedGroups.clear();
+    this.page = 0;
+    this.loadListPage();
   }
 
-  toggleGroup(key: string): void {
-    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
-    else this.expandedGroups.add(key);
-  }
+  toggleGroup(key: string): void { this.grouped.toggle(key); }
 
-  isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
+  isExpanded(key: string): boolean { return this.grouped.isExpanded(key); }
 
-  getGroupItems(key: string): SalesOrder[] {
-    return this.groupedRows.find(g => g.key === key)?.items ?? [];
-  }
+  getGroupItems(key: string): SalesOrder[] { return this.grouped.rows(key); }
 
   fmtMonth(ym: string): string {
     const [y, m] = ym.split('-');

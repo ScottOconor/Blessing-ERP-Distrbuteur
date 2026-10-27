@@ -182,7 +182,7 @@
               }
             }
           } @else {
-            @for (p of filtered; track p.id) {
+            @for (p of pageOf(filtered); track p.id) {
               <tr>
                 <td class="col-check"><input type="checkbox" [checked]="sel.isSelected(p)" (change)="sel.toggle(p)" /></td>
                 <td class="font-mono text-muted">{{ p.defaultCode || '—' }}</td>
@@ -225,6 +225,7 @@
           }
         </tbody>
       </table>
+      @if (!groupBy) { <app-pager [page]="uiPageFor(filtered.length)" [size]="uiPageSize" [total]="filtered.length" label="articles" (pageChange)="uiPage = $event"></app-pager> }
     }
   </div>
 </div>

@@ -43,7 +43,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (l of filtered; track l.id) {
+          @for (l of pageOf(filtered); track l.id) {
             <tr>
               <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(l)" (change)="sel.toggle(l)" /></td>
               <td class="fw-500">{{ l.completeName || l.name }}</td>
@@ -63,6 +63,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="uiPageFor(filtered.length)" [size]="uiPageSize" [total]="filtered.length" label="emplacements" (pageChange)="uiPage = $event"></app-pager>
     </div>
   }
 </div>

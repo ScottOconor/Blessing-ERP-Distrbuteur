@@ -104,6 +104,7 @@ public class PurchaseService {
     private final FiscalLockGuard fiscalLockGuard;
     private final PrixFournisseurArticleRepository prixFournisseurArticleRepo;
     private final TenantGuard tenantGuard;
+    private final com.erp.common.list.ListQueryService listQuery;
 
     // ===================== COMMANDES D'ACHAT =====================
 
@@ -3011,5 +3012,75 @@ public class PurchaseService {
             }).collect(Collectors.toList()));
         }
         return p;
+    }
+
+    // ===================== LISTES PAGINÉES (ListQueryService) =====================
+
+    private static final com.erp.common.list.ListDefinition ORDER_LIST = new com.erp.common.list.ListDefinition(
+            "PurchaseOrder", "LEFT JOIN e.partner p", "e.company.id")
+            .date("e.date").state("e.state").partner("p.id", "p.name").warehouse("e.warehouseId")
+            .search("e.name", "p.name").sum("ht", "e.totalHT").sum("ttc", "e.totalTTC")
+            .orderBy("e.createdAt DESC, e.id DESC");
+
+    private static com.erp.common.list.ListDefinition invoiceList(String type) {
+        return new com.erp.common.list.ListDefinition("PurchaseInvoice", "LEFT JOIN e.partner p LEFT JOIN e.journal j", "e.company.id")
+                .where("e.type = :fType", "fType", type)
+                .date("e.date").state("e.state").partner("p.id", "p.name").journal("j.id", "j.name").warehouse("e.warehouseId")
+                .search("e.name", "p.name").sum("ht", "e.totalHT").sum("ttc", "e.totalTTC")
+                .sum("paye", "e.montantPaye").sum("du", "e.montantDu")
+                .orderBy("e.date DESC, e.name DESC, e.id DESC");
+    }
+
+    private static final com.erp.common.list.ListDefinition INVOICE_LIST = invoiceList("invoice");
+    private static final com.erp.common.list.ListDefinition AVOIR_LIST = invoiceList("credit_note");
+
+    private static final com.erp.common.list.ListDefinition PAYMENT_LIST = new com.erp.common.list.ListDefinition(
+            "PurchaseInvoicePayment", "LEFT JOIN e.invoice inv LEFT JOIN inv.partner p LEFT JOIN e.journal j", "e.company.id")
+            .date("e.date").state("e.state").journal("j.id", "j.name").partner("p.id", "p.name")
+            .search("e.name", "inv.name", "p.name").sum("amount", "e.amount")
+            .orderBy("e.date DESC, e.name DESC, e.id DESC");
+
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<PurchaseOrderDTO> pageOrders(Map<String, String> params) {
+        return listQuery.page(ORDER_LIST, params, ids -> listQuery.loadByIds(PurchaseOrder.class, "LEFT JOIN FETCH e.partner", ids),
+                orders -> orders.stream().map(this::toOrderDTO).toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupOrders(Map<String, String> params) {
+        return listQuery.groups(ORDER_LIST, params);
+    }
+
+    /** Factures (avoir=false) ou avoirs (avoir=true) fournisseurs : même DTO que la liste complète. */
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<PurchaseInvoiceDTO> pageInvoices(boolean avoir, Map<String, String> params) {
+        return listQuery.page(avoir ? AVOIR_LIST : INVOICE_LIST, params,
+                ids -> listQuery.loadByIds(PurchaseInvoice.class, "LEFT JOIN FETCH e.partner LEFT JOIN FETCH e.journal", ids),
+                invoices -> {
+                    Long companyId = Long.valueOf(params.get("companyId"));
+                    Map<Long, String> catNames = categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
+                            .collect(Collectors.toMap(c -> c.getId(), c -> c.getName(), (a, b) -> a));
+                    Map<Long, String> warehouseNameCache = new HashMap<>();
+                    Map<String, String> receptionWhCache = new HashMap<>();
+                    return invoices.stream()
+                            .map(inv -> toInvoiceDTOWithPayments(inv, catNames, null, warehouseNameCache, receptionWhCache))
+                            .toList();
+                });
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupInvoices(boolean avoir, Map<String, String> params) {
+        return listQuery.groups(avoir ? AVOIR_LIST : INVOICE_LIST, params);
+    }
+
+    @Transactional(readOnly = true)
+    public com.erp.common.list.ListPage<PurchaseInvoiceDTO.PaymentDTO> pagePayments(Map<String, String> params) {
+        return listQuery.page(PAYMENT_LIST, params, ids -> listQuery.loadByIds(PurchaseInvoicePayment.class, null, ids),
+                payments -> payments.stream().map(this::toPaymentDTO).toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.erp.common.list.ListPage.Group> groupPayments(Map<String, String> params) {
+        return listQuery.groups(PAYMENT_LIST, params);
     }
 }

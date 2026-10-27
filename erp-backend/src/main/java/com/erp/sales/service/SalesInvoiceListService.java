@@ -39,7 +39,7 @@ public class SalesInvoiceListService {
     public static final int MAX_PAGE_SIZE = 500;
     /** Clé du groupe « sans date » / « sans client » / « sans entrepôt ». */
     public static final String NONE = "none";
-    private static final Set<String> TYPES = Set.of("invoice", "avoir");
+    private static final Set<String> TYPES = Set.of("invoice", "credit_note");
     private static final Set<String> GROUPS = Set.of("mois", "client", "statut", "entrepot");
     private static final String SUMS = "COUNT(i), COALESCE(SUM(i.totalHT),0), COALESCE(SUM(i.totalTTC),0), "
             + "COALESCE(SUM(i.montantPaye),0), COALESCE(SUM(i.montantDu),0)";

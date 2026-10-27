@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PAGE_SIZE } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HrService, Payslip, Employee, PayslipInputType, WorkedDaysType, SalaryRule } from '../../services/hr.service';
@@ -11,7 +13,7 @@ interface DayRow { code: string; name: string; numberOfDays: number; }
 @Component({
   selector: 'app-hr-payslips',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   template: `
     <div class="hp">
       <div class="hp-head">
@@ -25,7 +27,7 @@ interface DayRow { code: string; name: string; numberOfDays: number; }
           <table class="tbl">
             <thead><tr><th>Référence</th><th>Employé</th><th>Période</th><th class="ta-r">Brut</th><th class="ta-r">Retenues</th><th class="ta-r">Net à payer</th><th>État</th></tr></thead>
             <tbody>
-              @for (p of payslips; track p.id) {
+              @for (p of pageOf(payslips); track p.id) {
                 <tr class="clk" (click)="open(p)">
                   <td><strong>{{ p.name }}</strong></td>
                   <td>{{ p.employeeName }}</td>
@@ -38,6 +40,7 @@ interface DayRow { code: string; name: string; numberOfDays: number; }
               }
             </tbody>
           </table>
+<app-pager [page]="uiPageFor(payslips.length)" [size]="uiPageSize" [total]="payslips.length" label="bulletins" (pageChange)="uiPage = $event"></app-pager>
         </div>
       }
     </div>
@@ -184,5 +187,19 @@ export class PayslipsComponent implements OnInit {
       next: (dto) => { this.computing = false; this.showModal = false; this.router.navigate(['/hr/payslips', dto.payslip.id]); },
       error: (e) => { this.computing = false; this.err = e.error?.message || 'Erreur de calcul'; }
     });
+  }
+
+  // ── Affichage par pages (données déjà chargées) ──
+  uiPage = 0;
+  readonly uiPageSize = PAGE_SIZE;
+
+  /** Page courante, ramenée à la dernière page existante quand un filtre réduit la liste. */
+  uiPageFor(count: number): number {
+    return Math.min(this.uiPage, Math.max(0, Math.ceil(count / this.uiPageSize) - 1));
+  }
+
+  pageOf<T>(rows: T[]): T[] {
+    const p = this.uiPageFor(rows.length);
+    return rows.slice(p * this.uiPageSize, (p + 1) * this.uiPageSize);
   }
 }

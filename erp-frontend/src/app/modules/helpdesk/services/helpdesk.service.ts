@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ListGroup, ListPage, ListQuery, getListGroups, getListPage } from '../../../core/utils/server-list';
 
 export type TicketStatus   = 'OUVERT' | 'EN_COURS' | 'RESOLU' | 'FERME';
 export type TicketPriority = 'BASSE' | 'MOYENNE' | 'HAUTE' | 'CRITIQUE';
@@ -48,6 +49,11 @@ export class HelpdeskService {
   private api = `${environment.apiUrl}/api/helpdesk`;
 
   constructor(private http: HttpClient) {}
+
+  // ── Listes paginées côté serveur (voir core/utils/server-list) ──
+  getTicketsPage(query: ListQuery): Observable<ListPage<Ticket>> {
+    return getListPage<Ticket>(this.http, `${this.api}/tickets/page`, query);
+  }
 
   getTickets(companyId: number, status?: string, assignedTo?: string, createdBy?: string): Observable<Ticket[]> {
     let params = new HttpParams().set('companyId', companyId);

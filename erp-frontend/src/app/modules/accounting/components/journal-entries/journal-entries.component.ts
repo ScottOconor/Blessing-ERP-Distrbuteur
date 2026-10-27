@@ -7,16 +7,24 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountMove } from '../../../../core/models/move.model';
 import { AccountJournal } from '../../../../core/models/account.model';
 import { exportObjectsToExcel } from '../../../../core/utils/excel-import.util';
+import { PAGE_SIZE, ListQuery, fetchAllPages } from '../../../../core/utils/server-list';
+import { PagerComponent } from '../../../../shared/components/pager/pager.component';
 
 @Component({
   selector: 'app-journal-entries',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PagerComponent],
   templateUrl: './journal-entries.component.html',
   styleUrl: './journal-entries.component.scss'
 })
 export class JournalEntriesComponent implements OnInit {
+  /** Page affichée : filtres, recherche et tri appliqués par le serveur. */
   moves: AccountMove[] = [];
+  totalElements = 0;
+  page = 0;
+  readonly pageSize = PAGE_SIZE;
+  exporting = false;
+  private searchTimer?: ReturnType<typeof setTimeout>;
   journals: AccountJournal[] = [];
   loading = false;
   confirmCancelId: number | null = null;
@@ -35,14 +43,16 @@ export class JournalEntriesComponent implements OnInit {
     state: ''
   };
 
-  get filteredMoves(): AccountMove[] {
-    if (!this.search.trim()) return this.moves;
-    const s = this.search.toLowerCase().trim();
-    return this.moves.filter(m =>
-      (m.name || '').toLowerCase().includes(s) ||
-      (m.ref || '').toLowerCase().includes(s) ||
-      (m.partnerName || '').toLowerCase().includes(s)
-    );
+  /** Filtres courants envoyés au serveur. */
+  private query(): ListQuery {
+    return {
+      companyId: this.authService.getCompanyId(),
+      journalId: this.filters.journalId,
+      dateFrom: this.filters.dateFrom,
+      dateTo: this.filters.dateTo,
+      state: this.filters.state,
+      search: this.search.trim()
+    };
   }
 
   constructor(
@@ -68,19 +78,29 @@ export class JournalEntriesComponent implements OnInit {
     this.loadMoves();
   }
 
+  /** Nouveaux filtres : retour à la première page. */
   loadMoves(): void {
-    this.loading = true;
-    const companyId = this.authService.getCompanyId();
-    const params: any = {};
-    if (this.filters.journalId) params['journalId'] = this.filters.journalId;
-    if (this.filters.dateFrom) params['dateFrom'] = this.filters.dateFrom;
-    if (this.filters.dateTo) params['dateTo'] = this.filters.dateTo;
-    if (this.filters.state) params['state'] = this.filters.state;
+    this.page = 0;
+    this.loadPage();
+  }
 
-    this.accountingService.getMoves(companyId, params).subscribe({
-      next: (data) => { this.moves = data; this.loading = false; },
+  loadPage(): void {
+    this.loading = true;
+    this.accountingService.getMovesPage({ ...this.query(), page: this.page, size: this.pageSize }).subscribe({
+      next: (r) => { this.moves = r.content; this.totalElements = r.totalElements; this.loading = false; },
       error: () => { this.loading = false; }
     });
+  }
+
+  goToPage(page: number): void {
+    this.page = page;
+    this.loadPage();
+  }
+
+  /** Recherche appliquée par le serveur, peu après la frappe. */
+  onSearchChange(): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadMoves(), 350);
   }
 
   resetFilters(): void {
@@ -94,8 +114,17 @@ export class JournalEntriesComponent implements OnInit {
     this.loadMoves();
   }
 
-  exportToExcel(): void {
-    const data = this.filteredMoves.map(m => ({
+  /** Export de toutes les pièces filtrées (pas seulement de la page affichée). */
+  async exportToExcel(): Promise<void> {
+    this.exporting = true;
+    let all: AccountMove[];
+    try {
+      all = await fetchAllPages(
+        (page, size) => this.accountingService.getMovesPage({ ...this.query(), page, size }));
+    } finally {
+      this.exporting = false;
+    }
+    const data = all.map(m => ({
       'N° Pièce': m.name || 'Brouillon',
       'Date': m.date ? new Date(m.date).toLocaleDateString('fr-FR') : '',
       'Journal': m.journalName || '',
@@ -112,7 +141,7 @@ export class JournalEntriesComponent implements OnInit {
     event.stopPropagation();
     if (!confirm('Valider cette pièce ? Cette action est irréversible.')) return;
     this.accountingService.postMove(id).subscribe({
-      next: () => this.loadMoves(),
+      next: () => this.loadPage(),
       error: (err) => alert(err.error?.message || 'Erreur lors de la validation')
     });
   }

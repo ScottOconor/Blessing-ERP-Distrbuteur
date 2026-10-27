@@ -5,9 +5,9 @@
       Pièces Comptables
     </h1>
     <div class="page-actions">
-      <button class="btn btn-outline" (click)="exportToExcel()" [disabled]="filteredMoves.length === 0" title="Exporter en Excel">
+      <button class="btn btn-outline" (click)="exportToExcel()" [disabled]="totalElements === 0 || exporting" title="Exporter en Excel toutes les pièces filtrées">
         <span class="material-icons">download</span>
-        Exporter Excel
+        {{ exporting ? 'Export...' : 'Exporter Excel' }}
       </button>
       <button class="btn btn-primary" (click)="router.navigate(['/accounting/journal-entries/new'])">
         <span class="material-icons">add</span>
@@ -49,7 +49,7 @@
       <div class="search-box">
         <span class="material-icons">search</span>
         <input type="text" class="form-control" placeholder="N° pièce, référence, partenaire..."
-          [(ngModel)]="search">
+          [(ngModel)]="search" (ngModelChange)="onSearchChange()" (keyup.enter)="loadMoves()">
       </div>
     </div>
     <div class="filter-actions">
@@ -68,7 +68,7 @@
   <div class="table-container">
     @if (loading) {
       <div style="text-align:center;padding:60px"><div class="spinner"></div></div>
-    } @else if (filteredMoves.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state">
         <span class="material-icons">receipt_long</span>
         <h3>Aucune pièce trouvée</h3>
@@ -76,7 +76,7 @@
       </div>
     } @else {
       <div style="padding:8px 16px 4px;font-size:13px;color:#6c757d">
-        {{ filteredMoves.length }} pièce(s)
+        {{ totalElements }} pièce(s)
         @if (search.trim()) { <span>— filtrée(s) sur "{{ search }}"</span> }
       </div>
       <table class="table-erp">
@@ -94,7 +94,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (move of filteredMoves; track move.id) {
+          @for (move of moves; track move.id) {
             <tr (click)="router.navigate(['/accounting/journal-entries', move.id])" style="cursor:pointer">
               <td><strong>{{ move.name || 'Brouillon' }}</strong></td>
               <td>{{ move.date | date:'dd/MM/yyyy' }}</td>
@@ -135,6 +135,7 @@
           }
         </tbody>
       </table>
+      <app-pager [page]="page" [size]="pageSize" [total]="totalElements" label="pièces" (pageChange)="goToPage($event)"></app-pager>
     }
   </div>
 </div>
