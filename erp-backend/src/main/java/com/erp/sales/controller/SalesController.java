@@ -4,6 +4,7 @@ import com.erp.common.service.IdempotencyService;
 import com.erp.accounting.dto.PartnerDTO;
 import com.erp.sales.dto.*;
 import com.erp.sales.service.RistourneService;
+import com.erp.sales.service.SalesInvoiceListService;
 import com.erp.sales.service.SalesService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -23,6 +25,7 @@ public class SalesController {
     private final SalesService salesService;
     private final RistourneService ristourneService;
     private final IdempotencyService idempotencyService;
+    private final SalesInvoiceListService invoiceListService;
 
     // ===================== BONS DE COMMANDE =====================
 
@@ -77,6 +80,35 @@ public class SalesController {
     public ResponseEntity<StreamingResponseBody> getInvoices(@RequestParam("companyId") Long companyId) {
         StreamingResponseBody body = out -> salesService.streamInvoices(companyId, "invoice", out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
+    }
+
+    /** Liste paginée côté serveur (écran « Factures ») : filtres, tri et totaux calculés en base. */
+    @GetMapping("/invoices/page")
+    public ResponseEntity<InvoiceListDTO.Page> getInvoicePage(@RequestParam("companyId") Long companyId,
+            @RequestParam(value = "type", defaultValue = "invoice") String type,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo,
+            @RequestParam(value = "journalId", required = false) Long journalId,
+            @RequestParam(value = "groupBy", required = false) String groupBy,
+            @RequestParam(value = "groupKey", required = false) String groupKey,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "50") int size) {
+        return ResponseEntity.ok(invoiceListService.page(new SalesInvoiceListService.Filter(companyId, type, null,
+                state, dateFrom, dateTo, journalId, groupBy, groupKey), page, size));
+    }
+
+    /** Regroupements de la liste (mois, client, statut, entrepôt) avec effectifs et totaux. */
+    @GetMapping("/invoices/groups")
+    public ResponseEntity<List<InvoiceListDTO.Group>> getInvoiceGroups(@RequestParam("companyId") Long companyId,
+            @RequestParam("groupBy") String groupBy,
+            @RequestParam(value = "type", defaultValue = "invoice") String type,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo,
+            @RequestParam(value = "journalId", required = false) Long journalId) {
+        return ResponseEntity.ok(invoiceListService.groups(new SalesInvoiceListService.Filter(companyId, type, null,
+                state, dateFrom, dateTo, journalId, groupBy, null)));
     }
 
     @GetMapping("/invoices/{id}")

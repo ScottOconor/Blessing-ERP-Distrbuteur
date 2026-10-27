@@ -426,6 +426,24 @@ public class SalesService {
     }
 
     /**
+     * DTO de liste d'une page de factures déjà chargée (SalesInvoiceListService) : contenu
+     * identique à streamInvoices, soldes et crédits calculés pour les seuls partenaires de la page.
+     */
+    @Transactional(readOnly = true)
+    public List<SalesInvoiceDTO> toListDTOs(Long companyId, List<SalesInvoice> invoices) {
+        if (invoices.isEmpty()) return List.of();
+        Map<Long, String> catNames = categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
+                .collect(Collectors.toMap(c -> c.getId(), c -> c.getName(), (a, b) -> a));
+        Map<Long, String> warehouseNameCache = new HashMap<>();
+        // Soldes partenaires calculés à la demande pour les seuls partenaires de la page.
+        Map<Long, java.math.BigDecimal[]> partnerBalanceCache = new HashMap<>();
+        ListLookups listLookups = ListLookups.create();
+        return invoices.stream()
+                .map(inv -> buildInvoiceDTO(inv, List.of(), catNames, warehouseNameCache, partnerBalanceCache, listLookups))
+                .toList();
+    }
+
+    /**
      * Crée un avoir à partir d'une facture validée (copie les lignes en inversant le sens).
      */
     public SalesInvoiceDTO createAvoirFromInvoice(Long invoiceId, com.erp.sales.dto.AvoirRequest req) {

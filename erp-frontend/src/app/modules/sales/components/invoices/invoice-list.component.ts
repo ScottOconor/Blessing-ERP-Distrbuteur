@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SalesService, SalesInvoice, PAYABLE_INVOICE_STATES, paymentProgressPct, invoiceTropPercu } from '../../services/sales.service';
+import { SalesService, SalesInvoice, InvoiceGroup, InvoiceListQuery, PAYABLE_INVOICE_STATES, paymentProgressPct, invoiceTropPercu } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
@@ -14,8 +14,12 @@ import { formatFCFA } from '../../../../core/utils/currency-format.util';
   styleUrl: './invoice-list.component.scss'
 })
 export class InvoiceListComponent implements OnInit {
+  /** Page affichée : filtres, tri, totaux et regroupements sont calculés par le serveur. */
   invoices: SalesInvoice[] = [];
-  filteredInvoices: SalesInvoice[] = [];
+  totalElements = 0;
+  page = 0;
+  readonly pageSize = 50;
+  totals = { ht: 0, ttc: 0, paye: 0, du: 0 };
   loading = false;
   stateFilter = 'all';
   dateFrom = '';
@@ -43,35 +47,50 @@ export class InvoiceListComponent implements OnInit {
     this.loadInvoices();
   }
 
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalElements / this.pageSize));
+  }
+
+  /** Filtres courants envoyés au serveur. */
+  private query(): InvoiceListQuery {
+    return {
+      companyId: this.authService.getCompanyId(),
+      state: this.stateFilter,
+      dateFrom: this.dateFrom || undefined,
+      dateTo: this.dateTo || undefined,
+      journalId: this.journalFilter || undefined
+    };
+  }
+
   loadInvoices(): void {
+    const q = this.query();
+    if (this.groupBy) { this.loadGroups(q); return; }
+
     this.loading = true;
-    this.salesService.getInvoices(this.authService.getCompanyId()).subscribe({
-      next: (data) => {
-        this.invoices = data;
-        const seen = new Set<number>();
-        this.journals = [];
-        for (const inv of data) {
-          if (inv.journalId && !seen.has(inv.journalId)) {
-            seen.add(inv.journalId);
-            this.journals.push({ id: inv.journalId, name: inv.journalName || String(inv.journalId) });
-          }
-        }
-        this.journals.sort((a, b) => a.name.localeCompare(b.name));
-        this.applyFilter();
+    this.salesService.getInvoicePage(q, this.page, this.pageSize).subscribe({
+      next: (r) => {
+        this.invoices = r.content;
+        this.totalElements = r.totalElements;
+        this.totals = r.totals;
+        this.journals = r.journals;
         this.loading = false;
       },
       error: () => { this.loading = false; }
     });
   }
 
+  /** Un filtre a changé : retour à la première page. */
   applyFilter(): void {
-    this.filteredInvoices = this.invoices.filter(i => {
-      if (this.stateFilter !== 'all' && i.state !== this.stateFilter) return false;
-      if (this.dateFrom && i.date < this.dateFrom) return false;
-      if (this.dateTo && i.date > this.dateTo) return false;
-      if (this.journalFilter && i.journalId !== this.journalFilter) return false;
-      return true;
-    });
+    this.page = 0;
+    this.expandedGroups.clear();
+    this.groupItems.clear();
+    this.loadInvoices();
+  }
+
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages || page === this.page) return;
+    this.page = page;
+    this.loadInvoices();
   }
 
   setFilter(state: string): void {
@@ -118,15 +137,6 @@ export class InvoiceListComponent implements OnInit {
     return PAYABLE_INVOICE_STATES.includes(invoice.state || '');
   }
 
-  get totals(): { ht: number; ttc: number; paye: number; du: number } {
-    return this.filteredInvoices.reduce((acc, i) => ({
-      ht:   acc.ht   + (i.totalHT     || 0),
-      ttc:  acc.ttc  + (i.totalTTC    || 0),
-      paye: acc.paye + (i.montantPaye || 0),
-      du:   acc.du   + (i.montantDu   || 0)
-    }), { ht: 0, ttc: 0, paye: 0, du: 0 });
-  }
-
   // ── Group By ─────────────────────────────────────────────────────────────────
   groupBy = '';
   expandedGroups = new Set<string>();
@@ -138,56 +148,69 @@ export class InvoiceListComponent implements OnInit {
     { key: 'entrepot', label: 'Entrepôt',  icon: 'warehouse' }
   ];
 
-  get groupedRows(): { key: string; label: string; count: number; totalHT: number; totalTTC: number; paye: number; du: number; items: SalesInvoice[] }[] {
-    if (!this.groupBy) return [];
-    const map = new Map<string, { key: string; label: string; count: number; totalHT: number; totalTTC: number; paye: number; du: number; items: SalesInvoice[] }>();
-    for (const item of this.filteredInvoices) {
-      let key: string, label: string;
-      switch (this.groupBy) {
-        case 'mois':
-          key = (item.date || '').substring(0, 7);
-          label = key ? this.fmtMonth(key) : '(Sans date)';
-          break;
-        case 'client':
-          key = label = item.partnerName || '(Sans client)';
-          break;
-        case 'statut':
-          key = item.state || '?';
-          label = this.getStateLabel(item.state || '');
-          break;
-        case 'entrepot':
-          key = label = (item as any).warehouseName || '(Sans entrepôt)';
-          break;
-        default: key = label = '?';
-      }
-      if (!map.has(key)) map.set(key, { key, label, count: 0, totalHT: 0, totalTTC: 0, paye: 0, du: 0, items: [] });
-      const g = map.get(key)!;
-      g.count++;
-      g.totalHT  += item.totalHT  || 0;
-      g.totalTTC += item.totalTTC || 0;
-      g.paye     += item.montantPaye || 0;
-      g.du       += item.montantDu  || 0;
-      g.items.push(item);
-    }
-    const arr = Array.from(map.values());
-    arr.sort((a, b) => a.label.localeCompare(b.label));
-    return arr;
+  groupedRows: InvoiceGroup[] = [];
+  /** Factures d'un groupe déplié, chargées page par page (« Afficher plus »). */
+  groupItems = new Map<string, { items: SalesInvoice[]; total: number; page: number; loading: boolean }>();
+
+  private loadGroups(q: InvoiceListQuery): void {
+    this.loading = true;
+    this.salesService.getInvoiceGroups(q, this.groupBy).subscribe({
+      next: (groups) => {
+        this.groupedRows = groups
+          .map(g => ({ ...g, label: this.groupLabel(g) }))
+          .sort((a, b) => a.label.localeCompare(b.label));
+        const sum = (f: (g: InvoiceGroup) => number) => groups.reduce((acc, g) => acc + (f(g) || 0), 0);
+        this.totalElements = sum(g => g.count);
+        this.totals = { ht: sum(g => g.totalHT), ttc: sum(g => g.totalTTC), paye: sum(g => g.paye), du: sum(g => g.du) };
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  private groupLabel(g: InvoiceGroup): string {
+    if (g.key === 'none') return g.label;
+    if (this.groupBy === 'mois') return this.fmtMonth(g.key);
+    if (this.groupBy === 'statut') return this.getStateLabel(g.key);
+    return g.label;
   }
 
   setGroupBy(key: string): void {
     this.groupBy = this.groupBy === key ? '' : key;
-    this.expandedGroups.clear();
+    this.applyFilter();
   }
 
   toggleGroup(key: string): void {
-    if (this.expandedGroups.has(key)) this.expandedGroups.delete(key);
-    else this.expandedGroups.add(key);
+    if (this.expandedGroups.has(key)) { this.expandedGroups.delete(key); return; }
+    this.expandedGroups.add(key);
+    if (!this.groupItems.has(key)) this.loadGroupPage(key, 0);
+  }
+
+  loadGroupPage(key: string, page: number): void {
+    const q = this.query();
+    const entry = this.groupItems.get(key) ?? { items: [], total: 0, page: -1, loading: false };
+    entry.loading = true;
+    this.groupItems.set(key, entry);
+    this.salesService.getInvoicePage({ ...q, groupBy: this.groupBy, groupKey: key }, page, this.pageSize).subscribe({
+      next: (r) => {
+        entry.items = page === 0 ? r.content : [...entry.items, ...r.content];
+        entry.total = r.totalElements;
+        entry.page = page;
+        entry.loading = false;
+      },
+      error: () => { entry.loading = false; }
+    });
   }
 
   isExpanded(key: string): boolean { return this.expandedGroups.has(key); }
 
   getGroupItems(key: string): SalesInvoice[] {
-    return this.groupedRows.find(g => g.key === key)?.items ?? [];
+    return this.groupItems.get(key)?.items ?? [];
+  }
+
+  hasMoreGroupItems(key: string): boolean {
+    const e = this.groupItems.get(key);
+    return !!e && !e.loading && e.items.length < e.total;
   }
 
   fmtMonth(ym: string): string {

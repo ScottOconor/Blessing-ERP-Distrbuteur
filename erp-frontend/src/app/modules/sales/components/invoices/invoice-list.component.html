@@ -5,7 +5,7 @@
         <span class="material-icons">description</span>
         Factures
       </h1>
-      <span class="record-count">{{ filteredInvoices.length }} facture(s)</span>
+      <span class="record-count">{{ totalElements }} facture(s)</span>
     </div>
   </div>
 
@@ -57,7 +57,7 @@
   <div class="card">
     @if (loading) {
       <div class="loading-state"><span class="material-icons spin">refresh</span> Chargement...</div>
-    } @else if (filteredInvoices.length === 0) {
+    } @else if (totalElements === 0) {
       <div class="empty-state">
         <span class="material-icons">description</span>
         <p>Aucune facture — confirmez un bon de commande pour en créer une.</p>
@@ -129,10 +129,19 @@
                     <td><span [class]="getStateBadge(inv.state || '')">{{ getStateLabel(inv.state || '') }}</span></td>
                   </tr>
                 }
+                @if (hasMoreGroupItems(row.key)) {
+                  <tr class="detail-row">
+                    <td colspan="11" class="text-center">
+                      <button class="filter-btn" (click)="loadGroupPage(row.key, groupItems.get(row.key)!.page + 1)">
+                        Afficher plus ({{ getGroupItems(row.key).length }} / {{ row.count }})
+                      </button>
+                    </td>
+                  </tr>
+                }
               }
             }
           } @else {
-            @for (inv of filteredInvoices; track inv.id) {
+            @for (inv of invoices; track inv.id) {
               <tr class="clickable-row" (click)="openInvoice(inv)">
                 <td class="font-mono font-bold">{{ inv.name }}</td>
                 <td>{{ inv.date | date:'dd/MM/yyyy' }}</td>
@@ -169,7 +178,7 @@
         </tbody>
         <tfoot>
           <tr class="totals-row">
-            <td colspan="4" class="font-bold">Totaux ({{ filteredInvoices.length }})</td>
+            <td colspan="4" class="font-bold">Totaux ({{ totalElements }})</td>
             <td></td>
             <td class="text-right font-bold">{{ totals.ht | number:'1.0-0' }}</td>
             <td class="text-right font-bold">{{ totals.ttc | number:'1.0-0' }}</td>
@@ -179,6 +188,23 @@
           </tr>
         </tfoot>
       </table>
+      @if (!groupBy && totalPages > 1) {
+        <div class="pagination">
+          <button class="page-btn" (click)="goToPage(0)" [disabled]="page === 0" title="Première page">
+            <span class="material-icons">first_page</span>
+          </button>
+          <button class="page-btn" (click)="goToPage(page - 1)" [disabled]="page === 0" title="Page précédente">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <span class="page-info">Page {{ page + 1 }} / {{ totalPages }} ({{ totalElements }} factures)</span>
+          <button class="page-btn" (click)="goToPage(page + 1)" [disabled]="page + 1 >= totalPages" title="Page suivante">
+            <span class="material-icons">chevron_right</span>
+          </button>
+          <button class="page-btn" (click)="goToPage(totalPages - 1)" [disabled]="page + 1 >= totalPages" title="Dernière page">
+            <span class="material-icons">last_page</span>
+          </button>
+        </div>
+      }
     }
   </div>
 </div>

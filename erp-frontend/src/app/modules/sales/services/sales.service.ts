@@ -395,6 +395,36 @@ export interface RapportVentesResponse {
   totalPET: number;
 }
 
+export interface InvoiceListQuery {
+  companyId: number;
+  state?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  journalId?: number;
+  groupBy?: string;
+  groupKey?: string;
+}
+
+/** Page de la liste des factures ; totalElements et totals portent sur toutes les factures filtrées. */
+export interface InvoicePage {
+  content: SalesInvoice[];
+  totalElements: number;
+  page: number;
+  size: number;
+  totals: { ht: number; ttc: number; paye: number; du: number };
+  journals: { id: number; name: string }[];
+}
+
+export interface InvoiceGroup {
+  key: string;
+  label: string;
+  count: number;
+  totalHT: number;
+  totalTTC: number;
+  paye: number;
+  du: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SalesService {
   private apiUrl = `${environment.apiUrl}/api/sales`;
@@ -433,6 +463,24 @@ export class SalesService {
     return this.http.get<SalesInvoice[]>(`${this.apiUrl}/invoices`, {
       params: new HttpParams().set('companyId', companyId)
     });
+  }
+  /** Liste paginée côté serveur (écran Factures) : filtres, tri et totaux calculés en base. */
+  getInvoicePage(q: InvoiceListQuery, page: number, size: number): Observable<InvoicePage> {
+    return this.http.get<InvoicePage>(`${this.apiUrl}/invoices/page`,
+      { params: this.invoiceListParams(q).set('page', page).set('size', size) });
+  }
+  getInvoiceGroups(q: InvoiceListQuery, groupBy: string): Observable<InvoiceGroup[]> {
+    return this.http.get<InvoiceGroup[]>(`${this.apiUrl}/invoices/groups`,
+      { params: this.invoiceListParams({ ...q, groupBy: undefined, groupKey: undefined }).set('groupBy', groupBy) });
+  }
+  private invoiceListParams(q: InvoiceListQuery): HttpParams {
+    let params = new HttpParams().set('companyId', q.companyId);
+    if (q.state && q.state !== 'all') params = params.set('state', q.state);
+    if (q.dateFrom) params = params.set('dateFrom', q.dateFrom);
+    if (q.dateTo) params = params.set('dateTo', q.dateTo);
+    if (q.journalId) params = params.set('journalId', q.journalId);
+    if (q.groupBy && q.groupKey != null) params = params.set('groupBy', q.groupBy).set('groupKey', q.groupKey);
+    return params;
   }
   getInvoice(id: number): Observable<SalesInvoice> {
     return this.http.get<SalesInvoice>(`${this.apiUrl}/invoices/${id}`);

@@ -67,3 +67,21 @@
 }
 .progress-pct { font-size: 11px; color: var(--text-muted); }
 .progress-surplus { color: #017E84; font-weight: 600; margin-left: 4px; }
+
+/* Pagination serveur */
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 14px 16px; border-top: 1px solid var(--border);
+}
+
+.page-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: 0.15s;
+  .material-icons { font-size: 18px; }
+  &:hover:not(:disabled) { background: #EDE9FE; color: #7C3AED; border-color: #C4B5FD; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.page-info { font-size: 13px; color: var(--text-muted); }
