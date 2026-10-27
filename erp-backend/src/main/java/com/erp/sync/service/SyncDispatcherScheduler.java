@@ -413,7 +413,8 @@ public class SyncDispatcherScheduler {
      * sync_outbox_events sans raison (bloat Postgres, autovacuum, requêtes plus lentes). PENDING et
      * FAILED ne sont jamais purgés — seuls les événements déjà transmis avec succès le sont.
      * Avec la confirmation du Hub active (HubConfirmationService), seuls les CONFIRMED sont purgés :
-     * un SENT jamais confirmé reste disponible pour être renvoyé.
+     * un SENT jamais confirmé reste disponible pour être renvoyé — sauf les types que le Hub ne
+     * confirme pas (snapshots), purgés comme avant.
      */
     @Scheduled(fixedDelayString = "${sync.outbox.sent-purge-interval-ms:86400000}",
                initialDelayString = "${sync.outbox.sent-purge-initial-delay-ms:120000}")
@@ -421,9 +422,15 @@ public class SyncDispatcherScheduler {
     public void purgeOldSentEvents() {
         int retentionDays = sentRetentionDays;
         LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
-        OutboxStatus delivered = hubConfirmation.isActive() ? OutboxStatus.CONFIRMED : OutboxStatus.SENT;
-        int n = outboxRepo.deleteByStatusAndCreatedAtBefore(delivered, cutoff);
-        if (n > 0) log.info("Sync: {} événement(s) {} de plus de {} jour(s) purgé(s)", n, delivered, retentionDays);
+        int n;
+        if (hubConfirmation.isActive()) {
+            n = outboxRepo.deleteByStatusAndCreatedAtBefore(OutboxStatus.CONFIRMED, cutoff)
+                    + outboxRepo.deleteByStatusAndEventTypeInAndCreatedAtBefore(OutboxStatus.SENT,
+                            HubConfirmationService.NOT_CONFIRMED_TYPES, cutoff);
+        } else {
+            n = outboxRepo.deleteByStatusAndCreatedAtBefore(OutboxStatus.SENT, cutoff);
+        }
+        if (n > 0) log.info("Sync: {} événement(s) transmis de plus de {} jour(s) purgé(s)", n, retentionDays);
     }
 
     /** Détecte un rejet broker "message trop gros" (406 PRECONDITION_FAILED, taille > max size

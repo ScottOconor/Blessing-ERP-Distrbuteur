@@ -1,6 +1,6 @@
 # Confirmation par le Hub du traitement des événements — contrat proposé
 
-Statut : **proposé, en attente d'accord de l'équipe du Hub.** Le spoke (KIRA Commercial) l'implémente
+Statut : **proposé, en attente d'accord de l'équipe du Hub.** Le spoke (Blessing ERP Distributeurs, comme KIRA Commercial) l'implémente
 de façon facultative : tant que `sync.confirmation.url` est vide, ou si le Hub répond 404, rien ne
 change pour les installations existantes.
 
@@ -33,23 +33,32 @@ Content-Type: application/json
 
 ```
 200 {"processed": [123],
-     "rejected":  [{"outboxId": 124, "reason": "texte lisible"}],
+     "rejected":  [{"outboxId": 124, "code": "INVALID_PAYLOAD", "reason": "texte lisible"}],
+     "ignored":   [126],
      "unknown":   [125]}
 401  clé ou installation non reconnue (idéalement : seulement si l'identité REGISTER est vérifiée)
 404  contrat non pris en charge par ce Hub
 ```
 
 - `processed` : événement durablement enregistré (HubEvent existant pour (spokeId, outboxId)).
-- `rejected` : refusé définitivement (file d'erreurs, contrat invalide...), avec le motif.
-- `unknown` : jamais reçu.
+- `rejected` : refusé définitivement, avec un code normalisé (`IDENTITY`, `INVALID_PAYLOAD`, `VERSION`,
+  `UNKNOWN_SPOKE`, mêmes motifs que SyncMetrics) et un texte lisible.
+- `ignored` : reçu mais ignoré (installation révoquée).
+- `unknown` : aucune trace pour (spokeId, outboxId). Ce n'est pas forcément « jamais reçu » : pendant
+  une indisponibilité de PostgreSQL côté Hub, la consommation est en pause et le message attend dans
+  la file. D'où un délai de renvoi large (30 min) ; un renvoi reste sans danger (déduplication).
+
+Seuls les événements métier sont interrogés. Les snapshots (`FULL_SNAPSHOT`) ne créent pas de
+HubEvent : le spoke ne les interroge jamais et les purge comme avant. REGISTER et HEARTBEAT ne
+passent pas par l'outbox.
 
 ## Comportement du spoke
 
 | Réponse | Effet |
 |---|---|
 | traité | `CONFIRMED` (seuls les CONFIRMED sont purgés quand le mode est actif) |
-| refusé | `FAILED` avec le motif, sans reprise automatique |
-| inconnu depuis plus de `resend-after-minutes` (15) | `PENDING` : renvoyé ; le Hub ignore les doublons (index unique (spokeId, outboxId)) |
+| refusé ou ignoré | `FAILED` avec le code et le motif, sans reprise automatique |
+| inconnu depuis plus de `resend-after-minutes` (30) | `PENDING` : renvoyé ; le Hub ignore les doublons (index unique (spokeId, outboxId)) |
 | absent de la réponse | aucun changement |
 | 404 | service en veille jusqu'au redémarrage, fonctionnement d'avant |
 | 401, 5xx, délai dépassé, Hub injoignable | aucun changement, nouvel essai au cycle suivant |
@@ -61,7 +70,7 @@ Interrogation toutes les 2 min des événements `SENT` depuis plus d'1 min.
 ```properties
 sync.confirmation.url=https://<hub>/api/hub/sync/confirmations   # vide = désactivé (défaut)
 #sync.confirmation.interval-ms=120000
-#sync.confirmation.resend-after-minutes=15
+#sync.confirmation.resend-after-minutes=30
 #sync.confirmation.batch-size=500
 ```
 
@@ -73,5 +82,15 @@ contrat (404). Tests unitaires : `HubConfirmationServiceTest`.
 
 ## Reste à faire côté Hub (non réalisé, décision de l'utilisateur)
 
-Implémenter l'endpoint ; authentifier par (X-Spoke-Id, X-Api-Key) contre la `spokeApiKey`
-enregistrée ; renvoyer `rejected` pour les messages en file d'erreurs ; limiter à 500 identifiants.
+Points relevés par la revue côté Hub (session du 27/10/2026), à intégrer dans l'implémentation :
+
+1. **Suivi par (spokeId, outboxId)** avec statut et motif, y compris pour les messages rejetés (file
+   d'erreurs) et ignorés (installation révoquée) : aujourd'hui seuls des compteurs par motif existent,
+   ces messages resteraient `unknown` et seraient renvoyés en boucle.
+2. **Authentification** : X-Api-Key comparée à la `spokeApiKey` de REGISTER, fiable seulement en
+   `identity-mode=strict` (en transitional, le premier REGISTER non vérifié fixe la clé). Exiger une
+   installation connue, `enrollmentStatus != REVOKED`, de préférence `lastVerifiedMessageAt` non nul ;
+   limite de débit.
+3. **Schéma** : `hub_events` est dans le schéma de l'entreprise (`company_N` ou `hub_unassigned`) ;
+   le résoudre par `HubSpoke.companyId`, jamais par une valeur fournie par le client.
+4. Limiter à 500 identifiants par appel.

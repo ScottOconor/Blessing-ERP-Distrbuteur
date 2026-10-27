@@ -44,7 +44,7 @@ class HubConfirmationServiceTest {
         service = new HubConfirmationService(repo, keys);
         ReflectionTestUtils.setField(service, "confirmationUrl", URL);
         ReflectionTestUtils.setField(service, "batchSize", 500);
-        ReflectionTestUtils.setField(service, "resendAfterMinutes", 15L);
+        ReflectionTestUtils.setField(service, "resendAfterMinutes", 30L);
         ReflectionTestUtils.setField(service, "spokeId", "NDEMEFO_01");
         hub = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "http")).build();
         when(keys.getOrCreateKey()).thenReturn("cle-installation");
@@ -59,7 +59,8 @@ class HubConfirmationServiceTest {
     }
 
     private void awaiting(OutboxEvent... events) {
-        when(repo.findByStatusAndLastAttemptAtBeforeOrderByIdAsc(eq(OutboxStatus.SENT), any(), any())).thenReturn(List.of(events));
+        when(repo.findByStatusAndEventTypeNotInAndLastAttemptAtBeforeOrderByIdAsc(eq(OutboxStatus.SENT),
+                eq(HubConfirmationService.NOT_CONFIRMED_TYPES), any(), any())).thenReturn(List.of(events));
     }
 
     @Test
@@ -68,12 +69,13 @@ class HubConfirmationServiceTest {
         OutboxEvent refuse = sent(2, now.minusMinutes(5));
         OutboxEvent inconnuRecent = sent(3, now.minusMinutes(5));
         OutboxEvent inconnuAncien = sent(4, now.minusMinutes(60));
-        awaiting(traite, refuse, inconnuRecent, inconnuAncien);
+        OutboxEvent ignore = sent(5, now.minusMinutes(5));
+        awaiting(traite, refuse, inconnuRecent, inconnuAncien, ignore);
         hub.expect(requestTo(URL)).andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-Spoke-Id", "NDEMEFO_01")).andExpect(header("X-Api-Key", "cle-installation"))
-                .andExpect(jsonPath("$.outboxIds.length()").value(4))
+                .andExpect(jsonPath("$.outboxIds.length()").value(5))
                 .andRespond(withSuccess("""
-                        {"processed":[1,1],"rejected":[{"outboxId":2,"reason":"payload invalide"}],"unknown":[3,4]}""",
+                        {"processed":[1,1],"rejected":[{"outboxId":2,"code":"INVALID_PAYLOAD","reason":"payload invalide"}],"ignored":[5],"unknown":[3,4]}""",
                         MediaType.APPLICATION_JSON));
 
         service.confirm();
@@ -81,10 +83,12 @@ class HubConfirmationServiceTest {
         hub.verify();
         assertThat(traite.getStatus()).isEqualTo(OutboxStatus.CONFIRMED);
         assertThat(refuse.getStatus()).isEqualTo(OutboxStatus.FAILED);
-        assertThat(refuse.getErrorMessage()).contains("payload invalide");
+        assertThat(refuse.getErrorMessage()).contains("[INVALID_PAYLOAD]").contains("payload invalide");
         assertThat(refuse.getAutoRequeueCount()).isEqualTo(SyncDispatcherScheduler.MAX_AUTO_REQUEUES);
         assertThat(inconnuRecent.getStatus()).isEqualTo(OutboxStatus.SENT);
         assertThat(inconnuAncien.getStatus()).isEqualTo(OutboxStatus.PENDING);
+        assertThat(ignore.getStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(ignore.getAutoRequeueCount()).isEqualTo(SyncDispatcherScheduler.MAX_AUTO_REQUEUES);
     }
 
     @Test

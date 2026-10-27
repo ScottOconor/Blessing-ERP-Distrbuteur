@@ -66,8 +66,8 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     void dropStaleStatusCheckConstraint();
 
     /** Événements envoyés dont la confirmation par le Hub est à demander (les plus anciens d'abord). */
-    List<OutboxEvent> findByStatusAndLastAttemptAtBeforeOrderByIdAsc(OutboxStatus status, LocalDateTime before,
-                                                                    Pageable pageable);
+    List<OutboxEvent> findByStatusAndEventTypeNotInAndLastAttemptAtBeforeOrderByIdAsc(OutboxStatus status,
+            java.util.Collection<SyncEventType> excludedTypes, LocalDateTime before, Pageable pageable);
 
     long countByStatus(OutboxStatus status);
 
@@ -120,4 +120,10 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
     @Modifying
     @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.createdAt < :before")
     int deleteByStatusAndCreatedAtBefore(@Param("status") OutboxStatus status, @Param("before") LocalDateTime before);
+
+    /** Purge des événements SENT des seuls types donnés (ceux que le Hub ne confirme pas). */
+    @Modifying
+    @Query("DELETE FROM OutboxEvent e WHERE e.status = :status AND e.eventType IN :types AND e.createdAt < :before")
+    int deleteByStatusAndEventTypeInAndCreatedAtBefore(@Param("status") OutboxStatus status,
+            @Param("types") java.util.Collection<SyncEventType> types, @Param("before") LocalDateTime before);
 }
