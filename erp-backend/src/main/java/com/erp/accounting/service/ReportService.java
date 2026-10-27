@@ -39,23 +39,11 @@ public class ReportService {
                                                         Long companyId, List<Long> journalIds,
                                                         String displayAccount) {
         // Soldes d'ouverture (avant dateFrom) — logique identique au module Odoo blessing_repports
-        List<AccountMoveLine> initLines = fetchPostedLinesBefore(companyId, dateFrom, journalIds);
         Map<Long, BigDecimal> openingByAccount = new LinkedHashMap<>();
-        for (AccountMoveLine line : initLines) {
-            if (line.getAccount() == null) continue;
-            BigDecimal d = line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO;
-            BigDecimal c = line.getCredit() != null ? line.getCredit() : BigDecimal.ZERO;
-            openingByAccount.merge(line.getAccount().getId(), d.subtract(c), BigDecimal::add);
-        }
+        sumsBefore(companyId, dateFrom, journalIds).forEach((id, agg) -> openingByAccount.put(id, agg.debit.subtract(agg.credit)));
 
         // Mouvements de la période
-        List<AccountMoveLine> periodLines = fetchPostedLines(companyId, dateFrom, dateTo, journalIds);
-        Map<Long, AccountAggregation> byAccount = new LinkedHashMap<>();
-        for (AccountMoveLine line : periodLines) {
-            if (line.getAccount() == null) continue;
-            byAccount.computeIfAbsent(line.getAccount().getId(),
-                    k -> new AccountAggregation(line.getAccount())).addLine(line);
-        }
+        Map<Long, AccountAggregation> byAccount = sumsInPeriod(companyId, dateFrom, dateTo, journalIds);
 
         List<BalanceLineDTO> resultLines = new ArrayList<>();
         BigDecimal totalDebit = BigDecimal.ZERO, totalCredit = BigDecimal.ZERO;
@@ -141,22 +129,8 @@ public class ReportService {
     public Map<String, Object> getGeneralBalance6Cols(LocalDate dateFrom, LocalDate dateTo,
                                                         Long companyId, List<Long> journalIds,
                                                         String displayAccount) {
-        List<AccountMoveLine> periodLines = fetchPostedLines(companyId, dateFrom, dateTo, journalIds);
-        List<AccountMoveLine> initLines = fetchPostedLinesBefore(companyId, dateFrom, journalIds);
-
-        Map<Long, AccountAggregation> initByAccount = new LinkedHashMap<>();
-        for (AccountMoveLine line : initLines) {
-            if (line.getAccount() == null) continue;
-            initByAccount.computeIfAbsent(line.getAccount().getId(),
-                    k -> new AccountAggregation(line.getAccount())).addLine(line);
-        }
-
-        Map<Long, AccountAggregation> periodByAccount = new LinkedHashMap<>();
-        for (AccountMoveLine line : periodLines) {
-            if (line.getAccount() == null) continue;
-            periodByAccount.computeIfAbsent(line.getAccount().getId(),
-                    k -> new AccountAggregation(line.getAccount())).addLine(line);
-        }
+        Map<Long, AccountAggregation> initByAccount = sumsBefore(companyId, dateFrom, journalIds);
+        Map<Long, AccountAggregation> periodByAccount = sumsInPeriod(companyId, dateFrom, dateTo, journalIds);
 
         List<BalanceLine6ColsDTO> resultLines = new ArrayList<>();
         BigDecimal totalInitDebit = BigDecimal.ZERO, totalInitCredit = BigDecimal.ZERO;
@@ -279,15 +253,10 @@ public class ReportService {
     public Map<String, Object> getGrandLivre(LocalDate dateFrom, LocalDate dateTo,
                                                Long companyId, List<Long> accountIds) {
         // Soldes d'ouverture (mouvements AVANT dateFrom)
-        List<AccountMoveLine> openingLines = moveLineRepo.findPostedBeforeDate(companyId, dateFrom);
         Map<String, BigDecimal> openingByAccount = new LinkedHashMap<>();
-        for (AccountMoveLine line : openingLines) {
-            if (line.getAccount() == null) continue;
-            if (accountIds != null && !accountIds.isEmpty() && !accountIds.contains(line.getAccount().getId())) continue;
-            String code = line.getAccount().getCode();
-            BigDecimal d = line.getDebit()  != null ? line.getDebit()  : BigDecimal.ZERO;
-            BigDecimal c = line.getCredit() != null ? line.getCredit() : BigDecimal.ZERO;
-            openingByAccount.merge(code, d.subtract(c), BigDecimal::add);
+        for (Object[] row : moveLineRepo.sumPostedByAccountBefore(companyId, dateFrom)) {
+            if (accountIds != null && !accountIds.isEmpty() && !accountIds.contains((Long) row[0])) continue;
+            openingByAccount.merge((String) row[1], ((BigDecimal) row[2]).subtract((BigDecimal) row[3]), BigDecimal::add);
         }
 
         // Lignes de la période
@@ -564,18 +533,14 @@ public class ReportService {
         // Soldes CUMULÉS jusqu'à date_to (actif/passif) — comme Odoo. Valable pour
         // les comptes de BILAN (classes 1-5, des comptes de stock/position), mais
         // PAS pour le résultat de l'exercice (classes 6/7/8, des comptes de flux) :
-        // voir balanceExerciseN plus bas.
-        Map<String, BigDecimal> balanceN = buildBalanceByCode(
-                incUnposted ? moveLineRepo.findAllUpToDateOptionalUnposted(companyId, dateTo, true)
-                            : moveLineRepo.findPostedUpToDate(companyId, dateTo));
+        // voir balanceExerciseN plus bas. Totaux par compte calculés en base (aucune ligne chargée).
+        Map<String, BigDecimal> balanceN = balanceByCode(moveLineRepo.sumByAccountUpToDate(companyId, dateTo, incUnposted));
 
         // Période N-1
         LocalDate[] n1 = computePreviousPeriod(dateFrom, dateTo, periodType);
         Map<String, BigDecimal> balanceN1 = new LinkedHashMap<>();
         if (cmpEnabled && n1 != null) {
-            balanceN1 = buildBalanceByCode(
-                    incUnposted ? moveLineRepo.findAllUpToDateOptionalUnposted(companyId, n1[1], true)
-                                : moveLineRepo.findPostedUpToDate(companyId, n1[1]));
+            balanceN1 = balanceByCode(moveLineRepo.sumByAccountUpToDate(companyId, n1[1], incUnposted));
         }
 
         // Résultat net de l'exercice : borné à l'exercice fiscal en cours de la
@@ -588,9 +553,8 @@ public class ReportService {
                 .filter(mth -> mth != null && mth >= 1 && mth <= 12)
                 .orElse(1);
         LocalDate exerciseStartN = computeExerciseStart(dateTo, fyStartMonth);
-        Map<String, BigDecimal> balanceExerciseN = buildBalanceByCode(
-                incUnposted ? moveLineRepo.findAllByDateRangeOptionalUnposted(companyId, exerciseStartN, dateTo, true)
-                            : moveLineRepo.findPostedByCompanyAndDateRange(companyId, exerciseStartN, dateTo));
+        Map<String, BigDecimal> balanceExerciseN = balanceByCode(
+                moveLineRepo.sumByAccountInPeriod(companyId, exerciseStartN, dateTo, incUnposted));
 
         // Résultat N-1 : exercice fiscal COMPLET précédent (pas la période de
         // comparaison n1[], qui peut n'être qu'un fragment — le résultat N-1 d'un
@@ -599,9 +563,8 @@ public class ReportService {
         if (cmpEnabled) {
             LocalDate exerciseEndPrev = exerciseStartN.minusDays(1);
             LocalDate exerciseStartPrev = exerciseStartN.minusYears(1);
-            balanceExerciseN1 = buildBalanceByCode(
-                    incUnposted ? moveLineRepo.findAllByDateRangeOptionalUnposted(companyId, exerciseStartPrev, exerciseEndPrev, true)
-                                : moveLineRepo.findPostedByCompanyAndDateRange(companyId, exerciseStartPrev, exerciseEndPrev));
+            balanceExerciseN1 = balanceByCode(
+                    moveLineRepo.sumByAccountInPeriod(companyId, exerciseStartPrev, exerciseEndPrev, incUnposted));
         }
 
         // Calcul des postes individuels + spéciaux
@@ -997,8 +960,8 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
             dateToN1 = dateTo.minusYears(1);
         }
 
-        Map<String, BigDecimal> bc   = buildBalanceByCode(moveLineRepo.findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo));
-        Map<String, BigDecimal> bcN1 = buildBalanceByCode(moveLineRepo.findPostedByCompanyAndDateRange(companyId, dateFromN1, dateToN1));
+        Map<String, BigDecimal> bc   = balanceByCode(moveLineRepo.sumPostedByAccountInPeriod(companyId, dateFrom, dateTo));
+        Map<String, BigDecimal> bcN1 = balanceByCode(moveLineRepo.sumPostedByAccountInPeriod(companyId, dateFromN1, dateToN1));
 
         Map<String, Object> rubriques = new LinkedHashMap<>();
 
@@ -1229,18 +1192,6 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
         return response;
     }
 
-    private Map<String, BigDecimal> buildBalanceByCode(List<AccountMoveLine> lines) {
-        Map<String, BigDecimal> bc = new LinkedHashMap<>();
-        for (AccountMoveLine line : lines) {
-            if (line.getAccount() == null) continue;
-            String code = line.getAccount().getCode();
-            BigDecimal d = line.getDebit()  != null ? line.getDebit()  : BigDecimal.ZERO;
-            BigDecimal c = line.getCredit() != null ? line.getCredit() : BigDecimal.ZERO;
-            bc.merge(code, d.subtract(c), BigDecimal::add);
-        }
-        return bc;
-    }
-
     /**
      * Soldes bruts (débit - crédit) de tous les comptes de classe 6/7/8 (charges,
      * produits, HAO) ayant un mouvement non nul sur la période — utilisé par la
@@ -1252,8 +1203,8 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
      * recalculé en parallèle d'une autre méthode qui pourrait diverger.
      */
     public Map<String, BigDecimal> getProfitLossAccountBalances(Long companyId, LocalDate dateFrom, LocalDate dateTo) {
-        Map<String, BigDecimal> bc = buildBalanceByCode(
-                moveLineRepo.findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo));
+        Map<String, BigDecimal> bc = balanceByCode(
+                moveLineRepo.sumPostedByAccountInPeriod(companyId, dateFrom, dateTo));
         Map<String, BigDecimal> result = new LinkedHashMap<>();
         for (Map.Entry<String, BigDecimal> e : bc.entrySet()) {
             String code = e.getKey();
@@ -1264,6 +1215,15 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
             }
         }
         return result;
+    }
+
+    /** Solde (débit − crédit) par code de compte, à partir des totaux calculés en base (par code croissant). */
+    private Map<String, BigDecimal> balanceByCode(List<Object[]> sumsByAccount) {
+        Map<String, BigDecimal> bc = new LinkedHashMap<>();
+        for (Object[] row : sumsByAccount) {
+            bc.merge((String) row[1], ((BigDecimal) row[2]).subtract((BigDecimal) row[3]), BigDecimal::add);
+        }
+        return bc;
     }
 
     private void addRubrique(Map<String, Object> map, String code, String label,
@@ -1282,16 +1242,29 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
 
     // ======================== HELPERS ========================
 
-    private List<AccountMoveLine> fetchPostedLines(Long companyId, LocalDate dateFrom, LocalDate dateTo, List<Long> journalIds) {
-        if (journalIds != null && !journalIds.isEmpty())
-            return moveLineRepo.findPostedByCompanyAndDateRangeAndJournals(companyId, dateFrom, dateTo, journalIds);
-        return moveLineRepo.findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo);
+    /** Totaux débit/crédit par compte des écritures validées de la période, calculés en base. */
+    private Map<Long, AccountAggregation> sumsInPeriod(Long companyId, LocalDate dateFrom, LocalDate dateTo, List<Long> journalIds) {
+        return toAggregations(journalIds != null && !journalIds.isEmpty()
+                ? moveLineRepo.sumPostedByAccountInPeriodAndJournals(companyId, dateFrom, dateTo, journalIds)
+                : moveLineRepo.sumPostedByAccountInPeriod(companyId, dateFrom, dateTo));
     }
 
-    private List<AccountMoveLine> fetchPostedLinesBefore(Long companyId, LocalDate date, List<Long> journalIds) {
-        if (journalIds != null && !journalIds.isEmpty())
-            return moveLineRepo.findPostedBeforeDateAndJournals(companyId, date, journalIds);
-        return moveLineRepo.findPostedBeforeDate(companyId, date);
+    /** Totaux débit/crédit par compte des écritures validées antérieures à date, calculés en base. */
+    private Map<Long, AccountAggregation> sumsBefore(Long companyId, LocalDate date, List<Long> journalIds) {
+        return toAggregations(journalIds != null && !journalIds.isEmpty()
+                ? moveLineRepo.sumPostedByAccountBeforeAndJournals(companyId, date, journalIds)
+                : moveLineRepo.sumPostedByAccountBefore(companyId, date));
+    }
+
+    private static Map<Long, AccountAggregation> toAggregations(List<Object[]> rows) {
+        Map<Long, AccountAggregation> byAccount = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            AccountAggregation agg = new AccountAggregation();
+            agg.debit = (BigDecimal) row[2];
+            agg.credit = (BigDecimal) row[3];
+            byAccount.put((Long) row[0], agg);
+        }
+        return byAccount;
     }
 
     private boolean shouldInclude(String displayAccount, BigDecimal debit, BigDecimal credit) {
@@ -1460,12 +1433,7 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
     }
 
     private static class AccountAggregation {
-        AccountAccount account; BigDecimal debit = BigDecimal.ZERO, credit = BigDecimal.ZERO;
-        AccountAggregation(AccountAccount account) { this.account = account; }
-        void addLine(AccountMoveLine line) {
-            debit = debit.add(line.getDebit() != null ? line.getDebit() : BigDecimal.ZERO);
-            credit = credit.add(line.getCredit() != null ? line.getCredit() : BigDecimal.ZERO);
-        }
+        BigDecimal debit = BigDecimal.ZERO, credit = BigDecimal.ZERO;
     }
 
     private static class PartnerAggregation {

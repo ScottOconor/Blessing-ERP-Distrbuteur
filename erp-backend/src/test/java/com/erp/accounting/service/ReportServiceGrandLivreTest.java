@@ -43,8 +43,8 @@ class ReportServiceGrandLivreTest {
     @SuppressWarnings("unchecked")
     void soldesLimitesALaPeriode() {
         // Avant la période : 1 000 000 au débit (ne doit pas entrer dans les soldes)
-        when(moveLineRepo.findPostedBeforeDate(10L, FROM))
-                .thenReturn(List.of(line(LocalDate.of(2026, 8, 15), "1000000", "0")));
+        when(moveLineRepo.sumPostedByAccountBefore(10L, FROM))
+                .thenReturn(List.<Object[]>of(new Object[]{1L, "571100", new BigDecimal("1000000"), BigDecimal.ZERO}));
         // Période : +50 000 puis −20 000
         when(moveLineRepo.findForGrandLivre(10L, FROM, TO, null)).thenReturn(List.of(
                 line(LocalDate.of(2026, 9, 5), "50000", "0"),
