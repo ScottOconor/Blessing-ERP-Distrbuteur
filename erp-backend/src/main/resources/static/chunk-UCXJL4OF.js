@@ -1,0 +1,1 @@
+import{zc as t}from"./chunk-SCT4CNPD.js";function o(){let e=new Uint8Array(16);return crypto.getRandomValues(e),Array.from(e,r=>r.toString(16).padStart(2,"0")).join("")}function a(e){return e?{headers:new t({"Idempotency-Key":e})}:{}}export{o as a,a as b};
