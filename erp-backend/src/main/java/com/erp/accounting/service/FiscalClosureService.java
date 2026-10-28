@@ -170,6 +170,9 @@ public class FiscalClosureService {
 
         auditService.log("COMPANY", company.getId(), company.getName(),
                 "FISCAL_YEAR_CLOSED",
+                // Libellé court (colonne action_label de 80 caractères) : le texte complet, trop
+                // long, faisait échouer l'écriture du journal d'audit (FISCAL-01) ; il va dans details.
+                "Clôture d'exercice",
                 "Clôture d'exercice du " + req.getDateFrom() + " au " + req.getDateTo()
                 + " — écriture " + created.getName() + " (brouillon), résultat net = " + netResult,
                 company.getId());

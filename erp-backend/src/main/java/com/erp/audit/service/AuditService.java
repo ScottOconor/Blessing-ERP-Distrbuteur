@@ -66,9 +66,9 @@ public class AuditService {
                 AuditLog entry = AuditLog.builder()
                         .entityType(entityType)
                         .entityId(entityId)
-                        .entityRef(entityRef)
+                        .entityRef(fit(entityRef, 120))
                         .action(action)
-                        .actionLabel(actionLabel)
+                        .actionLabel(fit(actionLabel, 80))
                         .performedBy(getCurrentUsername())
                         .performedByFullname(getCurrentFullname())
                         .details(details)
@@ -80,6 +80,14 @@ public class AuditService {
             log.error("Erreur AuditLog entityType={} entityId={} action={}: {}",
                     entityType, entityId, action, e.getMessage());
         }
+    }
+
+    /** Coupe un texte à la taille de sa colonne : un libellé trop long (ex. clôture d'exercice avec
+     *  dates et montant) faisait échouer l'insertion et l'entrée d'audit disparaissait sans trace
+     *  visible. Le texte complet doit aller dans details ; ceci n'est qu'un filet de sécurité. */
+    static String fit(String value, int max) {
+        if (value == null || value.length() <= max) return value;
+        return value.substring(0, max - 1) + "…";
     }
 
     /** Raccourci pour les actions sans détails supplémentaires. */
