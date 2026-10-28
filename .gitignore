@@ -9,3 +9,6 @@ erp-backend/logs/
 graphify-out/
 .claude/
 .vscode/
+
+# Cache Python des scripts qa/
+__pycache__/
