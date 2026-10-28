@@ -39,6 +39,8 @@ public class AuthController {
     private final com.erp.caisse.repository.CaisseRepository caisseRepository;
     private final LoginRateLimiter         loginRateLimiter;
     private final SingleCompany            singleCompany;
+    private final com.erp.common.repository.CompanyRepository companyRepository;
+    private final com.erp.auth.repository.UserRepository     userRepository;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletRequest http) {
@@ -70,6 +72,18 @@ public class AuthController {
 
         User user = userDetailsService.findUserEntity(request.getUsername());
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+
+        // Première installation : le superadmin est créé avant la société unique, et le rattachement
+        // des comptes orphelins (DataSeeder) n'a lieu qu'au démarrage suivant. Sans société dans le
+        // jeton, toute création qui lit SecurityUtils.currentCompanyId() échouait (500) tant que
+        // l'application n'avait pas été redémarrée. Le compte est rattaché ici à la société unique.
+        if (user.getCompany() == null && singleCompany.exists()) {
+            companyRepository.findById(singleCompany.getId()).ifPresent(c -> {
+                user.setCompany(c);
+                userRepository.save(user);
+                log.info("Utilisateur {} rattaché à la société {} à la connexion", user.getUsername(), c.getId());
+            });
+        }
 
         String roleCode = user.getRole() != null ? user.getRole().getCode() : null;
 
