@@ -24,7 +24,17 @@ public class PurchaseController {
     private final RemiseService remiseService;
     private final IdempotencyService idempotencyService;
 
-    // ===================== FOURNISSEURS ==============
+    // ===================== FOURNISSEURS =====================
+
+    /** Retourne le taux de précompte achat configuré pour ce fournisseur. */
+    @GetMapping("/suppliers/{partnerId}/precompte-rate")
+    public ResponseEntity<Map<String, BigDecimal>> getSupplierPrecompteRate(
+            @PathVariable("partnerId") Long partnerId,
+            @RequestParam("companyId") Long companyId) {
+        BigDecimal rate = purchaseService.getPartnerPurchasePrecompteTaux(partnerId, companyId);
+        return ResponseEntity.ok(Map.of("tauxPrecompte", rate));
+    }
+
     // ===================== COMMANDES D'ACHAT =====================
 
     /** Streaming — voir getAllInvoices plus bas pour le pourquoi. */
