@@ -36,7 +36,9 @@ export interface Product {
   uomName?: string;
   unitOfMeasureId?: number;
   standardPrice?: number;
+  barcode?: string;
   salePrice?: number;
+  minPrice?: number;
   type: string; // product / service / consu
   stockAccountCode?: string;
   description?: string;

@@ -576,6 +576,7 @@ public class SalesService {
                                 .description(ol.getDescription())
                                 .quantity(qty)
                                 .prixUnitaire(pu)
+                                .prixReference(ol.getPrixReference())
                                 .prixUnitaireTTC(prixUnitaireTTC)
                                 .tauxRemise(remise)
                                 .tauxTVA(tva)
@@ -611,6 +612,8 @@ public class SalesService {
                             .description(ol.getDescription())
                             .quantity(ol.getQuantity())
                             .prixUnitaire(ol.getPrixUnitaire())
+                    .prixReference(ol.getPrixReference())
+                            .prixReference(ol.getPrixReference())
                             .prixUnitaireTTC(ol.getPrixUnitaireTTC())
                             .tauxRemise(ol.getTauxRemise())
                             .tauxTVA(ol.getTauxTVA())
@@ -837,6 +840,8 @@ public class SalesService {
                 .or(() -> accountRepo.findFirstByCodeAndCompanyId("419",  companyId))
                 .orElse(null);
 
+        BigDecimal ecartPrixTotal = ZERO;
+
         // Lignes produits 701100 (non-consigne) et emballages 419400 (consigne, signe selon quantité)
         // HT arrondi au franc pour la comptabilisation (FCFA n'a pas de centimes) — l'affichage facture
         // (invoice.getTotalHT(), etc.) garde sa précision au centime, seule l'écriture est arrondie ici.
@@ -857,8 +862,11 @@ public class SalesService {
                             .build());
                 }
             } else {
+                // Le produit reste comptabilisé au prix normal : l'écart de prix va au 701901 (voir plus bas).
+                BigDecimal ecart = ecartPrixHT(line);
+                ecartPrixTotal = ecartPrixTotal.add(ecart);
                 BigDecimal ht = (line.getMontantHT() != null ? line.getMontantHT() : ZERO)
-                        .setScale(0, RoundingMode.HALF_UP);
+                        .setScale(0, RoundingMode.HALF_UP).subtract(ecart);
                 if (ht.compareTo(ZERO) != 0) {
                     String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
                             ? line.getAccountCode() : DEFAULT_REVENUE_ACCOUNT;
@@ -1033,6 +1041,25 @@ public class SalesService {
                         .name("TVA frais d'enlèvement - " + invoice.getName()).date(date)
                         .debit(isAvoir ? totalEnlevementTVA : ZERO)
                         .credit(isAvoir ? ZERO : totalEnlevementTVA)
+                        .journal(invoice.getJournal()).company(invoice.getCompany())
+                        .build());
+            }
+        }
+
+        // Écart de prix 701901 : vendu plus cher = crédit, vendu moins cher = débit (inversé pour un avoir).
+        // Il est pris sur le HT déjà facturé, donc TVA et net client restent ceux de la facture.
+        if (ecartPrixTotal.signum() != 0) {
+            AccountAccount ecartAccount = findOrCreateAccount(
+                    RABAIS_ACCOUNT, "Rabais accordés sur articles",
+                    "expense", companyId, invoice.getJournal(), invoice.getCompany());
+            if (ecartAccount != null) {
+                boolean auCredit = (ecartPrixTotal.signum() > 0) != isAvoir;
+                BigDecimal montantEcart = ecartPrixTotal.abs();
+                moveLines.add(AccountMoveLine.builder()
+                        .move(move).account(ecartAccount).partner(invoice.getPartner())
+                        .name("Écart de prix de vente - " + invoice.getName()).date(date)
+                        .debit(auCredit ? ZERO : montantEcart)
+                        .credit(auCredit ? montantEcart : ZERO)
                         .journal(invoice.getJournal()).company(invoice.getCompany())
                         .build());
             }
@@ -3166,6 +3193,9 @@ public class SalesService {
             if (req == null || isEmptyDocumentLine(req.getProductId(), req.getProductCode(), req.getDescription(), req.getPrixUnitaire())) continue;
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : BigDecimal.ONE;
             BigDecimal rabaisUnit = req.getRabaisUnitaire() != null ? req.getRabaisUnitaire() : ZERO;
+            BigDecimal prixUnitaire = req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO;
+            BigDecimal prixReference = resolvePrixReference(req.getProductId(), req.getProductCode(), companyId);
+            requirePrixAuMoinsMinimum(req.getProductId(), req.getProductCode(), companyId, prixUnitaire, prixReference);
 
             // Respecter le flag exemptTva du produit — priorité sur ce que le frontend envoie
             BigDecimal resolvedTauxTVA = req.getTauxTVA() != null ? req.getTauxTVA() : ZERO;
@@ -3179,7 +3209,8 @@ public class SalesService {
                     .productCode(req.getProductCode())
                     .description(req.getDescription())
                     .quantity(qty)
-                    .prixUnitaire(req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO)
+                    .prixUnitaire(prixUnitaire)
+                    .prixReference(prixReference)
                     .tauxRemise(req.getTauxRemise() != null ? req.getTauxRemise() : ZERO)
                     .tauxTVA(resolvedTauxTVA)
                     .accountCode(req.getAccountCode())
@@ -3191,6 +3222,47 @@ public class SalesService {
             computeLineTotals(line);
             order.getLines().add(line);
         }
+    }
+
+    private com.erp.stock.entity.Product findLineProduct(Long productId, String productCode, Long companyId) {
+        if (productId != null) return stockProductRepo.findById(productId).orElse(null);
+        if (productCode != null && !productCode.isBlank() && companyId != null) {
+            return stockProductRepo.findFirstByDefaultCodeAndCompanyId(productCode, companyId).orElse(null);
+        }
+        return null;
+    }
+
+    /** Prix de vente normal de la ligne (fiche article). Calculé ici et jamais reçu du navigateur.
+     *  Null pour un service, un emballage consigné ou un article sans prix. */
+    private BigDecimal resolvePrixReference(Long productId, String productCode, Long companyId) {
+        com.erp.stock.entity.Product product = findLineProduct(productId, productCode, companyId);
+        if (product == null || "service".equals(product.getType()) || ConsigneCodes.isConsigne(product.getDefaultCode(), companyId)) return null;
+        BigDecimal prix = product.getSalePrice();
+        return prix != null && prix.signum() > 0 ? prix : null;
+    }
+
+    /** Un prix resté égal au prix normal n'est jamais bloqué. Comparaison au franc : le prix saisi en
+     *  TTC au bon de commande revient en HT avec des décimales. */
+    private void requirePrixAuMoinsMinimum(Long productId, String productCode, Long companyId,
+                                           BigDecimal prixUnitaire, BigDecimal prixReference) {
+        if (prixReference == null) return;
+        BigDecimal prix = prixUnitaire.setScale(0, RoundingMode.HALF_UP);
+        if (prix.compareTo(prixReference.setScale(0, RoundingMode.HALF_UP)) == 0) return;
+        com.erp.stock.entity.Product product = findLineProduct(productId, productCode, companyId);
+        BigDecimal min = product != null ? product.getMinPrice() : null;
+        if (min != null && min.signum() > 0 && prix.compareTo(min.setScale(0, RoundingMode.HALF_UP)) < 0) {
+            throw new IllegalArgumentException("Le prix de vente de « " + product.getName() + " » ("
+                    + prix.toPlainString() + ") est inférieur à son prix minimum ("
+                    + min.setScale(0, RoundingMode.HALF_UP).toPlainString() + ").");
+        }
+    }
+
+    /** Écart HT de la ligne entre le prix facturé et le prix normal, arrondi au franc comme l'écriture.
+     *  Positif = vendu plus cher, négatif = vendu moins cher. */
+    private BigDecimal ecartPrixHT(SalesInvoiceLine line) {
+        if (line.getPrixReference() == null || line.getPrixUnitaire() == null || line.getQuantity() == null) return ZERO;
+        return line.getPrixUnitaire().subtract(line.getPrixReference())
+                .multiply(line.getQuantity()).setScale(0, RoundingMode.HALF_UP);
     }
 
     /** Retourne ZERO si le produit (par id ou code) est exempté de TVA, sinon retourne tauxTVA tel quel. */
@@ -3238,13 +3310,22 @@ public class SalesService {
             // Emballages consignés : jamais de TVA (ni de précompte)
             if (ConsigneCodes.isConsigne(req.getProductCode(), companyId)) resolvedTauxTVA = ZERO;
 
+            // Un avoir manuel reprend le prix qu'on lui donne : ni plancher ni écart de prix.
+            BigDecimal prixUnitaire = req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO;
+            BigDecimal prixReference = null;
+            if (!"credit_note".equals(invoice.getType())) {
+                prixReference = resolvePrixReference(resolvedProductId, req.getProductCode(), companyId);
+                requirePrixAuMoinsMinimum(resolvedProductId, req.getProductCode(), companyId, prixUnitaire, prixReference);
+            }
+
             SalesInvoiceLine line = SalesInvoiceLine.builder()
                     .invoice(invoice)
                     .productId(resolvedProductId)
                     .productCode(req.getProductCode())
                     .description(req.getDescription())
                     .quantity(req.getQuantity() != null ? req.getQuantity() : BigDecimal.ONE)
-                    .prixUnitaire(req.getPrixUnitaire() != null ? req.getPrixUnitaire() : ZERO)
+                    .prixUnitaire(prixUnitaire)
+                    .prixReference(prixReference)
                     .tauxRemise(req.getTauxRemise() != null ? req.getTauxRemise() : ZERO)
                     .tauxTVA(resolvedTauxTVA)
                     .accountCode(req.getAccountCode())
@@ -3789,7 +3870,7 @@ public class SalesService {
         List<SalesOrderDTO.LineDTO> lines = order.getLines().stream()
                 .map(l -> SalesOrderDTO.LineDTO.builder()
                         .id(l.getId()).productId(l.getProductId()).productCode(l.getProductCode()).description(l.getDescription())
-                        .quantity(l.getQuantity()).prixUnitaire(l.getPrixUnitaire())
+                        .quantity(l.getQuantity()).prixUnitaire(l.getPrixUnitaire()).prixReference(l.getPrixReference())
                         .tauxRemise(l.getTauxRemise()).tauxTVA(l.getTauxTVA()).accountCode(l.getAccountCode())
                         .montantHT(l.getMontantHT()).montantTVA(l.getMontantTVA()).montantTTC(l.getMontantTTC())
                         .rabaisUnitaire(l.getRabaisUnitaire())
@@ -3947,7 +4028,7 @@ public class SalesService {
         List<SalesInvoiceDTO.LineDTO> lines = invoice.getLines().stream()
                 .map(l -> SalesInvoiceDTO.LineDTO.builder()
                         .id(l.getId()).productId(l.getProductId()).productCode(l.getProductCode()).description(l.getDescription())
-                        .quantity(l.getQuantity()).prixUnitaire(l.getPrixUnitaire())
+                        .quantity(l.getQuantity()).prixUnitaire(l.getPrixUnitaire()).prixReference(l.getPrixReference())
                         .tauxRemise(l.getTauxRemise()).tauxTVA(l.getTauxTVA()).accountCode(l.getAccountCode())
                         .categoryId(l.getCategoryId())
                         .montantHT(l.getMontantHT()).montantTVA(l.getMontantTVA()).montantTTC(l.getMontantTTC())

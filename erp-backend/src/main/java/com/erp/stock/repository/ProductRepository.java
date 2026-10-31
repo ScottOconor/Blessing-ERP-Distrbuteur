@@ -13,6 +13,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByCompanyIdOrderByNameAsc(Long companyId);
     Optional<Product> findFirstByDefaultCodeAndCompanyId(String defaultCode, Long companyId);
+    Optional<Product> findFirstByBarcodeAndCompanyId(String barcode, Long companyId);
     Optional<Product> findFirstByCompanyIdAndDefaultCodeIgnoreCase(Long companyId, String defaultCode);
 
     /** Articles (actifs ou non) portant cette référence, comparée sans casse ni espaces. */

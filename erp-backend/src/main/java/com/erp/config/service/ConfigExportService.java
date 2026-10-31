@@ -217,6 +217,7 @@ public class ConfigExportService {
             m.put("uomName", p.getUomName());
             m.put("standardPrice", p.getStandardPrice());
             m.put("salePrice", p.getSalePrice());
+            m.put("minPrice", p.getMinPrice());
             m.put("type", p.getType());
             m.put("stockAccountCode", p.getStockAccountCode());
             m.put("description", p.getDescription());
@@ -540,6 +541,7 @@ public class ConfigExportService {
             p.setUnitOfMeasureId(uomName != null ? uomIds.get(uomName.toLowerCase()) : null);
             p.setStandardPrice(decimal(row, "standardPrice"));
             p.setSalePrice(decimal(row, "salePrice"));
+            p.setMinPrice(decimal(row, "minPrice"));
             p.setType(type);
             p.setStockAccountCode(str(row, "stockAccountCode"));
             p.setDescription(str(row, "description"));

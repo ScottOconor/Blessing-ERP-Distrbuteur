@@ -66,6 +66,11 @@ public class SalesOrderLine {
     @Column(name = "is_consigne")
     private boolean consigne = false;
 
+    /** Prix de vente normal de l'article au moment de la vente. L'écart avec prixUnitaire, quand le
+     *  prix est modifié à la vente, est comptabilisé au 701901. Null = pas d'écart. */
+    @Column(name = "prix_reference", precision = 20, scale = 4)
+    private BigDecimal prixReference;
+
     /** Rabais unitaire accordé à ce client (= salePrice - prixClient). 0 si aucun tarif client. */
     @Builder.Default
     @Column(name = "rabais_unitaire", precision = 20, scale = 2)

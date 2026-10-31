@@ -12,8 +12,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
 import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, yesNo, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 
-const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Prix de vente', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
-const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '700', '500', 'Bières', '1000', 'Caisse', 'Non', 'Non'];
+const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Code-barres', 'Prix de vente', 'Prix minimum', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
+const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '6130000000017', '700', '650', '500', 'Bières', '1000', 'Caisse', 'Non', 'Non'];
 
 // Pas de quantité en stock (les services n'ont pas d'existence physique) ; la catégorie reste
 // une simple catégorie d'article (optionnelle) — ce projet n'a pas de notion de point de vente.
@@ -480,7 +480,7 @@ export class ProductListComponent implements OnInit {
     const headers = [ID_HEADER, ...(this.serviceMode ? SERVICE_HEADERS : PRODUCT_HEADERS)];
     const rows = this.sel.rowsToExport(this.products, this.filtered).map(p => this.serviceMode
       ? [p.id, p.name, p.defaultCode, p.salePrice, p.standardPrice, p.categoryName, p.uomName, yesNo(p.exemptTva), yesNo(p.exemptTvaAchat)]
-      : [p.id, p.name, p.defaultCode, p.salePrice, p.standardPrice, p.categoryName, p.qtyOnHand ?? 0, p.uomName, yesNo(p.exemptTva), yesNo(p.exemptTvaAchat)]);
+      : [p.id, p.name, p.defaultCode, p.barcode, p.salePrice, p.minPrice, p.standardPrice, p.categoryName, p.qtyOnHand ?? 0, p.uomName, yesNo(p.exemptTva), yesNo(p.exemptTvaAchat)]);
     exportRowsToExcel(headers, rows, this.serviceMode ? 'export_services' : 'export_articles');
   }
 
@@ -569,6 +569,13 @@ export class ProductListComponent implements OnInit {
         exemptTvaAchat: this.parseBoolCell(row['Exempté TVA achat']),
         companyId: this.companyId
       };
+      // Cellule vide : on ne met pas la clé, pour conserver la valeur d'un article existant.
+      if (!this.serviceMode) {
+        const barcode = String(row['Code-barres'] ?? row['Code barres'] ?? row['Code barre'] ?? '').trim();
+        if (barcode) dto.barcode = barcode;
+        const minPrice = parseFloat(row['Prix minimum'] ?? row['Prix min']);
+        if (!isNaN(minPrice)) dto.minPrice = minPrice;
+      }
       const existing = this.findExistingProduct(row, name, dto.defaultCode, dto.categoryId);
       try {
         if (existing?.id) {

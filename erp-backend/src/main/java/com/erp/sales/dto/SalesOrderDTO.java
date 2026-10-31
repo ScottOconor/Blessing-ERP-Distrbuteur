@@ -64,6 +64,7 @@ public class SalesOrderDTO {
         private String description;
         private BigDecimal quantity;
         private BigDecimal prixUnitaire;
+        private BigDecimal prixReference;
         private BigDecimal tauxRemise;
         private BigDecimal tauxTVA;
         private String accountCode;

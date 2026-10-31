@@ -95,6 +95,11 @@ public class SalesInvoiceLine {
     @Column(name = "guinness_taxe", precision = 20, scale = 2)
     private BigDecimal guinessTaxe = BigDecimal.ZERO;
 
+    /** Prix de vente normal de l'article au moment de la vente. L'écart avec prixUnitaire, quand le
+     *  prix est modifié à la vente, est comptabilisé au 701901. Null = pas d'écart. */
+    @Column(name = "prix_reference", precision = 20, scale = 4)
+    private BigDecimal prixReference;
+
     /** Rabais unitaire accordé à ce client = salePrice standard - prixClient (0 si pas de tarif client) */
     @Builder.Default
     @Column(name = "rabais_unitaire", precision = 20, scale = 2)

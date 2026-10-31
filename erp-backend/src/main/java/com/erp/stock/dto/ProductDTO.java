@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class ProductDTO {
     private Long id;
     private String defaultCode;
+    private String barcode;
     private String name;
     private Long categoryId;
     private String categoryName;
@@ -15,6 +16,7 @@ public class ProductDTO {
     private Long unitOfMeasureId;
     private BigDecimal standardPrice;
     private BigDecimal salePrice;
+    private BigDecimal minPrice;
     private String type;
     private String stockAccountCode;
     private String description;

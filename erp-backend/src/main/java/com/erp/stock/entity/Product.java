@@ -27,6 +27,10 @@ public class Product {
     @Column(name = "default_code")
     private String defaultCode;
 
+    /** Code-barres (EAN-13, UPC, ou tout code lu par un scanner) */
+    @Column(name = "barcode")
+    private String barcode;
+
     @Column(nullable = false)
     private String name;
 
@@ -47,6 +51,11 @@ public class Product {
     /** Prix de vente */
     @Column(precision = 20, scale = 4)
     private BigDecimal salePrice;
+
+    /** Prix minimum : le prix de vente saisi à la vente ne peut pas descendre en dessous.
+     *  Null ou 0 = pas de plancher. */
+    @Column(name = "min_price", precision = 20, scale = 4)
+    private BigDecimal minPrice;
 
     /** product / service / consu */
     @Column(nullable = false)
