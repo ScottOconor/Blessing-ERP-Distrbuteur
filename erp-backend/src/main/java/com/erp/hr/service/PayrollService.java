@@ -10,7 +10,6 @@ import com.erp.accounting.repository.AccountJournalRepository;
 import com.erp.accounting.repository.AccountMoveRepository;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.hr.dto.LeaveBalanceSummary;
 import com.erp.hr.dto.PayslipDTO;
 import com.erp.hr.dto.PayslipRequest;
@@ -65,7 +64,6 @@ public class PayrollService {
     private final AccountMoveRepository moveRepo;
     private final com.erp.accounting.service.FiscalLockGuard fiscalLockGuard;
     private final com.erp.accounting.service.AccountingService accountingService;
-    private final TenantGuard tenantGuard;
 
     // ─────────────── Lecture ───────────────
 
@@ -77,7 +75,6 @@ public class PayrollService {
     @Transactional(readOnly = true)
     public PayslipDTO getPayslip(Long id) {
         Payslip p = payslipRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable: " + id));
-        tenantGuard.check(p.getCompanyId());
         return toDTO(p);
     }
 
@@ -132,7 +129,6 @@ public class PayrollService {
     public PayslipDTO computePayslip(PayslipRequest req) {
         Employee emp = employeeRepo.findById(req.getEmployeeId())
                 .orElseThrow(() -> new EntityNotFoundException("Employé introuvable: " + req.getEmployeeId()));
-        tenantGuard.check(emp.getCompanyId());
         // La société du bulletin est TOUJOURS celle réelle de l'employé — req.getCompanyId()
         // (client) était auparavant préféré quand non-nul, permettant de générer un bulletin
         // rattaché à une société arbitraire.
@@ -193,7 +189,6 @@ public class PayrollService {
     public PayslipDTO recompute(Long payslipId) {
         Payslip slip = payslipRepo.findById(payslipId)
                 .orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable: " + payslipId));
-        tenantGuard.check(slip.getCompanyId());
         if (!"DRAFT".equals(slip.getState())) {
             throw new IllegalStateException("Seul un bulletin brouillon peut être recalculé");
         }
@@ -283,7 +278,6 @@ public class PayrollService {
 
     public PayslipDTO verify(Long id) {
         Payslip slip = payslipRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable"));
-        tenantGuard.check(slip.getCompanyId());
         // Sans ce garde-fou, remettre en vérification un bulletin déjà comptabilisé (DONE)
         // permettait de le re-valider ensuite : generateAccountingMove() n'est pas idempotent et
         // postait une DEUXIÈME écriture pour la même paie, en écrasant silencieusement le pointeur
@@ -297,7 +291,6 @@ public class PayrollService {
 
     public PayslipDTO setDraft(Long id) {
         Payslip slip = payslipRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable"));
-        tenantGuard.check(slip.getCompanyId());
         if ("DONE".equals(slip.getState())) {
             throw new IllegalStateException("Un bulletin comptabilisé ne peut être remis en brouillon");
         }
@@ -307,7 +300,6 @@ public class PayrollService {
 
     public PayslipDTO cancel(Long id) {
         Payslip slip = payslipRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable"));
-        tenantGuard.check(slip.getCompanyId());
         if ("CANCELLED".equals(slip.getState())) {
             throw new IllegalStateException("Ce bulletin est déjà annulé");
         }
@@ -329,7 +321,6 @@ public class PayrollService {
     /** Valide le bulletin et génère l'écriture comptable de paie (si comptes configurés). */
     public PayslipDTO validate(Long id) {
         Payslip slip = payslipRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Bulletin introuvable"));
-        tenantGuard.check(slip.getCompanyId());
         if ("DONE".equals(slip.getState())) throw new IllegalStateException("Bulletin déjà comptabilisé");
         fiscalLockGuard.assertPeriodOpen(slip.getCompanyId(),
                 slip.getPeriodTo() != null ? slip.getPeriodTo() : java.time.LocalDate.now());

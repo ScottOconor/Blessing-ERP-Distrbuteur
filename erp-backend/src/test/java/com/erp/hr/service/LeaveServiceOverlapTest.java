@@ -1,7 +1,6 @@
 package com.erp.hr.service;
 
-import com.erp.auth.TenantAuthenticationDetails;
-import com.erp.common.service.TenantGuard;
+import com.erp.common.service.SingleCompany;
 import com.erp.hr.entity.LeaveDeclaration;
 import com.erp.hr.init.LeaveTypeSeeder;
 import com.erp.hr.repository.*;
@@ -24,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -39,7 +39,7 @@ class LeaveServiceOverlapTest {
     @Mock private LeaveBalanceRepository balanceRepo;
     @Mock private EmployeeRepository employeeRepo;
     @Mock private LeaveTypeSeeder leaveTypeSeeder;
-    @Mock private TenantGuard tenantGuard;
+    @Mock private SingleCompany singleCompany;
 
     @InjectMocks
     private LeaveService leaveService;
@@ -49,12 +49,9 @@ class LeaveServiceOverlapTest {
         SecurityContextHolder.clearContext();
     }
 
-    /** saveDeclaration résout companyId via SecurityUtils.currentCompanyId() pour une NOUVELLE
-     *  déclaration (id null) — il faut donc un contexte de sécurité actif, comme en production. */
+    /** saveDeclaration résout companyId via SingleCompany pour une NOUVELLE déclaration (id null). */
     private void authenticateAs(Long companyId) {
-        Authentication auth = new UsernamePasswordAuthenticationToken("user", null, java.util.List.of());
-        ((UsernamePasswordAuthenticationToken) auth).setDetails(new TenantAuthenticationDetails(companyId, "127.0.0.1"));
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        lenient().when(singleCompany.getId()).thenReturn(companyId);
     }
 
     private LeaveDeclaration declaration(Long id, LocalDate from, LocalDate to) {
@@ -94,8 +91,7 @@ class LeaveServiceOverlapTest {
     void updatingADeclarationDoesNotFlagItselfAsAnOverlap() {
         LeaveDeclaration self = declaration(5L, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10));
 
-        // saveDeclaration recharge l'existant par id pour vérifier le tenant (TenantGuard, mocké
-        // ici en no-op) avant d'appliquer les modifications — companyId vient de cet existant.
+        // saveDeclaration recharge l'existant par id avant d'appliquer les modifications — companyId vient de cet existant.
         when(declarationRepo.findById(5L)).thenReturn(Optional.of(self));
         // findBy... returns the declaration itself among the "overlapping" candidates, since it
         // overlaps its own unchanged date range — must be excluded by id, not treated as a conflict.

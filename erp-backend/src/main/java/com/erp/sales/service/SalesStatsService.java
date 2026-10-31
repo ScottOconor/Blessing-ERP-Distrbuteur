@@ -31,14 +31,12 @@ public class SalesStatsService {
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
     private final ProductValuationService productValuationService;
-    private final com.erp.common.service.TenantGuard tenantGuard;
     private static final BigDecimal ZERO    = BigDecimal.ZERO;
     private static final BigDecimal NEG_ONE = BigDecimal.ONE.negate();
 
     public SalesStatsResponse getStats(SalesStatsRequest req) {
         // req.getCompanyId() vient du client — sans ce contrôle, n'importe quel utilisateur
         // authentifié pouvait lire le CA/marge d'une autre société en changeant ce champ.
-        tenantGuard.check(req.getCompanyId());
         String groupBy = req.getGroupBy() != null ? req.getGroupBy() : "client";
         Long companyId = req.getCompanyId();
 
@@ -421,7 +419,6 @@ public class SalesStatsService {
     // ══════════════════════════════════════════════════════════════════════════
 
     public RapportVentesResponse getRapportVentes(RapportVentesRequest req) {
-        tenantGuard.check(req.getCompanyId());
         Long companyId = req.getCompanyId();
 
         List<com.erp.sales.entity.SalesInvoice> invoices = invoiceRepo.findForRapportVentes(

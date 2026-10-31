@@ -1,6 +1,5 @@
 package com.erp.common.list;
 
-import com.erp.common.service.TenantGuard;
 import com.erp.stock.repository.WarehouseRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -45,7 +44,6 @@ public class ListQueryService {
 
     private final EntityManager em;
     private final WarehouseRepository warehouseRepo;
-    private final TenantGuard tenantGuard;
 
     /**
      * Page de la liste : identifiants de la page (tri de la définition, complété par l'id), chargés
@@ -134,7 +132,6 @@ public class ListQueryService {
     private Where where(ListDefinition d, Map<String, String> p, boolean withGroup) {
         Long companyId = longParam(p, "companyId");
         if (companyId == null) throw new IllegalArgumentException("companyId est obligatoire");
-        tenantGuard.check(companyId);
 
         Where w = new Where();
         w.and(d.company + " = :companyId", "companyId", companyId);

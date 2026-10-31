@@ -1,6 +1,5 @@
 package com.erp.config.service;
 
-import com.erp.common.service.TenantGuard;
 import com.erp.config.dto.ModuleStateDTO;
 import com.erp.config.entity.ModuleInstall;
 import com.erp.config.repository.ModuleInstallRepository;
@@ -26,7 +25,6 @@ public class ModuleService {
     );
 
     private final ModuleInstallRepository repo;
-    private final TenantGuard tenantGuard;
 
     /** RH masqué par défaut sur ce déploiement (Blessing Distributeurs n'utilise pas la paie via
      *  l'ERP) — reste dans MODULE_CODES et togglable normalement via setInstalled() si jamais
@@ -39,7 +37,6 @@ public class ModuleService {
         // l'état des modules de SA société) — mais ça ne dispense pas de vérifier que companyId
         // est bien la société de l'appelant, sans quoi n'importe quel utilisateur pourrait sonder
         // l'état des modules d'une autre société en changeant simplement ce paramètre.
-        tenantGuard.check(companyId);
         List<ModuleInstall> overrides = repo.findByCompanyId(companyId);
         return MODULE_CODES.stream()
                 .map(code -> {
@@ -55,7 +52,6 @@ public class ModuleService {
     }
 
     public ModuleStateDTO setInstalled(Long companyId, String moduleCode, boolean installed) {
-        tenantGuard.check(companyId);
         if (!MODULE_CODES.contains(moduleCode)) {
             throw new IllegalArgumentException("Module inconnu : " + moduleCode);
         }

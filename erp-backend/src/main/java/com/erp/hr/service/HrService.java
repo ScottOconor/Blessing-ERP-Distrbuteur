@@ -2,7 +2,6 @@ package com.erp.hr.service;
 
 import com.erp.audit.service.AuditService;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.common.service.DocumentNumberLock;
 import com.erp.hr.entity.*;
 import com.erp.hr.init.OrganisationSeeder;
@@ -37,7 +36,6 @@ public class HrService {
     private final PayrollSeeder payrollSeeder;
     private final ProfessionalCategorySeeder professionalCategorySeeder;
     private final OrganisationSeeder organisationSeeder;
-    private final TenantGuard tenantGuard;
     private final AuditService auditService;
     private final CompanyRepository companyRepo;
 
@@ -51,7 +49,6 @@ public class HrService {
     @Transactional(readOnly = true)
     public Employee getEmployee(Long id) {
         Employee e = employeeRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Employé introuvable: " + id));
-        tenantGuard.check(e.getCompanyId());
         return e;
     }
 
@@ -120,7 +117,6 @@ public class HrService {
 
     public void deleteDepartment(Long id) {
         Department d = departmentRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Département introuvable: " + id));
-        tenantGuard.check(d.getCompanyId());
         departmentRepo.deleteById(id);
     }
 
@@ -137,7 +133,6 @@ public class HrService {
 
     public void deleteJob(Long id) {
         JobPosition j = jobRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Poste introuvable: " + id));
-        tenantGuard.check(j.getCompanyId());
         jobRepo.deleteById(id);
     }
 
@@ -156,7 +151,6 @@ public class HrService {
     @Transactional(readOnly = true)
     public EmployeeContract getContract(Long id) {
         EmployeeContract c = contractRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Contrat introuvable: " + id));
-        tenantGuard.check(c.getCompanyId());
         return c;
     }
 
@@ -190,7 +184,6 @@ public class HrService {
 
     public void deleteRule(Long id) {
         SalaryRule r = ruleRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Règle introuvable: " + id));
-        tenantGuard.check(r.getCompanyId());
         ruleRepo.deleteById(id);
     }
 
@@ -205,7 +198,6 @@ public class HrService {
 
     public void deleteWorkedDaysType(Long id) {
         WorkedDaysType t = workedDaysTypeRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Type introuvable: " + id));
-        tenantGuard.check(t.getCompanyId());
         workedDaysTypeRepo.deleteById(id);
     }
 
@@ -220,7 +212,6 @@ public class HrService {
 
     public void deleteInputType(Long id) {
         PayslipInputType t = inputTypeRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Type introuvable: " + id));
-        tenantGuard.check(t.getCompanyId());
         inputTypeRepo.deleteById(id);
     }
 
@@ -235,7 +226,6 @@ public class HrService {
 
     public void deleteProfessionalCategory(Long id) {
         ProfessionalCategory c = professionalCategoryRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable: " + id));
-        tenantGuard.check(c.getCompanyId());
         professionalCategoryRepo.deleteById(id);
     }
 
@@ -253,7 +243,6 @@ public class HrService {
 
     public void deleteEchelon(Long id) {
         Echelon e = echelonRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Échelon introuvable: " + id));
-        tenantGuard.check(e.getCompanyId());
         echelonRepo.deleteById(id);
     }
 }

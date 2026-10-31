@@ -4,7 +4,7 @@ import com.erp.accounting.entity.Partner;
 import com.erp.accounting.repository.AccountJournalRepository;
 import com.erp.accounting.repository.PartnerRepository;
 import com.erp.common.repository.PrecompteRepository;
-import com.erp.common.service.TenantGuard;
+import com.erp.common.service.SingleCompany;
 import com.erp.sales.entity.Ristourne;
 import com.erp.sales.repository.RistournePaiementRepository;
 import com.erp.sales.repository.RistourneRepository;
@@ -46,7 +46,7 @@ class RistourneServiceTest {
     @Mock private AccountJournalRepository journalRepo;
     @Mock private SyncEventPublisher syncPublisher;
     @Mock private SalesService salesService;
-    @Mock private TenantGuard tenantGuard;
+    @Mock private SingleCompany singleCompany;
 
     @InjectMocks
     private RistourneService ristourneService;

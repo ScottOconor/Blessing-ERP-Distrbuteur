@@ -1,7 +1,6 @@
 package com.erp.config.service;
 
 import com.erp.accounting.init.OhadaDataInitializer;
-import com.erp.auth.SecurityUtils;
 import com.erp.auth.entity.User;
 import com.erp.auth.repository.UserRepository;
 import com.erp.auth.service.PasswordPolicy;
@@ -9,7 +8,6 @@ import com.erp.common.entity.Company;
 import com.erp.common.entity.CompanyLogo;
 import com.erp.common.repository.CompanyLogoRepository;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.common.service.ImageFiles;
 import com.erp.config.dto.*;
 import com.erp.config.entity.Role;
@@ -38,6 +36,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class ConfigService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final CompanyRepository         companyRepository;
     private final CompanyLogoRepository     companyLogoRepository;
     private final RoleRepository            roleRepository;
@@ -46,7 +45,6 @@ public class ConfigService {
     private final com.erp.caisse.repository.CaisseRepository caisseRepository;
     private final PasswordEncoder           passwordEncoder;
     private final OhadaDataInitializer      companyInitializer;
-    private final TenantGuard               tenantGuard;
     private final com.erp.audit.service.AuditService auditService;
 
     // ── Entreprises ───────────────────────────────────────────────────────
@@ -68,7 +66,6 @@ public class ConfigService {
         if (!isRealAuthentication()) {
             return toPublicBrandingDTO(c);
         }
-        tenantGuard.check(c.getId());
         return toCompanyDTO(c);
     }
 
@@ -106,7 +103,6 @@ public class ConfigService {
     public CompanyDTO updateCompany(Long id, CompanyDTO dto) {
         Company c = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
-        tenantGuard.check(c.getId());
         c.setName(dto.getName()); c.setSigle(dto.getSigle()); c.setRccm(dto.getRccm());
         c.setNif(dto.getNif()); c.setAdresse(dto.getAdresse()); c.setTelephone(dto.getTelephone());
         c.setEmail(dto.getEmail()); c.setLogoUrl(dto.getLogoUrl()); c.setActive(dto.isActive());
@@ -139,7 +135,7 @@ public class ConfigService {
                 .label(dto.getLabel()).isSystem(false).active(true).build());
         if (dto.getPermissions() != null) savePermissions(role, dto.getPermissions());
         auditService.log("ROLE", role.getId(), role.getLabel(),
-                "CREATED", "Rôle créé", SecurityUtils.currentCompanyId());
+                "CREATED", "Rôle créé", singleCompany.getId());
         return toRoleDTO(role);
     }
 
@@ -154,7 +150,7 @@ public class ConfigService {
             permissionRepository.deleteByRole(role);
             savePermissions(role, dto.getPermissions());
             auditService.log("ROLE", role.getId(), role.getLabel(),
-                    "PERMISSIONS_CHANGED", "Permissions du rôle modifiées", SecurityUtils.currentCompanyId());
+                    "PERMISSIONS_CHANGED", "Permissions du rôle modifiées", singleCompany.getId());
         }
         return toRoleDTO(role);
     }
@@ -167,7 +163,7 @@ public class ConfigService {
         permissionRepository.deleteByRole(role);
         roleRepository.delete(role);
         auditService.log("ROLE", roleId, role.getLabel(),
-                "DELETED", "Rôle supprimé", SecurityUtils.currentCompanyId());
+                "DELETED", "Rôle supprimé", singleCompany.getId());
     }
 
     // ── Utilisateurs ──────────────────────────────────────────────────────
@@ -181,7 +177,6 @@ public class ConfigService {
     public UserDTO getUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
-        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
         return toUserDTO(user);
     }
 
@@ -203,14 +198,11 @@ public class ConfigService {
                 : null;
         assertCanGrant(role);
 
-        Long currentCompanyId = SecurityUtils.currentCompanyId();
-        Company company = currentCompanyId != null ? companyRepository.findById(currentCompanyId).orElse(null) : null;
-
         User user = User.builder()
                 .username(req.getUsername()).email(req.getEmail())
                 .fullName(req.getFullName())
                 .password(passwordEncoder.encode(req.getPassword()))
-                .role(role).company(company).active(true).mustChangePassword(true)
+                .role(role).active(true).mustChangePassword(true)
                 .caisseId(requireCaisse(req.getCaisseId())).build();
         return toUserDTO(userRepository.save(user));
     }
@@ -219,7 +211,6 @@ public class ConfigService {
     public UserDTO updateUser(Long id, CreateUserRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
-        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
         assertCanGrant(user.getRole());
         if (req.getFullName() != null) user.setFullName(req.getFullName());
         if (req.getEmail()    != null) user.setEmail(req.getEmail());
@@ -249,14 +240,13 @@ public class ConfigService {
     @Transactional
     public void toggleUserActive(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Utilisateur introuvable"));
-        tenantGuard.check(user.getCompany() != null ? user.getCompany().getId() : null);
         assertCanGrant(user.getRole());
         user.setActive(!user.isActive());
         userRepository.save(user);
         auditService.log("USER", id, user.getUsername(),
                 user.isActive() ? "ACTIVATED" : "DEACTIVATED",
                 user.isActive() ? "Utilisateur activé" : "Utilisateur désactivé",
-                user.getCompany() != null ? user.getCompany().getId() : null);
+                singleCompany.getId());
     }
 
     /**
@@ -283,7 +273,6 @@ public class ConfigService {
     public void uploadLogo(Long id, byte[] data, String contentType) {
         Company c = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
-        tenantGuard.check(c.getId());
         CompanyLogo logo = companyLogoRepository.findById(id).orElseThrow();
         logo.setLogoData(data);
         c.setLogoContentType(contentType);
@@ -293,18 +282,13 @@ public class ConfigService {
     public void uploadAppLogo(Long id, byte[] data, String contentType) {
         Company c = companyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Entreprise introuvable"));
-        tenantGuard.check(c.getId());
         CompanyLogo logo = companyLogoRepository.findById(id).orElseThrow();
         logo.setAppLogoData(data);
         c.setAppLogoContentType(contentType);
     }
 
-    // GET .../logo et .../app-logo restent volontairement SANS tenantGuard.check : ce sont les
-    // deux seules routes /api/config/companies/** consultées avant connexion (écran de login,
-    // permitAll dans SecurityConfig) — il n'y a alors aucun SecurityContext authentifié, donc
-    // SecurityUtils.currentCompanyId() lèverait une IllegalStateException et casserait l'écran de
-    // login pour tout le monde. Seul le détail complet (GET simple /companies/{id}, RCCM/NIF/etc.)
-    // exige une authentification ; le logo binaire seul n'est pas une donnée sensible.
+    // GET .../logo et .../app-logo sont consultées avant connexion (écran de login, permitAll
+    // dans SecurityConfig) ; le logo binaire seul n'est pas une donnée sensible.
 
     @Transactional(readOnly = true)
     public ResponseEntity<byte[]> getLogoResponse(Long id) {

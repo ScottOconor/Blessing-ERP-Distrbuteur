@@ -5,7 +5,6 @@ import com.erp.accounting.entity.AccountAccount;
 import com.erp.accounting.repository.AccountAccountRepository;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.stock.entity.Product;
 import com.erp.stock.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,11 +28,9 @@ public class ServiceAccountService {
     private final ProductRepository productRepo;
     private final CompanyRepository companyRepo;
     private final AccountAccountRepository accountRepo;
-    private final TenantGuard tenantGuard;
 
     @Transactional(readOnly = true)
     public ServiceAccountsDTO getServiceAccounts(Long companyId) {
-        tenantGuard.check(companyId);
         Company company = companyRepo.findById(companyId)
                 .orElseThrow(() -> new EntityNotFoundException("Société introuvable"));
         String defaultCode = blankToNull(company.getServiceRevenueAccountCode());
@@ -58,7 +55,6 @@ public class ServiceAccountService {
 
     @Transactional
     public ServiceAccountsDTO setDefaultAccount(Long companyId, String accountCode) {
-        tenantGuard.check(companyId);
         Company company = companyRepo.findById(companyId)
                 .orElseThrow(() -> new EntityNotFoundException("Société introuvable"));
         company.setServiceRevenueAccountCode(validateAccount(accountCode, companyId));
@@ -70,7 +66,6 @@ public class ServiceAccountService {
     public ServiceAccountsDTO setProductAccount(Long productId, String accountCode) {
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new EntityNotFoundException("Service introuvable : " + productId));
-        tenantGuard.check(product.getCompanyId());
         if (!"service".equals(product.getType())) {
             throw new IllegalArgumentException("« " + product.getName() + " » n'est pas un service");
         }

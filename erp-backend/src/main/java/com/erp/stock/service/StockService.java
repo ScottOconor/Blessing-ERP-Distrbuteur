@@ -16,8 +16,6 @@ import com.erp.stock.dto.*;
 import com.erp.stock.entity.*;
 import com.erp.stock.repository.*;
 import com.erp.audit.service.AuditService;
-import com.erp.auth.SecurityUtils;
-import com.erp.common.service.TenantGuard;
 import com.erp.common.service.UsageGuard;
 import com.erp.accounting.service.FiscalLockGuard;
 import com.erp.sync.service.SyncEventPublisher;
@@ -48,6 +46,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class StockService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final DocumentNumberLock documentNumberLock;
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
@@ -84,7 +83,6 @@ public class StockService {
     private final SyncEventPublisher syncEventPublisher;
     private final AuditService auditService;
     private final FiscalLockGuard fiscalLockGuard;
-    private final TenantGuard tenantGuard;
     private final com.erp.common.list.ListQueryService listQuery;
     private final UsageGuard usageGuard;
 
@@ -290,7 +288,7 @@ public class StockService {
     }
 
     public ProductCategoryDTO createCategory(ProductCategoryDTO dto) {
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         ProductCategory c = categoryRepo.findByNameIgnoreCaseAndCompanyId(dto.getName().trim(), companyId)
                 .orElse(ProductCategory.builder().companyId(companyId).build());
         c.setName(dto.getName().trim());
@@ -303,7 +301,6 @@ public class StockService {
 
     public ProductCategoryDTO updateCategory(Long id, ProductCategoryDTO dto) {
         ProductCategory c = categoryRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Category not found: " + id));
-        tenantGuard.check(c.getCompanyId());
         c.setName(dto.getName());
         c.setCode(dto.getCode());
         if (dto.getStockAccountCode() != null) c.setStockAccountCode(dto.getStockAccountCode());
@@ -315,7 +312,6 @@ public class StockService {
     public void deleteCategory(Long id) {
         ProductCategory c = categoryRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable: " + id));
-        tenantGuard.check(c.getCompanyId());
         usageGuard.assertCategoryUnused(id);
         categoryRepo.delete(c);
     }
@@ -345,7 +341,7 @@ public class StockService {
     }
 
     public UnitOfMeasureDTO createUnitOfMeasure(UnitOfMeasureDTO dto) {
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         UnitOfMeasure u = uomRepo.findByNameIgnoreCaseAndCompanyId(dto.getName().trim(), companyId)
                 .orElse(UnitOfMeasure.builder().companyId(companyId).build());
         u.setName(dto.getName().trim());
@@ -355,7 +351,6 @@ public class StockService {
 
     public UnitOfMeasureDTO updateUnitOfMeasure(Long id, UnitOfMeasureDTO dto) {
         UnitOfMeasure u = uomRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Unit of measure not found: " + id));
-        tenantGuard.check(u.getCompanyId());
         u.setName(dto.getName());
         u.setCode(dto.getCode());
         return toUomDTO(uomRepo.save(u));
@@ -364,7 +359,6 @@ public class StockService {
     public void deleteUnitOfMeasure(Long id) {
         UnitOfMeasure u = uomRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Unité de mesure introuvable: " + id));
-        tenantGuard.check(u.getCompanyId());
         usageGuard.assertUnitOfMeasureUnused(id);
         uomRepo.delete(u);
     }
@@ -435,14 +429,13 @@ public class StockService {
     @Transactional(readOnly = true)
     public ProductDTO getProduct(Long id) {
         Product p = productRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
-        tenantGuard.check(p.getCompanyId());
         BigDecimal qty = quantRepo.findByProductIdAndCompanyId(p.getId(), p.getCompanyId())
                 .stream().map(StockQuant::getQuantity).reduce(ZERO, BigDecimal::add);
         return toProductDTO(p, qty);
     }
 
     public ProductDTO createProduct(ProductDTO dto) {
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         String stockCode = dto.getStockAccountCode();
         if (stockCode == null) stockCode = resolveStockAccountCode(dto.getCategoryId(), companyId);
 
@@ -501,7 +494,6 @@ public class StockService {
 
     public ProductDTO updateProduct(Long id, ProductDTO dto) {
         Product p = productRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
-        tenantGuard.check(p.getCompanyId());
         if (dto.getDefaultCode() != null) {
             String code = dto.getDefaultCode().trim();
             if (!code.isEmpty()) {
@@ -545,7 +537,6 @@ public class StockService {
     public void deleteProduct(Long id) {
         Product p = productRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
-        tenantGuard.check(p.getCompanyId());
         if (productRepo.hasOperationalReferences(id, p.getCompanyId())) {
             throw new IllegalStateException("Impossible de supprimer cet article : il est déjà utilisé dans des mouvements de stock, des ajustements, des pertes ou des documents de vente/achat.");
         }
@@ -558,7 +549,6 @@ public class StockService {
     @Transactional
     public void uploadProductPhoto(Long productId, byte[] data, String contentType) {
         Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
-        tenantGuard.check(p.getCompanyId());
         productPhotoRepo.findById(productId).orElseThrow().setPhotoData(data);
         p.setPhotoContentType(contentType);
     }
@@ -574,7 +564,6 @@ public class StockService {
     @Transactional
     public void deleteProductPhoto(Long productId) {
         Product p = productRepo.findById(productId).orElseThrow(() -> new EntityNotFoundException("Product not found: " + productId));
-        tenantGuard.check(p.getCompanyId());
         productPhotoRepo.findById(productId).orElseThrow().setPhotoData(null);
         p.setPhotoContentType(null);
     }
@@ -676,12 +665,11 @@ public class StockService {
     @Transactional(readOnly = true)
     public WarehouseDTO getWarehouse(Long id) {
         Warehouse w = warehouseRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
-        tenantGuard.check(w.getCompanyId());
         return toWarehouseDTO(w, true);
     }
 
     public WarehouseDTO createWarehouse(WarehouseDTO dto) {
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         String code = dto.getCode().toUpperCase();
         Warehouse existing = warehouseRepo.findFirstByCodeAndCompanyId(code, companyId).orElse(null);
         if (existing != null) {
@@ -791,7 +779,6 @@ public class StockService {
 
     public WarehouseDTO updateWarehouse(Long id, WarehouseDTO dto) {
         Warehouse wh = warehouseRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
-        tenantGuard.check(wh.getCompanyId());
         wh.setName(dto.getName());
         if (dto.getStockJournalId() != null) wh.setStockJournalId(dto.getStockJournalId());
         wh.setSalesJournalId(dto.getSalesJournalId());
@@ -830,7 +817,6 @@ public class StockService {
     public void deleteWarehouse(Long id) {
         Warehouse wh = warehouseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
-        tenantGuard.check(wh.getCompanyId());
         if (Boolean.TRUE.equals(wh.getIsDefault())) {
             throw new IllegalStateException("Impossible de supprimer le magasin par défaut : définissez-en un autre d'abord.");
         }
@@ -1434,7 +1420,7 @@ public class StockService {
     }
 
     public StockLocationDTO createLocation(StockLocationDTO dto) {
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         String usage = dto.getUsage() != null ? dto.getUsage() : "internal";
         StockLocation l = locationRepo.findFirstByCompanyIdAndNameIgnoreCaseAndUsageAndParentIdAndWarehouseId(
                         companyId, dto.getName().trim(), usage, dto.getParentId(), dto.getWarehouseId())
@@ -1449,7 +1435,6 @@ public class StockService {
 
     public StockLocationDTO updateLocation(Long id, StockLocationDTO dto) {
         StockLocation l = locationRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Location not found: " + id));
-        tenantGuard.check(l.getCompanyId());
         l.setName(dto.getName());
         l.setActive(dto.isActive());
         return toLocationDTO(locationRepo.save(l), false);
@@ -1458,7 +1443,6 @@ public class StockService {
     public void deleteLocation(Long id) {
         StockLocation l = locationRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Location not found: " + id));
-        tenantGuard.check(l.getCompanyId());
         usageGuard.assertLocationUnused(id);
         l.setActive(false);
         locationRepo.save(l);
@@ -1587,7 +1571,6 @@ public class StockService {
     @Transactional(readOnly = true)
     public StockPickingDTO getPicking(Long id) {
         StockPicking p = pickingRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
-        tenantGuard.check(p.getCompanyId());
         return toPickingDTO(p, true, null);
     }
 
@@ -1681,7 +1664,6 @@ public class StockService {
 
     public StockPickingDTO updatePicking(Long id, StockPickingRequest req) {
         StockPicking p = pickingRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
-        tenantGuard.check(p.getCompanyId());
         if (!"draft".equals(p.getState())) throw new IllegalStateException("Seuls les transferts en brouillon peuvent être modifiés");
 
         if (req.getLocationId() != null) p.setLocationId(req.getLocationId());
@@ -1745,7 +1727,6 @@ public class StockService {
      */
     public StockPickingDTO validatePicking(Long id) {
         StockPicking picking = pickingRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if ("done".equals(picking.getState())) throw new IllegalStateException("Ce transfert est déjà validé");
         if ("cancelled".equals(picking.getState())) throw new IllegalStateException("Ce transfert est annulé");
         if ("pending_reception".equals(picking.getState())) throw new IllegalStateException("Ce transfert est déjà en attente de réception");
@@ -1888,7 +1869,6 @@ public class StockService {
 
     public StockPickingDTO cancelPicking(Long id) {
         StockPicking picking = pickingRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if ("done".equals(picking.getState())) throw new IllegalStateException("Impossible d'annuler un transfert validé");
 
         // Pour un transfert inter-dépôts en pending_reception : restituer le stock à la source
@@ -2955,7 +2935,7 @@ public class StockService {
                 .name(dto.getName()).code(dto.getCode())
                 .address(dto.getAddress()).contactPerson(dto.getContactPerson())
                 .phone(dto.getPhone()).email(dto.getEmail())
-                .companyId(SecurityUtils.currentCompanyId()).active(true)
+                .companyId(singleCompany.getId()).active(true)
                 .build();
         return toAgencyDTO(agencyRepo.save(agency));
     }
@@ -2963,7 +2943,6 @@ public class StockService {
     public AgencyDTO updateAgency(Long id, AgencyDTO dto) {
         Agency agency = agencyRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Agence introuvable: " + id));
-        tenantGuard.check(agency.getCompanyId());
         agency.setName(dto.getName());
         agency.setCode(dto.getCode());
         agency.setAddress(dto.getAddress());
@@ -3077,7 +3056,6 @@ public class StockService {
     public StockPickingDTO updateInterCompanyExpedition(Long id, StockPickingRequest req) {
         StockPicking p = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
-        tenantGuard.check(p.getCompanyId());
         if (!"draft".equals(p.getState()))
             throw new IllegalStateException("Seules les expéditions en brouillon peuvent être modifiées");
 
@@ -3115,7 +3093,6 @@ public class StockService {
     public StockPickingDTO validateInterCompanyExpedition(Long id) {
         StockPicking picking = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if ("done".equals(picking.getState())) throw new IllegalStateException("Cette expédition est déjà validée");
         if ("cancelled".equals(picking.getState())) throw new IllegalStateException("Cette expédition est annulée");
         if ("pending_reception".equals(picking.getState())) throw new IllegalStateException("Cette expédition est déjà en attente de réception");
@@ -3197,7 +3174,6 @@ public class StockService {
     public StockPickingDTO confirmInterCompanyReception(Long id) {
         StockPicking picking = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if (!"pending_reception".equals(picking.getState()))
             throw new IllegalStateException("Cette expédition n'est pas en attente de réception");
         fiscalLockGuard.assertPeriodOpen(picking.getCompanyId(),
@@ -3336,7 +3312,6 @@ public class StockService {
     public StockPickingDTO retryNotifySender(Long id) {
         StockPicking picking = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Réception introuvable: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if (!picking.isTransferReception() || picking.getRemoteAgencyId() == null) {
             throw new IllegalStateException("Cette réception n'est pas liée à une agence distante");
         }
@@ -3433,7 +3408,6 @@ public class StockService {
     public StockPickingDTO cancelInterCompanyReception(Long id) {
         StockPicking picking = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Réception introuvable: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if (!picking.isTransferReception() || !"pending_reception".equals(picking.getState()))
             throw new IllegalStateException("Cette réception n'est pas en attente");
         fiscalLockGuard.assertPeriodOpen(picking.getCompanyId(),
@@ -3460,7 +3434,6 @@ public class StockService {
     public StockPickingDTO cancelInterCompanyExpedition(Long id) {
         StockPicking picking = pickingRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
-        tenantGuard.check(picking.getCompanyId());
         if ("done".equals(picking.getState()))
             throw new IllegalStateException("Impossible d'annuler une expédition déjà validée");
         fiscalLockGuard.assertPeriodOpen(picking.getCompanyId(),

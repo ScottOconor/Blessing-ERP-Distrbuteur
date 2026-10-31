@@ -14,7 +14,6 @@ import com.erp.caisse.entity.*;
 import com.erp.caisse.repository.*;
 import com.erp.audit.service.AuditService;
 import com.erp.common.entity.Company;
-import com.erp.common.service.TenantGuard;
 import com.erp.common.service.UsageGuard;
 import com.erp.sales.repository.SellerRepository;
 import com.erp.sync.entity.SyncEventType;
@@ -37,6 +36,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class CaisseService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final CaisseRepository caisseRepo;
     private final CaisseOperationRepository operationRepo;
     private final CaisseSessionRepository sessionRepo;
@@ -48,7 +48,6 @@ public class CaisseService {
     private final AccountingService accountingService;
     private final SyncEventPublisher syncEventPublisher;
     private final AuditService auditService;
-    private final TenantGuard tenantGuard;
     private final com.erp.common.list.ListQueryService listQuery;
     private final UsageGuard usageGuard;
     private final UserRepository userRepository;
@@ -74,7 +73,6 @@ public class CaisseService {
     public CaisseDTO getCaisse(Long id) {
         Caisse c = caisseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + id));
-        tenantGuard.check(c.getCompanyId());
         return enrichCaisseDTO(toDTO(c));
     }
 
@@ -86,7 +84,7 @@ public class CaisseService {
 
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance pour
         // choisir SOUS QUELLE société la caisse est créée.
-        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
 
         Caisse caisse = Caisse.builder()
                 .name(dto.getName())
@@ -106,7 +104,6 @@ public class CaisseService {
     public CaisseDTO updateCaisse(Long id, CaisseDTO dto) {
         Caisse caisse = caisseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + id));
-        tenantGuard.check(caisse.getCompanyId());
 
         caisse.setName(dto.getName());
         caisse.setCode(dto.getCode());
@@ -132,7 +129,6 @@ public class CaisseService {
     public void deleteCaisse(Long id) {
         Caisse caisse = caisseRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + id));
-        tenantGuard.check(caisse.getCompanyId());
         usageGuard.assertCaisseUnused(id);
         caisse.setActive(false);
         caisseRepo.save(caisse);
@@ -228,7 +224,6 @@ public class CaisseService {
     public CaisseOperationDTO addOperation(AddOperationRequest req, String userName) {
         Caisse caisse = caisseRepo.findById(req.getCaisseId())
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + req.getCaisseId()));
-        tenantGuard.check(caisse.getCompanyId());
 
         // La société de l'opération/écriture est dérivée de la caisse réellement chargée (et non
         // du champ companyId fourni par le client) pour empêcher qu'une caisse de la société A soit
@@ -299,7 +294,7 @@ public class CaisseService {
                     .build());
         }
 
-        // companyId de la caisse déjà vérifiée (tenantGuard.check ci-dessus) — jamais
+        // companyId de la caisse — jamais
         // req.getCompanyId() (client), qui aurait permis de poster l'écriture et l'opération
         // sous une société arbitraire même avec un caisseId légitime.
         JournalEntryRequest entryReq = JournalEntryRequest.builder()
@@ -373,7 +368,6 @@ public class CaisseService {
     public CaisseSessionDTO ouvrirSession(Long caisseId, OuvertureCaisseRequest req, String userName) {
         Caisse caisse = caisseRepo.findByIdForUpdate(caisseId)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + caisseId));
-        tenantGuard.check(caisse.getCompanyId());
         if (req.getCompanyId() != null && !req.getCompanyId().equals(caisse.getCompanyId())) {
             throw new IllegalArgumentException("La société indiquée ne correspond pas à la caisse sélectionnée.");
         }
@@ -482,7 +476,6 @@ public class CaisseService {
         // passer toutes les deux le contrôle "déjà clôturée" avant que l'une des deux ait committé.
         Caisse caisse = caisseRepo.findByIdForUpdate(caisseId)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + caisseId));
-        tenantGuard.check(caisse.getCompanyId());
 
         LocalDate today = LocalDate.now();
 
@@ -703,7 +696,6 @@ public class CaisseService {
     public CaisseDTO rouvrirCaisse(Long caisseId) {
         Caisse caisse = caisseRepo.findById(caisseId)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + caisseId));
-        tenantGuard.check(caisse.getCompanyId());
         LocalDate today = LocalDate.now();
         sessionRepo.findByCaisseIdAndDateSession(caisseId, today).ifPresent(s -> {
             if ("CLOTUREE".equals(s.getStatus())) {
@@ -725,7 +717,6 @@ public class CaisseService {
     public BrouillardDTO getBrouillard(Long caisseId, LocalDate date) {
         Caisse caisse = caisseRepo.findById(caisseId)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + caisseId));
-        tenantGuard.check(caisse.getCompanyId());
 
         AccountJournal journal = journalRepo.findById(caisse.getJournalId())
                 .orElseThrow(() -> new EntityNotFoundException("Journal non trouvé"));
@@ -808,7 +799,6 @@ public class CaisseService {
     public List<CaisseSessionDTO> getSessions(Long caisseId) {
         Caisse caisse = caisseRepo.findById(caisseId)
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + caisseId));
-        tenantGuard.check(caisse.getCompanyId());
         return sessionRepo.findByCaisseIdOrderByDateSessionDesc(caisseId)
                 .stream()
                 .map(s -> toSessionDTO(s, caisse))
@@ -823,7 +813,6 @@ public class CaisseService {
                 .orElseThrow(() -> new EntityNotFoundException("Session non trouvée: " + sessionId));
         Caisse caisse = caisseRepo.findById(session.getCaisseId())
                 .orElseThrow(() -> new EntityNotFoundException("Caisse non trouvée: " + session.getCaisseId()));
-        tenantGuard.check(caisse.getCompanyId());
 
         List<RapportClotureDTO.DenominationCountLine> countsOuverture =
                 toDenominationCountLines(sessionId, CountMoment.OUVERTURE);

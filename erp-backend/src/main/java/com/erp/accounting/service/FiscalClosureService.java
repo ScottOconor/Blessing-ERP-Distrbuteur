@@ -15,7 +15,6 @@ import com.erp.accounting.repository.AccountMoveRepository;
 import com.erp.audit.service.AuditService;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,14 +48,12 @@ public class FiscalClosureService {
     private final AccountMoveRepository moveRepo;
     private final AccountingService accountingService;
     private final AuditService auditService;
-    private final TenantGuard tenantGuard;
 
     @Transactional(readOnly = true)
     public FiscalClosurePreviewResponse preview(FiscalClosurePreviewRequest req) {
         // req.getCompanyId() vient du client — sans ce contrôle, n'importe quel utilisateur
         // authentifié pouvait déclencher une clôture d'exercice (écriture + verrouillage de
         // période) sur UNE AUTRE société en changeant simplement ce champ dans la requête.
-        tenantGuard.check(req.getCompanyId());
         List<AccountMove> drafts = moveRepo.findByCompanyIdAndStateAndDateBetweenOrderByDateAscNameAsc(
                 req.getCompanyId(), "draft", req.getDateFrom(), req.getDateTo());
 
@@ -94,7 +91,6 @@ public class FiscalClosureService {
     }
 
     public FiscalClosureExecuteResponse execute(FiscalClosureExecuteRequest req) {
-        tenantGuard.check(req.getCompanyId());
         List<AccountMove> drafts = moveRepo.findByCompanyIdAndStateAndDateBetweenOrderByDateAscNameAsc(
                 req.getCompanyId(), "draft", req.getDateFrom(), req.getDateTo());
         if (!drafts.isEmpty()) {
@@ -144,7 +140,6 @@ public class FiscalClosureService {
                     .orElseThrow(() -> new EntityNotFoundException("Compte de résultat introuvable: " + resultAccountId));
             // Le compte de résultat référencé doit appartenir à la même société que la clôture,
             // sinon l'écriture générée mélangerait des comptes de deux sociétés différentes.
-            tenantGuard.check(resultAccount.getCompany() != null ? resultAccount.getCompany().getId() : null);
             BigDecimal amount = netResult.abs();
             lines.add(JournalEntryRequest.LineRequest.builder()
                     .accountId(resultAccount.getId())

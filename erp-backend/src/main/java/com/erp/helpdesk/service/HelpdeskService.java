@@ -2,7 +2,6 @@ package com.erp.helpdesk.service;
 
 import com.erp.common.service.DocumentNumberLock;
 import com.erp.audit.service.AuditService;
-import com.erp.common.service.TenantGuard;
 import com.erp.config.service.HubConfigService;
 import com.erp.helpdesk.dto.TicketCommentDTO;
 import com.erp.helpdesk.dto.TicketDTO;
@@ -34,13 +33,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class HelpdeskService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final DocumentNumberLock documentNumberLock;
 
     private final TicketRepository ticketRepo;
     private final TicketCommentRepository commentRepo;
     private final AuditService auditService;
     private final HubConfigService hubConfigService;
-    private final TenantGuard tenantGuard;
     private final com.erp.common.list.ListQueryService listQuery;
 
     @Value("${sync.spoke.id:SPOKE}")
@@ -64,7 +63,6 @@ public class HelpdeskService {
 
     @Transactional(readOnly = true)
     public List<TicketDTO> getTickets(Long companyId, String status, String assignedTo, String createdBy) {
-        tenantGuard.check(companyId);
         List<Ticket> tickets;
         if (createdBy != null) {
             if (status != null) {
@@ -91,7 +89,6 @@ public class HelpdeskService {
     public TicketDTO getTicket(Long id) {
         Ticket t = ticketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket introuvable : " + id));
-        tenantGuard.check(t.getCompanyId());
         return toDTO(t, true);
     }
 
@@ -100,7 +97,7 @@ public class HelpdeskService {
     public TicketDTO createTicket(TicketDTO dto) {
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance pour
         // choisir SOUS QUELLE société le ticket est créé.
-        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         String number = generateNumber(companyId);
         Ticket t = Ticket.builder()
                 .ticketNumber(number)
@@ -127,7 +124,6 @@ public class HelpdeskService {
     public TicketDTO updateTicket(Long id, TicketDTO dto) {
         Ticket t = ticketRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket introuvable : " + id));
-        tenantGuard.check(t.getCompanyId());
         if (dto.getTitle() != null) t.setTitle(dto.getTitle());
         if (dto.getDescription() != null) t.setDescription(dto.getDescription());
         if (dto.getPriority() != null) t.setPriority(dto.getPriority());
@@ -161,7 +157,6 @@ public class HelpdeskService {
     public TicketCommentDTO addComment(Long ticketId, TicketCommentDTO dto) {
         Ticket ticket = ticketRepo.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket introuvable : " + ticketId));
-        tenantGuard.check(ticket.getCompanyId());
         if (ticket.getStatus() == TicketStatus.FERME) {
             throw new IllegalStateException("Impossible de commenter un ticket clôturé.");
         }
@@ -197,7 +192,6 @@ public class HelpdeskService {
 
     @Transactional(readOnly = true)
     public TicketStatsDTO getStats(Long companyId) {
-        tenantGuard.check(companyId);
         return TicketStatsDTO.builder()
                 .totalOuvert(ticketRepo.countByCompanyIdAndStatus(companyId, TicketStatus.OUVERT))
                 .totalEnCours(ticketRepo.countByCompanyIdAndStatus(companyId, TicketStatus.EN_COURS))

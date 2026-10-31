@@ -2,7 +2,6 @@ package com.erp.common.service;
 
 import com.erp.accounting.entity.Partner;
 import com.erp.accounting.repository.PartnerRepository;
-import com.erp.auth.SecurityUtils;
 import com.erp.common.dto.PrecompteDTO;
 import com.erp.common.entity.Precompte;
 import com.erp.common.repository.PrecompteRepository;
@@ -20,9 +19,9 @@ public class PrecompteService {
 
     public static final String[] TAUX_ALLOWED = {"1", "2", "2.5", "5", "10"};
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final PrecompteRepository precompteRepo;
     private final PartnerRepository partnerRepo;
-    private final com.erp.common.service.TenantGuard tenantGuard;
 
     @Transactional(readOnly = true)
     public List<PrecompteDTO> getAll(Long companyId) {
@@ -41,7 +40,7 @@ public class PrecompteService {
                 .orElseThrow(() -> new IllegalArgumentException("Partenaire introuvable"));
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance pour
         // choisir SOUS QUELLE société le précompte est créé/modifié.
-        Long companyId = SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
         Precompte entity = precompteRepo.findByPartnerIdAndTypePrecompteAndCompanyId(
                 dto.getPartnerId(), dto.getTypePrecompte(), companyId)
                 .orElse(Precompte.builder().build());
@@ -56,7 +55,6 @@ public class PrecompteService {
     public void delete(Long id) {
         Precompte p = precompteRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Précompte introuvable"));
-        tenantGuard.check(p.getCompanyId());
         p.setActive(false);
         precompteRepo.save(p);
     }

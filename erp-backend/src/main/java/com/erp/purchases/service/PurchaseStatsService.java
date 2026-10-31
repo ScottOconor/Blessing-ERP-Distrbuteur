@@ -24,13 +24,11 @@ public class PurchaseStatsService {
     private final ProductRepository productRepo;
     private final ProductCategoryRepository categoryRepo;
     private final WarehouseRepository warehouseRepo;
-    private final com.erp.common.service.TenantGuard tenantGuard;
     private static final BigDecimal ZERO    = BigDecimal.ZERO;
     private static final BigDecimal NEG_ONE = BigDecimal.ONE.negate();
 
     public PurchaseStatsResponse getStats(PurchaseStatsRequest req) {
         // req.getCompanyId() vient du client — même correctif que côté ventes.
-        tenantGuard.check(req.getCompanyId());
         String groupBy = req.getGroupBy() != null ? req.getGroupBy() : "fournisseur";
         Long companyId = req.getCompanyId();
 

@@ -10,7 +10,6 @@ import com.erp.common.ConsigneCodes;
 import com.erp.common.entity.Precompte;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.common.repository.PrecompteRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.purchases.dto.PurchaseInvoiceRequest;
 import com.erp.purchases.dto.RemiseDTO;
 import com.erp.purchases.dto.RemisePaiementDTO;
@@ -42,6 +41,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class RemiseService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final RemiseRepository remiseRepo;
     private final RemisePaiementRepository paiementRepo;
     private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
@@ -53,7 +53,6 @@ public class RemiseService {
     private final AccountJournalRepository journalRepo;
     private final SyncEventPublisher syncPublisher;
     @Lazy private final PurchaseService purchaseService;
-    private final TenantGuard tenantGuard;
     private final com.erp.common.service.DocumentNumberLock documentNumberLock;
     private final CompanyRepository companyRepo;
     private final FiscalLockGuard fiscalLockGuard;
@@ -75,7 +74,7 @@ public class RemiseService {
     public RemiseDTO save(RemiseDTO dto) {
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance
         // pour déterminer sous quelle société l'entité est créée/mise à jour.
-        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
 
         Partner partner = partnerRepo.findById(dto.getPartnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Partenaire introuvable"));
@@ -97,7 +96,6 @@ public class RemiseService {
     public void delete(Long id) {
         Remise r = remiseRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Remise introuvable"));
-        tenantGuard.check(r.getCompanyId());
         r.setActive(false);
         remiseRepo.save(r);
     }
@@ -166,7 +164,6 @@ public class RemiseService {
     public RemisePaiementDTO getPaiement(Long id) {
         RemisePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         return toPaiementDTO(p);
     }
 
@@ -180,14 +177,11 @@ public class RemiseService {
         // Vérifier l'appartenance de l'entité EXISTANTE avant toute mutation, avec son companyId
         // chargé depuis la base — dto.getCompanyId() (écrasé juste après) vient du client et ne
         // doit jamais servir de base à un contrôle d'accès.
-        if (entity.getId() != null) {
-            tenantGuard.check(entity.getCompanyId());
-        }
 
         if (entity.getId() == null) {
             // companyId vient du corps de la requête (client) — ne jamais lui faire confiance
             // pour la création : on utilise la société de l'utilisateur authentifié.
-            Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+            Long companyId = singleCompany.getId();
             entity.setName(generateRmsName(companyId));
             entity.setCompanyId(companyId);
         }
@@ -243,7 +237,6 @@ public class RemiseService {
     public RemisePaiementDTO confirmPaiement(Long id) {
         RemisePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         if (!"draft".equals(p.getState())) {
             throw new IllegalStateException("Seul un brouillon peut être confirmé");
         }
@@ -264,7 +257,6 @@ public class RemiseService {
     public RemisePaiementDTO cancelPaiement(Long id) {
         RemisePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         if ("cancelled".equals(p.getState())) {
             throw new IllegalStateException("Ce règlement est déjà annulé");
         }
@@ -301,7 +293,6 @@ public class RemiseService {
     public RemisePaiementDTO generateFromInvoice(Long invoiceId) {
         PurchaseInvoice invoice = purchaseInvoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Facture introuvable"));
-        tenantGuard.check(invoice.getCompany() != null ? invoice.getCompany().getId() : null);
 
         // "extournee" acceptée comme sur RistourneService.generateFromInvoice côté ventes : une
         // facture totalement extournée doit pouvoir générer/annuler son règlement de remise associé.
@@ -596,9 +587,6 @@ public class RemiseService {
         if (paiements.isEmpty()) throw new IllegalArgumentException("Règlements introuvables");
 
         for (RemisePaiement p : paiements) {
-            // companyId vient du corps de requête client — ne jamais s'y fier pour un contrôle
-            // d'accès. tenantGuard compare à la société de l'utilisateur authentifié (JWT).
-            tenantGuard.check(p.getCompanyId());
             if (!"confirmed".equals(p.getState())) {
                 throw new IllegalStateException(
                     "Seuls les règlements confirmés peuvent être facturés. Problème : " + p.getName());

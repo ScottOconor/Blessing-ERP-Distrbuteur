@@ -5,7 +5,6 @@ import com.erp.accounting.repository.AccountJournalRepository;
 import com.erp.common.ConsigneCodes;
 import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.eleader.dto.EleaderConfigDTO;
 import com.erp.eleader.dto.EleaderEmballageMappingDTO;
 import com.erp.eleader.entity.EleaderConfig;
@@ -33,7 +32,6 @@ public class EleaderConfigService {
     private final EleaderEmballageMappingRepository mappingRepo;
     private final AccountJournalRepository journalRepo;
     private final CompanyRepository companyRepo;
-    private final TenantGuard tenantGuard;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -55,7 +53,6 @@ public class EleaderConfigService {
 
     @Transactional(readOnly = true)
     public EleaderConfigDTO getConfig(Long companyId) {
-        tenantGuard.check(companyId);
         return configRepo.findByCompanyId(companyId)
                 .map(this::toDTO)
                 .orElseGet(() -> EleaderConfigDTO.builder()
@@ -69,7 +66,6 @@ public class EleaderConfigService {
     }
 
     public EleaderConfigDTO saveConfig(EleaderConfigDTO dto) {
-        tenantGuard.check(dto.getCompanyId());
 
         // ── Validation des doublons ──────────────────────────────────────────
         validateMappingDuplicates(dto.getEmballageMappings());
@@ -126,7 +122,6 @@ public class EleaderConfigService {
     }
 
     public EleaderEmballageMappingDTO addMapping(Long companyId, EleaderEmballageMappingDTO dto) {
-        tenantGuard.check(companyId);
         EleaderConfig config = configRepo.findByCompanyId(companyId)
                 .orElseThrow(() -> new EntityNotFoundException("Configuration eLeader introuvable — enregistrez d'abord la configuration."));
 
@@ -158,7 +153,6 @@ public class EleaderConfigService {
                 .orElseThrow(() -> new EntityNotFoundException("Mapping introuvable : " + mappingId));
         EleaderConfig config = mapping.getConfig();
         Long companyId = config.getCompany() != null ? config.getCompany().getId() : null;
-        tenantGuard.check(companyId);
         config.getEmballageMappings().removeIf(m -> m.getId() != null && m.getId().equals(mappingId));
         EleaderConfig saved = configRepo.save(config);
         ConsigneCodes.refresh(companyId, buildExtraCodes(saved));

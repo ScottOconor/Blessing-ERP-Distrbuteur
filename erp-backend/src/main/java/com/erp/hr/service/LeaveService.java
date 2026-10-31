@@ -1,6 +1,5 @@
 package com.erp.hr.service;
 
-import com.erp.common.service.TenantGuard;
 import com.erp.hr.dto.LeaveBalanceSummary;
 import com.erp.hr.entity.Employee;
 import com.erp.hr.entity.LeaveBalance;
@@ -34,17 +33,16 @@ public class LeaveService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final LeaveTypeRepository typeRepo;
     private final LeaveDeclarationRepository declarationRepo;
     private final LeaveBalanceRepository balanceRepo;
     private final EmployeeRepository employeeRepo;
     private final LeaveTypeSeeder leaveTypeSeeder;
-    private final TenantGuard tenantGuard;
 
     // ─────────────── Types de congés ───────────────
 
     public List<LeaveType> getLeaveTypes(Long companyId) {
-        tenantGuard.check(companyId);
         leaveTypeSeeder.seedIfEmpty(companyId);
         return typeRepo.findByCompanyIdOrderByNameAsc(companyId);
     }
@@ -53,10 +51,9 @@ public class LeaveService {
         if (t.getId() != null) {
             LeaveType existing = typeRepo.findById(t.getId())
                     .orElseThrow(() -> new EntityNotFoundException("Type de congé introuvable: " + t.getId()));
-            tenantGuard.check(existing.getCompanyId());
             t.setCompanyId(existing.getCompanyId());
         } else {
-            t.setCompanyId(com.erp.auth.SecurityUtils.currentCompanyId());
+            t.setCompanyId(singleCompany.getId());
         }
         return typeRepo.save(t);
     }
@@ -64,7 +61,6 @@ public class LeaveService {
     public void deleteLeaveType(Long id) {
         LeaveType t = typeRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Type de congé introuvable: " + id));
-        tenantGuard.check(t.getCompanyId());
         typeRepo.deleteById(id);
     }
 
@@ -72,7 +68,6 @@ public class LeaveService {
 
     @Transactional(readOnly = true)
     public List<LeaveDeclaration> getDeclarations(Long companyId, Long employeeId) {
-        tenantGuard.check(companyId);
         return employeeId != null
                 ? declarationRepo.findByCompanyIdAndEmployeeIdOrderByDateFromDesc(companyId, employeeId)
                 : declarationRepo.findByCompanyIdOrderByDateFromDesc(companyId);
@@ -83,10 +78,9 @@ public class LeaveService {
         if (d.getId() != null) {
             LeaveDeclaration existing = declarationRepo.findById(d.getId())
                     .orElseThrow(() -> new EntityNotFoundException("Déclaration introuvable: " + d.getId()));
-            tenantGuard.check(existing.getCompanyId());
             companyId = existing.getCompanyId();
         } else {
-            companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+            companyId = singleCompany.getId();
         }
         d.setCompanyId(companyId);
 
@@ -107,7 +101,6 @@ public class LeaveService {
     public void deleteDeclaration(Long id) {
         LeaveDeclaration d = declarationRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Déclaration introuvable: " + id));
-        tenantGuard.check(d.getCompanyId());
         declarationRepo.deleteById(id);
     }
 
@@ -115,7 +108,6 @@ public class LeaveService {
 
     /** Report de solde N-1 : mise à jour (création si absente) pour un employé/type/année. */
     public LeaveBalance saveCarryOver(Long companyId, Long employeeId, Long leaveTypeId, int year, BigDecimal carryOver) {
-        tenantGuard.check(companyId);
         LeaveBalance b = balanceRepo.findByCompanyIdAndEmployeeIdAndLeaveTypeIdAndYear(companyId, employeeId, leaveTypeId, year)
                 .orElse(LeaveBalance.builder().employeeId(employeeId).leaveTypeId(leaveTypeId).year(year).companyId(companyId).build());
         b.setCarryOver(carryOver == null ? ZERO : carryOver);
@@ -125,7 +117,6 @@ public class LeaveService {
     /** Compteurs de tous les types de congés actifs pour un employé, sur une année, calculés à la date du jour. */
     @Transactional(readOnly = true)
     public List<LeaveBalanceSummary> getBalances(Long companyId, Long employeeId, int year) {
-        tenantGuard.check(companyId);
         return computeBalances(companyId, employeeId, year, LocalDate.now());
     }
 

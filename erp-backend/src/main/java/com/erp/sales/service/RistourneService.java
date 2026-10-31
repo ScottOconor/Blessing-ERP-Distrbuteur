@@ -9,7 +9,6 @@ import com.erp.sync.service.SyncEventPublisher;
 import com.erp.common.entity.Precompte;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.common.repository.PrecompteRepository;
-import com.erp.common.service.TenantGuard;
 import com.erp.sales.dto.RistourneDTO;
 import com.erp.sales.dto.RistournePaiementDTO;
 import com.erp.sales.dto.SalesInvoiceRequest;
@@ -40,6 +39,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class RistourneService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final RistourneRepository ristourneRepo;
     private final RistournePaiementRepository paiementRepo;
     private final com.erp.common.service.JsonArrayStreamer jsonArrayStreamer;
@@ -51,7 +51,6 @@ public class RistourneService {
     private final AccountJournalRepository journalRepo;
     private final SyncEventPublisher syncPublisher;
     @Lazy private final SalesService salesService;
-    private final TenantGuard tenantGuard;
     private final com.erp.common.service.DocumentNumberLock documentNumberLock;
     private final CompanyRepository companyRepo;
     private final FiscalLockGuard fiscalLockGuard;
@@ -83,7 +82,7 @@ public class RistourneService {
         }
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance
         // pour déterminer sous quelle société l'entité est créée/mise à jour.
-        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
 
         Partner partner = partnerRepo.findById(dto.getPartnerId())
                 .orElseThrow(() -> new IllegalArgumentException("Partenaire introuvable"));
@@ -107,7 +106,6 @@ public class RistourneService {
     public void delete(Long id) {
         Ristourne r = ristourneRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Ristourne introuvable"));
-        tenantGuard.check(r.getCompanyId());
         r.setActive(false);
         ristourneRepo.save(r);
     }
@@ -211,7 +209,6 @@ public class RistourneService {
     public RistournePaiementDTO getPaiement(Long id) {
         RistournePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         return toPaiementDTO(p);
     }
 
@@ -225,14 +222,11 @@ public class RistourneService {
         // Vérifier l'appartenance de l'entité EXISTANTE avant toute mutation, avec son companyId
         // chargé depuis la base — dto.getCompanyId() (écrasé juste après) n'est pas fiable ici,
         // il vient du client et ne doit jamais servir de base à un contrôle d'accès.
-        if (entity.getId() != null) {
-            tenantGuard.check(entity.getCompanyId());
-        }
 
         if (entity.getId() == null) {
             // companyId vient du corps de la requête (client) — ne jamais lui faire confiance
             // pour la création : on utilise la société de l'utilisateur authentifié.
-            Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+            Long companyId = singleCompany.getId();
             entity.setName(generateRstName(companyId));
             entity.setCompanyId(companyId);
         }
@@ -279,7 +273,6 @@ public class RistourneService {
     public RistournePaiementDTO confirmPaiement(Long id) {
         RistournePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         if (!"draft".equals(p.getState())) {
             throw new IllegalStateException("Seul un brouillon peut être confirmé");
         }
@@ -300,7 +293,6 @@ public class RistourneService {
     public RistournePaiementDTO cancelPaiement(Long id) {
         RistournePaiement p = paiementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Règlement introuvable"));
-        tenantGuard.check(p.getCompanyId());
         if ("cancelled".equals(p.getState())) {
             throw new IllegalStateException("Ce règlement est déjà annulé");
         }
@@ -336,7 +328,6 @@ public class RistourneService {
     public RistournePaiementDTO generateFromInvoice(Long invoiceId) {
         SalesInvoice invoice = salesInvoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Facture introuvable"));
-        tenantGuard.check(invoice.getCompany() != null ? invoice.getCompany().getId() : null);
 
         if (!"posted".equals(invoice.getState()) && !"paid".equals(invoice.getState()) && !"extournee".equals(invoice.getState())) {
             throw new IllegalStateException("Seules les factures/avoirs validés peuvent générer des règlements");
@@ -491,7 +482,6 @@ public class RistourneService {
     public RistournePaiementDTO generateFromInvoiceForType(Long invoiceId, String typeRistourne) {
         SalesInvoice invoice = salesInvoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Facture introuvable"));
-        tenantGuard.check(invoice.getCompany() != null ? invoice.getCompany().getId() : null);
 
         // "extournee" acceptée comme sur generateFromInvoice ci-dessus : cette variante par type
         // (utilisée par la génération par période) doit accepter exactement les mêmes états, sinon
@@ -700,10 +690,6 @@ public class RistourneService {
         if (paiements.isEmpty()) throw new IllegalArgumentException("Règlements introuvables");
 
         for (RistournePaiement p : paiements) {
-            // companyId ici vient du corps de requête client — ne jamais s'y fier pour un contrôle
-            // d'accès (il suffirait à l'attaquant de le renseigner avec la société de la victime).
-            // tenantGuard compare à la société de l'utilisateur authentifié, dérivée du JWT.
-            tenantGuard.check(p.getCompanyId());
             if (!"confirmed".equals(p.getState())) {
                 throw new IllegalStateException(
                     "Seuls les règlements confirmés peuvent être facturés. Problème : " + p.getName());

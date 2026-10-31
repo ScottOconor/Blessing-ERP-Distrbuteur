@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class EnlevementService {
 
+    private final com.erp.common.service.SingleCompany singleCompany;
     private final EnlevementRepository enlevementRepo;
     private final EnlevementClientRepository enlevementClientRepo;
     private final ProductCategoryRepository categoryRepo;
@@ -40,7 +41,6 @@ public class EnlevementService {
     private final SalesInvoiceRepository salesInvoiceRepo;
     private final AccountMoveLineRepository moveLineRepo;
     private final SyncEventPublisher syncEventPublisher;
-    private final TenantGuard tenantGuard;
 
     @Transactional(readOnly = true)
     public List<EnlevementDTO> getAll(Long companyId) {
@@ -52,11 +52,10 @@ public class EnlevementService {
         // companyId vient du corps de la requête (client) — ne jamais lui faire confiance pour
         // choisir SOUS QUELLE société la config est créée/modifiée (cf. generateFacture dans
         // RistourneService/RemiseService, même bug corrigé). Seul le companyId du JWT fait foi.
-        Long companyId = com.erp.auth.SecurityUtils.currentCompanyId();
+        Long companyId = singleCompany.getId();
 
         ProductCategory cat = categoryRepo.findById(dto.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie introuvable"));
-        tenantGuard.check(cat.getCompanyId());
 
         Enlevement entity = enlevementRepo.findByCategoryIdAndCompanyId(dto.getCategoryId(), companyId)
                 .orElse(Enlevement.builder().build());
@@ -97,7 +96,6 @@ public class EnlevementService {
     public void delete(Long id) {
         Enlevement e = enlevementRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Enlèvement introuvable"));
-        tenantGuard.check(e.getCompanyId());
         e.setActive(false);
         enlevementRepo.save(e);
     }
@@ -180,7 +178,6 @@ public class EnlevementService {
     public List<EnlevementRapportDTO.Line> getInvoiceCosts(Long invoiceId) {
         PurchaseInvoice inv = purchaseInvoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Facture introuvable"));
-        tenantGuard.check(inv.getCompany() != null ? inv.getCompany().getId() : null);
 
         Map<Long, Enlevement> enlevByCategory = buildEnlevByCategory(inv.getCompany().getId());
         if (enlevByCategory.isEmpty()) return Collections.emptyList();

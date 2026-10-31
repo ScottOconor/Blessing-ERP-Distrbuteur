@@ -2,7 +2,6 @@ package com.erp.stock.controller;
 
 import com.erp.common.repository.CompanyRepository;
 import com.erp.config.ProductCodeUniqueIndexInitializer;
-import com.erp.common.service.TenantGuard;
 import com.erp.stock.dto.*;
 import com.erp.stock.repository.StockPickingTypeRepository;
 import com.erp.stock.entity.ProductPriceHistory;
@@ -35,12 +34,10 @@ public class StockController {
     private final StockPickingTypeRepository pickingTypeRepo;
     private final CompanyRepository companyRepository;
     private final ProductCodeUniqueIndexInitializer productCodeIndex;
-    private final TenantGuard tenantGuard;
 
     // ---- Categories ----
     @GetMapping("/categories")
     public ResponseEntity<List<ProductCategoryDTO>> getCategories(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getCategories(companyId));
     }
 
@@ -63,7 +60,6 @@ public class StockController {
     // ---- Units of measure (UDM) ----
     @GetMapping("/units-of-measure")
     public ResponseEntity<List<UnitOfMeasureDTO>> getUnitsOfMeasure(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getUnitsOfMeasure(companyId));
     }
 
@@ -88,7 +84,6 @@ public class StockController {
     public ResponseEntity<List<ProductDTO>> getProducts(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "warehouseId", required = false) Long warehouseId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getProducts(companyId, warehouseId));
     }
 
@@ -107,7 +102,6 @@ public class StockController {
     @GetMapping("/products/{id}/price-history")
     public ResponseEntity<List<ProductPriceHistory>> getPriceHistory(
             @PathVariable("id") Long id, @RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(productValuationService.getHistory(id, companyId));
     }
 
@@ -116,7 +110,6 @@ public class StockController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ProductValuationService.RebuildResult> rebuildPriceHistory(
             @RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(productValuationService.rebuildCmupHistory(companyId));
     }
 
@@ -167,7 +160,6 @@ public class StockController {
     /** Marque tous les produits des catégories EMBALLAGES comme exemptes de TVA. */
     @PostMapping("/products/apply-emballages-tva-exempt")
     public ResponseEntity<java.util.Map<String, Object>> applyEmballagesTvaExempt(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         int count = stockService.applyEmballagesTvaExempt(companyId);
         return ResponseEntity.ok(java.util.Map.of("updated", count, "message",
                 count + " produit(s) de la catégorie EMBALLAGES marqué(s) comme exempte(s) de TVA"));
@@ -176,7 +168,6 @@ public class StockController {
     // ---- Warehouses ----
     @GetMapping("/warehouses")
     public ResponseEntity<List<WarehouseDTO>> getWarehouses(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getWarehouses(companyId));
     }
 
@@ -209,7 +200,6 @@ public class StockController {
     // ---- Agences distantes ----
     @GetMapping("/agencies")
     public ResponseEntity<List<AgencyDTO>> getAgencies(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getAgencies(companyId));
     }
 
@@ -226,7 +216,6 @@ public class StockController {
     // ---- Locations ----
     @GetMapping("/locations")
     public ResponseEntity<List<StockLocationDTO>> getLocations(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getLocations(companyId));
     }
 
@@ -249,7 +238,6 @@ public class StockController {
     // ---- Picking Types ----
     @GetMapping("/picking-types")
     public ResponseEntity<List<StockPickingTypeDTO>> getPickingTypes(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getPickingTypes(companyId));
     }
 
@@ -258,7 +246,6 @@ public class StockController {
     public ResponseEntity<StreamingResponseBody> getPickings(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "type", required = false) String type) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamPickings(companyId, type, out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -291,7 +278,6 @@ public class StockController {
     // Shortcuts par type
     @GetMapping("/receptions")
     public ResponseEntity<StreamingResponseBody> getReceptions(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamPickings(companyId, "incoming", out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -299,7 +285,6 @@ public class StockController {
     /** Entrées Dépôt Achat en attente de réception physique (état confirmed) */
     @GetMapping("/receptions/pending")
     public ResponseEntity<StreamingResponseBody> getPendingReceptions(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamPendingReceptions(companyId, out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -351,14 +336,12 @@ public class StockController {
 
     @GetMapping("/livraisons")
     public ResponseEntity<StreamingResponseBody> getLivraisons(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamPickings(companyId, "outgoing", out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 
     @GetMapping("/transferts")
     public ResponseEntity<StreamingResponseBody> getTransferts(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamPickings(companyId, "internal", out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -368,7 +351,6 @@ public class StockController {
     public ResponseEntity<List<StockPickingDTO>> getTransferReceptions(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "all", defaultValue = "false") boolean all) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(all
                 ? stockService.getAllTransferReceptions(companyId)
                 : stockService.getPendingTransferReceptions(companyId));
@@ -407,7 +389,6 @@ public class StockController {
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "locationId", required = false) Long locationId,
             @RequestParam(name = "productId", required = false) Long productId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getQuants(companyId, locationId, productId));
     }
 
@@ -422,14 +403,12 @@ public class StockController {
     // ---- Dashboard ----
     @GetMapping("/dashboard")
     public ResponseEntity<StockDashboardDTO> getDashboard(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getDashboard(companyId));
     }
 
     // ---- Ajustements de stock ----
     @GetMapping("/adjustments")
     public ResponseEntity<StreamingResponseBody> getAdjustments(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamAdjustments(companyId, out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -450,7 +429,6 @@ public class StockController {
             @RequestParam("companyId") Long companyId,
             @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
             @RequestParam(value = "dateTo", required = false) LocalDate dateTo) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamStockLosses(companyId, dateFrom, dateTo, out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -554,7 +532,6 @@ public class StockController {
     // ---- Analyse ----
     @GetMapping("/report")
     public ResponseEntity<List<StockQuantDTO>> getStockReport(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getStockReport(companyId));
     }
 
@@ -565,7 +542,6 @@ public class StockController {
             @RequestParam(name = "dateFrom", required = false) String dateFrom,
             @RequestParam(name = "dateTo", required = false) String dateTo,
             @RequestParam(name = "limit", defaultValue = "1000") int limit) {
-        tenantGuard.check(companyId);
         LocalDateTime from = dateFrom != null ? LocalDate.parse(dateFrom).atStartOfDay() : null;
         LocalDateTime to   = dateTo   != null ? LocalDate.parse(dateTo).atTime(23, 59, 59) : null;
         return ResponseEntity.ok(stockService.getMovements(companyId, productId, from, to, limit));
@@ -575,7 +551,6 @@ public class StockController {
     public ResponseEntity<List<ValuationLayerDTO>> getValuation(
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "productId", required = false) Long productId) {
-        tenantGuard.check(companyId);
         return ResponseEntity.ok(stockService.getValuation(companyId, productId));
     }
 
@@ -584,7 +559,6 @@ public class StockController {
     @GetMapping("/inter-company/expeditions")
     public ResponseEntity<StreamingResponseBody> getInterCompanyExpeditions(
             @RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         StreamingResponseBody body = out -> stockService.streamInterCompanyExpeditions(companyId, out);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
@@ -643,7 +617,6 @@ public class StockController {
 
     @GetMapping("/report/pdf")
     public ResponseEntity<byte[]> getStockReportPdf(@RequestParam("companyId") Long companyId) {
-        tenantGuard.check(companyId);
         List<StockQuantDTO> quants = stockService.getStockReport(companyId);
         InventorySheetDTO dto = new InventorySheetDTO();
         dto.setCompanyId(companyId);
@@ -666,7 +639,6 @@ public class StockController {
             @RequestParam(name = "dateFrom", required = false) String dateFrom,
             @RequestParam(name = "dateTo",   required = false) String dateTo,
             @RequestParam(name = "limit", defaultValue = "1000") int limit) {
-        tenantGuard.check(companyId);
         LocalDateTime from = dateFrom != null ? LocalDate.parse(dateFrom).atStartOfDay() : null;
         LocalDateTime to   = dateTo   != null ? LocalDate.parse(dateTo).atTime(23, 59, 59) : null;
         List<StockMoveDTO> moves = stockService.getMovements(companyId, productId, from, to, limit);
@@ -688,7 +660,6 @@ public class StockController {
             @RequestParam String dateTo,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long categoryId) {
-        tenantGuard.check(companyId);
         LocalDate from = LocalDate.parse(dateFrom);
         LocalDate to   = LocalDate.parse(dateTo);
         List<StockReportWarehouseDTO> data = stockReportService.getAnalyticalReport(companyId, warehouseIds, from, to, productId, categoryId);
@@ -712,7 +683,6 @@ public class StockController {
             @RequestParam String dateTo,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long categoryId) {
-        tenantGuard.check(companyId);
         LocalDate from = LocalDate.parse(dateFrom);
         LocalDate to   = LocalDate.parse(dateTo);
         List<StockDetailedProductDTO> data = stockReportService.getDetailedReport(companyId, warehouseIds, from, to, productId, categoryId);
@@ -738,7 +708,6 @@ public class StockController {
             @RequestParam String dateTo,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long categoryId) {
-        tenantGuard.check(companyId);
         LocalDate from = LocalDate.parse(dateFrom);
         LocalDate to   = LocalDate.parse(dateTo);
         return ResponseEntity.ok(stockReportService.getAnalyticalReport(companyId, warehouseIds, from, to, productId, categoryId));
@@ -752,7 +721,6 @@ public class StockController {
             @RequestParam String dateTo,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long categoryId) {
-        tenantGuard.check(companyId);
         LocalDate from = LocalDate.parse(dateFrom);
         LocalDate to   = LocalDate.parse(dateTo);
         return ResponseEntity.ok(stockReportService.getDetailedReport(companyId, warehouseIds, from, to, productId, categoryId));

@@ -73,7 +73,6 @@ class JwtAuthFilterTest {
         when(jwtService.extractUsername("valid-jwt")).thenReturn("alice");
         when(userDetailsService.loadUserByUsername("alice")).thenReturn(enabledUser);
         when(jwtService.isTokenValid("valid-jwt", enabledUser)).thenReturn(true);
-        when(jwtService.extractCompanyId("valid-jwt")).thenReturn(7L);
 
         filter.doFilter(request, response, filterChain);
 

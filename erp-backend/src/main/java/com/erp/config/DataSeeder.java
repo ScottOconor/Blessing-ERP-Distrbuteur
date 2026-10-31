@@ -39,34 +39,6 @@ public class DataSeeder implements ApplicationRunner {
         migrateAgencesPermissions();
         seedRoles();
         seedSuperAdmin();
-        assignDefaultCompanyToOrphanUsers();
-    }
-
-    /** Déploiement mono-société : TOUT utilisateur (y compris SUPER_ADMIN/ADMIN) doit être
-     *  rattaché à l'unique société de l'instance. Une version antérieure excluait les comptes
-     *  privilégiés de ce rattachement (l'idée étant qu'ils contournent déjà TenantGuard, donc pas
-     *  besoin de société) — en pratique ça laissait ces comptes avec un companyId NULL dans le
-     *  JWT/la réponse de login, ce qui casse tout code qui lit SecurityUtils.currentCompanyId()
-     *  directement (hors TenantGuard) pour déterminer sous quelle société agir, et le frontend qui
-     *  s'attend à un companyId exploitable après connexion. Incident vécu en clientèle : un
-     *  compte SUPER_ADMIN avec companyId NULL semblait "bloqué"/accès refusé après connexion.
-     *  Tourne à CHAQUE démarrage (pas seulement à l'installation) : se corrige tout seul si ce
-     *  cas se reproduit un jour (nouvel admin créé sans société, restauration de sauvegarde...),
-     *  sans intervention manuelle sur la base. Sans effet tant qu'aucune société n'existe encore
-     *  (première installation avant création de la société via l'IHM). */
-    private void assignDefaultCompanyToOrphanUsers() {
-        Company defaultCompany = companyRepository.findAll().stream()
-                .min(java.util.Comparator.comparing(Company::getId))
-                .orElse(null);
-        if (defaultCompany == null) return;
-
-        userRepository.findAll().stream()
-                .filter(u -> u.getCompany() == null)
-                .forEach(u -> {
-                    u.setCompany(defaultCompany);
-                    userRepository.save(u);
-                    log.info("Utilisateur {} rattaché à la société {}", u.getUsername(), defaultCompany.getId());
-                });
     }
 
     private void migrateRolePermissionsSchema() {
