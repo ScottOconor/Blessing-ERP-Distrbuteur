@@ -173,3 +173,8 @@ export class RowSelection<T> {
     return this.count > 0 ? all.filter(i => this.ids.has(this.key(i))) : displayed;
   }
 }
+
+/** Raison lisible d'un échec d'import d'une ligne, telle que renvoyée par l'API. */
+export function importErrorMessage(e: any): string {
+  return e?.error?.message || e?.error?.error || 'erreur inconnue';
+}

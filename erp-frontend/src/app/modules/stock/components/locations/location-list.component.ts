@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { StockService, StockLocation, Warehouse } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
-import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER, importErrorMessage } from '../../../../core/utils/excel-import.util';
 
 const LOC_HEADERS = ['Nom*', 'Type (internal/view/supplier/customer/inventory/transit)', 'Emplacement Parent (nom)'];
 const LOC_SAMPLE  = ['Stockage Zone A', 'internal', 'WH/Stock'];
@@ -172,7 +172,7 @@ export class LocationListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     this.importLoading = true;
     const cid = this.authService.getCompanyId();
-    let done = 0, updated = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0, firstError = '';
     const validUsages = ['internal', 'view', 'supplier', 'customer', 'inventory', 'transit'];
     for (const row of this.importRows) {
       const usageVal = String(row['Type (internal/view/supplier/customer/inventory/transit)'] || 'internal').trim();
@@ -196,13 +196,13 @@ export class LocationListComponent implements OnInit {
           await this.stockService.createLocation(dto).toPromise();
           done++;
         }
-      } catch { errors++; }
+      } catch (e: any) { errors++; firstError ||= importErrorMessage(e); }
     }
     this.importLoading = false;
     this.closeImportModal();
     this.sel.clear();
     this.load();
-    this.showSuccess(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)${firstError ? ` — ${firstError}` : ''}`);
   }
 
   // ── Affichage par pages (données déjà chargées : recherche, sélection et export portent sur toutes les lignes) ──

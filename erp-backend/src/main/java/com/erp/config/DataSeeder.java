@@ -6,6 +6,7 @@ import com.erp.common.entity.Company;
 import com.erp.common.repository.CompanyRepository;
 import com.erp.config.entity.Role;
 import com.erp.config.repository.RoleRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -39,6 +40,7 @@ public class DataSeeder implements ApplicationRunner {
         migrateAgencesPermissions();
         seedRoles();
         seedSuperAdmin();
+        warnIfSeveralCompanies();
     }
 
     private void migrateRolePermissionsSchema() {
@@ -154,6 +156,16 @@ public class DataSeeder implements ApplicationRunner {
             roleRepository.save(Role.builder()
                     .code(code).label(label).isSystem(true).active(true).build());
             log.info("Rôle créé : {}", code);
+        }
+    }
+
+    /** SingleCompany ne sert que la première société : les données des autres sont inaccessibles. */
+    private void warnIfSeveralCompanies() {
+        List<Company> companies = companyRepository.findAll();
+        if (companies.size() > 1) {
+            log.error("{} sociétés en base, mais une installation n'en gère qu'une : seule la première "
+                    + "est accessible, les données des autres sont invisibles. Sociétés : {}", companies.size(),
+                    companies.stream().map(c -> c.getId() + "=" + c.getName()).toList());
         }
     }
 

@@ -5,7 +5,7 @@ import { StockService, Warehouse, StockLocation } from '../../services/stock.ser
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AccountJournal } from '../../../../core/models/account.model';
-import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER, importErrorMessage } from '../../../../core/utils/excel-import.util';
 
 const WH_HEADERS = ['Nom*', 'Code*'];
 const WH_SAMPLE  = ['Entrepôt Central', 'EC'];
@@ -182,7 +182,7 @@ export class WarehouseListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let done = 0, updated = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0, firstError = '';
     for (const row of this.importRows) {
       const dto = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
@@ -202,12 +202,12 @@ export class WarehouseListComponent implements OnInit {
           await this.stockService.createWarehouse(dto).toPromise();
           done++;
         }
-      } catch { errors++; }
+      } catch (e: any) { errors++; firstError ||= importErrorMessage(e); }
     }
     this.importLoading = false;
     this.closeImportModal();
     this.sel.clear();
     this.load();
-    this.showSuccessMsg(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`);
+    this.showSuccessMsg(`Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)${firstError ? ` — ${firstError}` : ''}`);
   }
 }

@@ -16,17 +16,11 @@ public class SingleCompany {
 
     private final CompanyRepository companyRepository;
 
-    // L'identifiant ne change jamais une fois la société créée : inutile de le relire à chaque requête.
-    private volatile Long cachedId;
-
-    /** Identifiant de la société unique, ou null si elle n'existe pas encore (premier démarrage). */
+    /** Identifiant de la société unique, ou null si elle n'existe pas encore (premier démarrage).
+     *  Relu à chaque appel : une restauration de sauvegarde peut le changer, et une valeur gardée
+     *  en mémoire obligerait à redémarrer. */
     public Long getId() {
-        Long id = cachedId;
-        if (id == null) {
-            id = companyRepository.findFirstByOrderByIdAsc().map(Company::getId).orElse(null);
-            cachedId = id;
-        }
-        return id;
+        return companyRepository.findFirstByOrderByIdAsc().map(Company::getId).orElse(null);
     }
 
     public boolean exists() {

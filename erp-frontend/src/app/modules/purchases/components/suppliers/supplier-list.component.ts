@@ -7,7 +7,7 @@ import { AccountingService } from '../../../accounting/services/accounting.servi
 import { RemiseService, Remise } from '../../services/remise.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, importErrorMessage } from '../../../../core/utils/excel-import.util';
 import { exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
 import { forkJoin } from 'rxjs';
 
@@ -280,7 +280,7 @@ export class SupplierListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let done = 0, updated = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0, firstError = '';
     for (const row of this.importRows) {
       const dto = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
@@ -300,13 +300,13 @@ export class SupplierListComponent implements OnInit {
           await this.accountingService.createPartner(dto).toPromise();
           done++;
         }
-      } catch { errors++; }
+      } catch (e: any) { errors++; firstError ||= importErrorMessage(e); }
     }
     this.importLoading = false;
     this.closeImportModal();
     this.sel.clear();
     this.loadSuppliers();
-    this.successMsg = `Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)`;
+    this.successMsg = `Import terminé : ${done} créé(s), ${updated} mis à jour, ${errors} erreur(s)${firstError ? ` — ${firstError}` : ''}`;
     setTimeout(() => this.successMsg = '', 5000);
   }
 

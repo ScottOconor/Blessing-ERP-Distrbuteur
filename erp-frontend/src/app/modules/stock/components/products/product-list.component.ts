@@ -10,7 +10,7 @@ import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/serv
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
-import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, yesNo, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, yesNo, RowSelection, ID_HEADER, importErrorMessage } from '../../../../core/utils/excel-import.util';
 
 const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Code-barres', 'Prix de vente', 'Prix minimum', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
 const PRODUCT_SAMPLE  = ['Bière Castel 65cl', 'CAS65', '6130000000017', '700', '650', '500', 'Bières', '1000', 'Caisse', 'Non', 'Non'];
@@ -546,7 +546,7 @@ export class ProductListComponent implements OnInit {
 
   async confirmImport(): Promise<void> {
     this.importLoading = true;
-    let created = 0, updated = 0, errors = 0;
+    let created = 0, updated = 0, errors = 0, firstError = '';
     const stockAdjustments: StockAdjustmentRequest[] = [];
 
     for (const row of this.importRows) {
@@ -604,7 +604,7 @@ export class ProductListComponent implements OnInit {
             companyId: this.companyId
           });
         }
-      } catch { errors++; }
+      } catch (e: any) { errors++; firstError ||= importErrorMessage(e); }
     }
 
     if (stockAdjustments.length > 0) {
@@ -617,7 +617,7 @@ export class ProductListComponent implements OnInit {
     this.closeImportModal();
     this.sel.clear();
     this.load();
-    this.showSuccessMsg(`Import terminé : ${created} créé(s), ${updated} mis à jour${stockAdjustments.length > 0 ? ', ' + stockAdjustments.length + ' stock(s) initialisé(s)' : ''}, ${errors} erreur(s)`);
+    this.showSuccessMsg(`Import terminé : ${created} créé(s), ${updated} mis à jour${stockAdjustments.length > 0 ? ', ' + stockAdjustments.length + ' stock(s) initialisé(s)' : ''}, ${errors} erreur(s)${firstError ? ` — ${firstError}` : ''}`);
   }
 
   showSuccessMsg(msg: string): void {

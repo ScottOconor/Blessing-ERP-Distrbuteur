@@ -5,7 +5,7 @@ import { PagerComponent } from '../../../../shared/components/pager/pager.compon
 import { FormsModule } from '@angular/forms';
 import { StockService, ProductCategory } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, RowSelection, ID_HEADER, importErrorMessage } from '../../../../core/utils/excel-import.util';
 
 const CAT_HEADERS = ['Nom*', 'Code'];
 const CAT_SAMPLE  = ['Matériaux de construction', 'MAT'];
@@ -142,7 +142,7 @@ export class CategoryListComponent implements OnInit {
   async confirmImport(): Promise<void> {
     this.importLoading = true;
     const cid = this.authService.getCompanyId();
-    let done = 0, updated = 0, errors = 0;
+    let done = 0, updated = 0, errors = 0, firstError = '';
     for (const row of this.importRows) {
       const dto: ProductCategory = {
         name: String(row['Nom*'] || row['Nom'] || '').trim(),
@@ -161,13 +161,13 @@ export class CategoryListComponent implements OnInit {
           await this.stockService.createCategory(dto).toPromise();
           done++;
         }
-      } catch { errors++; }
+      } catch (e: any) { errors++; firstError ||= importErrorMessage(e); }
     }
     this.importLoading = false;
     this.closeImportModal();
     this.sel.clear();
     this.load();
-    this.showSuccess(`Import terminé : ${done} créé(e)(s), ${updated} mise(s) à jour, ${errors} erreur(s)`);
+    this.showSuccess(`Import terminé : ${done} créé(e)(s), ${updated} mise(s) à jour, ${errors} erreur(s)${firstError ? ` — ${firstError}` : ''}`);
   }
 
   // ── Affichage par pages (données déjà chargées : recherche, sélection et export portent sur toutes les lignes) ──

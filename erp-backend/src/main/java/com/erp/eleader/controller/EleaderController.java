@@ -79,7 +79,8 @@ public class EleaderController {
             @RequestParam(value = "invoiceModel", required = false) String invoiceModel,
             @RequestParam Long companyId) {
         EleaderImportResultDTO result = importService.importPdf(file, invoiceModel, companyId);
-        return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
+        if (!result.isSuccess()) return ResponseEntity.badRequest().body(result);
+        return ResponseEntity.ok(importService.autoConfirm(result, companyId));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

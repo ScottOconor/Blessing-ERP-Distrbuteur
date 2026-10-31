@@ -26,6 +26,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -140,23 +141,13 @@ public class EleaderImportService {
             SalesOrder order = createSalesOrder(parsed, partner, journal, company, lines);
             importLog.setSalesOrder(order);
 
-            // 10. Auto-confirmation si activée
             String warning = null;
-            if (config != null && config.isAutoConfirm()) {
-                try {
-                    salesService.confirmOrder(order.getId());
-                } catch (Exception e) {
-                    warning = "Confirmation automatique échouée : " + e.getMessage() + ". Le bon de commande reste en brouillon.";
-                    log.warn("Auto-confirm eLeader order {} failed: {}", order.getName(), e.getMessage());
-                }
-            }
             // Produits/emballages du PDF non reconnus dans l'ERP : la commande a été créée avec ce
             // qui a pu être résolu, mais silencieusement AMPUTÉE des lignes ignorées si on ne le
             // signale pas — même risque que le bug de parsing de pourcentage déjà corrigé pour
             // l'import Excel des précomptes (import partiel réussi sans que personne ne le sache).
             if (!skippedCodes.isEmpty()) {
-                String skippedMsg = "Code(s) produit non reconnu(s), ligne(s) ignorée(s) : " + String.join(", ", skippedCodes);
-                warning = warning == null ? skippedMsg : warning + " — " + skippedMsg;
+                warning = "Code(s) produit non reconnu(s), ligne(s) ignorée(s) : " + String.join(", ", skippedCodes);
             }
 
             importLog.setStatus("success");
@@ -181,6 +172,25 @@ public class EleaderImportService {
             log.error("Erreur import eLeader PDF '{}': {}", file.getOriginalFilename(), e.getMessage(), e);
             return fail(importLog, "Erreur inattendue : " + e.getMessage());
         }
+    }
+
+    /**
+     * Auto-confirmation, appelée une fois l'import validé. Dans la transaction de l'import, un échec
+     * de confirmOrder (ex : stock insuffisant) l'annulerait en entier au commit malgré le catch :
+     * ni bon de commande, ni trace d'import, et une erreur générique à l'écran.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public EleaderImportResultDTO autoConfirm(EleaderImportResultDTO result, Long companyId) {
+        boolean enabled = configRepo.findByCompanyId(companyId).map(EleaderConfig::isAutoConfirm).orElse(false);
+        if (!enabled) return result;
+        try {
+            salesService.confirmOrder(result.getSalesOrderId());
+        } catch (Exception e) {
+            String failure = "Confirmation automatique échouée : " + e.getMessage() + ". Le bon de commande reste en brouillon.";
+            log.warn("Auto-confirm eLeader order {} failed: {}", result.getSalesOrderName(), e.getMessage());
+            result.setWarning(result.getWarning() == null ? failure : failure + " — " + result.getWarning());
+        }
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

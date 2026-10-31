@@ -13,10 +13,11 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAd
 
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.Map;
 
 /**
- * Pendant de SingleCompanyFilter pour les corps JSON : tout objet reçu (ou chaque élément d'une
- * liste reçue) qui porte une propriété companyId la voit remplacée par la société unique de
+ * Pendant de SingleCompanyFilter pour les corps JSON : tout objet ou Map reçu (ou chaque élément
+ * d'une liste reçue) qui porte une propriété companyId la voit remplacée par la société unique de
  * l'installation, avant d'atteindre le contrôleur. Une création (client, facture, article...)
  * ne peut donc plus viser une autre société que celle de l'installation.
  */
@@ -49,6 +50,14 @@ public class SingleCompanyBodyAdvice extends RequestBodyAdviceAdapter {
 
     private static void forceCompany(Object target, Long companyId) {
         if (target == null) return;
+        if (target instanceof Map<?, ?> map) {
+            if (map.containsKey(SingleCompanyFilter.PARAM)) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> values = (Map<String, Object>) map;
+                values.put(SingleCompanyFilter.PARAM, companyId);
+            }
+            return;
+        }
         BeanWrapper bean = PropertyAccessorFactory.forBeanPropertyAccess(target);
         if (bean.isWritableProperty(SingleCompanyFilter.PARAM)
                 && Long.class.equals(bean.getPropertyType(SingleCompanyFilter.PARAM))) {
