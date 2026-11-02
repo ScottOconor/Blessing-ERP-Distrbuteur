@@ -64,6 +64,7 @@ public class StockService {
     private final StockQuantRepository quantRepo;
     private final ValuationLayerRepository valuationRepo;
     private final ProductValuationService productValuationService;
+    private final StockLedgerService stockLedger;
     private final AgencyRepository agencyRepo;
     private final StockAdjustmentRepository adjustmentRepo;
     private final StockLossRepository stockLossRepo;
@@ -263,7 +264,7 @@ public class StockService {
                 StockLocation location = locationRepo.findById(q.getLocationId()).orElse(null);
                 if (product == null || location == null) continue;
 
-                BigDecimal unitCost = getWarehouseCmup(product.getId(), location.getWarehouseId(), product);
+                BigDecimal unitCost = StockLedgerService.purchasePriceOf(product);
                 createAdjustmentStockMove(product, location, diff, unitCost, companyId,
                         "Correction d'écart fiche de stock (mouvement historique manquant)", LocalDate.now());
                 fixed++;
@@ -421,9 +422,45 @@ public class StockService {
         Map<Long, String> catNames = categoryRepo.findByCompanyIdOrderByNameAsc(companyId).stream()
                 .collect(Collectors.toMap(ProductCategory::getId, ProductCategory::getName, (a, b) -> a));
 
-        return products.stream()
+        List<ProductDTO> dtos = products.stream()
                 .map(p -> toProductDTO(p, qtyMap.getOrDefault(p.getId(), ZERO), reservedMap.getOrDefault(p.getId(), ZERO), catNames))
                 .collect(Collectors.toList());
+        applyValuation(dtos, products, companyId, warehouseId);
+        return dtos;
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockLedgerService.WarehouseValuationLine> getProductValuation(Long id) {
+        return stockLedger.warehouseLines(productRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found: " + id)));
+    }
+
+    /** Renseigne CMUP (entrepôt demandé, sinon magasin principal) et valeur au prix d'achat : deux
+     *  données distinctes, la seconde ne se déduit jamais de la première. */
+    private void applyValuation(List<ProductDTO> dtos, List<Product> products, Long companyId, Long warehouseId) {
+        Map<Long, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, p -> p, (a, b) -> a));
+        StockLedgerService.ValueView view = stockLedger.loadValues(companyId);
+        Long locationId = warehouseId != null
+                ? warehouseRepo.findById(warehouseId).map(Warehouse::getStockLocationId).orElse(null) : null;
+        Set<Long> stockLocIds = locationRepo.findInternalAndTransit(companyId).stream()
+                .map(StockLocation::getId).collect(Collectors.toSet());
+        Map<Long, BigDecimal> valueByProduct = new HashMap<>();
+        Set<Long> estimated = new HashSet<>();
+        for (StockQuant q : quantRepo.findAllWithStock(companyId)) {
+            Product p = byId.get(q.getProductId());
+            if (p == null || !stockLocIds.contains(q.getLocationId())) continue;
+            if (locationId != null && !locationId.equals(q.getLocationId())) continue;
+            valueByProduct.merge(p.getId(), view.valueOf(q, StockLedgerService.purchasePriceOf(p)), BigDecimal::add);
+            if (!view.isEstablished(q)) estimated.add(p.getId());
+        }
+        Warehouse main = warehouseId == null ? findMainWarehouse(warehouseRepo.findByCompanyIdAndActiveTrue(companyId)) : null;
+        Long cmupWarehouseId = warehouseId != null ? warehouseId : main != null ? main.getId() : null;
+        Map<Long, BigDecimal> cmups = stockLedger.cmupByProduct(companyId, cmupWarehouseId);
+        for (ProductDTO dto : dtos) {
+            dto.setStockValue(valueByProduct.getOrDefault(dto.getId(), ZERO).setScale(2, RoundingMode.HALF_UP));
+            dto.setStockValueEstablished(!estimated.contains(dto.getId()));
+            dto.setCmup(cmups.getOrDefault(dto.getId(), StockLedgerService.purchasePriceOf(byId.get(dto.getId()))));
+        }
     }
 
     @Transactional(readOnly = true)
@@ -431,7 +468,9 @@ public class StockService {
         Product p = productRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found: " + id));
         BigDecimal qty = quantRepo.findByProductIdAndCompanyId(p.getId(), p.getCompanyId())
                 .stream().map(StockQuant::getQuantity).reduce(ZERO, BigDecimal::add);
-        return toProductDTO(p, qty);
+        ProductDTO dto = toProductDTO(p, qty);
+        applyValuation(List.of(dto), List.of(p), p.getCompanyId(), null);
+        return dto;
     }
 
     public ProductDTO createProduct(ProductDTO dto) {
@@ -957,14 +996,17 @@ public class StockService {
                     BigDecimal reste = finalHasSplit
                             ? qteAvarieParProduit.getOrDefault(m.getProductId(), ZERO)
                             : qteCommandee.subtract(qteRecue).max(ZERO);
+                    // Prix affiché = prix d'achat de la fiche, jamais le prix facturé (qui nourrit le CMUP).
+                    BigDecimal prixAchat = m.getPurchasePrice() != null ? m.getPurchasePrice() : m.getPriceUnit();
                     return ReceptionBordereauDTO.LigneBordereau.builder()
                             .moveId(m.getId())
                             .productCode(m.getProductCode())
                             .productName(m.getProductName())
-                            .prixUnitaire(m.getPriceUnit())
+                            .prixUnitaire(prixAchat)
                             .qteCommandee(qteCommandee)
                             .qteRecue(qteRecue)
                             .reste(reste)
+                            .valeur(prixAchat != null ? qteRecue.multiply(prixAchat).setScale(2, RoundingMode.HALF_UP) : ZERO)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -981,7 +1023,24 @@ public class StockService {
         // Opérateur = celui qui a créé le picking (ou validé)
         String operatorName = picking.getUpdatedBy() != null ? picking.getUpdatedBy() : picking.getCreatedBy();
 
+        // Validé : ce qui est entré en magasin ; en attente : la quantité attendue.
+        boolean validated = "done".equals(picking.getState());
+        Map<Long, StockMoveDTO> movesById = toPickingDTO(picking, true).getMoves().stream()
+                .collect(Collectors.toMap(StockMoveDTO::getId, m -> m));
+        BigDecimal totalColis = ZERO, totalPet = ZERO, totalCasier = ZERO;
+        for (ReceptionBordereauDTO.LigneBordereau l : lignes) {
+            StockMoveDTO m = movesById.get(l.getMoveId());
+            l.setColis(!com.erp.common.ConsigneCodes.isConsigne(m.getProductCode(), picking.getCompanyId()));
+            l.setPet(l.isColis() && isPet(m));
+            l.setCasier(l.isColis() && isCasier(m));
+            BigDecimal qty = validated ? l.getQteRecue() : l.getQteCommandee();
+            if (l.isColis()) totalColis = totalColis.add(qty);
+            if (l.isPet()) totalPet = totalPet.add(qty);
+            if (l.isCasier()) totalCasier = totalCasier.add(qty);
+        }
+
         return ReceptionBordereauDTO.builder()
+                .totalColis(totalColis).totalPet(totalPet).totalCasier(totalCasier)
                 .pickingId(picking.getId())
                 .pickingName(picking.getName())
                 .invoiceRef(picking.getOrigin())
@@ -1005,12 +1064,16 @@ public class StockService {
      */
     public ReceptionBordereauDTO validateBordereau(Long pickingId,
                                                     List<ReceptionBordereauDTO.LigneBordereau> lignesRecues) {
-        StockPicking picking = pickingRepo.findById(pickingId)
+        StockPicking picking = pickingRepo.findByIdForUpdate(pickingId)
                 .orElseThrow(() -> new EntityNotFoundException("Picking introuvable: " + pickingId));
 
         if ("done".equals(picking.getState())) {
             throw new IllegalStateException("Ce bordereau est déjà validé");
         }
+        if ("cancelled".equals(picking.getState())) {
+            throw new IllegalStateException("Ce bordereau est annulé");
+        }
+        refreshPurchasePrices(picking);
 
         Long companyId = picking.getCompanyId();
         fiscalLockGuard.assertPeriodOpen(companyId,
@@ -1067,8 +1130,18 @@ public class StockService {
                             reste, move.getPriceUnit(), companyId, picking.getName() + " (Avarie)", "incoming", effectiveDate);
                 }
             }
-            picking.setState("done");
             picking.setDateDone(effectiveDate);
+            // Valeur par destination réelle : la part avariée n'a pas de mouvement propre sur ce circuit.
+            for (StockMove move : picking.getMoves()) {
+                BigDecimal qteRecue = move.getQtyDone() != null ? move.getQtyDone() : ZERO;
+                BigDecimal qteCommandee = move.getQtyDemanded() != null ? move.getQtyDemanded() : ZERO;
+                stockLedger.postIn(picking, move, stockLedger.internalWarehouse(mainLocationId), qteRecue);
+                if (avarLocationId != null) {
+                    stockLedger.postIn(picking, move, stockLedger.internalWarehouse(avarLocationId),
+                            qteCommandee.subtract(qteRecue).max(ZERO));
+                }
+            }
+            picking.setState("done");
             picking.setValidatedBy(auditService.getCurrentUsername());
             picking.setValidatedAt(LocalDateTime.now());
             pickingRepo.save(picking);
@@ -1139,6 +1212,7 @@ public class StockService {
             }
         }
 
+        picking.setDateDone(effectiveDate);
         boolean hasMainMoves = false;
         boolean hasAvarMoves = false;
 
@@ -1156,6 +1230,7 @@ public class StockService {
             if (qteCommandee.compareTo(ZERO) > 0) {
                 applyStockMovement(move.getProductId(), move.getLocationId(), depotAchatLocationId,
                         qteCommandee, move.getPriceUnit(), companyId, picking.getName(), "incoming", effectiveDate);
+                stockLedger.postIn(picking, move, stockLedger.internalWarehouse(depotAchatLocationId), qteCommandee);
             }
 
             // Transfert Dépôt Achat → Magasin principal
@@ -1175,6 +1250,7 @@ public class StockService {
                             .qtyDemanded(qteRecue)
                             .qtyDone(qteAppliquee)
                             .priceUnit(move.getPriceUnit())
+                            .purchasePrice(move.getPurchasePrice())
                             .locationId(depotAchatLocationId)
                             .locationDestId(mainLocationId)
                             .state("done")
@@ -1202,6 +1278,7 @@ public class StockService {
                             .qtyDemanded(reste)
                             .qtyDone(qteAppliquee)
                             .priceUnit(move.getPriceUnit())
+                            .purchasePrice(move.getPurchasePrice())
                             .locationId(depotAchatLocationId)
                             .locationDestId(avarLocationId)
                             .state("done")
@@ -1214,16 +1291,16 @@ public class StockService {
         }
 
         // Sauvegarder les pickings de transfert inter-dépôts
-        if (transferMain != null && hasMainMoves) {
-            pickingRepo.save(transferMain);
-        }
-        if (transferAvar != null && hasAvarMoves) {
-            pickingRepo.save(transferAvar);
-        }
-
         // Marquer le picking initial (Dépôt Achat) comme traité
         picking.setState("done");
         picking.setDateDone(effectiveDate);
+        stockLedger.postPicking(picking);
+        if (transferMain != null && hasMainMoves) {
+            stockLedger.postPicking(pickingRepo.save(transferMain));
+        }
+        if (transferAvar != null && hasAvarMoves) {
+            stockLedger.postPicking(pickingRepo.save(transferAvar));
+        }
         picking.setValidatedBy(auditService.getCurrentUsername());
         picking.setValidatedAt(LocalDateTime.now());
         pickingRepo.save(picking);
@@ -1334,6 +1411,7 @@ public class StockService {
         picking.setValidatedBy(auditService.getCurrentUsername());
         picking.setValidatedAt(LocalDateTime.now());
         StockPicking saved = pickingRepo.save(picking);
+        stockLedger.postPicking(saved);
 
         syncEventPublisher.publish(SyncEventType.STOCK_PICKING_VALIDATED, String.valueOf(saved.getId()),
                 toPickingDTO(saved, false));
@@ -1369,6 +1447,14 @@ public class StockService {
                                             LocalDateTime effectiveDate, String reference) {
         return productValuationService.recalcWarehouseCmup(productId, warehouseId, companyId,
                 incomingQty, incomingPrice, effectiveDate, reference);
+    }
+
+    /** Fige sur chaque mouvement le prix d'achat de la fiche en vigueur à la validation. */
+    private void refreshPurchasePrices(StockPicking picking) {
+        for (StockMove move : picking.getMoves()) {
+            productRepo.findById(move.getProductId())
+                    .ifPresent(p -> move.setPurchasePrice(StockLedgerService.purchasePriceOf(p)));
+        }
     }
 
     private BigDecimal applyStockMovement(Long productId, Long srcLocationId, Long destLocationId,
@@ -1660,6 +1746,7 @@ public class StockService {
                         : getWarehouseCmup(product.getId(), resolveWarehouseId(moveDestLocId), product);
                 StockMove move = StockMove.builder()
                         .picking(picking)
+                        .purchasePrice(StockLedgerService.purchasePriceOf(product))
                         .productId(product.getId())
                         .productCode(product.getDefaultCode())
                         .productName(product.getName())
@@ -1735,6 +1822,7 @@ public class StockService {
                         : getWarehouseCmup(product.getId(), resolveWarehouseId(moveDestLocId), product);
                 StockMove move = StockMove.builder()
                         .picking(p)
+                        .purchasePrice(StockLedgerService.purchasePriceOf(product))
                         .productId(product.getId())
                         .productCode(product.getDefaultCode())
                         .productName(product.getName())
@@ -1758,7 +1846,7 @@ public class StockService {
      * Pour les transferts inter-dépôts (entrepôts différents) : destock source + crée réception en attente.
      */
     public StockPickingDTO validatePicking(Long id) {
-        StockPicking picking = pickingRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
+        StockPicking picking = pickingRepo.findByIdForUpdate(id).orElseThrow(() -> new EntityNotFoundException("Picking not found: " + id));
         if ("done".equals(picking.getState())) throw new IllegalStateException("Ce transfert est déjà validé");
         if ("cancelled".equals(picking.getState())) throw new IllegalStateException("Ce transfert est annulé");
         if ("pending_reception".equals(picking.getState())) throw new IllegalStateException("Ce transfert est déjà en attente de réception");
@@ -1767,6 +1855,7 @@ public class StockService {
 
         List<StockMove> moves = picking.getMoves();
         if (moves.isEmpty()) throw new IllegalStateException("Aucune ligne à valider");
+        refreshPurchasePrices(picking);
 
         // Date effective = date planifiée du transfert (respecte l'antidatage) ou maintenant par défaut —
         // calculée une seule fois pour que l'historique CMUP et dateDone portent exactement la même date.
@@ -1889,6 +1978,7 @@ public class StockService {
         picking.setAccountMoveId(moveAccountId);
         picking.setState("done");
         picking.setDateDone(effectiveDate);
+        stockLedger.postPicking(picking);
         picking.setValidatedBy(auditService.getCurrentUsername());
         picking.setValidatedAt(LocalDateTime.now());
 
@@ -1913,6 +2003,7 @@ public class StockService {
                         StockQuant srcQ = findOrCreateQuant(move.getProductId(), move.getLocationId(), picking.getCompanyId());
                         srcQ.setQuantity(srcQ.getQuantity().add(qty));
                         quantRepo.save(srcQ);
+                        stockLedger.postCancelOut(picking, move, qty);
                     }
                 }
             }
@@ -1936,6 +2027,7 @@ public class StockService {
                         StockQuant srcQ = findOrCreateQuant(move.getProductId(), move.getLocationId(), picking.getCompanyId());
                         srcQ.setQuantity(srcQ.getQuantity().add(qty));
                         quantRepo.save(srcQ);
+                        stockLedger.postCancelOut(picking, move, qty);
                     }
                 }
             }
@@ -1992,6 +2084,7 @@ public class StockService {
                 }
                 srcQ.setQuantity(srcQ.getQuantity().subtract(qty));
                 quantRepo.save(srcQ);
+                stockLedger.postOut(transfer, move, stockLedger.internalWarehouse(move.getLocationId()), qty);
             }
             move.setQtyDone(qty);
             move.setState("confirmed");
@@ -2045,6 +2138,7 @@ public class StockService {
                     .qtyDemanded(qty)
                     .qtyDone(qty)
                     .priceUnit(move.getPriceUnit())
+                    .purchasePrice(move.getPurchasePrice())
                     .locationId(transfer.getLocationId())
                     .locationDestId(transfer.getLocationDestId())
                     .state("draft")
@@ -2089,7 +2183,7 @@ public class StockService {
      */
     public StockPickingDTO confirmTransferReception(Long receptionId,
                                                     List<ReceptionBordereauDTO.LigneBordereau> lignesRecues) {
-        StockPicking reception = pickingRepo.findById(receptionId)
+        StockPicking reception = pickingRepo.findByIdForUpdate(receptionId)
                 .orElseThrow(() -> new EntityNotFoundException("Réception introuvable: " + receptionId));
         if (!"pending_reception".equals(reception.getState()))
             throw new IllegalStateException("Cette réception n'est pas en attente de validation");
@@ -2124,17 +2218,20 @@ public class StockService {
                 StockLocation destLoc = locationRepo.findById(destLocationId).orElse(null);
                 if (destLoc != null && "internal".equals(destLoc.getUsage())) {
                     StockQuant destQ = findOrCreateQuant(move.getProductId(), destLocationId, companyId);
-                    // Recalcul CMUP à l'entrée — par entrepôt de destination.
+                    // Recalcul CMUP à l'entrée — par entrepôt de destination, sur la valeur d'entrée au
+                    // prix d'achat du transfert (repli sur priceUnit pour un transfert antérieur).
                     Product product = productRepo.findById(move.getProductId()).orElse(null);
-                    if (product != null && move.getPriceUnit() != null) {
+                    BigDecimal entryPrice = move.getPurchasePrice() != null ? move.getPurchasePrice() : move.getPriceUnit();
+                    if (product != null && entryPrice != null) {
                         Long destWarehouseId = resolveWarehouseId(destLocationId);
                         if (destWarehouseId != null) {
                             recalcWarehouseCmup(move.getProductId(), destWarehouseId, companyId,
-                                    received, move.getPriceUnit(), effectiveDate, reception.getName());
+                                    received, entryPrice, effectiveDate, reception.getName());
                         }
                     }
                     destQ.setQuantity(destQ.getQuantity().add(received));
                     quantRepo.save(destQ);
+                    stockLedger.postIn(reception, move, stockLedger.internalWarehouse(destLocationId), received);
                 }
             }
 
@@ -2145,6 +2242,7 @@ public class StockService {
                     StockQuant srcQ = findOrCreateQuant(move.getProductId(), srcLocationId, companyId);
                     srcQ.setQuantity(srcQ.getQuantity().add(remainder));
                     quantRepo.save(srcQ);
+                    stockLedger.postReturn(reception, move, stockLedger.internalWarehouse(srcLocationId), remainder);
                 }
             }
 
@@ -2209,15 +2307,17 @@ public class StockService {
                         .moveId(m.getId())
                         .productCode(m.getProductCode())
                         .productName(m.getProductName())
-                        .prixUnitaire(m.getPriceUnit())
+                        .prixUnitaire(m.getPurchasePrice() != null ? m.getPurchasePrice() : m.getPriceUnit())
                         .qteCommandee(m.getQtyDemanded())
                         .qteRecue(m.getQtyDone() != null ? m.getQtyDone() : ZERO)
                         .reste(m.getQtyDemanded() != null && m.getQtyDone() != null
                                 ? m.getQtyDemanded().subtract(m.getQtyDone()).max(ZERO) : ZERO)
                         .build())
                 .collect(Collectors.toList());
+        StockPickingDTO totals = toPickingDTO(reception, true);
 
         return ReceptionBordereauDTO.builder()
+                .totalColis(totals.getTotalColis()).totalPet(totals.getTotalPet()).totalCasier(totals.getTotalCasier())
                 .pickingId(reception.getId())
                 .pickingName(reception.getName())
                 .invoiceRef(reception.getOrigin())
@@ -2278,18 +2378,21 @@ public class StockService {
                 : categoryRepo.findAllById(categoryIds).stream()
                     .collect(Collectors.toMap(com.erp.stock.entity.ProductCategory::getId, com.erp.stock.entity.ProductCategory::getName));
         Map<String, BigDecimal> cmupCache = new HashMap<>();
+        Map<Long, StockLedgerService.ValueView> viewsByCompany = new HashMap<>();
 
-        return quants.stream().map(q -> toQuantDTO(q, productById, locationById, categoryNameById, cmupCache)).collect(Collectors.toList());
+        return quants.stream().map(q -> toQuantDTO(q, productById, locationById, categoryNameById, cmupCache,
+                viewsByCompany.computeIfAbsent(q.getCompanyId(), stockLedger::loadValues))).collect(Collectors.toList());
     }
 
     private StockQuantDTO toQuantDTO(StockQuant q, Map<Long, Product> productById, Map<Long, StockLocation> locationById,
-            Map<Long, String> categoryNameById, Map<String, BigDecimal> cmupCache) {
+            Map<Long, String> categoryNameById, Map<String, BigDecimal> cmupCache, StockLedgerService.ValueView values) {
         Product product = productById.get(q.getProductId());
         StockLocation loc = locationById.get(q.getLocationId());
         Long warehouseId = loc != null ? loc.getWarehouseId() : null;
-        BigDecimal price = product == null ? ZERO
+        BigDecimal cmup = product == null ? ZERO
                 : cmupCache.computeIfAbsent(product.getId() + ":" + warehouseId,
                         k -> getWarehouseCmup(product.getId(), warehouseId, product));
+        BigDecimal purchasePrice = StockLedgerService.purchasePriceOf(product);
         BigDecimal available = q.getQuantity().subtract(q.getReservedQuantity()).max(ZERO);
 
         Long categoryId = product != null ? product.getCategoryId() : null;
@@ -2307,8 +2410,9 @@ public class StockService {
                 .quantity(q.getQuantity())
                 .reservedQuantity(q.getReservedQuantity())
                 .availableQuantity(available)
-                .standardPrice(price)
-                .totalValue(q.getQuantity().multiply(price).setScale(2, RoundingMode.HALF_UP))
+                .standardPrice(purchasePrice)
+                .cmup(cmup)
+                .totalValue(values.valueOf(q, purchasePrice).setScale(2, RoundingMode.HALF_UP))
                 .companyId(q.getCompanyId())
                 .categoryId(categoryId)
                 .categoryName(categoryName)
@@ -2334,7 +2438,7 @@ public class StockService {
     public StockDashboardDTO getDashboard(Long companyId) {
         long nbProducts = productRepo.findByCompanyIdAndActiveOrderByNameAsc(companyId, true).size();
         long nbWarehouses = warehouseRepo.findByCompanyIdOrderByNameAsc(companyId).size();
-        BigDecimal totalValue = quantRepo.computeTotalStockValue(companyId);
+        BigDecimal totalValue = stockLedger.totalStockValue(companyId);
 
         List<StockPicking> allPickings = pickingRepo.findByCompanyIdOrderByCreatedAtDesc(companyId);
         long nbRecDraft = allPickings.stream().filter(p -> "incoming".equals(p.getPickingTypeCode())
@@ -2398,13 +2502,13 @@ public class StockService {
                     .productName(product.getName()).uomName(product.getUomName())
                     .locationId(location.getId()).locationName(buildCompleteName(location))
                     .qtyBefore(qtyBefore).qtyAfter(qtyAfter).qtyDiff(ZERO)
-                    .unitCost(getWarehouseCmup(product.getId(), location.getWarehouseId(), product)).valueDiff(ZERO)
+                    .unitCost(StockLedgerService.purchasePriceOf(product)).valueDiff(ZERO)
                     .notes("Aucun écart").companyId(req.getCompanyId())
                     .createdAt(LocalDateTime.now())
                     .build();
         }
 
-        BigDecimal unitCost = getWarehouseCmup(product.getId(), location.getWarehouseId(), product);
+        BigDecimal unitCost = StockLedgerService.purchasePriceOf(product);
         BigDecimal valueDiff = diff.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
         LocalDate adjDate = req.getDate() != null ? req.getDate() : LocalDate.now();
         fiscalLockGuard.assertPeriodOpen(req.getCompanyId(), adjDate);
@@ -2529,7 +2633,7 @@ public class StockService {
                     .build();
 
             picking.getMoves().add(move);
-            pickingRepo.save(picking);
+            stockLedger.postPicking(pickingRepo.save(picking));
         } catch (Exception e) {
             log.warn("Impossible de créer le mouvement de stock pour l'ajustement: {}", e.getMessage());
         }
@@ -2692,7 +2796,7 @@ public class StockService {
                         + warehouse.getName() + " : " + available.setScale(0, RoundingMode.HALF_UP)
                         + " en stock, " + qty.setScale(0, RoundingMode.HALF_UP) + " à sortir");
             }
-            BigDecimal unitCost = getWarehouseCmup(product.getId(), warehouse.getId(), product);
+            BigDecimal unitCost = StockLedgerService.purchasePriceOf(product);
             BigDecimal montant = qty.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
             resolved.add(new ResolvedLossLine(product, qty, unitCost, montant));
         }
@@ -2797,7 +2901,7 @@ public class StockService {
                         .build();
                 picking.getMoves().add(move);
             }
-            pickingRepo.save(picking);
+            stockLedger.postPicking(pickingRepo.save(picking));
         } catch (Exception e) {
             log.warn("Impossible de créer le mouvement de stock pour la casse: {}", e.getMessage());
         }
@@ -2923,6 +3027,11 @@ public class StockService {
 
     @Transactional(readOnly = true)
     public List<ValuationLayerDTO> getValuation(Long companyId, Long productId) {
+        // Journal au prix d'achat ; les anciennes couches, mêlant CMUP et prix facturés, ne servent
+        // qu'en attendant la première écriture.
+        List<StockValuationEntry> entries = stockLedger.history(companyId, productId, 200);
+        if (!entries.isEmpty()) return entries.stream().map(this::toValuationDTO).collect(Collectors.toList());
+
         List<ValuationLayer> layers;
         if (productId != null) {
             layers = valuationRepo.findByProductIdAndCompanyIdOrderByCreatedAtDesc(productId, companyId);
@@ -2930,6 +3039,24 @@ public class StockService {
             layers = valuationRepo.findRecentByCompany(companyId, PageRequest.of(0, 200));
         }
         return layers.stream().map(this::toValuationDTO).collect(Collectors.toList());
+    }
+
+    private ValuationLayerDTO toValuationDTO(StockValuationEntry e) {
+        Product product = productRepo.findById(e.getProductId()).orElse(null);
+        return ValuationLayerDTO.builder()
+                .id(e.getId())
+                .productId(e.getProductId())
+                .productCode(product != null ? product.getDefaultCode() : null)
+                .productName(product != null ? product.getName() : "?")
+                .uomName(product != null ? product.getUomName() : null)
+                .locationName(warehouseRepo.findById(e.getWarehouseId()).map(Warehouse::getName).orElse(null))
+                .quantity(e.getQuantity())
+                .unitCost(e.getPurchasePrice())
+                .value(e.getMoveValue().setScale(2, RoundingMode.HALF_UP))
+                .description(e.getReference())
+                .companyId(e.getCompanyId())
+                .createdAt(e.getValidatedAt())
+                .build();
     }
 
     private ValuationLayerDTO toValuationDTO(ValuationLayer v) {
@@ -3065,6 +3192,7 @@ public class StockService {
                         .orElseThrow(() -> new EntityNotFoundException("Produit introuvable: " + mr.getProductId()));
                 StockMove move = StockMove.builder()
                         .picking(picking)
+                        .purchasePrice(StockLedgerService.purchasePriceOf(product))
                         .productId(product.getId())
                         .productCode(product.getDefaultCode())
                         .productName(product.getName())
@@ -3103,6 +3231,7 @@ public class StockService {
                         .orElseThrow(() -> new EntityNotFoundException("Produit introuvable: " + mr.getProductId()));
                 StockMove move = StockMove.builder()
                         .picking(p)
+                        .purchasePrice(StockLedgerService.purchasePriceOf(product))
                         .productId(product.getId())
                         .productCode(product.getDefaultCode())
                         .productName(product.getName())
@@ -3123,7 +3252,7 @@ public class StockService {
     }
 
     public StockPickingDTO validateInterCompanyExpedition(Long id) {
-        StockPicking picking = pickingRepo.findById(id)
+        StockPicking picking = pickingRepo.findByIdForUpdate(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
         if ("done".equals(picking.getState())) throw new IllegalStateException("Cette expédition est déjà validée");
         if ("cancelled".equals(picking.getState())) throw new IllegalStateException("Cette expédition est annulée");
@@ -3149,6 +3278,7 @@ public class StockService {
                 // Destock immédiat dès la validation (l'émetteur n'a plus ce stock)
                 srcQuant.setQuantity(srcQuant.getQuantity().subtract(qty));
                 quantRepo.save(srcQuant);
+                stockLedger.postOut(picking, move, stockLedger.internalWarehouse(move.getLocationId()), qty);
             }
             move.setState("confirmed");
         }
@@ -3204,7 +3334,7 @@ public class StockService {
     }
 
     public StockPickingDTO confirmInterCompanyReception(Long id) {
-        StockPicking picking = pickingRepo.findById(id)
+        StockPicking picking = pickingRepo.findByIdForUpdate(id)
                 .orElseThrow(() -> new EntityNotFoundException("Expédition introuvable: " + id));
         if (!"pending_reception".equals(picking.getState()))
             throw new IllegalStateException("Cette expédition n'est pas en attente de réception");
@@ -3245,6 +3375,7 @@ public class StockService {
                 }
                 destQuant.setQuantity(destQuant.getQuantity().add(qty));
                 quantRepo.save(destQuant);
+                stockLedger.postIn(picking, move, stockLedger.internalWarehouse(destLocId), qty);
             }
             valuationRepo.save(ValuationLayer.builder()
                     .productId(move.getProductId()).moveId(move.getId())
@@ -3298,9 +3429,8 @@ public class StockService {
                 Product product = productRepo.findById(move.getProductId()).orElse(null);
                 if (product == null) continue;
 
-                Long costLocId = "incoming".equals(direction) ? move.getLocationDestId() : move.getLocationId();
-                BigDecimal price = move.getPriceUnit() != null ? move.getPriceUnit()
-                        : getWarehouseCmup(move.getProductId(), resolveWarehouseId(costLocId), product);
+                BigDecimal price = move.getPurchasePrice() != null ? move.getPurchasePrice()
+                        : StockLedgerService.purchasePriceOf(product);
                 BigDecimal value = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
                 totalValue = totalValue.add(value);
 
@@ -3483,6 +3613,7 @@ public class StockService {
                         StockQuant srcQ = findOrCreateQuant(move.getProductId(), move.getLocationId(), picking.getCompanyId());
                         srcQ.setQuantity(srcQ.getQuantity().add(qty));
                         quantRepo.save(srcQ);
+                        stockLedger.postCancelOut(picking, move, qty);
                     }
                 }
             }
@@ -3599,9 +3730,10 @@ public class StockService {
             int flow = stockFlow(picking, move);
             if (flow == 0) continue; // entre emplacements propres : pas d'écriture
 
-            Long costLocId = flow > 0 ? move.getLocationDestId() : move.getLocationId();
-            BigDecimal price = move.getPriceUnit() != null ? move.getPriceUnit()
-                    : getWarehouseCmup(move.getProductId(), resolveWarehouseId(costLocId), product);
+            // Sortie au prix d'achat figé sur le mouvement ; entrée au prix de son document.
+            BigDecimal price = flow < 0 || move.getPriceUnit() == null
+                    ? (move.getPurchasePrice() != null ? move.getPurchasePrice() : StockLedgerService.purchasePriceOf(product))
+                    : move.getPriceUnit();
             BigDecimal value = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
             totalValue = totalValue.add(value);
 
@@ -3780,11 +3912,35 @@ public class StockService {
                 .linkedPickingId(p.getLinkedPickingId()).linkedPickingName(linkedPickingName)
                 .transferReception(p.isTransferReception())
                 .moves(moveDTOs).totalValue(totalValue)
+                .totalColis(withMoves ? packageTotal(moveDTOs, p.getCompanyId(), m -> true) : null)
+                .totalPet(withMoves ? packageTotal(moveDTOs, p.getCompanyId(), StockService::isPet) : null)
+                .totalCasier(withMoves ? packageTotal(moveDTOs, p.getCompanyId(), StockService::isCasier) : null)
                 .createdAt(p.getCreatedAt())
                 .createdBy(p.getCreatedBy())
                 .updatedBy(p.getUpdatedBy())
                 .updatedAt(p.getUpdatedAt())
                 .build();
+    }
+
+    /** Quantités des lignes retenues, consignes exclues — mêmes règles que les totaux des factures. */
+    private static BigDecimal packageTotal(List<StockMoveDTO> moves, Long companyId,
+                                           java.util.function.Predicate<StockMoveDTO> retained) {
+        BigDecimal total = ZERO;
+        for (StockMoveDTO m : moves) {
+            if (com.erp.common.ConsigneCodes.isConsigne(m.getProductCode(), companyId) || !retained.test(m)) continue;
+            // Réception en attente : rien n'est encore fait, le total porte sur la quantité attendue.
+            BigDecimal qty = m.getQtyDone() != null && m.getQtyDone().compareTo(ZERO) > 0 ? m.getQtyDone() : m.getQtyDemanded();
+            if (qty != null) total = total.add(qty);
+        }
+        return total;
+    }
+
+    private static boolean isPet(StockMoveDTO m) {
+        return m.getCategoryName() != null && m.getCategoryName().trim().toUpperCase().startsWith("PET");
+    }
+
+    private static boolean isCasier(StockMoveDTO m) {
+        return m.getUomName() != null && m.getUomName().toLowerCase().contains("casier");
     }
 
     private StockMoveDTO toMoveDTO(StockMove m, StockPicking picking) {
@@ -3795,7 +3951,9 @@ public class StockService {
 
         BigDecimal price = m.getPriceUnit() != null ? m.getPriceUnit() : ZERO;
         BigDecimal qty = m.getQtyDone() != null ? m.getQtyDone() : m.getQtyDemanded();
-        BigDecimal subtotal = qty.multiply(price).setScale(2, RoundingMode.HALF_UP);
+        // Valeur opérationnelle au prix d'achat ; priceUnit pour un mouvement antérieur qui n'en a pas.
+        BigDecimal subtotal = m.getPurchaseValue() != null ? m.getPurchaseValue().setScale(2, RoundingMode.HALF_UP)
+                : qty.multiply(m.getPurchasePrice() != null ? m.getPurchasePrice() : price).setScale(2, RoundingMode.HALF_UP);
 
         Long cid = picking != null ? picking.getCompanyId() : m.getCompanyId();
         BigDecimal available = quantRepo.findFirstByProductIdAndLocationIdAndCompanyId(
@@ -3833,7 +3991,8 @@ public class StockService {
                 .productName(m.getProductName()).uomName(m.getUomName())
                 .categoryId(categoryId).categoryName(categoryName)
                 .qtyDemanded(m.getQtyDemanded()).qtyDone(m.getQtyDone())
-                .priceUnit(m.getPriceUnit()).subtotalValue(subtotal)
+                .priceUnit(m.getPriceUnit()).purchasePrice(m.getPurchasePrice())
+                .subtotalValue(subtotal)
                 .locationId(m.getLocationId()).locationName(srcName)
                 .locationDestId(m.getLocationDestId()).locationDestName(destName)
                 .state(m.getState()).companyId(m.getCompanyId())

@@ -98,7 +98,7 @@ public class ProductValuationService {
         return v != null ? v : ZERO;
     }
 
-    private static BigDecimal computeCmup(BigDecimal oldCmup, BigDecimal currentQty, BigDecimal incomingQty, BigDecimal pu) {
+    static BigDecimal computeCmup(BigDecimal oldCmup, BigDecimal currentQty, BigDecimal incomingQty, BigDecimal pu) {
         BigDecimal newQty = currentQty.add(incomingQty);
         if (newQty.compareTo(ZERO) <= 0) return oldCmup;
         return currentQty.multiply(oldCmup).add(incomingQty.multiply(pu)).divide(newQty, 4, RoundingMode.HALF_UP);
@@ -164,6 +164,11 @@ public class ProductValuationService {
         /** Coût en vigueur à la date `at` incluse (changements datés exactement de `at` compris). */
         public BigDecimal costAt(Long productId, LocalDateTime at) {
             return resolve(productId, at, true);
+        }
+
+        /** Prix d'achat de la fiche en vigueur à `at` d'après son historique ; null sans historique. */
+        public BigDecimal purchasePriceAt(Long productId, LocalDateTime at) {
+            return priceAt(standard.get(productId), at, true);
         }
 
         /** Coût en vigueur juste avant `at` (pour une valeur d'ouverture de période). */

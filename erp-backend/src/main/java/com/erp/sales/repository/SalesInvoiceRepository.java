@@ -156,18 +156,6 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, Long
            "ORDER BY SUM(i.montantDu) DESC")
     List<Object[]> creancesParTiers(@Param("cid") Long companyId);
 
-    /** "Créances Jour/Mois" du dashboard : montant dû des factures dont la DATE DE FACTURE tombe
-     *  dans la période — même logique que "CA du mois" (somme bornée par les factures de la
-     *  période), volontairement PAS le calcul par tiers/GL utilisé pour le total (creancesParTiers)
-     *  qui, lui, raisonne en mouvements de compte sur la période et peut dépasser le total global
-     *  affiché à côté (deux populations de tiers différentes selon la fenêtre). */
-    @Query("SELECT COALESCE(SUM(i.montantDu), 0) FROM SalesInvoice i " +
-           "WHERE i.company.id = :cid AND i.state = 'posted' AND i.type = 'invoice' " +
-           "AND i.montantDu > 0 AND i.date BETWEEN :from AND :to")
-    java.math.BigDecimal sumMontantDuClientsPeriode(@Param("cid") Long companyId,
-                                                    @Param("from") LocalDate from,
-                                                    @Param("to") LocalDate to);
-
     /**
      * Rapport des ventes : factures validées (y compris extournées — l'avoir correspondant
      * vient en négatif) et, au besoin, avoirs validés, filtrés sur leur propre date.

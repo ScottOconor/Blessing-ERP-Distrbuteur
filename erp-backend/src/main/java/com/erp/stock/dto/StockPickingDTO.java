@@ -41,6 +41,10 @@ public class StockPickingDTO {
     private boolean transferReception;
     private List<StockMoveDTO> moves;
     private BigDecimal totalValue;
+    // Mêmes règles que les factures : colis hors consignes, PET par catégorie, casiers par unité
+    private BigDecimal totalColis;
+    private BigDecimal totalPet;
+    private BigDecimal totalCasier;
     private LocalDateTime createdAt;
     private String createdBy;
     private String updatedBy;

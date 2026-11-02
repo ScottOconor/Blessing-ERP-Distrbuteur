@@ -1386,30 +1386,32 @@ private BigDecimal r2(BigDecimal v) { return v == null ? BigDecimal.ZERO : v.set
 
     // ── Suivi Dettes & Créances ──────────────────────────────────────────────
 
+    /** Soldes des comptes clients, pour le tableau de bord Ventes. */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getCreancesTiers(Long companyId) {
+        return moveLineRepo.creancesParTiers(companyId).stream()
+                .map(row -> tiersLine(row, toBD(row[2]).subtract(toBD(row[3])))).collect(Collectors.toList());
+    }
+
+    /** Soldes des comptes fournisseurs, pour le tableau de bord Achats. */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getDettesTiers(Long companyId) {
+        return moveLineRepo.dettesParTiers(companyId).stream()
+                .map(row -> tiersLine(row, toBD(row[3]).subtract(toBD(row[2])))).collect(Collectors.toList());
+    }
+
+    private Map<String, Object> tiersLine(Object[] row, BigDecimal solde) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("partnerId",   row[0]);
+        m.put("partnerName", row[1] != null ? row[1] : "—");
+        m.put("solde",       solde);
+        return m;
+    }
+
     @Transactional(readOnly = true)
     public Map<String, Object> getSuiviTiers(Long companyId) {
-        List<Object[]> rawCreances = moveLineRepo.creancesParTiers(companyId);
-        List<Object[]> rawDettes   = moveLineRepo.dettesParTiers(companyId);
-
-        List<Map<String, Object>> creances = rawCreances.stream().map(row -> {
-            BigDecimal debit  = toBD(row[2]);
-            BigDecimal credit = toBD(row[3]);
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("partnerId",   row[0]);
-            m.put("partnerName", row[1] != null ? row[1] : "—");
-            m.put("solde",       debit.subtract(credit));
-            return m;
-        }).collect(Collectors.toList());
-
-        List<Map<String, Object>> dettes = rawDettes.stream().map(row -> {
-            BigDecimal debit  = toBD(row[2]);
-            BigDecimal credit = toBD(row[3]);
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("partnerId",   row[0]);
-            m.put("partnerName", row[1] != null ? row[1] : "—");
-            m.put("solde",       credit.subtract(debit));
-            return m;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> creances = getCreancesTiers(companyId);
+        List<Map<String, Object>> dettes   = getDettesTiers(companyId);
 
         BigDecimal totalCreances = creances.stream()
                 .map(m -> (BigDecimal) m.get("solde")).reduce(BigDecimal.ZERO, BigDecimal::add);

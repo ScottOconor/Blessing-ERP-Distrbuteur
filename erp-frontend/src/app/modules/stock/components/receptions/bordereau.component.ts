@@ -62,6 +62,12 @@ export class BordereauComponent implements OnInit {
     return this.bordereau?.lignes.reduce((s, l) => s + l.qteCommandee, 0) ?? 0;
   }
 
+  /** Suit les quantités saisies ; une fois validé, ce qui est entré en magasin. */
+  packageTotal(kind: 'colis' | 'pet' | 'casier'): number {
+    return (this.bordereau?.lignes || []).filter(l => l[kind])
+      .reduce((s, l) => s + (this.saisie[l.moveId] || 0), 0);
+  }
+
   get totalQteSaisie(): number {
     return Object.values(this.saisie).reduce((s, v) => s + (v || 0), 0);
   }

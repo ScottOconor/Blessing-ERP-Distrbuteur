@@ -114,4 +114,10 @@ public interface SalesInvoiceLineRepository extends JpaRepository<SalesInvoiceLi
 
     @Query("SELECT l FROM SalesInvoiceLine l WHERE l.invoice.id IN :invoiceIds")
     List<SalesInvoiceLine> findByInvoiceIds(@Param("invoiceIds") java.util.Collection<Long> invoiceIds);
+
+    /** Lignes d'articles de documents validés sans coût figé (reprise de l'historique). */
+    @Query("SELECT l FROM SalesInvoiceLine l JOIN FETCH l.invoice i WHERE i.company.id = :cid "
+            + "AND l.productId IS NOT NULL AND l.cmupApplique IS NULL AND i.date IS NOT NULL "
+            + "AND i.state IN ('posted', 'paid', 'partiellement_extournee', 'extournee')")
+    List<SalesInvoiceLine> findWithoutFrozenCost(@Param("cid") Long companyId);
 }

@@ -203,3 +203,4 @@ textarea.form-control { resize: vertical; }
   &.qty-low { color: var(--danger); background: var(--danger-bg); }
 }
 
+.package-totals { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 12px; font-size: 13px; }

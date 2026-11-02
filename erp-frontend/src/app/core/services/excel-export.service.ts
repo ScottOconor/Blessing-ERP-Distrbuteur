@@ -697,7 +697,7 @@ export class ExcelExportService {
     const numCols = 6;
 
     titleBlock(ws, 'Rapport de Stock Valorisé', `État au ${new Date().toLocaleDateString('fr-FR')} ${companyName ? '— ' + companyName : ''}`, numCols);
-    hdrRow(ws, ['Référence', 'Désignation', 'UDM', 'P.U. (CMUP)', 'Quantité', 'Valeur (FCFA)'], numCols);
+    hdrRow(ws, ['Référence', 'Désignation', 'UDM', "Prix d'achat", 'Quantité', 'Valeur (FCFA)'], numCols);
     ws.getColumn(1).width = 16; ws.getColumn(2).width = 40; ws.getColumn(3).width = 10;
     ws.getColumn(4).width = 18; ws.getColumn(5).width = 14; ws.getColumn(6).width = 20;
 
@@ -878,7 +878,7 @@ export class ExcelExportService {
 
     titleBlock(ws, 'TROUS & CASSES',
       `Période du ${dateStr(dateFrom)} au ${dateStr(dateTo)} ${companyName ? '— ' + companyName : ''}`, NC);
-    hdrRow(ws, ['Code', 'Article', 'Quantité', 'CMUP', 'Montant'], NC);
+    hdrRow(ws, ['Code', 'Article', 'Quantité', "Prix d'achat", 'Montant'], NC);
 
     let grandTotal = 0;
     for (const loss of losses) {

@@ -39,4 +39,9 @@ public class ProductWarehouseValuation {
     @Column(precision = 20, scale = 4, nullable = false)
     @Builder.Default
     private BigDecimal standardPrice = BigDecimal.ZERO;
+
+    /** Valeur opérationnelle du stock de cet entrepôt, au prix d'achat — distincte du CMUP et jamais
+     *  déduite de lui. Nulle tant qu'un stock antérieur n'a pas été initialisé (StockLedgerService). */
+    @Column(name = "stock_value", precision = 24, scale = 4)
+    private BigDecimal stockValue;
 }

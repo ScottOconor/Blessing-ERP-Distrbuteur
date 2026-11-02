@@ -14,6 +14,8 @@ public class PermissionService {
     private static final List<PermissionRule> RULES = List.of(
         // ── VENTES ────────────────────────────────────────────────────────
         // SalesStatsController n'expose que du POST (stats-ventes/etat-commercial/rapport-consolide).
+        new PermissionRule("GET",    "/api/sales/creances-tiers",    "VENTES","COMMANDES","VIEW"),
+        new PermissionRule("GET",    "/api/purchases/dettes-tiers",  "ACHATS","COMMANDES","VIEW"),
         new PermissionRule("POST",   "/api/sales/stats/**",          "VENTES","COMMANDES","VIEW"),
         new PermissionRule("GET",    "/api/sales/orders",            "VENTES","COMMANDES","VIEW"),
         new PermissionRule("GET",    "/api/sales/orders/**",         "VENTES","COMMANDES","VIEW"),
@@ -143,6 +145,8 @@ public class PermissionService {
         new PermissionRule("GET",    "/api/stock/report",            "STOCK","INVENTAIRE","VIEW"),
         new PermissionRule("GET",    "/api/stock/report/**",         "STOCK","INVENTAIRE","VIEW"),
         new PermissionRule("GET",    "/api/stock/valuation",         "STOCK","INVENTAIRE","VIEW"),
+        new PermissionRule("GET",    "/api/stock/valuation/**",      "STOCK","INVENTAIRE","VIEW"),
+        new PermissionRule("POST",   "/api/stock/valuation/**",      "STOCK","INVENTAIRE","EDIT"),
         new PermissionRule("GET",    "/api/stock/adjustments",       "STOCK","INVENTAIRE","VIEW"),
         new PermissionRule("GET",    "/api/stock/adjustments/**",    "STOCK","INVENTAIRE","VIEW"),
         new PermissionRule("POST",   "/api/stock/adjustments",       "STOCK","INVENTAIRE","CREATE"),

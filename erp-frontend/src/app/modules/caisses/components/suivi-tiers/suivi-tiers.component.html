@@ -40,7 +40,7 @@
           Total Créances
         </div>
         <div class="kpi-value">{{ totalCreances | number:'1.0-0' }} <span class="kpi-curr">FCFA</span></div>
-        <div class="kpi-sub">{{ creances.length }} client(s) nous doivent de l'argent</div>
+        <div class="kpi-sub">{{ creances.length }} compte(s) client</div>
       </div>
       <div class="kpi-card kpi-dettes">
         <div class="kpi-label">
@@ -48,7 +48,7 @@
           Total Dettes
         </div>
         <div class="kpi-value">{{ totalDettes | number:'1.0-0' }} <span class="kpi-curr">FCFA</span></div>
-        <div class="kpi-sub">{{ dettes.length }} fournisseur(s) à qui on doit de l'argent</div>
+        <div class="kpi-sub">{{ dettes.length }} compte(s) fournisseur</div>
       </div>
       <div class="kpi-card" [class.kpi-net-pos]="soldeNet >= 0" [class.kpi-net-neg]="soldeNet < 0">
         <div class="kpi-label">
@@ -80,7 +80,7 @@
             <thead>
               <tr>
                 <th>Partenaire</th>
-                <th class="ar solde-col">Montant dû</th>
+                <th class="ar solde-col">Solde</th>
               </tr>
             </thead>
             <tbody>
@@ -118,7 +118,7 @@
             <thead>
               <tr>
                 <th>Partenaire</th>
-                <th class="ar solde-col">Montant dû</th>
+                <th class="ar solde-col">Solde</th>
               </tr>
             </thead>
             <tbody>

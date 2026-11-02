@@ -44,6 +44,7 @@ public class SnapshotService {
 
     private final CompanyRepository              companyRepo;
     private final com.erp.stock.service.ProductValuationService productValuationService;
+    private final com.erp.stock.service.StockLedgerService stockLedger;
     private final SalesInvoiceRepository         salesInvoiceRepo;
     private final PurchaseInvoiceRepository      purchaseInvoiceRepo;
     private final RistournePaiementRepository    ristournePaiementRepo;
@@ -193,9 +194,8 @@ public class SnapshotService {
 
         // Total : même calcul que l'écran "Suivi Tiers" déjà utilisé et vérifié en local
         // (ReportService.getSuiviTiers / AccountMoveLineRepository.creancesParTiers-dettesParTiers)
-        // — ventilé par tiers avant de sommer, jamais un solde net global : un partenaire en crédit
-        // (avance, trop-perçu) est exclu des créances et compté dans les dettes, au lieu de faire
-        // baisser le total créances en dessous de zéro comme le faisait l'ancien solde brut 411/401.
+        // : créances = soldes des comptes clients, dettes = soldes des comptes fournisseurs, positifs
+        // ou négatifs (une avance diminue le total de son côté, sans changer de côté).
         BigDecimal creancesTotal = sumSoldeParTiers(moveLineRepo.creancesParTiers(cid), true);
         List<Object[]> dettesParTiers = moveLineRepo.dettesParTiers(cid);
         BigDecimal dettesTotal   = sumSoldeParTiers(dettesParTiers, false);
@@ -205,16 +205,12 @@ public class SnapshotService {
         BigDecimal detteBrasseries = sumDettesFournisseur(soldesFournisseurs, "brasseries");
         BigDecimal detteGuinness = sumDettesFournisseur(soldesFournisseurs, "guinness");
 
-        // Jour/Mois : PAS le même calcul par tiers restreint à la période — un tiers déjà soldé
-        // avant le mois mais avec une grosse facture nouvelle ce mois-ci gonflait "Ce mois" au-delà
-        // du "Total" affiché juste à côté (deux populations de tiers différentes selon la fenêtre).
-        // Repris sur le même principe que "CA du mois" : somme des factures encore dues dont la
-        // date de facture tombe dans la période — borné par construction, jamais négatif, jamais
-        // supérieur au total en pratique.
-        BigDecimal creancesJour  = orZ(salesInvoiceRepo.sumMontantDuClientsPeriode(cid, today, today));
-        BigDecimal creancesMois  = orZ(salesInvoiceRepo.sumMontantDuClientsPeriode(cid, monthStart, today));
-        BigDecimal dettesJour    = orZ(purchaseInvoiceRepo.sumMontantDuFournisseursPeriode(cid, today, today));
-        BigDecimal dettesMois    = orZ(purchaseInvoiceRepo.sumMontantDuFournisseursPeriode(cid, monthStart, today));
+        // Jour/Mois : mêmes comptes que le total, mouvement net de la période (factures moins
+        // règlements) — négatif si l'on a plus réglé que facturé sur la période.
+        BigDecimal creancesJour  = orZ(moveLineRepo.mouvementComptesTiers(cid, "receivable", today, today));
+        BigDecimal creancesMois  = orZ(moveLineRepo.mouvementComptesTiers(cid, "receivable", monthStart, today));
+        BigDecimal dettesJour    = orZ(moveLineRepo.mouvementComptesTiers(cid, "payable", today, today)).negate();
+        BigDecimal dettesMois    = orZ(moveLineRepo.mouvementComptesTiers(cid, "payable", monthStart, today)).negate();
 
         BigDecimal ristTotalTotal     = orZ(ristournePaiementRepo.sumTotalByCompany(cid));
         BigDecimal ristTotalMois      = orZ(ristournePaiementRepo.sumByPeriod(cid, monthStart, today));
@@ -393,13 +389,17 @@ public class SnapshotService {
         BigDecimal valEmballages = BigDecimal.ZERO;
         List<SpokeSnapshotPayload.StockItem> topStock = new ArrayList<>();
 
+        // Valeur remontée au Hub : toujours celle du prix d'achat. Le CMUP voyage à côté, dans son
+        // propre champ, pour les analyses de marge ; le Hub ne s'en sert jamais pour valoriser.
+        com.erp.stock.service.StockLedgerService.ValueView stockValues = stockLedger.loadValues(cid);
         for (StockQuant q : quants) {
             var p = productById.get(q.getProductId());
-            BigDecimal price  = p != null
+            BigDecimal price  = com.erp.stock.service.StockLedgerService.purchasePriceOf(p);
+            BigDecimal valeur = stockValues.valueOf(q, price);
+            BigDecimal cmup   = p != null
                     ? productValuationService.getWarehouseCmup(p.getId(),
                             productValuationService.resolveWarehouseId(q.getLocationId()), p)
                     : BigDecimal.ZERO;
-            BigDecimal valeur = q.getQuantity().multiply(price);
             String     code   = p != null && p.getDefaultCode() != null ? p.getDefaultCode().strip().toUpperCase() : "";
             boolean    emb    = (p != null && p.getCategoryId() != null && emballageCategoryIds.contains(p.getCategoryId()))
                     || EMBALLAGE_CODES.contains(code);
@@ -414,12 +414,14 @@ public class SnapshotService {
                     .category(cat)
                     .quantity(q.getQuantity())
                     .standardPrice(price)
+                    .cmup(cmup)
+                    .salePrice(p != null ? p.getSalePrice() : null)
                     .valeurStock(valeur)
                     .build());
         }
 
-        // Total = Produits + Emballages, valorisés comme le rapport de stock du spoke (CMUP de
-        // l'entrepôt de chaque quant). Avant : total recalculé à part au prix standard
+        // Total = Produits + Emballages, valorisés comme le rapport de stock du spoke (prix d'achat
+        // des mouvements). Avant : total recalculé à part au prix standard
         // (computeTotalStockValue) → il ne correspondait jamais à la somme des deux cartes.
         BigDecimal totalStock = valProduits.add(valEmballages);
 
@@ -454,17 +456,21 @@ public class SnapshotService {
             }
         }
 
+        Map<Long, BigDecimal> mainStockValues = stockLedger.stockValuesByProduct(cid, mainWarehouseId);
+
         // Toujours la liste complète : un mouvement de stock ne modifie pas Product.updatedAt,
         // l'incrémental laissait donc les quantités figées côté hub.
         List<SpokeSnapshotPayload.ProductItem> products = productRepo.findByCompanyIdAndActiveOrderByNameAsc(cid, true).stream()
                 .map(p -> {
                     BigDecimal qty = mainQtyByProduct.getOrDefault(p.getId(), BigDecimal.ZERO);
-                    BigDecimal price = productValuationService.getWarehouseCmup(p.getId(), mainWarehouseId, p);
-                    BigDecimal val = qty.multiply(price);
+                    BigDecimal price = com.erp.stock.service.StockLedgerService.purchasePriceOf(p);
+                    BigDecimal cmup = productValuationService.getWarehouseCmup(p.getId(), mainWarehouseId, p);
+                    BigDecimal mainValue = mainWarehouseId != null ? mainStockValues.get(p.getId()) : null;
+                    BigDecimal val = mainValue != null ? mainValue : qty.multiply(price);
                     return SpokeSnapshotPayload.ProductItem.builder()
                             .id(p.getId()).code(p.getDefaultCode()).name(p.getName())
                             .uomName(p.getUomName()).type(p.getType())
-                            .standardPrice(price).salePrice(p.getSalePrice())
+                            .standardPrice(price).cmup(cmup).salePrice(p.getSalePrice())
                             .quantiteEnStock(qty).valeurStock(val)
                             .build();
                 })
@@ -801,9 +807,8 @@ public class SnapshotService {
 
     private static BigDecimal orZ(BigDecimal v) { return v != null ? v : BigDecimal.ZERO; }
 
-    /** Somme le solde net (débit-crédit, ou crédit-débit pour les dettes) des lignes déjà
-     *  ventilées par tiers par creancesParTiers/dettesParTiers(Periode) — chaque ligne représente
-     *  un tiers dont le HAVING de la requête garantit déjà le solde net dans le bon sens. */
+    /** Somme le solde (débit-crédit, ou crédit-débit pour les dettes) des lignes déjà ventilées
+     *  par tiers par creancesParTiers/dettesParTiers — positif ou négatif. */
     private static BigDecimal sumSoldeParTiers(java.util.List<Object[]> rows, boolean creance) {
         BigDecimal total = BigDecimal.ZERO;
         for (Object[] row : rows) {
@@ -816,8 +821,7 @@ public class SnapshotService {
 
     /**
      * Dette envers Boissons du Cameroun (nom contenant « brasserie », « boissons » ou « sabc ») ou
-     * Guinness (« guinness »). Chaque tiers ne compte que si son solde fournisseur est créditeur
-     * (on lui doit réellement) : une avance chez un autre tiers ne diminue pas la dette.
+     * Guinness (« guinness ») : solde du compte fournisseur, positif ou négatif.
      */
     private static BigDecimal sumDettesFournisseur(java.util.List<Object[]> rows, String supplierToken) {
         BigDecimal total = BigDecimal.ZERO;
@@ -827,7 +831,7 @@ public class SnapshotService {
                     ? partner.contains("brasserie") || partner.contains("boissons") || partner.contains("sabc")
                     : partner.contains("guinness") || partner.contains("guiness");
             BigDecimal solde = toBD(row[3]).subtract(toBD(row[2]));
-            if (match && solde.signum() > 0) total = total.add(solde);
+            if (match) total = total.add(solde);
         }
         return total;
     }

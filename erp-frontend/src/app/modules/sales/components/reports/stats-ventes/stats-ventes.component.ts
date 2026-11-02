@@ -148,7 +148,7 @@ export class StatsVentesComponent implements OnInit {
     const head: string[] = [this.groupLabel, 'Produit', 'Qté', 'Px vente HT'];
     if (this.showCA)   head.push('CA HT');
     if (this.showCout) head.push('Coût');
-    if (this.showMarge) head.push('Marge HT', 'Tx %');
+    if (this.showMarge) head.push('Marge HT', 'Tx marge %');
     if (this.showCA)   head.push('CA TTC');
 
     const body: any[] = [];
@@ -218,7 +218,7 @@ export class StatsVentesComponent implements OnInit {
     const hdrs: string[] = [this.groupLabel, 'Produit', 'Qté', 'Px vente HT'];
     if (this.showCA)    hdrs.push('CA HT');
     if (this.showCout)  hdrs.push('Coût');
-    if (this.showMarge) hdrs.push('Marge HT', 'Taux %');
+    if (this.showMarge) hdrs.push('Marge HT', 'Taux marge %');
     if (this.showCA)    hdrs.push('CA TTC');
 
     const hRow = ws.addRow(hdrs);

@@ -413,25 +413,35 @@ public interface AccountMoveLineRepository extends JpaRepository<AccountMoveLine
                                   @Param("from") LocalDate from,
                                   @Param("to") LocalDate to);
 
-    /** Créances par tiers : solde net débiteur (on nous doit) — clients ET fournisseurs */
+    /** Créances : solde (débit − crédit) du compte client de chaque tiers, positif ou négatif —
+     *  un client en avance reste dans les créances et en diminue le total. */
     @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +
            "FROM AccountMoveLine l " +
            "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
-           "AND l.account.internalType IN ('receivable', 'payable') AND l.partner IS NOT NULL " +
+           "AND l.account.internalType = 'receivable' AND l.partner IS NOT NULL " +
            "GROUP BY l.partner.id, l.partner.name " +
-           "HAVING SUM(l.debit) > SUM(l.credit) " +
+           "HAVING SUM(l.debit) <> SUM(l.credit) " +
            "ORDER BY (SUM(l.debit) - SUM(l.credit)) DESC")
     List<Object[]> creancesParTiers(@Param("cid") Long companyId);
 
-    /** Dettes par tiers : solde net créditeur (on leur doit) — clients ET fournisseurs */
+    /** Dettes : solde (crédit − débit) du compte fournisseur de chaque tiers, positif ou négatif —
+     *  un fournisseur à qui l'on a trop versé reste dans les dettes et en diminue le total. */
     @Query("SELECT l.partner.id, l.partner.name, SUM(l.debit), SUM(l.credit) " +
            "FROM AccountMoveLine l " +
            "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
-           "AND l.account.internalType IN ('receivable', 'payable') AND l.partner IS NOT NULL " +
+           "AND l.account.internalType = 'payable' AND l.partner IS NOT NULL " +
            "GROUP BY l.partner.id, l.partner.name " +
-           "HAVING SUM(l.credit) > SUM(l.debit) " +
+           "HAVING SUM(l.debit) <> SUM(l.credit) " +
            "ORDER BY (SUM(l.credit) - SUM(l.debit)) DESC")
     List<Object[]> dettesParTiers(@Param("cid") Long companyId);
+
+    /** Mouvement net (débit − crédit) des comptes tiers d'un type sur une période : même base que
+     *  creancesParTiers / dettesParTiers, pour les cartes Jour et Mois. */
+    @Query("SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) FROM AccountMoveLine l " +
+           "WHERE l.company.id = :cid AND l.move.state = 'posted' " +
+           "AND l.account.internalType = :type AND l.partner IS NOT NULL AND l.date BETWEEN :from AND :to")
+    BigDecimal mouvementComptesTiers(@Param("cid") Long companyId, @Param("type") String internalType,
+                                     @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     /** Solde des seuls comptes fournisseurs (internalType 'payable' : 4011, 401100…) par tiers,
      *  pour la carte Dettes du Hub (Boissons du Cameroun / Guinness). */

@@ -16,7 +16,9 @@ public class StockQuantDTO {
     private BigDecimal quantity;
     private BigDecimal reservedQuantity;
     private BigDecimal availableQuantity;
+    // Prix d'achat de la fiche (standardPrice), valeur au prix d'achat (totalValue), CMUP à part
     private BigDecimal standardPrice;
+    private BigDecimal cmup;
     private BigDecimal totalValue;
     private Long companyId;
     private Long categoryId;

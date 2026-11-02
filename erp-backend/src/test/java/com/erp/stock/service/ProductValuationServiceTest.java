@@ -239,4 +239,25 @@ class ProductValuationServiceTest {
         return StockMove.builder().productId(7L).locationId(src).locationDestId(dest)
                 .qtyDone(new BigDecimal(qty)).priceUnit(new BigDecimal(price)).picking(picking).build();
     }
+
+    /** Exemple du cahier des charges : le CMUP se nourrit des prix de chaque achat, sans arrondi cumulé gênant. */
+    @Test
+    void cmupFollowsEachPurchasePriceOverSuccessiveReceptions() {
+        Long productId = 1L, warehouseId = 5L, companyId = 9L;
+        ProductWarehouseValuation row = ProductWarehouseValuation.builder().productId(productId)
+                .warehouseId(warehouseId).companyId(companyId).standardPrice(BigDecimal.ZERO).build();
+        when(warehouseValuationRepo.findByProductIdAndWarehouseId(productId, warehouseId)).thenReturn(Optional.of(row));
+
+        when(quantRepo.sumQuantityForProductInWarehouse(productId, warehouseId)).thenReturn(BigDecimal.ZERO);
+        assertThat(service.recalcWarehouseCmup(productId, warehouseId, companyId,
+                new BigDecimal("100"), new BigDecimal("1000"), LocalDateTime.now(), "R1")).isEqualByComparingTo("1000");
+
+        when(quantRepo.sumQuantityForProductInWarehouse(productId, warehouseId)).thenReturn(new BigDecimal("100"));
+        assertThat(service.recalcWarehouseCmup(productId, warehouseId, companyId,
+                new BigDecimal("50"), new BigDecimal("1200"), LocalDateTime.now(), "R2")).isEqualByComparingTo("1066.6667");
+
+        when(quantRepo.sumQuantityForProductInWarehouse(productId, warehouseId)).thenReturn(new BigDecimal("150"));
+        assertThat(service.recalcWarehouseCmup(productId, warehouseId, companyId,
+                new BigDecimal("100"), new BigDecimal("1300"), LocalDateTime.now(), "R3")).isEqualByComparingTo("1160");
+    }
 }

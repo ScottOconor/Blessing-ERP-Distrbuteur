@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Valorisation de stock</h1>
-      <p class="page-subtitle">Couches de valorisation CMUP — historique des coûts</p>
+      <p class="page-subtitle">Mouvements valorisés au prix d'achat</p>
     </div>
     <div style="display:flex;gap:8px">
       @if (isAdmin) {
@@ -18,6 +18,20 @@
 
   @if (rebuildMsg) { <div class="alert alert-success"><span class="material-icons">check_circle</span> {{ rebuildMsg }}</div> }
   @if (rebuildError) { <div class="alert alert-danger">{{ rebuildError }}</div> }
+
+  @if (isAdmin && initLines.length > 0) {
+    <div class="alert alert-warning">
+      <span class="material-icons">info</span>
+      <div style="flex:1">
+        {{ initLines.length }} stock(s) existant(s) sans valeur établie — valeur proposée au prix d'achat :
+        <strong>{{ initTotal | number:'1.0-0' }} FCFA</strong>.
+        @if (initUnpriced > 0) { {{ initUnpriced }} article(s) sans prix d'achat seront ignorés. }
+      </div>
+      <button class="btn-secondary" (click)="initializeValuation()" [disabled]="initializing">
+        Valider l'initialisation
+      </button>
+    </div>
+  }
 
   <!-- KPIs -->
   <div class="kpi-row">

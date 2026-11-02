@@ -35,7 +35,13 @@ export interface Product {
   categoryName?: string;
   uomName?: string;
   unitOfMeasureId?: number;
+  /** Prix d'achat de la fiche : base de la valeur du stock. */
   standardPrice?: number;
+  /** Coût moyen calculé à chaque achat : lecture seule, réservé aux marges. */
+  cmup?: number;
+  /** Valeur du stock au prix d'achat. */
+  stockValue?: number;
+  stockValueEstablished?: boolean;
   barcode?: string;
   salePrice?: number;
   minPrice?: number;
@@ -111,6 +117,7 @@ export interface StockPickingType {
 
 export interface StockMove {
   id?: number;
+  purchasePrice?: number;
   pickingId?: number;
   pickingRef?: string;
   productId: number;
@@ -170,6 +177,9 @@ export interface StockPicking {
   transferReception?: boolean;
   moves: StockMove[];
   totalValue?: number;
+  totalColis?: number;
+  totalPet?: number;
+  totalCasier?: number;
   createdAt?: string;
   createdBy?: string;
   updatedBy?: string;
@@ -272,6 +282,28 @@ export interface PriceHistoryRebuildResult {
   aligned: number;
 }
 
+/** Stock existant sans valeur connue, avec la valeur proposée au prix d'achat de la fiche. */
+export interface ValuationInitLine {
+  productId: number;
+  productCode?: string;
+  productName: string;
+  warehouseId: number;
+  quantity: number;
+  purchasePrice: number;
+  proposedValue?: number;
+  cmup: number;
+  canInitialize: boolean;
+}
+
+/** Valeur et CMUP d'un article pour un entrepôt. */
+export interface WarehouseValuationLine {
+  warehouseId: number;
+  quantity: number;
+  cmup: number;
+  stockValue: number;
+  valueEstablished: boolean;
+}
+
 export interface ValuationLayer {
   id?: number;
   productId: number;
@@ -302,6 +334,7 @@ export interface Agency {
 
 export interface StockQuant {
   id?: number;
+  cmup?: number;
   productId: number;
   productCode?: string;
   productName?: string;
@@ -327,6 +360,9 @@ export interface BordereauLigne {
   qteCommandee: number;
   qteRecue: number;
   reste: number;
+  colis?: boolean;
+  pet?: boolean;
+  casier?: boolean;
 }
 
 export interface ReceptionBordereauDTO {
@@ -340,6 +376,9 @@ export interface ReceptionBordereauDTO {
   operatorName?: string;
   state?: string;
   dateDone?: string;
+  totalColis?: number;
+  totalPet?: number;
+  totalCasier?: number;
   lignes: BordereauLigne[];
 }
 
@@ -739,6 +778,22 @@ export class StockService {
 
   getPriceHistory(productId: number, companyId: number): Observable<ProductPriceHistory[]> {
     return this.http.get<ProductPriceHistory[]>(`${this.api}/products/${productId}/price-history`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  getProductValuation(productId: number): Observable<WarehouseValuationLine[]> {
+    return this.http.get<WarehouseValuationLine[]>(`${this.api}/products/${productId}/valuation`);
+  }
+
+  getValuationInitialization(companyId: number): Observable<ValuationInitLine[]> {
+    return this.http.get<ValuationInitLine[]>(`${this.api}/valuation/initialization`, {
+      params: new HttpParams().set('companyId', companyId)
+    });
+  }
+
+  initializeValuation(companyId: number): Observable<{ initialized: number; skipped: number }> {
+    return this.http.post<{ initialized: number; skipped: number }>(`${this.api}/valuation/initialization`, null, {
       params: new HttpParams().set('companyId', companyId)
     });
   }

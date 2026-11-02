@@ -136,6 +136,11 @@
           </tr>
         </tfoot>
       </table>
+      <div class="package-totals">
+        <span>Total Colis : <strong>{{ packageTotal('colis') | number:'1.0-2' }}</strong></span>
+        <span>Total PET : <strong>{{ packageTotal('pet') | number:'1.0-2' }}</strong></span>
+        <span>Total Casier : <strong>{{ packageTotal('casier') | number:'1.0-2' }}</strong></span>
+      </div>
     </div>
 
     <!-- Actions -->

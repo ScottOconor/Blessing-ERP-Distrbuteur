@@ -214,7 +214,7 @@
                   <th class="col-num">Px vente HT</th>
                   @if (showCA)    { <th class="col-num">CA HT</th> }
                   @if (showCout)  { <th class="col-num">Coût</th> }
-                  @if (showMarge) { <th class="col-num">Marge HT</th> <th class="col-pct">Taux %</th> }
+                  @if (showMarge) { <th class="col-num">Marge HT</th> <th class="col-pct" title="Taux de marge (sur coût) / taux de marque (sur CA)">Marge / Marque %</th> }
                   @if (showCA)    { <th class="col-num">CA TTC</th> }
                 </tr>
               </thead>
@@ -231,7 +231,7 @@
                     @if (showCout)  { <td class="num muted">{{ l.cout | number:'1.0-0' }}</td> }
                     @if (showMarge) {
                       <td class="num" [class.pos]="l.margeHT > 0" [class.neg]="l.margeHT < 0">{{ l.margeHT | number:'1.0-0' }}</td>
-                      <td class="num muted">{{ l.tauxMarge | number:'1.1-1' }} %</td>
+                      <td class="num muted">{{ l.tauxMarge | number:'1.1-1' }} / {{ l.tauxMarque | number:'1.1-1' }} %</td>
                     }
                     @if (showCA)    { <td class="num">{{ l.caTTC | number:'1.0-0' }}</td> }
                   </tr>

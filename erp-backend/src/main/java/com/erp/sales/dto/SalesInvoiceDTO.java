@@ -107,6 +107,8 @@ public class SalesInvoiceDTO {
         private String description;
         private BigDecimal quantity;
         private BigDecimal prixUnitaire;
+        /** CMUP figé à la validation : coût de la ligne pour les marges, ici et sur le Hub. */
+        private BigDecimal cmupApplique;
         private BigDecimal prixReference;
         private BigDecimal tauxRemise;
         private BigDecimal tauxTVA;

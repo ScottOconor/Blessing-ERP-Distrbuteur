@@ -182,3 +182,5 @@
 }
 textarea.form-control { resize: vertical; }
 .form-value { font-size: 13px; color: var(--text-primary); padding: 4px 0; }
+
+.package-totals { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 12px; font-size: 13px; }

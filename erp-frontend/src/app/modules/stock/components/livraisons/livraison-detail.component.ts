@@ -10,6 +10,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { CompanyService } from '../../../../core/services/company.service';
 import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
+import { computePackageTotals, PackageTotals } from '../../../../shared/constants/package-totals';
 
 @Component({
   selector: 'app-livraison-detail',
@@ -47,6 +48,7 @@ export class LivraisonDetailComponent implements OnInit {
     qtyDemanded: number;
     qtyDone: number;
     priceUnit: number;
+    purchasePrice: number;
     uomName: string;
     availableQty: number;
   }> = [];
@@ -143,6 +145,7 @@ export class LivraisonDetailComponent implements OnInit {
           qtyDemanded: m.qtyDemanded,
           qtyDone: m.qtyDone ?? m.qtyDemanded,
           priceUnit: m.priceUnit ?? 0,
+          purchasePrice: m.purchasePrice ?? m.priceUnit ?? 0,
           uomName: m.uomName || '',
           availableQty: 0
         }));
@@ -169,7 +172,7 @@ export class LivraisonDetailComponent implements OnInit {
   }
 
   addLine(): void {
-    this.lines.push({ productId: null, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, uomName: '', availableQty: 0 });
+    this.lines.push({ productId: null, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, purchasePrice: 0, uomName: '', availableQty: 0 });
     this.lineSearchTexts.push('');
   }
   removeLine(i: number): void { this.lines.splice(i, 1); this.lineSearchTexts.splice(i, 1); }
@@ -198,6 +201,7 @@ export class LivraisonDetailComponent implements OnInit {
     if (prod) {
       this.lines[i].uomName = prod.uomName || '';
       this.lines[i].priceUnit = prod.standardPrice || 0;
+      this.lines[i].purchasePrice = prod.standardPrice || 0;
       this.refreshLineQty(i);
     }
   }
@@ -321,6 +325,10 @@ export class LivraisonDetailComponent implements OnInit {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  private qty(n?: number): string {
+    return (n ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
   printBordereau(): void {
     if (!this.picking) return;
     const p = this.picking;
@@ -333,7 +341,7 @@ export class LivraisonDetailComponent implements OnInit {
     const dateStr = p.scheduledDate ? new Date(p.scheduledDate).toLocaleDateString('fr-FR') : '—';
     const rows = (p.moves || []).map(m => {
       const qty = m.qtyDone ?? m.qtyDemanded ?? 0;
-      const pu = m.priceUnit ?? 0;
+      const pu = m.purchasePrice ?? m.priceUnit ?? 0;
       return `<tr>
         <td>${m.productCode ? '[' + this.h(m.productCode) + '] ' : ''}${this.h(m.productName || '')}</td>
         <td class="center">${this.h(m.uomName || '')}</td>
@@ -342,7 +350,7 @@ export class LivraisonDetailComponent implements OnInit {
         <td class="right">${(qty * pu).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
       </tr>`;
     }).join('');
-    const total = (p.moves || []).reduce((s, m) => s + (m.qtyDone ?? m.qtyDemanded ?? 0) * (m.priceUnit ?? 0), 0);
+    const total = (p.moves || []).reduce((s, m) => s + (m.qtyDone ?? m.qtyDemanded ?? 0) * (m.purchasePrice ?? m.priceUnit ?? 0), 0);
     const stateMap: Record<string, string> = { draft: 'Brouillon', pending_reception: 'En attente de réception', done: 'Réceptionné', cancelled: 'Annulé' };
     const title = isRec ? 'Bordereau de Réception' : "Bordereau d'Expédition";
 
@@ -381,6 +389,8 @@ table{width:100%;border-collapse:collapse;margin-top:6px}
 th{background:#017E84;color:white;padding:6px 8px;text-align:left;font-size:10px}
 td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px}
 .right{text-align:right}.center{text-align:center}
+.package-totals{width:45%;margin:12px 0 0 auto}
+.package-totals td{font-weight:bold}
 tfoot td{font-weight:bold;background:#f5f5f5;border-top:2px solid #017E84}
 .signatures{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:36px}
 .sig-box{border-top:1px solid #999;padding-top:6px;min-height:50px}
@@ -408,6 +418,10 @@ tfoot td{font-weight:bold;background:#f5f5f5;border-top:2px solid #017E84}
   <tbody>${rows}</tbody>
   <tfoot><tr><td colspan="4" class="right">TOTAL</td><td class="right">${total.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} FCFA</td></tr></tfoot>
 </table>
+${p.totalColis != null ? `<table class="package-totals">
+  <thead><tr><th class="right">Total Colis</th><th class="right">Total PET</th><th class="right">Total Casier</th></tr></thead>
+  <tbody><tr><td class="right">${this.qty(p.totalColis)}</td><td class="right">${this.qty(p.totalPet)}</td><td class="right">${this.qty(p.totalCasier)}</td></tr></tbody>
+</table>` : ''}
 <div class="signatures">
   <div class="sig-box"><label>Signature émetteur</label></div>
   <div class="sig-box"><label>Cachet & signature récepteur</label></div>
@@ -426,7 +440,15 @@ tfoot td{font-weight:bold;background:#f5f5f5;border-top:2px solid #017E84}
   get isDone(): boolean { return this.picking?.state === 'done'; }
   get isCancelled(): boolean { return this.picking?.state === 'cancelled'; }
   get isPendingReception(): boolean { return this.picking?.state === 'pending_reception'; }
-  get lineTotal(): number { return this.lines.reduce((s, l) => s + l.qtyDone * l.priceUnit, 0); }
+  /** Totaux enregistrés d'un document validé, calculés en direct pendant la saisie. */
+  get packageTotals(): PackageTotals {
+    if (!this.isDraft && this.picking?.totalColis != null) {
+      return { colis: this.picking.totalColis, pet: this.picking.totalPet ?? 0, casier: this.picking.totalCasier ?? 0 };
+    }
+    return computePackageTotals(this.lines.map(l => ({ productId: l.productId, qty: l.qtyDone })), this.products);
+  }
+
+  get lineTotal(): number { return this.lines.reduce((s, l) => s + l.qtyDone * l.purchasePrice, 0); }
 
   productName(id: number | null): string {
     return this.products.find(p => p.id === Number(id))?.name || '';

@@ -265,7 +265,7 @@ export class ProductListComponent implements OnInit {
       const wh = this.warehouses.find(w => w.id === h.warehouseId);
       return 'CMUP' + (wh ? ' — ' + wh.name : '');
     }
-    return h.priceType === 'SALE' ? 'Prix de vente' : 'Prix de revient';
+    return h.priceType === 'SALE' ? 'Prix de vente' : 'Prix d\'achat';
   }
 
   priceSourceLabel(h: ProductPriceHistory): string {

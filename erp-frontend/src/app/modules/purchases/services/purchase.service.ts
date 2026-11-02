@@ -250,6 +250,9 @@ export interface StatsAchatsRequest {
   warehouseId?: number | null;
 }
 
+/** Solde du compte d'un tiers, positif ou négatif. */
+export interface TiersSolde { partnerId: number; partnerName: string; solde: number; }
+
 @Injectable({ providedIn: 'root' })
 export class PurchaseService {
   private base = `${environment.apiUrl}/api/purchases`;
@@ -324,6 +327,11 @@ export class PurchaseService {
   }
 
   // ===================== FACTURES FOURNISSEURS =====================
+
+  /** Soldes des comptes fournisseurs, positifs ou négatifs. */
+  getDettesTiers(companyId: number): Observable<TiersSolde[]> {
+    return this.http.get<TiersSolde[]>(`${this.base}/dettes-tiers`, { params: { companyId: companyId.toString() } });
+  }
 
   getInvoices(companyId: number): Observable<PurchaseInvoice[]> {
     const params = new HttpParams().set('companyId', companyId);

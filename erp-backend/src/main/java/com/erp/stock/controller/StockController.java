@@ -30,6 +30,8 @@ public class StockController {
     private final StockService stockService;
     private final StockReportService stockReportService;
     private final ProductValuationService productValuationService;
+    private final com.erp.stock.service.StockLedgerService stockLedger;
+    private final com.erp.stock.service.PurchaseReconciliationService purchaseReconciliation;
     private final BordereauExportService bordereauExportService;
     private final StockPickingTypeRepository pickingTypeRepo;
     private final CompanyRepository companyRepository;
@@ -552,6 +554,53 @@ public class StockController {
             @RequestParam("companyId") Long companyId,
             @RequestParam(name = "productId", required = false) Long productId) {
         return ResponseEntity.ok(stockService.getValuation(companyId, productId));
+    }
+
+    /** Valeur au prix d'achat et CMUP d'un article, par entrepôt, pour la fiche article. */
+    @GetMapping("/products/{id}/valuation")
+    public ResponseEntity<List<com.erp.stock.service.StockLedgerService.WarehouseValuationLine>> getProductValuation(
+            @PathVariable("id") Long id) {
+        return ResponseEntity.ok(stockService.getProductValuation(id));
+    }
+
+    /** Journal de valorisation : un mouvement, ses valeurs au prix d'achat, le CMUP à part. */
+    @GetMapping("/valuation/history")
+    public ResponseEntity<List<com.erp.stock.entity.StockValuationEntry>> getValuationHistory(
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(name = "productId", required = false) Long productId,
+            @RequestParam(name = "limit", defaultValue = "200") int limit) {
+        return ResponseEntity.ok(stockLedger.history(companyId, productId, Math.min(limit, 1000)));
+    }
+
+    /** Stocks existants sans valeur connue, avec la valeur proposée au prix d'achat de la fiche. */
+    @GetMapping("/valuation/initialization")
+    public ResponseEntity<List<com.erp.stock.service.StockLedgerService.InitLine>> previewValuationInit(
+            @RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(stockLedger.previewInitialization(companyId));
+    }
+
+    /** Valide l'initialisation proposée ; tracée, et sans effet sur ce qui est déjà établi. */
+    @PostMapping("/valuation/initialization")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<com.erp.stock.service.StockLedgerService.InitResult> initializeValuation(
+            @RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(stockLedger.initialize(companyId));
+    }
+
+    /** TEMPORAIRE : ce que changerait la reprise des achats passés. */
+    @GetMapping("/valuation/reconciliation")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<com.erp.stock.service.PurchaseReconciliationService.Preview> previewReconciliation(
+            @RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(purchaseReconciliation.preview(companyId));
+    }
+
+    /** TEMPORAIRE : lance la reprise des achats passés. */
+    @PostMapping("/valuation/reconciliation")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<com.erp.stock.service.PurchaseReconciliationService.Result> reconcilePurchases(
+            @RequestParam("companyId") Long companyId) {
+        return ResponseEntity.ok(purchaseReconciliation.apply(companyId));
     }
 
     // ---- Expéditions inter-agences (agences distantes via API) ----

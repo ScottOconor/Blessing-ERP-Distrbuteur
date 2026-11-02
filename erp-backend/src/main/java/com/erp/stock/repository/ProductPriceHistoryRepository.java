@@ -25,6 +25,9 @@ public interface ProductPriceHistoryRepository extends JpaRepository<ProductPric
     /** Historique complet d'un article (fiche article), plus récent d'abord. */
     List<ProductPriceHistory> findByProductIdAndCompanyIdOrderByEffectiveDateDescIdDesc(Long productId, Long companyId);
 
+    java.util.Optional<ProductPriceHistory> findFirstByProductIdAndWarehouseIdAndPriceTypeOrderByIdDesc(
+            Long productId, Long warehouseId, String priceType);
+
     @Modifying
     @Query("DELETE FROM ProductPriceHistory h WHERE h.companyId = :cid AND h.priceType = 'CMUP'")
     int deleteCmupHistory(@Param("cid") Long companyId);

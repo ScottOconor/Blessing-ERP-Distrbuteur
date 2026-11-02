@@ -41,6 +41,11 @@ public class ReceptionBordereauDTO {
     private String state;
     private LocalDateTime dateDone;
 
+    // Mêmes règles que les factures : colis hors consignes, PET par catégorie, casiers par unité
+    private BigDecimal totalColis;
+    private BigDecimal totalPet;
+    private BigDecimal totalCasier;
+
     private List<LigneBordereau> lignes;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
@@ -55,5 +60,11 @@ public class ReceptionBordereauDTO {
         private BigDecimal qteRecue;
         /** Reste = qteCommandee - qteRecue (calculé automatiquement) */
         private BigDecimal reste;
+        /** Quantité reçue × prix d'achat de la fiche (prixUnitaire). */
+        private BigDecimal valeur;
+        /** La ligne compte dans le total colis (hors consigne), PET, casier : totaux en direct à l'écran. */
+        private boolean colis;
+        private boolean pet;
+        private boolean casier;
     }
 }

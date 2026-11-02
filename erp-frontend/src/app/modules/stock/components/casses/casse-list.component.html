@@ -63,7 +63,7 @@
             <tr>
               <th>Article</th>
               <th class="text-right">Quantité</th>
-              <th class="text-right">CMUP</th>
+              <th class="text-right">Prix d'achat</th>
               <th class="text-right">Valeur estimée</th>
               <th style="width:44px"></th>
             </tr>
@@ -199,7 +199,7 @@
                       @if (l.notes) { <p class="notes-line"><em>{{ l.notes }}</em></p> }
                       <table class="sub-table">
                         <thead>
-                          <tr><th>Code</th><th>Article</th><th class="text-right">Qté</th><th class="text-right">CMUP</th><th class="text-right">Montant</th></tr>
+                          <tr><th>Code</th><th>Article</th><th class="text-right">Qté</th><th class="text-right">Prix d'achat</th><th class="text-right">Montant</th></tr>
                         </thead>
                         <tbody>
                           @for (line of l.lines; track line.id) {

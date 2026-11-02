@@ -7,6 +7,7 @@ import { StockService, StockPicking, StockPickingType, StockLocation, Product, W
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
+import { computePackageTotals, PackageTotals } from '../../../../shared/constants/package-totals';
 
 @Component({
   selector: 'app-transfert-detail',
@@ -47,7 +48,7 @@ export class TransfertDetailComponent implements OnInit {
   partnerName = '';
   scheduledDate = '';
 
-  lines: Array<{ productId: number | null; qtyDemanded: number; qtyDone: number; priceUnit: number; uomName: string; availableQty: number }> = [];
+  lines: Array<{ productId: number | null; qtyDemanded: number; qtyDone: number; priceUnit: number; purchasePrice: number; uomName: string; availableQty: number }> = [];
   availableProducts: { id: number; name: string; defaultCode?: string; uomName?: string; standardPrice?: number; availableQty: number }[] = [];
 
   // Autocomplete articles par ligne
@@ -147,7 +148,7 @@ export class TransfertDetailComponent implements OnInit {
         this.scheduledDate = p.scheduledDate || '';
         this.lines = (p.moves || []).map(m => ({
           productId: m.productId, qtyDemanded: m.qtyDemanded,
-          qtyDone: m.qtyDone ?? m.qtyDemanded, priceUnit: m.priceUnit ?? 0,
+          qtyDone: m.qtyDone ?? m.qtyDemanded, priceUnit: m.priceUnit ?? 0, purchasePrice: m.purchasePrice ?? m.priceUnit ?? 0,
           uomName: m.uomName || '', availableQty: m.availableQty ?? 0
         }));
         this.lineSearchTexts = (p.moves || []).map(m => {
@@ -237,7 +238,7 @@ export class TransfertDetailComponent implements OnInit {
   }
 
   addLine(): void {
-    this.lines.push({ productId: null, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, uomName: '', availableQty: 0 });
+    this.lines.push({ productId: null, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, purchasePrice: 0, uomName: '', availableQty: 0 });
     this.lineSearchTexts.push('');
   }
   removeLine(i: number): void { this.lines.splice(i, 1); this.lineSearchTexts.splice(i, 1); }
@@ -255,6 +256,7 @@ export class TransfertDetailComponent implements OnInit {
     if (prod) {
       this.lines[i].uomName = prod.uomName || '';
       this.lines[i].priceUnit = prod.standardPrice || 0;
+      this.lines[i].purchasePrice = prod.standardPrice || 0;
       this.lines[i].availableQty = avail?.availableQty ?? 0;
       if (!avail) this.fetchQty(i, productId);
     } else {
@@ -301,7 +303,15 @@ export class TransfertDetailComponent implements OnInit {
   get isCancelled(): boolean { return this.picking?.state === 'cancelled'; }
   get isPendingReception(): boolean { return this.picking?.state === 'pending_reception'; }
   get isTransferReception(): boolean { return this.picking?.transferReception === true; }
-  get lineTotal(): number { return this.lines.reduce((s, l) => s + l.qtyDone * l.priceUnit, 0); }
+  /** Totaux enregistrés d'un document validé, calculés en direct pendant la saisie. */
+  get packageTotals(): PackageTotals {
+    if (!this.isDraft && this.picking?.totalColis != null) {
+      return { colis: this.picking.totalColis, pet: this.picking.totalPet ?? 0, casier: this.picking.totalCasier ?? 0 };
+    }
+    return computePackageTotals(this.lines.map(l => ({ productId: l.productId, qty: l.qtyDone })), this.products);
+  }
+
+  get lineTotal(): number { return this.lines.reduce((s, l) => s + l.qtyDone * l.purchasePrice, 0); }
   get backRoute(): string { return '/stock/transferts'; }
 
   buildReq() {

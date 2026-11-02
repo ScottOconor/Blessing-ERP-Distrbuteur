@@ -113,6 +113,13 @@
                   }
                 </tbody>
               </table>
+              @if (picking?.totalColis != null) {
+                <div class="package-totals">
+                  <span>Total Colis : <strong>{{ picking!.totalColis | number:'1.0-2' }}</strong></span>
+                  <span>Total PET : <strong>{{ picking!.totalPet | number:'1.0-2' }}</strong></span>
+                  <span>Total Casier : <strong>{{ picking!.totalCasier | number:'1.0-2' }}</strong></span>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -165,7 +172,7 @@
                       <th class="th-dispo">Dispo source</th>
                     }
                     <th class="text-right">{{ isDraft ? 'Quantité' : 'Qté transférée' }}</th>
-                    <th class="text-right">CMUP</th>
+                    <th class="text-right">Prix d'achat</th>
                     <th class="text-right">Valeur</th>
                     @if (isDraft) { <th></th> }
                   </tr></thead>
@@ -224,8 +231,8 @@
                           <span class="font-bold">{{ line.qtyDone }}</span>
                         }
                       </td>
-                      <td class="cell-right">{{ line.priceUnit | number:'1.0-0' }}</td>
-                      <td class="cell-right font-bold">{{ line.qtyDemanded * line.priceUnit | number:'1.0-0' }}</td>
+                      <td class="cell-right">{{ line.purchasePrice | number:'1.0-0' }}</td>
+                      <td class="cell-right font-bold">{{ line.qtyDemanded * line.purchasePrice | number:'1.0-0' }}</td>
                       @if (isDraft) { <td><button class="btn-remove-line" (click)="removeLine(i)"><span class="material-icons">delete</span></button></td> }
                     </tr>
                   }
@@ -239,6 +246,13 @@
                 }
               </table>
             </div>
+            @if (lines.length > 0) {
+              <div class="package-totals">
+                <span>Total Colis : <strong>{{ packageTotals.colis | number:'1.0-2' }}</strong></span>
+                <span>Total PET : <strong>{{ packageTotals.pet | number:'1.0-2' }}</strong></span>
+                <span>Total Casier : <strong>{{ packageTotals.casier | number:'1.0-2' }}</strong></span>
+              </div>
+            }
           </div>
         </div>
 

@@ -76,6 +76,7 @@ public class PurchaseService {
     private static final String CONSIGNE_PURCHASE_ACCOUNT = "409400";
 
     private final com.erp.stock.service.ProductValuationService productValuationService;
+    private final com.erp.stock.service.StockLedgerService stockLedger;
     private final PurchaseOrderRepository orderRepo;
     private final PurchaseInvoiceRepository invoiceRepo;
     private final ObjectMapper objectMapper;
@@ -739,7 +740,7 @@ public class PurchaseService {
             if (cost.compareTo(ZERO) == 0) {
                 // Fallback : chercher le standard price du produit
                 Product p = resolveProduct(line.getProductId(), line.getProductCode(), companyId).orElse(null);
-                if (p != null) cost = productValuationService.getWarehouseCmup(p.getId(), invoice.getWarehouseId(), p);
+                if (p != null) cost = com.erp.stock.service.StockLedgerService.purchasePriceOf(p);
             }
             if (cost.compareTo(ZERO) == 0) continue;
 
@@ -863,6 +864,9 @@ public class PurchaseService {
                     .uomName(product.getUomName())
                     .qtyDemanded(qty)
                     .qtyDone(ZERO)
+                    // Prix facturé : entrée du CMUP et de la comptabilité. La réception, elle, s'affiche et
+                    // se valorise au prix d'achat de la fiche, quel que soit le prix de la facture.
+                    .purchasePrice(com.erp.stock.service.StockLedgerService.purchasePriceOf(product))
                     .priceUnit(line.getPrixUnitaire() != null ? line.getPrixUnitaire()
                             : resolveMovementCmup(product.getId(), pt.getDefaultLocationSrcId(), pt.getDefaultLocationDestId(), product))
                     .locationId(pt.getDefaultLocationSrcId())
@@ -976,7 +980,7 @@ public class PurchaseService {
         }
 
         if (!picking.getMoves().isEmpty()) {
-            pickingRepo.save(picking);
+            stockLedger.postPicking(pickingRepo.save(picking));
             syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_PURCHASE, String.valueOf(picking.getId()),
                     buildPickingSyncPayload(picking, "Retour déconsigne achat " + invoice.getName()));
         }
@@ -1206,7 +1210,7 @@ public class PurchaseService {
         }
 
         if (!picking.getMoves().isEmpty()) {
-            pickingRepo.save(picking);
+            stockLedger.postPicking(pickingRepo.save(picking));
             syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_PURCHASE, String.valueOf(picking.getId()),
                     buildPickingSyncPayload(picking, "Retour stock avoir achat " + avoir.getName()));
         }
@@ -1300,7 +1304,7 @@ public class PurchaseService {
         }
 
         if (!picking.getMoves().isEmpty()) {
-            pickingRepo.save(picking);
+            stockLedger.postPicking(pickingRepo.save(picking));
             syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_PURCHASE, String.valueOf(picking.getId()),
                     buildPickingSyncPayload(picking, "Annulation avoir achat " + avoir.getName()));
             log.info("Stock restitué (annulation avoir achat) : {} pour {}", pickingName, avoir.getName());

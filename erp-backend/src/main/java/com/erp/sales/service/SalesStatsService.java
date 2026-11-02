@@ -84,6 +84,8 @@ public class SalesStatsService {
         linesByWarehouse.forEach((whId, lines) -> costsByWarehouse.put(whId, productValuationService.loadCostTimeline(whId,
                 lines.stream().map(SalesInvoiceLine::getProductId).filter(Objects::nonNull).collect(Collectors.toSet()))));
         Function<SalesInvoiceLine, BigDecimal> unitCostOf = l -> {
+            // CMUP figé à la validation ; l'historique ne sert qu'aux ventes qui l'ont précédé.
+            if (l.getCmupApplique() != null) return l.getCmupApplique();
             if (l.getProductId() == null || l.getInvoice().getDate() == null) return ZERO;
             return costsByWarehouse.get(l.getInvoice().getWarehouseId())
                 .costAt(l.getProductId(), l.getInvoice().getDate().atTime(LocalTime.MAX));
@@ -180,8 +182,12 @@ public class SalesStatsService {
                 BigDecimal prixRevient = qty.compareTo(ZERO) != 0
                     ? cout.divide(qty, 4, RoundingMode.HALF_UP) : ZERO;
                 BigDecimal margeHT = caHT.subtract(cout).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal tauxMarge = caHT.compareTo(ZERO) != 0
+                BigDecimal tauxMarque = caHT.compareTo(ZERO) != 0
                     ? margeHT.divide(caHT, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
+                    : ZERO;
+                BigDecimal tauxMarge = cout.compareTo(ZERO) != 0
+                    ? margeHT.divide(cout, 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
                     : ZERO;
 
@@ -195,6 +201,7 @@ public class SalesStatsService {
                     .prixRevient(prixRevient.setScale(2, RoundingMode.HALF_UP))
                     .margeHT(margeHT)
                     .tauxMarge(tauxMarge)
+                    .tauxMarque(tauxMarque)
                     .caTTC(caTTC)
                     .remise(remise)
                     .isAvoir(false)
@@ -238,8 +245,12 @@ public class SalesStatsService {
                 BigDecimal prixRevient = qty.compareTo(ZERO) != 0
                     ? cout.divide(qty, 4, RoundingMode.HALF_UP) : ZERO;
                 BigDecimal margeHT = caHT.subtract(cout).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal tauxMarge = caHT.compareTo(ZERO) != 0
+                BigDecimal tauxMarque = caHT.compareTo(ZERO) != 0
                     ? margeHT.divide(caHT, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
+                    : ZERO;
+                BigDecimal tauxMarge = cout.compareTo(ZERO) != 0
+                    ? margeHT.divide(cout, 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
                     : ZERO;
 
@@ -253,6 +264,7 @@ public class SalesStatsService {
                     .prixRevient(prixRevient.setScale(2, RoundingMode.HALF_UP))
                     .margeHT(margeHT)
                     .tauxMarge(tauxMarge)
+                    .tauxMarque(tauxMarque)
                     .caTTC(caTTC)
                     .remise(remise)
                     .isAvoir(true)

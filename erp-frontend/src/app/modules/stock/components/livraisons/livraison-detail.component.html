@@ -121,7 +121,7 @@
                     <th class="th-dispo">Dispo</th>
                   }
                   <th class="text-right">{{ (isReadonly || isIncoming) ? 'Quantité' : 'Qté à envoyer' }}</th>
-                  <th class="text-right">CMUP</th>
+                  <th class="text-right">Prix d'achat</th>
                   <th class="text-right">Valeur</th>
                   @if (!isReadonly && !isIncoming) { <th style="width:36px"></th> }
                 </tr></thead>
@@ -178,8 +178,8 @@
                                (keydown.enter)="onLineEnter()">
                       }
                     </td>
-                    <td class="text-right">{{ line.priceUnit | number:'1.0-0' }}</td>
-                    <td class="text-right font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
+                    <td class="text-right">{{ line.purchasePrice | number:'1.0-0' }}</td>
+                    <td class="text-right font-bold">{{ line.qtyDone * line.purchasePrice | number:'1.0-0' }}</td>
                     @if (!isReadonly && !isIncoming) {
                       <td><button class="btn-remove-line" (click)="removeLine(i)">
                         <span class="material-icons">delete</span>
@@ -197,6 +197,13 @@
               }
             </table>
           </div>
+          @if (lines.length > 0) {
+            <div class="package-totals">
+              <span>Total Colis : <strong>{{ packageTotals.colis | number:'1.0-2' }}</strong></span>
+              <span>Total PET : <strong>{{ packageTotals.pet | number:'1.0-2' }}</strong></span>
+              <span>Total Casier : <strong>{{ packageTotals.casier | number:'1.0-2' }}</strong></span>
+            </div>
+          }
         </div>
 
         @if (isDone && picking) {

@@ -190,4 +190,10 @@ public interface StockMoveRepository extends JpaRepository<StockMove, Long> {
            "  OR (m.locationId IN :locIds AND m.locationDestId NOT IN :locIds)) " +
            "ORDER BY p.dateDone ASC, m.id ASC")
     List<StockMove> findMovementsBetweenBatch(@Param("pids") List<Long> productIds, @Param("locIds") List<Long> locIds, @Param("df") LocalDateTime dateFrom, @Param("dt") LocalDateTime dateTo);
+
+    @Modifying
+    @Query(value = "UPDATE stock_moves m SET purchase_price = p.standard_price FROM products p "
+            + "WHERE m.product_id = p.id AND m.purchase_price IS NULL AND m.state NOT IN ('done', 'cancelled')",
+            nativeQuery = true)
+    int backfillOpenMovesPurchasePrice();
 }

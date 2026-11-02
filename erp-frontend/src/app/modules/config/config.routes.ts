@@ -45,6 +45,11 @@ export const configRoutes: Routes = [
         loadComponent: () => import('./components/supervision/supervision.component').then(m => m.SupervisionComponent)
       },
       {
+        // TEMPORAIRE : reprise unique des achats passés
+        path: 'reconciliation',
+        loadComponent: () => import('./components/reconciliation/reconciliation.component').then(m => m.ReconciliationComponent)
+      },
+      {
         path: 'backup',
         loadComponent: () => import('./components/backup/backup.component').then(m => m.BackupComponent)
       },

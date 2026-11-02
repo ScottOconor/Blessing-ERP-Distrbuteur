@@ -45,10 +45,20 @@ public class StockMove {
     @Builder.Default
     private BigDecimal qtyDone = BigDecimal.ZERO;
 
-    /** Prix unitaire pour valorisation */
+    /** Prix unitaire du document : prix facturé d'une réception (entrée du CMUP et de la comptabilité),
+     *  CMUP d'un transfert ou d'une sortie, prix de vente d'une vente. Pas une valeur de stock. */
     @Column(precision = 20, scale = 4)
     @Builder.Default
     private BigDecimal priceUnit = BigDecimal.ZERO;
+
+    /** Prix d'achat de référence figé pour ce mouvement : base de sa valeur opérationnelle.
+     *  Nul sur les mouvements antérieurs à cette valorisation : aucune valeur n'a été reconstruite. */
+    @Column(name = "purchase_price", precision = 20, scale = 4)
+    private BigDecimal purchasePrice;
+
+    /** Quantité × purchasePrice, fixée à la validation. */
+    @Column(name = "purchase_value", precision = 24, scale = 4)
+    private BigDecimal purchaseValue;
 
     @Column(name = "location_id", nullable = false)
     private Long locationId;

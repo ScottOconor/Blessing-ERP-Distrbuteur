@@ -7,6 +7,7 @@ import { StockService, StockPicking, StockMove, StockPickingType, StockLocation,
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuditFooterComponent } from '../../../../shared/components/audit-footer/audit-footer.component';
 import { AuditTrailComponent } from '../../../../shared/components/audit-trail/audit-trail.component';
+import { computePackageTotals, PackageTotals } from '../../../../shared/constants/package-totals';
 
 @Component({
   selector: 'app-reception-detail',
@@ -45,6 +46,7 @@ export class ReceptionDetailComponent implements OnInit {
     qtyDemanded: number;
     qtyDone: number;
     priceUnit: number;
+    purchasePrice: number;
     uomName: string;
   }> = [];
 
@@ -103,6 +105,7 @@ export class ReceptionDetailComponent implements OnInit {
           qtyDemanded: m.qtyDemanded,
           qtyDone: m.qtyDone ?? m.qtyDemanded,
           priceUnit: m.priceUnit ?? 0,
+          purchasePrice: m.purchasePrice ?? m.priceUnit ?? 0,
           uomName: m.uomName || ''
         }));
         this.loading = false;
@@ -130,7 +133,7 @@ export class ReceptionDetailComponent implements OnInit {
   }
 
   addLine(): void {
-    this.lines.push({ productId: null, productSearch: '', showSuggestions: false, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, uomName: '' });
+    this.lines.push({ productId: null, productSearch: '', showSuggestions: false, qtyDemanded: 1, qtyDone: 1, priceUnit: 0, purchasePrice: 0, uomName: '' });
   }
 
   removeLine(i: number): void {
@@ -143,6 +146,7 @@ export class ReceptionDetailComponent implements OnInit {
     if (prod) {
       this.lines[i].uomName = prod.uomName || '';
       this.lines[i].priceUnit = prod.standardPrice || 0;
+      this.lines[i].purchasePrice = prod.standardPrice || 0;
     }
   }
 
@@ -168,6 +172,7 @@ export class ReceptionDetailComponent implements OnInit {
     this.lines[i].showSuggestions = false;
     this.lines[i].uomName = p.uomName || '';
     this.lines[i].priceUnit = p.standardPrice || 0;
+    this.lines[i].purchasePrice = p.standardPrice || 0;
   }
 
   onProductEnter(i: number, e: Event): void {
@@ -318,8 +323,13 @@ export class ReceptionDetailComponent implements OnInit {
     });
   }
 
+  /** Totaux en direct, sur la quantité traitée ou, en attente, sur la quantité attendue. */
+  get packageTotals(): PackageTotals {
+    return computePackageTotals(this.lines.map(l => ({ productId: l.productId, qty: l.qtyDone || l.qtyDemanded })), this.products);
+  }
+
   get lineTotal(): number {
-    return this.lines.reduce((s, l) => s + l.qtyDone * l.priceUnit, 0);
+    return this.lines.reduce((s, l) => s + l.qtyDone * l.purchasePrice, 0);
   }
 
   productName(id: number | null): string {

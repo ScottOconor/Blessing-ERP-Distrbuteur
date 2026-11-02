@@ -225,3 +225,5 @@ textarea.form-control { resize: vertical; }
   padding: 2px 7px; border-radius: 4px; flex-shrink: 0; font-weight: 600;
   &.qty-low { color: var(--danger); background: var(--danger-bg); }
 }
+
+.package-totals { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 12px; font-size: 13px; }

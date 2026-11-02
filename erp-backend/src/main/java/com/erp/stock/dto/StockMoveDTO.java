@@ -18,6 +18,8 @@ public class StockMoveDTO {
     private BigDecimal qtyDemanded;
     private BigDecimal qtyDone;
     private BigDecimal priceUnit;
+    // Prix d'achat de référence et valeur opérationnelle (qté × prix d'achat)
+    private BigDecimal purchasePrice;
     private BigDecimal subtotalValue;
     private Long locationId;
     private String locationName;

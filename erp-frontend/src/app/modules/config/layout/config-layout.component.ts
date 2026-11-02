@@ -31,6 +31,7 @@ export class ConfigLayoutComponent {
       { label: 'Changer mot de passe', icon: 'lock_reset',           route: '/config/change-password' },
       { label: 'Supervision',          icon: 'manage_search',        route: '/config/supervision',     visible: can('AUDIT') },
       { label: 'Sauvegarde & Restore', icon: 'backup',               route: '/config/backup',          visible: admin },
+      { label: 'Reprise des achats',   icon: 'published_with_changes', route: '/config/reconciliation', visible: admin },
       { label: 'Exportation',          icon: 'file_download',        route: '/config/export',          visible: can('EXPORT') },
     ];
     return items.filter(i => i.visible ?? true);

@@ -70,7 +70,7 @@
                     <th style="width:12%">Unité</th>
                     <th style="width:12%">Qté demandée</th>
                     <th style="width:12%">Qté reçue</th>
-                    <th style="width:14%">Prix unitaire</th>
+                    <th style="width:14%">Prix d'achat</th>
                     <th style="width:12%">Sous-total</th>
                     @if (isDraft) { <th style="width:3%"></th> }
                   </tr>
@@ -128,11 +128,9 @@
                       } @else { <span class="text-right-cell font-bold">{{ line.qtyDone }}</span> }
                     </td>
                     <td>
-                      @if (isDraft) {
-                        <input type="number" class="line-input text-right" [(ngModel)]="line.priceUnit" min="0" (keydown.enter)="onLineEnter()" />
-                      } @else { <span class="text-right-cell">{{ line.priceUnit | number:'1.0-0' }}</span> }
+                      <span class="text-right-cell">{{ line.purchasePrice | number:'1.0-0' }}</span>
                     </td>
-                    <td class="text-right-cell font-bold">{{ line.qtyDone * line.priceUnit | number:'1.0-0' }}</td>
+                    <td class="text-right-cell font-bold">{{ line.qtyDone * line.purchasePrice | number:'1.0-0' }}</td>
                     @if (isDraft) {
                       <td>
                         <button class="btn-remove-line" (click)="removeLine(i)" title="Supprimer">
@@ -153,6 +151,13 @@
                 </tfoot>
               }
             </table>
+            @if (lines.length > 0) {
+              <div class="package-totals">
+                <span>Total Colis : <strong>{{ packageTotals.colis | number:'1.0-2' }}</strong></span>
+                <span>Total PET : <strong>{{ packageTotals.pet | number:'1.0-2' }}</strong></span>
+                <span>Total Casier : <strong>{{ packageTotals.casier | number:'1.0-2' }}</strong></span>
+              </div>
+            }
           </div>
         </div>
       </div>

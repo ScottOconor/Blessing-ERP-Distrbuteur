@@ -125,3 +125,5 @@
 }
 .btn-primary { background: var(--accent); color: white; &:hover:not(:disabled) { background: var(--accent); } }
 .btn-secondary { background: var(--bg-surface); color: var(--text-muted); border: 1px solid var(--border); &:hover { background: var(--bg-hover); } }
+
+.package-totals { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 12px; font-size: 13px; }

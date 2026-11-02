@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { PurchaseService, PurchaseOrder, PurchaseInvoice, PurchaseInvoicePayment } from '../../services/purchase.service';
+import { PurchaseService, PurchaseOrder, PurchaseInvoice, PurchaseInvoicePayment, TiersSolde } from '../../services/purchase.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 interface DetteFournisseur {
@@ -105,19 +105,22 @@ export class PurchaseDashboardComponent implements OnInit {
       orders:   this.purchaseService.getOrders(this.companyId),
       invoices: this.purchaseService.getInvoices(this.companyId),
       payments: this.purchaseService.getAllPayments(this.companyId),
+      soldes:   this.purchaseService.getDettesTiers(this.companyId),
     }).subscribe({
-      next: ({ orders, invoices, payments }) => {
+      next: ({ orders, invoices, payments, soldes }) => {
         this.orders   = orders;
         this.invoices = invoices;
         this.payments = payments;
-        this.computeDettes(invoices);
+        this.computeDettes(invoices, soldes);
         this.loading  = false;
       },
       error: () => { this.loading = false; }
     });
   }
 
-  private computeDettes(invoices: PurchaseInvoice[]): void {
+  /** Dettes = solde du compte de chaque fournisseur, positif ou négatif ; les factures ouvertes
+   *  ne donnent que leur nombre et leur ancienneté. */
+  private computeDettes(invoices: PurchaseInvoice[], soldes: TiersSolde[]): void {
     const today = new Date();
     const map = new Map<string, { du: number; nb: number; oldest: number }>();
 
@@ -135,14 +138,18 @@ export class PurchaseDashboardComponent implements OnInit {
         map.set(name, cur);
       });
 
-    this.dettes = Array.from(map.entries())
-      .map(([name, v]) => ({
-        name,
-        totalDu:    v.du,
-        nbFactures: v.nb,
-        oldestDays: v.oldest,
-        aging: v.oldest > 60 ? 'critical' : v.oldest > 30 ? 'late' : 'current',
-      } as DetteFournisseur))
+    this.dettes = soldes
+      .map(s => {
+        const v = map.get(s.partnerName);
+        const oldest = v?.oldest ?? 0;
+        return {
+          name: s.partnerName,
+          totalDu:    s.solde,
+          nbFactures: v?.nb ?? 0,
+          oldestDays: oldest,
+          aging: oldest > 60 ? 'critical' : oldest > 30 ? 'late' : 'current',
+        } as DetteFournisseur;
+      })
       .sort((a, b) => b.totalDu - a.totalDu);
 
     this.totalDettes = this.dettes.reduce((s, d) => s + d.totalDu, 0);
@@ -150,8 +157,9 @@ export class PurchaseDashboardComponent implements OnInit {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   fmtM(n: number): string {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
-    if (n >= 1_000)     return (n / 1_000).toFixed(0) + ' K';
+    const a = Math.abs(n);
+    if (a >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
+    if (a >= 1_000)     return (n / 1_000).toFixed(0) + ' K';
     return String(Math.round(n));
   }
 

@@ -1,0 +1,51 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Reprise des achats</h1>
+      <p class="page-subtitle">Recalcule le CMUP depuis les achats passés et met à jour les marges des ventes passées. Écran temporaire.</p>
+    </div>
+  </div>
+
+  @if (message) { <div class="alert alert-success">{{ message }}</div> }
+  @if (error) { <div class="alert alert-danger">{{ error }}</div> }
+
+  @if (loading) {
+    <p>Analyse de l'historique…</p>
+  } @else if (preview) {
+    <ul>
+      <li>{{ preview.purchasesReplayed }} achat(s) à reprendre</li>
+      <li>{{ preview.cmupChanges }} CMUP à modifier</li>
+      <li>{{ preview.salesLinesToFreeze }} ligne(s) de vente sans coût enregistré</li>
+      <li>{{ preview.stocksToInitialize }} stock(s) à valoriser au prix d'achat</li>
+      @if (preview.stocksWithoutPrice > 0) {
+        <li>{{ preview.stocksWithoutPrice }} stock(s) ignoré(s) : article sans prix d'achat</li>
+      }
+    </ul>
+
+    <button class="btn-primary" (click)="run()" [disabled]="running">
+      @if (running) { Reprise en cours… } @else { Lancer la reprise }
+    </button>
+
+    @if (preview.changes.length > 0) {
+      <table class="data-table" style="margin-top:16px">
+        <thead>
+          <tr>
+            <th>Référence</th><th>Article</th><th>Entrepôt</th>
+            <th class="text-right">CMUP actuel</th><th class="text-right">Nouveau CMUP</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of preview.changes; track $index) {
+            <tr>
+              <td>{{ c.productCode || '—' }}</td>
+              <td>{{ c.productName }}</td>
+              <td>{{ c.warehouseName || '—' }}</td>
+              <td class="text-right">{{ c.oldCmup | number:'1.0-2' }}</td>
+              <td class="text-right">{{ c.newCmup | number:'1.0-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

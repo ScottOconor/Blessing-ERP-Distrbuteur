@@ -95,15 +95,6 @@ public interface PurchaseInvoiceRepository extends JpaRepository<PurchaseInvoice
            "ORDER BY SUM(i.montantDu) DESC")
     List<Object[]> dettesParTiers(@Param("cid") Long companyId);
 
-    /** "Dettes Jour/Mois" du dashboard : voir SalesInvoiceRepository.sumMontantDuClientsPeriode
-     *  (même logique, côté achats). */
-    @Query("SELECT COALESCE(SUM(i.montantDu), 0) FROM PurchaseInvoice i " +
-           "WHERE i.company.id = :cid AND i.state IN ('posted','partiellement_extournee') AND i.type = 'invoice' " +
-           "AND i.montantDu > 0 AND i.date BETWEEN :from AND :to")
-    java.math.BigDecimal sumMontantDuFournisseursPeriode(@Param("cid") Long companyId,
-                                                         @Param("from") LocalDate from,
-                                                         @Param("to") LocalDate to);
-
     /** Avoirs (credit_note) validés ayant encore un montant disponible, du plus ancien au plus récent */
     @Query("SELECT i FROM PurchaseInvoice i WHERE i.partner.id = :partnerId AND i.company.id = :companyId " +
            "AND i.type = 'credit_note' AND i.state = 'posted' AND i.montantDu > 0 ORDER BY i.date ASC, i.id ASC")

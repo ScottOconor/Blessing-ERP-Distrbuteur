@@ -66,4 +66,9 @@ public interface StockPickingRepository extends JpaRepository<StockPicking, Long
     @Modifying
     @Query("UPDATE StockPicking p SET p.dateDone = p.createdAt WHERE p.state = 'done' AND p.dateDone IS NULL AND p.createdAt IS NOT NULL")
     int fixNullDateDone();
+
+    /** Sérialise les validations concurrentes d'un même document : la seconde voit l'état final. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM StockPicking p WHERE p.id = :id")
+    Optional<StockPicking> findByIdForUpdate(@Param("id") Long id);
 }

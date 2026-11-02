@@ -1253,7 +1253,7 @@ exportBilan(
     ]));
 
     autoTable(doc, baseOpts(startY, {
-      head: [['Référence', 'Désignation', 'UDM', 'P.U. (CMUP)', 'Quantité', 'Valeur (FCFA)']],
+      head: [['Référence', 'Désignation', 'UDM', "Prix d'achat", 'Quantité', 'Valeur (FCFA)']],
       body,
 columnStyles: {
         0: { cellWidth: 26, halign: 'center' as const },

@@ -56,6 +56,16 @@ public class SalesInvoiceLine {
     @Column(precision = 20, scale = 2)
     private BigDecimal montantTTC;
 
+    // ===== Coût historique, figé à la validation =====
+
+    /** CMUP appliqué à cette ligne : coût unitaire historique des marges, insensible aux CMUP ultérieurs. */
+    @Column(name = "cmup_applique", precision = 20, scale = 4)
+    private BigDecimal cmupApplique;
+
+    /** Prix d'achat appliqué au mouvement de stock de cette ligne, repris par un retour client. */
+    @Column(name = "prix_achat_applique", precision = 20, scale = 4)
+    private BigDecimal prixAchatApplique;
+
     // ===== Champs précompte / enlèvement =====
 
     /** Précompte calculé sur cette ligne (retenue à la source) */

@@ -44,7 +44,9 @@ public class Product {
     @Column(name = "unit_of_measure_id")
     private Long unitOfMeasureId;
 
-    /** Prix de revient CMUP (mis à jour automatiquement) */
+    /** Prix d'achat de référence de la fiche article, saisi par l'utilisateur : base de la valeur
+     *  opérationnelle du stock. Jamais mis à jour par les achats. Le CMUP, lui, est par entrepôt
+     *  (ProductWarehouseValuation) ; ce prix ne lui sert que de repli tant qu'il n'existe pas. */
     @Column(precision = 20, scale = 4)
     private BigDecimal standardPrice;
 

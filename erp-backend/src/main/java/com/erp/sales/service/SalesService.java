@@ -65,6 +65,7 @@ public class SalesService {
 
     private final com.erp.common.service.SingleCompany singleCompany;
     private final com.erp.stock.service.ProductValuationService productValuationService;
+    private final com.erp.stock.service.StockLedgerService stockLedger;
     private final com.erp.auth.repository.UserRepository userRepository;
     private final DocumentNumberLock documentNumberLock;
 
@@ -1372,6 +1373,7 @@ public class SalesService {
                     .qtyDemanded(absQty)
                     .qtyDone(absQty)
                     .priceUnit(lp.line().getPrixUnitaire() != null ? lp.line().getPrixUnitaire() : ZERO)
+                    .purchasePrice(lp.line().getPrixAchatApplique())
                     .locationId(moveSrcId)
                     .locationDestId(moveDestId)
                     .state("done")
@@ -1393,7 +1395,7 @@ public class SalesService {
         }
 
         picking.setMoves(moves);
-        stockPickingRepo.save(picking);
+        stockLedger.postPicking(stockPickingRepo.save(picking));
         syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_SALE, String.valueOf(picking.getId()),
                 buildPickingSyncPayload(picking, "Annulation avoir vente " + avoir.getName()));
         log.info("Stock restitué (annulation avoir vente) : {} ({} lignes) pour {}", pickingName, moves.size(), avoir.getName());
@@ -1488,6 +1490,7 @@ public class SalesService {
                     .qtyDemanded(absQty)
                     .qtyDone(absQty)
                     .priceUnit(lp.line().getPrixUnitaire() != null ? lp.line().getPrixUnitaire() : ZERO)
+                    .purchasePrice(lp.line().getPrixAchatApplique())
                     .locationId(moveSrcId)
                     .locationDestId(moveDestId)
                     .state("done")
@@ -1509,7 +1512,7 @@ public class SalesService {
         }
 
         picking.setMoves(moves);
-        stockPickingRepo.save(picking);
+        stockLedger.postPicking(stockPickingRepo.save(picking));
         syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_SALE, String.valueOf(picking.getId()),
                 buildPickingSyncPayload(picking, "Annulation facture vente " + invoice.getName()));
         log.info("Stock restitué (annulation facture vente) : {} ({} lignes) pour {}", pickingName, moves.size(), invoice.getName());
@@ -3003,6 +3006,7 @@ public class SalesService {
 
             BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
             BigDecimal priceUnit = line.getPrixUnitaire() != null ? line.getPrixUnitaire() : ZERO;
+            freezeLineCost(line, product, invoice, isAvoir, internalLoc);
 
             // Vente normale (hors avoir) : ligne positive fait SORTIR le stock (vente), ligne
             // négative fait ENTRER (retour du client — vaut pour tout article, pas seulement les
@@ -3024,6 +3028,7 @@ public class SalesService {
                     .qtyDemanded(absQty)
                     .qtyDone(absQty)
                     .priceUnit(priceUnit)
+                    .purchasePrice(line.getPrixAchatApplique())
                     .locationId(moveSrcId)
                     .locationDestId(moveDestId)
                     .state("done")
@@ -3072,7 +3077,7 @@ public class SalesService {
         }
 
         picking.setMoves(moves);
-        stockPickingRepo.save(picking);
+        stockLedger.postPicking(stockPickingRepo.save(picking));
         syncEventPublisher.publish(SyncEventType.STOCK_PICKING_FROM_SALE, String.valueOf(picking.getId()),
                 buildPickingSyncPayload(picking, "Livraison facture vente " + invoice.getName()));
         log.info("Mouvement de stock créé : {} ({} lignes) pour facture {}", pickingName, moves.size(), invoice.getName());
@@ -3081,6 +3086,31 @@ public class SalesService {
         createStockValuationEntries(invoice, isAvoir, productLines.stream()
                 .map(lp -> new java.util.AbstractMap.SimpleEntry<>(lp.line(), lp.product()))
                 .collect(java.util.stream.Collectors.toList()));
+    }
+
+    /**
+     * Fige sur la ligne le CMUP (coût historique des marges) et le prix d'achat de son mouvement de
+     * stock. Un retour client reprend ceux de la vente d'origine : la marchandise rentre comme elle
+     * était sortie, et la marge de cette vente reste cohérente.
+     */
+    private void freezeLineCost(SalesInvoiceLine line, com.erp.stock.entity.Product product,
+                                SalesInvoice invoice, boolean isAvoir, StockLocation internalLoc) {
+        if (isAvoir && invoice.getOriginalInvoice() != null) {
+            for (SalesInvoiceLine origin : invoice.getOriginalInvoice().getLines()) {
+                if (product.getId().equals(origin.getProductId())) {
+                    line.setCmupApplique(origin.getCmupApplique());
+                    line.setPrixAchatApplique(origin.getPrixAchatApplique());
+                    break;
+                }
+            }
+        }
+        if (line.getCmupApplique() == null) {
+            Long warehouseId = invoice.getWarehouseId() != null ? invoice.getWarehouseId() : internalLoc.getWarehouseId();
+            line.setCmupApplique(productValuationService.getWarehouseCmup(product.getId(), warehouseId, product));
+        }
+        if (line.getPrixAchatApplique() == null) {
+            line.setPrixAchatApplique(com.erp.stock.service.StockLedgerService.purchasePriceOf(product));
+        }
     }
 
     /**
@@ -3124,7 +3154,9 @@ public class SalesService {
 
             if (ConsigneCodes.isConsigne(product.getDefaultCode(), companyId)) continue;
 
-            BigDecimal cost = productValuationService.getWarehouseCmup(product.getId(), invoice.getWarehouseId(), product);
+            // Variation de stock au prix d'achat du mouvement ; le CMUP ne sert qu'aux marges.
+            BigDecimal cost = line.getPrixAchatApplique() != null ? line.getPrixAchatApplique()
+                    : com.erp.stock.service.StockLedgerService.purchasePriceOf(product);
             if (cost.compareTo(ZERO) == 0) continue;
 
             BigDecimal qty = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
@@ -4027,6 +4059,7 @@ public class SalesService {
 
         List<SalesInvoiceDTO.LineDTO> lines = invoice.getLines().stream()
                 .map(l -> SalesInvoiceDTO.LineDTO.builder()
+                        .cmupApplique(l.getCmupApplique())
                         .id(l.getId()).productId(l.getProductId()).productCode(l.getProductCode()).description(l.getDescription())
                         .quantity(l.getQuantity()).prixUnitaire(l.getPrixUnitaire()).prixReference(l.getPrixReference())
                         .tauxRemise(l.getTauxRemise()).tauxTVA(l.getTauxTVA()).accountCode(l.getAccountCode())

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StockService, ValuationLayer, Product } from '../../services/stock.service';
+import { StockService, ValuationLayer, Product, ValuationInitLine } from '../../services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
@@ -23,6 +23,8 @@ export class StockValuationComponent implements OnInit {
   rebuilding = false;
   rebuildMsg = '';
   rebuildError = '';
+  initLines: ValuationInitLine[] = [];
+  initializing = false;
 
   constructor(private stockService: StockService, private authService: AuthService) {}
 
@@ -31,6 +33,43 @@ export class StockValuationComponent implements OnInit {
     const cid = this.authService.getCompanyId();
     this.stockService.getProducts(cid).subscribe({ next: (p) => this.products = p });
     this.load();
+    if (this.isAdmin) this.loadInitialization();
+  }
+
+  private loadInitialization(): void {
+    this.stockService.getValuationInitialization(this.authService.getCompanyId()).subscribe({
+      next: lines => this.initLines = lines
+    });
+  }
+
+  get initTotal(): number {
+    return this.initLines.reduce((s, l) => s + (l.proposedValue || 0), 0);
+  }
+
+  get initUnpriced(): number {
+    return this.initLines.filter(l => !l.canInitialize).length;
+  }
+
+  /** Fixe la valeur des stocks existants au prix d'achat de la fiche, après contrôle de l'utilisateur. */
+  initializeValuation(): void {
+    if (!confirm(`Initialiser la valeur de ${this.initLines.length} stock(s) au prix d'achat de la fiche ?\n` +
+                 'Le CMUP n\'est pas modifié. L\'opération est tracée.')) return;
+    this.initializing = true;
+    this.rebuildMsg = '';
+    this.rebuildError = '';
+    this.stockService.initializeValuation(this.authService.getCompanyId()).subscribe({
+      next: r => {
+        this.initializing = false;
+        this.rebuildMsg = `${r.initialized} valeur(s) initialisée(s)` +
+          (r.skipped > 0 ? `, ${r.skipped} article(s) sans prix d'achat ignoré(s)` : '') + '.';
+        this.loadInitialization();
+        this.load();
+      },
+      error: e => {
+        this.initializing = false;
+        this.rebuildError = e?.error?.message || 'L\'initialisation a échoué.';
+      }
+    });
   }
 
   load(): void {

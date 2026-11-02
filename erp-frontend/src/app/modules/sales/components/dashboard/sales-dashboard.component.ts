@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { SalesService, SalesOrder, SalesInvoice, collectionRatePct } from '../../services/sales.service';
+import { SalesService, SalesOrder, SalesInvoice, TiersSolde, collectionRatePct } from '../../services/sales.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { formatFCFA } from '../../../../core/utils/currency-format.util';
 
@@ -35,7 +35,6 @@ export class SalesDashboardComponent implements OnInit {
   caTTC       = 0;
   caHT        = 0;
   encaisse    = 0;
-  resteAEncaisser = 0;
   tauxEncaissement = 0;
   totalAvoirs = 0;
 
@@ -79,11 +78,12 @@ export class SalesDashboardComponent implements OnInit {
       orders:   this.salesService.getOrders(cid),
       invoices: this.salesService.getInvoices(cid),
       avoirs:   this.salesService.getAvoirs(cid),
+      soldes:   this.salesService.getCreancesTiers(cid),
     }).subscribe({
-      next: ({ orders, invoices, avoirs }) => {
+      next: ({ orders, invoices, avoirs, soldes }) => {
         this.computeKpis(orders, invoices, avoirs);
-        this.computeCreances(invoices);
-        this.computeTopClients(invoices);
+        this.computeCreances(invoices, soldes);
+        this.computeTopClients(invoices, soldes);
         this.computeBreakdown(invoices);
         this.recentInvoices = [...invoices]
           .filter(i => i.state !== 'cancelled')
@@ -104,7 +104,6 @@ export class SalesDashboardComponent implements OnInit {
     this.caTTC    = active.reduce((s, i) => s + (i.totalTTC || 0), 0);
     this.caHT     = active.reduce((s, i) => s + (i.totalHT  || 0), 0);
     this.encaisse = active.reduce((s, i) => s + (i.montantPaye || 0), 0);
-    this.resteAEncaisser = active.reduce((s, i) => s + (i.montantDu || 0), 0);
     this.tauxEncaissement = collectionRatePct(active);
     this.totalAvoirs = avoirs.filter(a => a.state === 'posted').reduce((s, a) => s + (a.totalTTC || 0), 0);
 
@@ -118,7 +117,9 @@ export class SalesDashboardComponent implements OnInit {
     this.nbClients        = new Set(invoices.map(i => i.partnerId)).size;
   }
 
-  private computeCreances(invoices: SalesInvoice[]): void {
+  /** Créances = solde du compte de chaque client, positif ou négatif ; les factures ouvertes ne
+   *  donnent que leur nombre et leur ancienneté. */
+  private computeCreances(invoices: SalesInvoice[], soldes: TiersSolde[]): void {
     const today = new Date();
     // Groupé par partnerId (clé stable) — pas par nom, qui peut être partagé entre deux clients
     // ou avoir changé entre deux factures du même client, faussant les regroupements.
@@ -137,26 +138,30 @@ export class SalesDashboardComponent implements OnInit {
         map.set(i.partnerId, cur);
       });
 
-    this.creances = Array.from(map.values())
-      .map(v => ({
-        name: v.name,
-        totalDu:   v.du,
-        nbFactures: v.nb,
-        oldestDays: v.oldest,
-        aging: v.oldest > 60 ? 'critical' : v.oldest > 30 ? 'late' : 'current',
-      } as Creance))
+    this.creances = soldes
+      .map(s => {
+        const v = map.get(s.partnerId);
+        const oldest = v?.oldest ?? 0;
+        return {
+          name: s.partnerName,
+          totalDu:   s.solde,
+          nbFactures: v?.nb ?? 0,
+          oldestDays: oldest,
+          aging: oldest > 60 ? 'critical' : oldest > 30 ? 'late' : 'current',
+        } as Creance;
+      })
       .sort((a, b) => b.totalDu - a.totalDu);
 
     this.totalCreances     = this.creances.reduce((s, c) => s + c.totalDu, 0);
-    this.nbClientsDebiteurs = this.creances.length;
+    this.nbClientsDebiteurs = this.creances.filter(c => c.totalDu > 0).length;
   }
 
-  private computeTopClients(invoices: SalesInvoice[]): void {
+  private computeTopClients(invoices: SalesInvoice[], soldes: TiersSolde[]): void {
+    const soldeByPartner = new Map(soldes.map(s => [s.partnerId, s.solde]));
     const map = new Map<number, { name: string; caTTC: number; du: number }>();
     invoices.filter(i => i.state === 'posted' || i.state === 'paid').forEach(i => {
-      const cur = map.get(i.partnerId) || { name: i.partnerName || 'Inconnu', caTTC: 0, du: 0 };
+      const cur = map.get(i.partnerId) || { name: i.partnerName || 'Inconnu', caTTC: 0, du: soldeByPartner.get(i.partnerId) ?? 0 };
       cur.caTTC += i.totalTTC || 0;
-      cur.du    += i.montantDu || 0;
       map.set(i.partnerId, cur);
     });
     const sorted = Array.from(map.values())
@@ -191,8 +196,9 @@ export class SalesDashboardComponent implements OnInit {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   fmtM(n: number): string {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
-    if (n >= 1_000)     return (n / 1_000).toFixed(0) + ' K';
+    const a = Math.abs(n);
+    if (a >= 1_000_000) return (n / 1_000_000).toFixed(1).replace('.', ',') + ' M';
+    if (a >= 1_000)     return (n / 1_000).toFixed(0) + ' K';
     return String(Math.round(n));
   }
 

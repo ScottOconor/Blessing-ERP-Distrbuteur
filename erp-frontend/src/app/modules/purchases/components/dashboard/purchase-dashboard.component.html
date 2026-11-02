@@ -30,10 +30,10 @@
          (click)="router.navigate(['/purchases/invoices'])">
       <div class="kpi-icon-wrap"><span class="material-icons">warning_amber</span></div>
       <div class="kpi-body">
-        <span class="kpi-val">{{ fmtM(montantDuTotal) }}</span>
+        <span class="kpi-val">{{ fmtM(totalDettes) }}</span>
         <span class="kpi-cur">FCFA</span>
         <span class="kpi-lbl">Dettes fournisseurs</span>
-        <span class="kpi-hint">{{ facturesNonPayees.length }} facture(s) impayée(s)</span>
+        <span class="kpi-hint">Soldes de {{ dettes.length }} compte(s) fournisseur</span>
       </div>
       <span class="material-icons kpi-arrow">chevron_right</span>
     </div>
@@ -120,7 +120,7 @@
         <span class="card-title">
           <span class="material-icons">account_balance_wallet</span> Dettes fournisseurs
         </span>
-        @if (totalDettes > 0) {
+        @if (dettes.length > 0) {
           <span class="dettes-total">{{ fmtFull(totalDettes) }}</span>
         }
       </div>

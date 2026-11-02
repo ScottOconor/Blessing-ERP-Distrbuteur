@@ -213,8 +213,10 @@ public class SpokeSnapshotPayload {
         String     productName;
         String     category;       // "PRODUIT" ou "EMBALLAGE"
         BigDecimal quantity;
-        BigDecimal standardPrice;
-        BigDecimal valeurStock;
+        BigDecimal standardPrice;  // prix d'achat de la fiche
+        BigDecimal cmup;           // coût moyen, réservé aux marges — jamais une base de valeur de stock
+        BigDecimal salePrice;
+        BigDecimal valeurStock;    // au prix d'achat
     }
 
     @Data @Builder
@@ -235,7 +237,8 @@ public class SpokeSnapshotPayload {
         String     code;
         String     name;
         String     uomName;
-        BigDecimal standardPrice;
+        BigDecimal standardPrice;  // prix d'achat de la fiche
+        BigDecimal cmup;           // coût moyen du magasin principal, réservé aux marges
         BigDecimal salePrice;
         String     type;
         BigDecimal quantiteEnStock;

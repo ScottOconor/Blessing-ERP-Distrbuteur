@@ -118,10 +118,12 @@
             <th>Catégorie</th>
             <th>Type</th>
             <th>Unité</th>
-            <th class="text-right">{{ serviceMode ? 'Coût' : 'CMUP' }}</th>
+            <th class="text-right">{{ serviceMode ? 'Coût' : 'Prix d\'achat' }}</th>
+            @if (!serviceMode) { <th class="text-right">CMUP</th> }
             <th class="text-right">Prix vente</th>
             @if (!serviceMode) {
               <th class="text-right">En stock</th>
+              <th class="text-right">Valeur stock</th>
               <th class="text-right">Réservé</th>
               <th class="text-right">Disponible</th>
             }
@@ -132,7 +134,7 @@
           @if (groupBy) {
             @for (row of groupedRows; track row.key) {
               <tr class="group-header-row" (click)="toggleGroup(row.key)">
-                <td class="group-header-cell" [attr.colspan]="serviceMode ? 9 : 12">
+                <td class="group-header-cell" [attr.colspan]="serviceMode ? 9 : 14">
                   <span class="material-icons expand-icon">{{ isExpanded(row.key) ? 'expand_more' : 'chevron_right' }}</span>
                   <span class="group-label">{{ row.label }}</span>
                   <span class="badge">{{ row.count }} article(s)</span>
@@ -148,12 +150,14 @@
                     <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
                     <td class="text-muted">{{ p.uomName || '—' }}</td>
                     <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
+                    @if (!serviceMode) { <td class="text-right font-mono text-muted">{{ p.cmup | number:'1.0-2' }}</td> }
                     <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
                     @if (!serviceMode) {
                       <td class="text-right font-mono">
                         @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
                         } @else { <span class="text-muted">—</span> }
                       </td>
+                      <td class="text-right font-mono">{{ p.stockValue | number:'1.0-0' }}</td>
                       <td class="text-right">
                         @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
                           <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
@@ -191,12 +195,14 @@
                 <td><span class="type-badge" [attr.data-type]="p.type">{{ typeLabels[p.type] }}</span></td>
                 <td class="text-muted">{{ p.uomName || '—' }}</td>
                 <td class="text-right font-mono">{{ p.standardPrice | number:'1.0-2' }}</td>
+                @if (!serviceMode) { <td class="text-right font-mono text-muted">{{ p.cmup | number:'1.0-2' }}</td> }
                 <td class="text-right font-mono">{{ p.salePrice | number:'1.0-2' }}</td>
                 @if (!serviceMode) {
                   <td class="text-right font-mono">
                     @if (p.type === 'product') { {{ p.qtyOnHand | number:'1.0-2' }}
                     } @else { <span class="text-muted">—</span> }
                   </td>
+                  <td class="text-right font-mono">{{ p.stockValue | number:'1.0-0' }}</td>
                   <td class="text-right">
                     @if (p.type === 'product' && (p.qtyReserved || 0) > 0) {
                       <span class="qty-reserved">{{ p.qtyReserved | number:'1.0-2' }}</span>
@@ -326,10 +332,26 @@
             }
           </div>
           <div class="form-group">
-            <label>{{ serviceMode ? 'Coût (prestataire externe, si applicable)' : 'Prix de revient (CMUP)' }}</label>
+            <label>{{ serviceMode ? 'Coût (prestataire externe, si applicable)' : 'Prix d\'achat' }}</label>
             <input type="number" [(ngModel)]="form.standardPrice" class="form-control" min="0" />
           </div>
         </div>
+        @if (!serviceMode && form.id) {
+          <div class="form-row">
+            <div class="form-group">
+              <label>CMUP (calculé à chaque achat)</label>
+              <input type="text" class="form-control" readonly [value]="form.cmup | number:'1.0-2'" />
+            </div>
+            <div class="form-group">
+              <label>Quantité disponible</label>
+              <input type="text" class="form-control" readonly [value]="form.qtyAvailable | number:'1.0-2'" />
+            </div>
+            <div class="form-group">
+              <label>Valeur du stock (au prix d'achat){{ form.stockValueEstablished === false ? ' — estimée' : '' }}</label>
+              <input type="text" class="form-control" readonly [value]="form.stockValue | number:'1.0-0'" />
+            </div>
+          </div>
+        }
         <div class="form-row">
           <div class="form-group">
             <label>Code-barres</label>
@@ -550,7 +572,7 @@
                   </button>
                 </div>
                 <div class="tarif-hint">
-                  Coût standard : <strong>{{ (form.standardPrice ?? 0) | number:'1.0-0' }} FCFA</strong> —
+                  Prix d'achat : <strong>{{ (form.standardPrice ?? 0) | number:'1.0-0' }} FCFA</strong> —
                   le rabais est calculé automatiquement (coût standard − prix fournisseur)
                 </div>
               </div>

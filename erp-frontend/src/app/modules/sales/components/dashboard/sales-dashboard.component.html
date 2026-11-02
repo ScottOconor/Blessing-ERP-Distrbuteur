@@ -45,13 +45,13 @@
     </div>
 
     <!-- Reste dû -->
-    <div class="kpi hero-card" [class.hero-orange]="resteAEncaisser > 0" [class.hero-gray]="resteAEncaisser === 0">
+    <div class="kpi hero-card" [class.hero-orange]="totalCreances > 0" [class.hero-gray]="totalCreances === 0">
       <div class="kpi-icon-wrap"><span class="material-icons">schedule</span></div>
       <div class="kpi-body">
-        <span class="kpi-val">{{ fmtM(resteAEncaisser) }}</span>
+        <span class="kpi-val">{{ fmtM(totalCreances) }}</span>
         <span class="kpi-cur">FCFA</span>
-        <span class="kpi-lbl">Reste à encaisser</span>
-        <span class="kpi-hint">{{ nbFacturesPosted }} facture(s) non soldée(s)</span>
+        <span class="kpi-lbl">Créances clients</span>
+        <span class="kpi-hint">Soldes de {{ creances.length }} compte(s) client</span>
       </div>
     </div>
 
@@ -118,7 +118,7 @@
           <span class="material-icons">account_balance_wallet</span>
           Créances clients
         </span>
-        @if (nbClientsDebiteurs > 0) {
+        @if (creances.length > 0) {
           <span class="creances-total-badge">{{ fmtFull(totalCreances) }}</span>
         }
       </div>
@@ -198,8 +198,8 @@
             </div>
             <div class="top-nums">
               <span class="top-ca">{{ fmtM(c.caTTC) }} FCFA</span>
-              @if (c.du > 0) {
-                <span class="top-du">{{ fmtM(c.du) }} dû</span>
+              @if (c.du !== 0) {
+                <span class="top-du">Solde {{ fmtM(c.du) }}</span>
               }
             </div>
           </div>

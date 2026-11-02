@@ -171,6 +171,24 @@ public class BordereauExportService {
                 totalAvar.compareTo(BigDecimal.ZERO) > 0 ? avarFont : totalFont, TOTAL_BG, Element.ALIGN_RIGHT));
             doc.add(table);
 
+            // ── TOTAUX COLIS ──
+            if (dto.getTotalColis() != null) {
+                PdfPTable packages = new PdfPTable(3);
+                packages.setWidthPercentage(45);
+                packages.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                packages.setSpacingBefore(8);
+                for (String h : new String[]{"Total Colis", "Total PET", "Total Casier"}) {
+                    PdfPCell hc = new PdfPCell(new Phrase(h, hdrFont));
+                    hc.setBackgroundColor(HDR_BG); hc.setPadding(5);
+                    hc.setHorizontalAlignment(Element.ALIGN_CENTER); hc.setBorderColor(Color.WHITE);
+                    packages.addCell(hc);
+                }
+                addTableCell(packages, fmtQty(dto.getTotalColis().doubleValue()), totalFont, TOTAL_BG, Element.ALIGN_RIGHT);
+                addTableCell(packages, fmtQty(orZero(dto.getTotalPet()).doubleValue()), totalFont, TOTAL_BG, Element.ALIGN_RIGHT);
+                addTableCell(packages, fmtQty(orZero(dto.getTotalCasier()).doubleValue()), totalFont, TOTAL_BG, Element.ALIGN_RIGHT);
+                doc.add(packages);
+            }
+
             // ── SIGNATURES ──
             doc.add(new Paragraph(" "));
             addSignatureBlock(doc, new String[]{"Réceptionnaire", "Responsable entrepôt", "Direction"});
@@ -1040,6 +1058,18 @@ public class BordereauExportService {
             setCellNum(totRow, 2, totCmd,  totalStyle);
             setCellNum(totRow, 3, totRecu, totalStyle);
             setCellNum(totRow, 4, totAvar, totalStyle);
+
+            if (dto.getTotalColis() != null) {
+                row += 2;
+                Row pkgHead = sheet.createRow(row++);
+                setCellStr(pkgHead, 2, "Total Colis", hdrStyle);
+                setCellStr(pkgHead, 3, "Total PET", hdrStyle);
+                setCellStr(pkgHead, 4, "Total Casier", hdrStyle);
+                Row pkgRow = sheet.createRow(row);
+                setCellNum(pkgRow, 2, dto.getTotalColis().doubleValue(), totalStyle);
+                setCellNum(pkgRow, 3, orZero(dto.getTotalPet()).doubleValue(), totalStyle);
+                setCellNum(pkgRow, 4, orZero(dto.getTotalCasier()).doubleValue(), totalStyle);
+            }
 
             wb.write(out);
             return out.toByteArray();
