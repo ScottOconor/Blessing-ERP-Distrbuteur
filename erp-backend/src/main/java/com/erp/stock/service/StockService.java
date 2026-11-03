@@ -2191,6 +2191,8 @@ public class StockService {
         Long companyId = reception.getCompanyId();
         Long srcLocationId = reception.getLocationId();
         Long destLocationId = reception.getLocationDestId();
+        // Expédition d'une autre agence : prix d'achat local, repris aussi par l'écriture ci-dessous
+        if (isRemoteReception(reception)) priceAtLocalPurchasePrice(reception);
 
         // Map moveId → qté reçue
         Map<Long, BigDecimal> receivedMap = new HashMap<>();
@@ -3263,6 +3265,9 @@ public class StockService {
         List<StockMove> moves = picking.getMoves();
         if (moves.isEmpty()) throw new IllegalStateException("Aucune ligne à valider");
 
+        // Avant tout mouvement : un article inconnu du destinataire quitterait ce stock sans y entrer
+        requireProductsKnownByRemoteAgency(picking);
+
         // Vérifier le stock ET déduire immédiatement (réservation = destock physique)
         for (StockMove move : moves) {
             BigDecimal qty = move.getQtyDone();
@@ -3342,6 +3347,7 @@ public class StockService {
                 picking.getScheduledDate() != null ? picking.getScheduledDate() : LocalDate.now());
 
         List<StockMove> moves = picking.getMoves();
+        if (isRemoteReception(picking)) priceAtLocalPurchasePrice(picking);
 
         // Date effective = date planifiée de l'expédition (respecte l'antidatage) ou maintenant par défaut
         LocalDateTime effectiveDate = picking.getScheduledDate() != null
@@ -3407,6 +3413,80 @@ public class StockService {
         StockPickingDTO dto = toPickingDTO(savedPicking, true);
         dto.setSenderNotifyWarning(senderNotifyWarning);
         return dto;
+    }
+
+    /** Réception d'une expédition venant d'une autre agence (et non d'un transfert interne). */
+    private static boolean isRemoteReception(StockPicking reception) {
+        return reception.isTransferReception() && reception.getRemoteAgencyId() != null;
+    }
+
+    /**
+     * Expédition reçue d'une autre agence : la marchandise entre au prix d'achat de la fiche de CETTE
+     * base (valeur de stock, CMUP et écriture), quel que soit le prix de l'expéditeur, relu à la
+     * confirmation. Bloque si un article n'a pas de prix d'achat, plutôt que de faire entrer du stock
+     * valorisé à 0.
+     */
+    private void priceAtLocalPurchasePrice(StockPicking reception) {
+        List<String> missing = new ArrayList<>();
+        for (StockMove move : reception.getMoves()) {
+            Product product = productRepo.findById(move.getProductId()).orElse(null);
+            BigDecimal purchasePrice = StockLedgerService.purchasePriceOf(product);
+            if (purchasePrice.signum() <= 0) {
+                missing.add(move.getProductName() != null ? move.getProductName() : move.getProductCode());
+                continue;
+            }
+            move.setPurchasePrice(purchasePrice);
+            move.setPriceUnit(purchasePrice);
+        }
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("Prix d'achat manquant sur la fiche article : " + String.join(", ", missing)
+                    + ". Renseignez-le avant de valider la réception.");
+        }
+    }
+
+    /**
+     * Refuse l'expédition si un article n'existe pas dans la base de l'agence destinataire : la réception
+     * l'ignorerait (correspondance par code article) et la quantité sortie d'ici serait perdue. Destinataire
+     * injoignable ou d'une version sans ce contrôle : l'expédition reste possible, comme avant.
+     */
+    private void requireProductsKnownByRemoteAgency(StockPicking picking) {
+        List<StockMove> lines = picking.getMoves().stream()
+                .filter(m -> m.getQtyDone() != null && m.getQtyDone().compareTo(ZERO) > 0)
+                .collect(java.util.stream.Collectors.toList());
+        List<String> sansCode = lines.stream()
+                .filter(m -> m.getProductCode() == null || m.getProductCode().isBlank())
+                .map(StockMove::getProductName).distinct().collect(java.util.stream.Collectors.toList());
+        if (!sansCode.isEmpty()) {
+            throw new IllegalStateException("Expédition refusée : article(s) sans référence, impossibles à reconnaître chez "
+                    + "l'agence destinataire : " + String.join(", ", sansCode) + ".");
+        }
+
+        if (picking.getRemoteAgencyId() == null) return;
+        RemoteAgency agency = remoteAgencyRepo.findById(picking.getRemoteAgencyId()).orElse(null);
+        if (agency == null || !agency.isActive() || agency.getApiKey() == null) return;
+
+        List<String> codes = lines.stream().map(StockMove::getProductCode).distinct().collect(java.util.stream.Collectors.toList());
+        List<?> missing;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Api-Key", agency.getApiKey());
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            var response = restTemplate.exchange(agency.getBaseUrl() + "/api/inter-agency/products/missing",
+                    HttpMethod.POST, new HttpEntity<>(java.util.Map.of("codes", codes), headers), java.util.Map.class);
+            Object m = response.getBody() != null ? response.getBody().get("missing") : null;
+            missing = m instanceof List<?> l ? l : List.of();
+        } catch (Exception e) {
+            log.warn("Contrôle des articles chez {} impossible ({}) : expédition {} validée sans ce contrôle",
+                    agency.getName(), e.getMessage(), picking.getName());
+            return;
+        }
+        if (!missing.isEmpty()) {
+            List<String> labels = lines.stream().filter(m -> missing.contains(m.getProductCode()))
+                    .map(m -> m.getProductCode() + " (" + m.getProductName() + ")").distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            throw new IllegalStateException("Expédition refusée : article(s) absent(s) de la base de « " + agency.getName()
+                    + " » : " + String.join(", ", labels) + ". Créez-les chez l'agence destinataire avec la même référence, puis validez à nouveau.");
+        }
     }
 
     private Long createInterCompanyAccountingEntry(StockPicking picking, Long companyId, String direction) {

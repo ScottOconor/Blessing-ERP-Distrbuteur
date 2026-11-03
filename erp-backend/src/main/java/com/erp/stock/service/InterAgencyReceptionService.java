@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Traite les notifications de transfert reçues d'un spoke distant.
@@ -142,6 +143,17 @@ public class InterAgencyReceptionService {
         StockPicking saved = pickingRepo.save(reception);
         log.info("Réception inter-agences créée : {} ← {} ({})", name, senderName, payload.getExpeditionRef());
         return saved.getName();
+    }
+
+    /** Codes articles absents de la base locale (même correspondance que createPendingReception). */
+    @Transactional(readOnly = true)
+    public List<String> findMissingProductCodes(List<String> codes) {
+        if (codes == null || codes.isEmpty()) return List.of();
+        var company = companyRepo.findAll().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("Aucune société configurée"));
+        return codes.stream().distinct()
+                .filter(code -> code == null || productRepo.findFirstByDefaultCodeAndCompanyId(code, company.getId()).isEmpty())
+                .toList();
     }
 
     /**

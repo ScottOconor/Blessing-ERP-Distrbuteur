@@ -36,6 +36,16 @@ public class InterAgencyController {
     }
 
     /**
+     * Appelé par l'expéditeur avant de valider une expédition : codes articles inconnus dans cette base.
+     * Une expédition contenant un article absent chez le destinataire sortirait du stock de l'expéditeur
+     * sans jamais entrer ici.
+     */
+    @PostMapping("/api/inter-agency/products/missing")
+    public ResponseEntity<Map<String, java.util.List<String>>> missingProducts(@RequestBody Map<String, java.util.List<String>> body) {
+        return ResponseEntity.ok(Map.of("missing", receptionService.findMissingProductCodes(body.get("codes"))));
+    }
+
+    /**
      * Callback reçu du destinataire après confirmation de sa réception.
      * Marque l'expédition locale (côté expéditeur) comme done.
      * La ref est dans le corps car IC/XXXXX contient un '/' qui casserait le path.
