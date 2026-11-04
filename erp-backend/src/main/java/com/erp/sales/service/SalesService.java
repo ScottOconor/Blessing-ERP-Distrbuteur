@@ -3724,8 +3724,12 @@ public class SalesService {
     @Transactional(readOnly = true)
     public List<RistournePaiementDTO> getRapportRistournesFromInvoices(
             LocalDate dateFrom, LocalDate dateTo, Long companyId) {
+        return ristourneRapportOf(invoiceRepo.findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo), companyId);
+    }
 
-        List<SalesInvoice> invoices = invoiceRepo.findPostedByCompanyAndDateRange(companyId, dateFrom, dateTo);
+    /** Même calcul que le rapport des ristournes, pour des factures données (snapshot du Hub). */
+    @Transactional(readOnly = true)
+    public List<RistournePaiementDTO> ristourneRapportOf(List<SalesInvoice> invoices, Long companyId) {
         List<RistournePaiementDTO> result = new ArrayList<>();
 
         for (SalesInvoice invoice : invoices) {

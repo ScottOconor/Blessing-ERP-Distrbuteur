@@ -162,6 +162,7 @@ public class SpokeSnapshotPayload {
     List<RistournePaiementItem> ristournePaiements;
     /** Tous les paiements de remises fournisseurs */
     List<RemisePaiementItem> remisePaiements;
+    List<RistourneRapportItem> ristournesRapport;
 
     /** Opérations de caisse (entrées/sorties) — rattrapage des événements CAISSE_OPERATION_* perdus
      *  ou antérieurs au branchement au Hub. Mêmes champs que le payload de ces événements. */
@@ -274,6 +275,22 @@ public class SpokeSnapshotPayload {
         BigDecimal totalAmount;
         java.time.LocalDate date;
         String     state;
+        /** Détail par catégorie et par article : rapport des remises du Hub, comme celui de l'ERP. */
+        List<com.erp.purchases.dto.RemisePaiementDTO.LineDTO>        lines;
+        List<com.erp.purchases.dto.RemisePaiementDTO.ArticleLineDTO> articleLines;
+    }
+
+    /** État des ristournes d'une facture, calculé comme le rapport des ristournes de l'ERP
+     *  (SalesService#getRapportRistournesFromInvoices) : un groupe par type de ristourne. Une facture
+     *  annulée remonte sans groupe, pour effacer son état au Hub. */
+    @Data @Builder
+    public static class RistourneRapportItem {
+        Long       id;            // id de la facture
+        String     invoiceName;
+        String     partnerName;
+        java.time.LocalDate date;
+        String     state;
+        List<com.erp.sales.dto.RistournePaiementDTO> groups;
     }
 
     @Data @Builder

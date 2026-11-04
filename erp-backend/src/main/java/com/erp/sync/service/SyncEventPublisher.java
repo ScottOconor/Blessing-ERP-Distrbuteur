@@ -44,6 +44,7 @@ public class SyncEventPublisher {
     private static final java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>> PURCHASE_ORDERS = SpokeSnapshotPayload::getPurchaseOrders;
     private static final java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>> RISTOURNE_PAIEMENTS = SpokeSnapshotPayload::getRistournePaiements;
     private static final java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>> REMISE_PAIEMENTS = SpokeSnapshotPayload::getRemisePaiements;
+    private static final java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>> RISTOURNES_RAPPORT = SpokeSnapshotPayload::getRistournesRapport;
     private static final java.util.function.Function<SpokeSnapshotPayload, java.util.List<?>> ACCOUNTS = SpokeSnapshotPayload::getAccounts;
 
     /**
@@ -95,6 +96,7 @@ public class SyncEventPublisher {
             new SplitList(PURCHASE_ORDERS,     setter(SpokeSnapshotPayload::setPurchaseOrders)),
             new SplitList(RISTOURNE_PAIEMENTS, setter(SpokeSnapshotPayload::setRistournePaiements)),
             new SplitList(REMISE_PAIEMENTS,    setter(SpokeSnapshotPayload::setRemisePaiements)),
+            new SplitList(RISTOURNES_RAPPORT,  setter(SpokeSnapshotPayload::setRistournesRapport)),
             new SplitList(ACCOUNTS,            setter(SpokeSnapshotPayload::setAccounts))
     );
 

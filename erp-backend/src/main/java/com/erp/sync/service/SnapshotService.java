@@ -55,6 +55,9 @@ public class SnapshotService {
     private final StockQuantRepository           stockQuantRepo;
     private final ProductRepository              productRepo;
     private final SalesStatsService              salesStatsService;
+    // ObjectProvider : services métier, sans dépendance circulaire avec la synchronisation
+    private final org.springframework.beans.factory.ObjectProvider<com.erp.sales.service.SalesService> salesServiceProvider;
+    private final org.springframework.beans.factory.ObjectProvider<com.erp.purchases.service.RemiseService> remiseServiceProvider;
     private final SyncEventPublisher             publisher;
     private final CaisseRepository               caisseRepo;
     private final com.erp.caisse.repository.CaisseOperationRepository caisseOperationRepo;
@@ -511,12 +514,16 @@ public class SnapshotService {
                 (modifiedSince != null
                         ? remisePaiementRepo.findByCompanyIdModifiedSince(cid, modifiedSince)
                         : remisePaiementRepo.findByCompanyIdSince(cid, invoicesWindowStart)).stream()
-                .map(r -> SpokeSnapshotPayload.RemisePaiementItem.builder()
+                .map(r -> {
+                        var detail = remiseServiceProvider.getObject().toPaiementDTO(r);
+                        return SpokeSnapshotPayload.RemisePaiementItem.builder()
                         .id(r.getId()).name(r.getName())
                         .partnerName(r.getPartner() != null ? r.getPartner().getName() : null)
                         .typeRemise(r.getTypeRemise())
                         .totalAmount(r.getTotalAmount()).date(r.getDate()).state(r.getState())
-                        .build())
+                        .lines(detail.getLines()).articleLines(detail.getArticleLines())
+                        .build();
+                })
                 .collect(Collectors.toList());
 
         // Opérations de caisse : même fenêtre que les factures (complet) ou delta depuis le
@@ -582,10 +589,11 @@ public class SnapshotService {
                 .collect(Collectors.toMap(com.erp.stock.entity.Warehouse::getId, com.erp.stock.entity.Warehouse::getName));
 
         // ── Factures de vente (2 ans, 5 ans si snapshot forcé, filtré en SQL) ────────────────
-        List<SpokeSnapshotPayload.SaleInvoiceItem> saleInvoices =
-                (modifiedSince != null
-                        ? salesInvoiceRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
-                        : salesInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart)).stream()
+        List<com.erp.sales.entity.SalesInvoice> saleInvoiceEntities = modifiedSince != null
+                ? salesInvoiceRepo.findByCompanyIdAndStateNotModifiedSince(cid, "draft", modifiedSince)
+                : salesInvoiceRepo.findByCompanyIdAndStateNotSince(cid, "draft", invoicesWindowStart);
+        List<SpokeSnapshotPayload.RistourneRapportItem> ristournesRapport = buildRistournesRapport(saleInvoiceEntities, cid, today);
+        List<SpokeSnapshotPayload.SaleInvoiceItem> saleInvoices = saleInvoiceEntities.stream()
                 .map(inv -> SpokeSnapshotPayload.SaleInvoiceItem.builder()
                         .id(inv.getId())
                         .name(inv.getName())
@@ -796,6 +804,7 @@ public class SnapshotService {
                 .accounts(accounts)
                 .ristournePaiements(ristournePaiements)
                 .remisePaiements(remisePaiements)
+                .ristournesRapport(ristournesRapport)
                 .caisseOperations(caisseOperations)
                 .saleInvoices(saleInvoices)
                 .purchaseInvoices(purchaseInvoices)
@@ -850,5 +859,36 @@ public class SnapshotService {
                 .findFirst()
                 .orElseGet(() -> warehouseRepo.findFirstByCompanyIdAndIsDefaultTrue(companyId)
                         .orElse(all.isEmpty() ? null : all.get(0)));
+    }
+
+    /**
+     * État des ristournes de chaque facture (rapport des ristournes de l'ERP), limité aux factures de
+     * l'année en cours et de l'année précédente : le calcul interroge la configuration des ristournes
+     * de chaque client, il n'est pas refait sur 5 ans à chaque envoi. Seules les factures porteuses
+     * de ristournes remontent, plus les factures annulées (sans groupe) pour effacer leur état au Hub.
+     */
+    private List<SpokeSnapshotPayload.RistourneRapportItem> buildRistournesRapport(
+            List<com.erp.sales.entity.SalesInvoice> invoices, Long cid, LocalDate today) {
+        LocalDate since = LocalDate.of(today.getYear() - 1, 1, 1);
+        List<SpokeSnapshotPayload.RistourneRapportItem> out = new ArrayList<>();
+        var salesService = salesServiceProvider.getObject();
+        for (var inv : invoices) {
+            if (!"invoice".equals(inv.getType()) || inv.getDate() == null || inv.getDate().isBefore(since)) continue;
+            boolean active = "posted".equals(inv.getState()) || "paid".equals(inv.getState());
+            List<com.erp.sales.dto.RistournePaiementDTO> groups;
+            try {
+                groups = active ? salesService.ristourneRapportOf(List.of(inv), cid) : List.of();
+            } catch (Exception e) {
+                log.warn("État des ristournes non calculé pour la facture {} : {}", inv.getName(), e.getMessage());
+                continue;
+            }
+            if (active && groups.isEmpty()) continue;
+            out.add(SpokeSnapshotPayload.RistourneRapportItem.builder()
+                    .id(inv.getId()).invoiceName(inv.getName())
+                    .partnerName(inv.getPartner() != null ? inv.getPartner().getName() : null)
+                    .date(inv.getDate()).state(inv.getState()).groups(groups)
+                    .build());
+        }
+        return out;
     }
 }

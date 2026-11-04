@@ -798,7 +798,8 @@ public class RemiseService {
         return montantFixe.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private RemisePaiementDTO toPaiementDTO(RemisePaiement p) {
+    /** Public : le snapshot du Hub reprend le détail (lignes, articles) du rapport des remises. */
+    public RemisePaiementDTO toPaiementDTO(RemisePaiement p) {
         List<RemisePaiementDTO.LineDTO> lines = p.getLines().stream()
                 .map(l -> RemisePaiementDTO.LineDTO.builder()
                         .id(l.getId())
