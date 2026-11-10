@@ -13,7 +13,7 @@
 
     <groupId>com.erp</groupId>
     <artifactId>erp-backend</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.3</version>
     <name>Blessing ERP</name>
     <description>Blessing ERP - Distributeurs</description>
 
