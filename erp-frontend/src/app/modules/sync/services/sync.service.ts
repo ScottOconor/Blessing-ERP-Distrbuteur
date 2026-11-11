@@ -100,6 +100,15 @@ export class SyncService {
     return this.http.get<SyncEvent>(`${this.base}/events/${id}`);
   }
 
+  /** Interrupteur de la synchronisation : coupée, rien ne part vers le Hub ni les autres agences. */
+  getEnabled(): Observable<{ enabled: boolean }> {
+    return this.http.get<{ enabled: boolean }>(`${this.base}/enabled`);
+  }
+
+  setEnabled(enabled: boolean): Observable<{ enabled: boolean }> {
+    return this.http.post<{ enabled: boolean }>(`${this.base}/enabled`, { enabled });
+  }
+
   forceDispatch(): Observable<{ ok: boolean }> {
     return this.http.post<{ ok: boolean }>(`${this.base}/dispatch`, {});
   }

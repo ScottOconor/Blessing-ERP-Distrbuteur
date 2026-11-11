@@ -130,7 +130,7 @@ public class EleaderPdfParserService {
                     String num = m.group(1).trim();
                     // Valider : doit contenir "/" (ex: DV-XXXX/04418/26) et faire > 4 chars
                     if (num.length() > 4 && num.contains("/")) {
-                        result.invoiceNumber = num;
+                        result.invoiceNumber = num.toUpperCase();
                     }
                 }
             }
@@ -236,7 +236,7 @@ public class EleaderPdfParserService {
                 if (m.find()) {
                     String num = m.group(1).trim();
                     if (num.length() > 4 && (num.contains("/") || num.contains("-"))) {
-                        result.invoiceNumber = num;
+                        result.invoiceNumber = num.toUpperCase();
                         // Extract date from same line (Guinness format)
                         if (result.invoiceDate == null) {
                             Matcher md = pFactDate.matcher(trimmed);

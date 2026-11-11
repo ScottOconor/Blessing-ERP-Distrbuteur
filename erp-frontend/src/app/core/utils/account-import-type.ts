@@ -13,6 +13,7 @@ export function accountImportType(accountType?: string, internalType?: string): 
     case 'income':      return 'income';
     case 'expense':     return 'expense';
     case 'off_balance': return 'hors bilan';
-    default:            return 'other';
+    // Types précis saisis à la main (asset_current, equity_unaffected…) : relus tels quels par l'import.
+    default:            return accountType || 'other';
   }
 }

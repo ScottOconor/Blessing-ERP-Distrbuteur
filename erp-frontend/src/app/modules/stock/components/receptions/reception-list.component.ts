@@ -214,6 +214,12 @@ export class ReceptionListComponent implements OnInit {
     this.directForm.lines[i].searchResults = matches;
   }
 
+  /** Entrée dans la recherche : retient la première proposition. */
+  onDirectSearchEnter(i: number): void {
+    const first = this.directForm.lines[i]?.searchResults[0];
+    if (first) this.selectDirectProduct(i, first);
+  }
+
   selectDirectProduct(i: number, p: Product): void {
     const line = this.directForm.lines[i];
     line.product = p;

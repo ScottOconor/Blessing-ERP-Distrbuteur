@@ -19,6 +19,7 @@ public class RemoteAgencyService {
 
     private final RemoteAgencyRepository repo;
     private final RestTemplate           restTemplate;
+    private final com.erp.sync.service.RemoteSyncGuard remoteSyncGuard;
 
     @Transactional(readOnly = true)
     public List<RemoteAgencyDTO> getAll() {
@@ -68,6 +69,10 @@ public class RemoteAgencyService {
         RemoteAgencyDTO dto = toDTO(a);
         String url = a.getBaseUrl() + "/api/inter-agency/health";
         dto.setPingUrl(url);
+        if (!remoteSyncGuard.isEnabled()) {
+            dto.setReachable(false);
+            return dto;
+        }
         try {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             if (a.getApiKey() != null && !a.getApiKey().isBlank())

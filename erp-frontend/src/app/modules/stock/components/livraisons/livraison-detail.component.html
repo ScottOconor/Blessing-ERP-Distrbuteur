@@ -138,6 +138,7 @@
                             <span class="material-icons ac-icon">search</span>
                             <input type="text" class="line-select"
                                    #productInput
+                                   [id]="'exp-product-' + i"
                                    [(ngModel)]="lineSearchTexts[i]"
                                    (input)="openDropdownIndex = i"
                                    (focus)="openDropdownIndex = i"
@@ -173,9 +174,10 @@
                         <span class="font-bold">{{ line.qtyDone | number:'1.0-2' }}</span>
                       } @else {
                         <input type="number" class="line-input text-right"
+                               [id]="'exp-qty-' + i"
                                [(ngModel)]="line.qtyDone" min="0.01" step="0.01"
                                (ngModelChange)="line.qtyDemanded = line.qtyDone"
-                               (keydown.enter)="onLineEnter()">
+                               (keydown.enter)="onLineEnter(i, $event)">
                       }
                     </td>
                     <td class="text-right">{{ line.purchasePrice | number:'1.0-0' }}</td>

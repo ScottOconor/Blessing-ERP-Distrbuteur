@@ -25,6 +25,7 @@ public class SnapshotScheduler {
 
     private final SnapshotService snapshotService;
     private final OutboxEventRepository outboxEventRepo;
+    private final RemoteSyncGuard remoteSyncGuard;
 
     /** null tant qu'aucun snapshot n'a encore été envoyé depuis le démarrage : le tout premier
      *  passage envoie donc toujours un snapshot complet, qu'il y ait eu de l'activité ou non
@@ -34,6 +35,7 @@ public class SnapshotScheduler {
     @Scheduled(fixedDelayString = "${sync.snapshot.interval-ms:3600000}",
                initialDelayString = "${sync.snapshot.initial-delay-ms:60000}")
     public void run() {
+        if (!remoteSyncGuard.isEnabled()) return;
         LocalDateTime now = LocalDateTime.now();
         if (lastSnapshotAt != null && outboxEventRepo.countByCreatedAtAfterAndEventTypeNot(
                 lastSnapshotAt, SyncEventType.FULL_SNAPSHOT) == 0) {

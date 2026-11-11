@@ -71,12 +71,14 @@ export class ChartOfAccountsComponent implements OnInit {
   accountForm!: FormGroup;
 
   accountTypes = [
+    { value: 'asset',               label: 'Actif'                  },
     { value: 'asset_receivable',    label: 'Créances clients'       },
     { value: 'asset_cash',          label: 'Liquidités'             },
     { value: 'asset_current',       label: 'Actif courant'          },
     { value: 'asset_non_current',   label: 'Actif non courant'      },
     { value: 'asset_prepayments',   label: 'Acomptes'               },
     { value: 'asset_fixed',         label: 'Immobilisations'        },
+    { value: 'liability',           label: 'Passif'                 },
     { value: 'liability_payable',   label: 'Dettes fournisseurs'    },
     { value: 'liability_credit_card', label: 'Carte de crédit'      },
     { value: 'liability_current',   label: 'Passif courant'         },
@@ -88,7 +90,8 @@ export class ChartOfAccountsComponent implements OnInit {
     { value: 'expense',             label: 'Charges'                },
     { value: 'expense_depreciation', label: 'Amortissements'        },
     { value: 'expense_direct_cost', label: 'Coût des ventes'        },
-    { value: 'off_balance',         label: 'Hors bilan'             }
+    { value: 'off_balance',         label: 'Hors bilan'             },
+    { value: 'other',               label: 'Autre'                  }
   ];
 
   internalTypes = [
@@ -300,7 +303,11 @@ export class ChartOfAccountsComponent implements OnInit {
     return String(row[col.key] ?? row[col.key.toLowerCase()] ?? '');
   }
 
-  getAccountTypeLabel(type: string): string {
+  /** Libellé français : l'import enregistre le type général et, à part, créance/dette/liquidité. */
+  getAccountTypeLabel(type: string, internalType?: string): string {
+    if (type === 'asset' && internalType === 'receivable') return 'Créances clients';
+    if (type === 'asset' && internalType === 'liquidity') return 'Liquidités';
+    if (type === 'liability' && internalType === 'payable') return 'Dettes fournisseurs';
     return this.accountTypes.find(t => t.value === type)?.label || type;
   }
 

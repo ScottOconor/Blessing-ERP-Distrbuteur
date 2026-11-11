@@ -84,7 +84,7 @@ public class ServiceAccountService {
     }
 
     /** Vide = retour au compte par défaut. Sinon le compte doit exister dans le plan comptable de
-     *  la société, être actif et être un compte de produits (classe 7). */
+     *  la société et être actif ; toutes les classes sont permises (choix de l'utilisateur). */
     private String validateAccount(String accountCode, Long companyId) {
         String code = blankToNull(accountCode);
         if (code == null) return null;
@@ -93,9 +93,6 @@ public class ServiceAccountService {
                         "Compte " + code + " introuvable dans le plan comptable — créez-le d'abord"));
         if (account.isDeprecated()) {
             throw new IllegalArgumentException("Le compte " + code + " est désactivé");
-        }
-        if (!code.startsWith("7")) {
-            throw new IllegalArgumentException("Le compte " + code + " n'est pas un compte de produits (classe 7)");
         }
         return code;
     }

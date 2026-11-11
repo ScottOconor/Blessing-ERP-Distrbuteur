@@ -33,7 +33,7 @@ class SyncEventPublisherSnapshotSplitTest {
     @Test
     void splitsLargeSnapshotIntoPartsUnderMaxSizeWithoutLosingItems() throws Exception {
         OutboxEventRepository repo = mock(OutboxEventRepository.class);
-        SyncEventPublisher publisher = new SyncEventPublisher(repo, mapper, mock(EntityManager.class));
+        SyncEventPublisher publisher = new SyncEventPublisher(repo, mapper, mock(EntityManager.class), RemoteSyncGuardTest.enabledGuard());
         ReflectionTestUtils.setField(publisher, "spokeId", "SPOKE_TEST");
         int maxBytes = 64 * 1024;
         ReflectionTestUtils.setField(publisher, "snapshotPartBytes", maxBytes);

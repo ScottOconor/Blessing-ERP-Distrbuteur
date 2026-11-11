@@ -41,7 +41,7 @@ class HubConfirmationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new HubConfirmationService(repo, keys);
+        service = new HubConfirmationService(repo, keys, RemoteSyncGuardTest.enabledGuard());
         ReflectionTestUtils.setField(service, "confirmationUrl", URL);
         ReflectionTestUtils.setField(service, "batchSize", 500);
         ReflectionTestUtils.setField(service, "resendAfterMinutes", 30L);

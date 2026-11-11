@@ -26,6 +26,10 @@ spring.rabbitmq.password=
 # CHANGEME (l'envoi des événements reste suspendu tant qu'elle n'est pas renseignée).
 sync.spoke.id=
 sync.spoke.name=
+# Synchronisation (Hub + autres agences). false = rien ne sort de l'installation : à utiliser pour
+# une installation de formation. Valeur initiale seulement : ensuite, l'interrupteur de l'écran
+# « Synchronisation Hub » fait foi (enregistré en base, sans redémarrage).
+#sync.enabled=true
 
 # Confirmation par le Hub du traitement des événements (docs/sync-confirmation.md) : à n'activer que
 # lorsque le Hub prend en charge ce contrat. Vide = désactivé (fonctionnement sans confirmation).

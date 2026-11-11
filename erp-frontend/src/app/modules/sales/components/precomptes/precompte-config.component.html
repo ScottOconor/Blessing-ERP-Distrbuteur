@@ -112,7 +112,7 @@
               <th class="text-right">Montant HT / unité</th>
               <th class="text-right">Montant TTC / unité</th>
               <th class="text-right">Coût importé / unité</th>
-              <th>Suppléments clients (supplément TTC · TTC facturé)</th>
+              <th>Suppléments clients</th>
               <th></th>
             </tr>
           </thead>
@@ -126,16 +126,11 @@
                 <td class="text-right font-mono text-muted">{{ (e.coutEnlevement ?? 0) | number:'1.0-0' }} FCFA</td>
                 <td>
                   @if (e.clients && e.clients.length > 0) {
-                    <div class="supp-list">
-                      @for (c of e.clients; track c.partnerId) {
-                        <div class="supp-row">
-                          <span class="supp-client">{{ c.partnerName || clientNameById(c.partnerId) }}</span>
-                          <span class="supp font-mono" [class.supp-plus]="c.montant > 0"
-                                title="Supplément TTC par unité, comptabilisé au 707100">+{{ c.montant | number:'1.0-0' }}</span>
-                          <span class="font-mono" title="TTC facturé par unité">{{ ttc(e.montantFixe) + c.montant | number:'1.0-0' }}</span>
-                        </div>
-                      }
-                    </div>
+                    <button type="button" class="supp-toggle" [attr.aria-expanded]="expandedEnlId === e.id" (click)="toggleEnlClients(e)">
+                      <span class="clients-count">{{ e.clients.length }} client(s)</span>
+                      <span class="supp-summary font-mono">{{ enlSuppSummary(e) }}</span>
+                      <span class="material-icons">{{ expandedEnlId === e.id ? 'expand_less' : 'expand_more' }}</span>
+                    </button>
                   } @else {
                     <span class="text-muted">Montant uniforme</span>
                   }
@@ -145,6 +140,28 @@
                   <button class="btn-icon danger" (click)="deleteEnl(e.id!)"><span class="material-icons">delete</span></button>
                 </td>
               </tr>
+              @if (expandedEnlId === e.id) {
+                <tr class="supp-detail-row">
+                  <td colspan="7">
+                    <div class="supp-detail-head">
+                      <input type="search" class="form-control" placeholder="Rechercher un client…" aria-label="Rechercher un client"
+                             [(ngModel)]="enlClientFilter" />
+                      <span class="text-muted">Supplément TTC par unité (707100) · TTC facturé par unité</span>
+                    </div>
+                    <div class="supp-grid">
+                      @for (c of filteredEnlClients(e); track c.partnerId) {
+                        <div class="supp-row">
+                          <span class="supp-client" [title]="c.partnerName || clientNameById(c.partnerId)">{{ c.partnerName || clientNameById(c.partnerId) }}</span>
+                          <span class="supp font-mono" [class.supp-plus]="c.montant > 0">+{{ c.montant | number:'1.0-0' }}</span>
+                          <span class="font-mono">{{ ttc(e.montantFixe) + c.montant | number:'1.0-0' }}</span>
+                        </div>
+                      } @empty {
+                        <p class="text-muted">Aucun client trouvé</p>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
@@ -387,39 +404,79 @@
 <!-- Modal Import Enlèvements Excel -->
 @if (showImportEnlModal) {
   <div class="modal-overlay" (click)="closeImportEnlModal()">
-    <div class="modal-box" (click)="$event.stopPropagation()" style="max-width:650px;position:relative">
+    <div class="modal-box enl-import-box" (click)="$event.stopPropagation()">
       @if (importEnlLoading) {
         <div style="position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;border-radius:inherit">
           <div class="spinner"></div>
           <p style="margin-top:14px;color:#017E84;font-weight:600">Importation en cours…</p>
-          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importEnlRows.length }} ligne(s) en cours de traitement</p>
+          <p style="font-size:12px;color:#6c757d;margin-top:4px">{{ importEnlPlan?.groups?.length }} catégorie(s) en cours de traitement</p>
         </div>
       }
       <div class="modal-header">
-        <h2><span class="material-icons" style="vertical-align:middle;color:#017E84">upload_file</span>
-          Aperçu import enlèvements ({{ importEnlRows.length }} ligne(s))
-        </h2>
+        <span class="material-icons">upload_file</span>
+        <h2>Aperçu import enlèvements</h2>
         <button class="btn-close" (click)="closeImportEnlModal()"><span class="material-icons">close</span></button>
       </div>
-      <p class="import-hint">Une ligne dont la catégorie a déjà un frais d'enlèvement le met à jour (les tarifs spécifiques par client sont conservés), les autres sont créées.</p>
-      <div style="overflow-x:auto;max-height:50vh">
+      <p class="import-hint enl-import-summary">
+        <strong>{{ importEnlPlan?.groups?.length }} catégorie(s), {{ importEnlClientCount }} supplément(s) client.</strong>
+        Le supplément s'ajoute au TTC du tarif de base. Les montants vides et les clients absents du fichier gardent leur valeur actuelle.
+      </p>
+      @if (importEnlPlan?.odooRefs) {
+        <p class="import-alert warn">{{ importEnlPlan?.odooRefs }} ligne(s) ne contiennent qu'une référence Odoo (enlevement.client,…), sans client ni supplément : elles seront ignorées. Utilisez le modèle, avec les colonnes « Client (référence ou nom) » et « Supplément client TTC ».</p>
+      }
+      @if (importEnlPlan?.issues?.length) {
+        <div class="import-alert error">
+          <strong>{{ importEnlPlan?.issues?.length }} point(s) à vérifier avant d'importer :</strong>
+          @for (issue of importEnlPlan?.issues; track $index) { <div>{{ issue }}</div> }
+        </div>
+      }
+      <div class="enl-import-table">
         <table class="cfg-table">
-          <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant HT</th><th class="text-right">Coût importé (modèle)</th><th>Résolu</th></tr></thead>
+          <thead><tr><th>#</th><th>Catégorie d'article</th><th class="text-right">Montant HT</th><th class="text-right">Coût</th><th>Suppléments clients</th><th>Catégorie</th></tr></thead>
           <tbody>
-            @for (row of importEnlRows; track $index; let i = $index) {
+            @for (group of importEnlPlan?.groups; track $index; let i = $index) {
               <tr>
                 <td class="text-muted">{{ i+1 }}</td>
-                <td class="font-bold">{{ row["Catégorie d'article"] || row['Catégorie'] }}</td>
-                <td class="text-right">{{ row["Montant de l'enlèvement"] ?? row["Montant de l'enl\u00e8vement"] ?? '0' }}</td>
-                <td class="text-right text-muted">{{ row["Cout enlevement"] ?? row["Co\u00fbt enl\u00e8vement"] ?? '0' }}</td>
+                <td class="font-bold">{{ group.categoryName }}</td>
+                <td class="text-right font-mono">
+                  @if (group.montantFixe !== undefined) { {{ group.montantFixe | number:'1.0-2' }} } @else { <span class="text-muted">Inchangé</span> }
+                </td>
+                <td class="text-right font-mono">
+                  @if (group.coutEnlevement !== undefined) { {{ group.coutEnlevement | number:'1.0-2' }} } @else { <span class="text-muted">Inchangé</span> }
+                </td>
                 <td>
-                  @if (getCategoryIdByName(row["Catégorie d'article"] || row['Catégorie'])) {
+                  @if (group.clients.length > 0) {
+                    <button type="button" class="supp-toggle" [attr.aria-expanded]="expandedImportIdx === i" (click)="expandedImportIdx = expandedImportIdx === i ? null : i">
+                      <span class="clients-count">{{ group.clients.length }}</span>
+                      <span class="supp-summary font-mono">{{ enlSuppSummary(group) }}</span>
+                      <span class="material-icons">{{ expandedImportIdx === i ? 'expand_less' : 'expand_more' }}</span>
+                    </button>
+                  } @else {
+                    <span class="text-muted">Aucun</span>
+                  }
+                </td>
+                <td>
+                  @if (getCategoryIdByName(group.categoryName)) {
                     <span style="color:#198754">✓</span>
                   } @else {
-                    <span style="color:#dc3545" title="Catégorie introuvable">✗</span>
+                    <span style="color:#dc3545" title="Catégorie introuvable : elle sera créée">✗</span>
                   }
                 </td>
               </tr>
+              @if (expandedImportIdx === i) {
+                <tr class="supp-detail-row">
+                  <td colspan="6">
+                    <div class="supp-grid">
+                      @for (c of group.clients; track c.partnerId) {
+                        <div class="supp-row supp-row-import">
+                          <span class="supp-client" [title]="c.partnerName">{{ c.partnerName }}</span>
+                          <span class="supp font-mono supp-plus">+{{ c.montant | number:'1.0-2' }}</span>
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
@@ -427,7 +484,7 @@
       <div class="modal-footer">
         <button class="btn-cancel" (click)="closeImportEnlModal()">Annuler</button>
         <button class="btn-save" (click)="confirmImportEnl()">
-          <span class="material-icons">check_circle</span> Importer ({{ importEnlRows.length }} lignes)
+          <span class="material-icons">check_circle</span> Importer ({{ importEnlPlan?.groups?.length }} catégories, {{ importEnlClientCount }} clients)
         </button>
       </div>
     </div>

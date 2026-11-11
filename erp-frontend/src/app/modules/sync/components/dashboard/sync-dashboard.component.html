@@ -10,16 +10,16 @@
       <p class="dash-sub">Suivi de l'envoi des opérations de ce spoke vers le Hub central</p>
     </div>
     <div class="header-actions">
-      <button class="btn-action btn-hub-test" (click)="testHub()" [disabled]="testingHub">
+      <button class="btn-action btn-hub-test" (click)="testHub()" [disabled]="testingHub || syncEnabled === false">
         <span class="material-icons" [class.spinning]="testingHub">wifi_tethering</span>
         {{ testingHub ? 'Test...' : 'Tester Hub' }}
       </button>
-      <button class="btn-action btn-snapshot" (click)="forceSnapshot()" [disabled]="snapshotting"
+      <button class="btn-action btn-snapshot" (click)="forceSnapshot()" [disabled]="snapshotting || syncEnabled === false"
               title="Envoie l'état complet du système au Hub, sans limite d'historique (factures, avoirs, bons de commande...) — à utiliser pour rattraper des documents restés bloqués">
         <span class="material-icons" [class.spinning]="snapshotting">cloud_upload</span>
         {{ snapshotting ? 'Snapshot...' : 'Snapshot complet' }}
       </button>
-      <button class="btn-action btn-snapshot-hourly" (click)="triggerHourlySnapshot()" [disabled]="snapshottingHourly"
+      <button class="btn-action btn-snapshot-hourly" (click)="triggerHourlySnapshot()" [disabled]="snapshottingHourly || syncEnabled === false"
               title="Déclenche tout de suite le même snapshot incrémental que le job planifié (seulement ce qui a changé depuis le dernier envoi), sans attendre le prochain passage horaire">
         <span class="material-icons" [class.spinning]="snapshottingHourly">schedule_send</span>
         {{ snapshottingHourly ? 'Snapshot...' : 'Snapshot horaire' }}
@@ -35,6 +35,23 @@
       </button>
     </div>
   </div>
+
+  <!-- ── INTERRUPTEUR ── -->
+  @if (syncEnabled !== null) {
+    <div class="sync-switch" [class.sync-switch-off]="!syncEnabled">
+      <span class="material-icons">{{ syncEnabled ? 'cloud_done' : 'cloud_off' }}</span>
+      <div class="sync-switch-text">
+        <strong>{{ syncEnabled ? 'Synchronisation activée' : 'Synchronisation désactivée' }}</strong>
+        <span>{{ syncEnabled
+          ? 'Les opérations de ce spoke sont envoyées au Hub et aux autres agences.'
+          : 'Aucune donnée ne sort de cette installation : ni vers le Hub, ni vers les autres agences.' }}</span>
+      </div>
+      <button class="btn-action" (click)="toggleSync()" [disabled]="togglingSync">
+        <span class="material-icons">{{ syncEnabled ? 'pause_circle' : 'play_circle' }}</span>
+        {{ togglingSync ? '...' : (syncEnabled ? 'Désactiver' : 'Réactiver') }}
+      </button>
+    </div>
+  }
 
   <!-- ── KPI GLOBAUX ── -->
   <div class="kpi-row">

@@ -7,6 +7,7 @@ import com.erp.sync.entity.OutboxStatus;
 import com.erp.sync.entity.SyncEventType;
 import com.erp.sync.repository.OutboxEventRepository;
 import com.erp.sync.repository.OutboxEventRepository.OutboxEventSummary;
+import com.erp.sync.service.RemoteSyncGuard;
 import com.erp.sync.service.SnapshotService;
 import com.erp.sync.service.SyncDispatcherScheduler;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class SyncStatusController {
     private final SyncDispatcherScheduler  dispatcher;
     private final SnapshotService          snapshotService;
     private final ConnectionFactory        rabbitConnectionFactory;
+    private final RemoteSyncGuard          remoteSyncGuard;
 
     @Value("${spring.rabbitmq.host:localhost}")   private String rabbitHost;
     @Value("${spring.rabbitmq.port:5672}")        private int    rabbitPort;
@@ -199,8 +201,24 @@ public class SyncStatusController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    /** Interrupteur de la synchronisation (Hub + autres agences) — voir RemoteSyncGuard. */
+    @GetMapping("/enabled")
+    public ResponseEntity<Map<String, Object>> getEnabled() {
+        return ResponseEntity.ok(Map.of("enabled", remoteSyncGuard.isEnabled()));
+    }
+
+    @PostMapping("/enabled")
+    public ResponseEntity<Map<String, Object>> setEnabled(@RequestBody Map<String, Boolean> body) {
+        Boolean value = body.get("enabled");
+        if (value == null) throw new IllegalArgumentException("Champ « enabled » manquant");
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        remoteSyncGuard.setEnabled(value, auth != null ? auth.getName() : "inconnu");
+        return ResponseEntity.ok(Map.of("enabled", remoteSyncGuard.isEnabled()));
+    }
+
     @PostMapping("/dispatch")
     public ResponseEntity<Map<String, Object>> dispatch() {
+        remoteSyncGuard.requireEnabled();
         dispatcher.dispatch();
         return ResponseEntity.ok(Map.of("ok", true));
     }
@@ -221,6 +239,7 @@ public class SyncStatusController {
      *  événements déjà en échec, sans reconstruire de snapshot). */
     @PostMapping("/snapshot/force")
     public ResponseEntity<Map<String, String>> forceSnapshot() {
+        remoteSyncGuard.requireEnabled();
         try {
             if (!snapshotService.buildAndPublish(true)) {
                 return ResponseEntity.status(409).body(Map.of("status", "busy",
@@ -239,6 +258,7 @@ public class SyncStatusController {
      *  fenêtré/incrémental (ne renvoie que ce qui a changé depuis le dernier snapshot réussi). */
     @PostMapping("/snapshot/hourly")
     public ResponseEntity<Map<String, String>> triggerHourlySnapshot() {
+        remoteSyncGuard.requireEnabled();
         try {
             if (!snapshotService.buildAndPublish(false)) {
                 return ResponseEntity.status(409).body(Map.of("status", "busy",
@@ -347,6 +367,12 @@ public class SyncStatusController {
         result.put("hubUrl", brokerUrl);
         result.put("exchange", com.erp.sync.RabbitMQConfig.EXCHANGE);
         result.put("queue",    com.erp.sync.RabbitMQConfig.QUEUE);
+        if (!remoteSyncGuard.isEnabled()) {
+            result.put("reachable", false);
+            result.put("latencyMs", null);
+            result.put("message", RemoteSyncGuard.DISABLED_MESSAGE);
+            return ResponseEntity.ok(result);
+        }
         try {
             long start = System.currentTimeMillis();
             com.rabbitmq.client.Connection conn = rabbitConnectionFactory.createConnection().getDelegate();

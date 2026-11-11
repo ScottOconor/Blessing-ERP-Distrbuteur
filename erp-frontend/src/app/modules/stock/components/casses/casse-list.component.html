@@ -75,7 +75,7 @@
                   <input type="text" class="form-control" [(ngModel)]="line.search"
                          [disabled]="!form.warehouseId"
                          placeholder="{{ form.warehouseId ? 'Rechercher un article en stock...' : 'Sélectionnez d\'abord un entrepôt' }}"
-                         (input)="onSearchInput(i)" (focus)="onSearchInput(i)" autocomplete="off">
+                         (input)="onSearchInput(i)" (focus)="activeSuggestionIdx = i" (keydown.enter)="onSearchEnter(i)" autocomplete="off">
                   @if (activeSuggestionIdx === i && getSuggestions(i).length > 0) {
                     <div class="suggestions">
                       @for (p of getSuggestions(i); track p.id) {
@@ -115,7 +115,7 @@
           </tfoot>
         </table>
 
-        <button class="btn-add-line" (click)="addLine()">
+        <button class="btn-add-line" data-add-line (click)="addLine()">
           <span class="material-icons">add</span> Ajouter un article
         </button>
 

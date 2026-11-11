@@ -242,6 +242,7 @@
                 <div class="ac-wrap">
                   <input type="text" class="form-control" [(ngModel)]="line.productSearch"
                          (ngModelChange)="onDirectProductSearch(i)"
+                         (keydown.enter)="onDirectSearchEnter(i)"
                          placeholder="Chercher article…" autocomplete="off" />
                   @if (line.searchResults.length > 0) {
                     <div class="ac-results">
@@ -273,7 +274,7 @@
         </tbody>
       </table>
 
-      <button class="btn-add-line" (click)="addDirectLine()">
+      <button class="btn-add-line" data-add-line (click)="addDirectLine()">
         <span class="material-icons">add</span> Ajouter article
       </button>
 

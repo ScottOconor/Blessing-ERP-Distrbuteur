@@ -257,6 +257,14 @@ export class JournalEntryFormComponent implements OnInit {
     if (!line.name) line.name = account.name;
   }
 
+  /** Entrée dans la recherche de compte : retient le code exact tapé, sinon la première proposition. */
+  onAccountEnter(line: LineForm): void {
+    if (!line.showAccountSuggestions || line.accountSuggestions.length === 0) return;
+    const term = line.accountSearch.trim().toLowerCase();
+    const exact = line.accountSuggestions.find(a => a.code.toLowerCase() === term);
+    this.selectAccount(line, exact ?? line.accountSuggestions[0]);
+  }
+
   hideAccountSuggestions(line: LineForm): void {
     setTimeout(() => { line.showAccountSuggestions = false; }, 200);
   }

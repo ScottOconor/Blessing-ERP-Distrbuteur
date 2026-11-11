@@ -131,6 +131,13 @@ export class CasseListComponent implements OnInit {
     this.activeSuggestionIdx = i;
   }
 
+  /** Entrée dans la recherche : retient la première proposition (rien si l'article est déjà choisi). */
+  onSearchEnter(i: number): void {
+    if (this.lines[i]?.productId) { this.activeSuggestionIdx = null; return; }
+    const first = this.getSuggestions(i)[0];
+    if (first && (this.lines[i].search || '').trim()) this.selectProduct(i, first);
+  }
+
   selectProduct(i: number, p: Product): void {
     const line = this.lines[i];
     line.productId = p.id ?? null;

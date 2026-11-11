@@ -19,8 +19,8 @@ import { AccountAccount } from '../../../../core/models/account.model';
 })
 export class ServiceAccountsComponent implements OnInit {
   data: ServiceAccounts | null = null;
-  /** Comptes de produits (classe 7) actifs, proposés au choix */
-  incomeAccounts: AccountAccount[] = [];
+  /** Tous les comptes actifs du plan comptable, proposés au choix */
+  accounts: AccountAccount[] = [];
   loading = false;
   savingKey: string | null = null;
   searchTerm = '';
@@ -34,8 +34,8 @@ export class ServiceAccountsComponent implements OnInit {
     this.loading = true;
     this.accountingService.getAccounts(companyId).subscribe({
       next: (accounts) => {
-        this.incomeAccounts = accounts
-          .filter(a => a.code.startsWith('7') && !a.deprecated)
+        this.accounts = accounts
+          .filter(a => !a.deprecated)
           .sort((a, b) => a.code.localeCompare(b.code));
       }
     });
@@ -54,7 +54,7 @@ export class ServiceAccountsComponent implements OnInit {
 
   accountLabel(code: string | null | undefined): string {
     if (!code) return '';
-    const a = this.incomeAccounts.find(x => x.code === code);
+    const a = this.accounts.find(x => x.code === code);
     return a ? `${a.code} — ${a.name}` : code;
   }
 

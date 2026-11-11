@@ -22,6 +22,8 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
   forcingFailed = false;
   clearingFailed = false;
   testingHub = false;
+  syncEnabled: boolean | null = null;
+  togglingSync = false;
   hubTest: HubTestResult | null = null;
 
   summary: SyncSummary | null = null;
@@ -64,6 +66,7 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
   constructor(private syncService: SyncService) {}
 
   ngOnInit(): void {
+    this.syncService.getEnabled().subscribe({ next: r => this.syncEnabled = r.enabled, error: () => {} });
     this.loadAll();
     this.loadProgress();
     // Rafraîchissement auto toutes les 30s
@@ -116,6 +119,28 @@ export class SyncDashboardComponent implements OnInit, OnDestroy {
   selectStatus(s: SyncStatus | ''): void {
     this.activeStatus = s;
     this.loadEvents(0);
+  }
+
+  /** Coupe ou rétablit tout envoi vers le Hub et les autres agences. */
+  toggleSync(): void {
+    if (this.syncEnabled === null) return;
+    const target = !this.syncEnabled;
+    const ok = window.confirm(target
+      ? `Réactiver la synchronisation ?\n\n` +
+        `Les opérations saisies pendant la coupure ne seront PAS envoyées une par une, mais le prochain ` +
+        `snapshot transmettra l'état actuel de la base au Hub (totaux, soldes, documents récents), ` +
+        `y compris ce qui a été saisi pendant la coupure.\n\n` +
+        `Ne réactivez pas sur une installation qui a servi à la formation.`
+      : `Désactiver la synchronisation ?\n\n` +
+        `Plus aucune donnée ne sera envoyée au Hub ni aux autres agences, et les opérations saisies ` +
+        `à partir de maintenant ne seront jamais transmises une par une. Les expéditions inter-agences ` +
+        `seront refusées.`);
+    if (!ok) return;
+    this.togglingSync = true;
+    this.syncService.setEnabled(target).subscribe({
+      next: r => { this.syncEnabled = r.enabled; this.togglingSync = false; this.loadAll(); },
+      error: () => { this.togglingSync = false; }
+    });
   }
 
   testHub(): void {

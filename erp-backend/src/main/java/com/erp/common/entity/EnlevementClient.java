@@ -7,8 +7,8 @@ import lombok.*;
 import java.math.BigDecimal;
 
 /**
- * Tarif d'enlèvement spécifique pour un client sur une catégorie donnée.
- * Ce montant REMPLACE le montant fixe global pour ce client (logique identique à Odoo).
+ * Supplément d'enlèvement spécifique pour un client sur une catégorie donnée.
+ * Ce montant S'AJOUTE au TTC du tarif de base (sans TVA, compte 707100).
  */
 @Entity
 @Table(name = "enlevement_clients",
@@ -27,7 +27,7 @@ public class EnlevementClient {
     @JoinColumn(name = "partner_id", nullable = false)
     private Partner partner;
 
-    /** Tarif TTC par unité pour ce client — remplace montantFixe de l'Enlevement de base */
+    /** Supplément TTC par unité pour ce client — s'ajoute au montantFixe TTC de l'Enlevement de base */
     @Column(name = "montant", precision = 20, scale = 2, nullable = false)
     private BigDecimal montant;
 

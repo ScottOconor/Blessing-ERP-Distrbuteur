@@ -63,7 +63,7 @@ public class Product {
     @Column(nullable = false)
     private String type;
 
-    /** Compte de produit (classe 7) des ventes de ce service, paramétré en comptabilité
+    /** Compte (toute classe) des ventes de ce service, paramétré en comptabilité
      *  (écran "Comptes des services"). Null = compte par défaut des services de la société. */
     @Column(name = "income_account_code")
     private String incomeAccountCode;

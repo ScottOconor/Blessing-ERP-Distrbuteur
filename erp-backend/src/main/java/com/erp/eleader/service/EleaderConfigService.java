@@ -165,11 +165,16 @@ public class EleaderConfigService {
      * d'emballage/déconsigne à l'import (ex: VRACC12 chez NDEMEFO, log du 2026-10-02).
      * Clé = "CODE_ELEADER|MODELE".
      */
+    /** Code casier Brasseries : VC + 2 lettres (marque) + contenance en cl, ex VCBV50. */
+    private static final java.util.regex.Pattern BRASSERIES_CASIER =
+            java.util.regex.Pattern.compile("VC[A-Z]{2}(\\d{2})");
+
     private static final Map<String, String> DEFAULT_MAPPINGS = Map.ofEntries(
             Map.entry("VCBB65|BRASSERIES", "CB12"),
             Map.entry("VCBB60|BRASSERIES", "CB12"),
             Map.entry("VCBB50|BRASSERIES", "CB12"),
             Map.entry("VCBV65|BRASSERIES", "CB12"),
+            Map.entry("VCBV50|BRASSERIES", "CB12"),
             Map.entry("VCMU65|BRASSERIES", "CB12"),
             Map.entry("VCBA65|BRASSERIES", "CB12"),
             Map.entry("VCBA50|BRASSERIES", "CB12"),
@@ -233,6 +238,24 @@ public class EleaderConfigService {
 
         String fallback = invoiceModel != null ? DEFAULT_MAPPINGS.get(code + "|" + invoiceModel.toUpperCase()) : null;
         if (fallback != null) return fallback;
+
+        // Casier Brasseries absent de la liste (ex: VCBV50, manquant jusqu'au 2026-11-05 : la
+        // déconsignation des factures 50cl était ignorée) : la contenance donne le casier,
+        // comme pour toutes les entrées ci-dessus — 50/60/65cl → CB12, 30/33cl → CB24.
+        if ("BRASSERIES".equalsIgnoreCase(invoiceModel)) {
+            java.util.regex.Matcher m = BRASSERIES_CASIER.matcher(code);
+            if (m.matches()) {
+                String casier = switch (m.group(1)) {
+                    case "50", "60", "65" -> "CB12";
+                    case "30", "33" -> "CB24";
+                    default -> null;
+                };
+                if (casier != null) {
+                    log.warn("Code eLeader '{}' sans mapping : casier {} déduit de la contenance.", code, casier);
+                    return casier;
+                }
+            }
+        }
 
         log.warn("Aucun mapping configuré pour le code eLeader '{}' (modèle: {}). Code brut utilisé.", code, invoiceModel);
         return code;

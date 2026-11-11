@@ -61,6 +61,7 @@ public class HubConfirmationService {
     private final OutboxEventRepository outboxRepo;
     private final InterAgencyKeyService interAgencyKeyService;
     private final RestTemplate http;
+    private final RemoteSyncGuard remoteSyncGuard;
 
     @Value("${sync.confirmation.url:}")                    private String confirmationUrl;
     @Value("${sync.confirmation.batch-size:500}")          private int batchSize;
@@ -69,8 +70,10 @@ public class HubConfirmationService {
 
     private volatile boolean unsupportedByHub;
 
-    public HubConfirmationService(OutboxEventRepository outboxRepo, InterAgencyKeyService interAgencyKeyService) {
+    public HubConfirmationService(OutboxEventRepository outboxRepo, InterAgencyKeyService interAgencyKeyService,
+                                  RemoteSyncGuard remoteSyncGuard) {
         this.outboxRepo = outboxRepo;
+        this.remoteSyncGuard = remoteSyncGuard;
         this.interAgencyKeyService = interAgencyKeyService;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
@@ -85,7 +88,7 @@ public class HubConfirmationService {
 
     @Scheduled(fixedDelayString = "${sync.confirmation.interval-ms:120000}", initialDelayString = "${sync.confirmation.initial-delay-ms:60000}")
     public void confirm() {
-        if (!isActive() || spokeId == null || spokeId.isBlank() || UNCONFIGURED_SPOKE_ID.equalsIgnoreCase(spokeId.trim())) return;
+        if (!remoteSyncGuard.isEnabled() || !isActive() || spokeId == null || spokeId.isBlank() || UNCONFIGURED_SPOKE_ID.equalsIgnoreCase(spokeId.trim())) return;
 
         // Laisser au Hub le temps de consommer ce qui vient d'être envoyé.
         List<OutboxEvent> awaiting = outboxRepo.findByStatusAndEventTypeNotInAndLastAttemptAtBeforeOrderByIdAsc(

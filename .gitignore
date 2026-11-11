@@ -12,3 +12,8 @@ graphify-out/
 
 # Cache Python des scripts qa/
 __pycache__/
+CLAUDE.md
+.github/modernize/
+.~lock*
+~$*
+logs/

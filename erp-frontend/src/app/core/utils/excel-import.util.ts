@@ -1,3 +1,4 @@
+import { httpErrorMessage } from './http-error-message';
 import * as ExcelJS from 'exceljs';
 
 // Lecture et écriture des fichiers Excel par exceljs. La bibliothèque xlsx (SheetJS 0.18.5, dernière
@@ -25,6 +26,11 @@ async function writeSheet(sheetName: string, rows: unknown[][], widths: number[]
 /** Génère et télécharge un fichier Excel modèle */
 export function downloadExcelTemplate(headers: string[], sampleRow: (string | number)[], fileName: string): Promise<void> {
   return writeSheet('Modèle', [headers, sampleRow], headers.map(() => 22), fileName);
+}
+
+/** Variante à plusieurs lignes d'exemple, quand une seule ne suffit pas à montrer le format. */
+export function downloadExcelTemplateRows(headers: string[], sampleRows: (string | number)[][], fileName: string): Promise<void> {
+  return writeSheet('Modèle', [headers, ...sampleRows], headers.map(() => 22), fileName);
 }
 
 /** Exporte des objets (une colonne par clé) vers un fichier Excel. */
@@ -125,12 +131,16 @@ export function rowId(row: Record<string, any>): number | undefined {
   return Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
+/** Texte sans casse, accents ni espaces superflus, pour comparer ou indexer. */
+export function normText(v: unknown): string {
+  return String(v ?? '').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+}
+
 /** Comparaison texte insensible à la casse, aux accents et aux espaces superflus. */
 export function sameText(a: unknown, b: unknown): boolean {
-  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
-  const na = norm(a);
-  return na !== '' && na === norm(b);
+  const na = normText(a);
+  return na !== '' && na === normText(b);
 }
 
 /** "Oui"/"Non" pour l'export des booléens. */
@@ -176,5 +186,5 @@ export class RowSelection<T> {
 
 /** Raison lisible d'un échec d'import d'une ligne, telle que renvoyée par l'API. */
 export function importErrorMessage(e: any): string {
-  return e?.error?.message || e?.error?.error || 'erreur inconnue';
+  return httpErrorMessage(e);
 }

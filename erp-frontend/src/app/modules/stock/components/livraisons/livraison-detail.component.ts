@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChildren, ElementRef, QueryList } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -56,7 +56,6 @@ export class LivraisonDetailComponent implements OnInit {
   // Autocomplete articles par ligne
   lineSearchTexts: string[] = [];
   openDropdownIndex: number | null = null;
-  @ViewChildren('productInput') productInputs!: QueryList<ElementRef>;
 
   lineFilteredProducts(i: number): Product[] {
     const q = (this.lineSearchTexts[i] || '').toLowerCase();
@@ -73,19 +72,41 @@ export class LivraisonDetailComponent implements OnInit {
     this.onProductChange(i);
   }
 
+  /** Entrée dans la recherche : retient la première proposition puis passe à la quantité. */
   onProductEnter(i: number, e: Event): void {
     e.preventDefault();
-    const s = this.lineFilteredProducts(i);
-    if (s.length > 0) { this.selectLineProduct(i, s[0]); return; }
-    if (this.lines[i].productId) this.onLineEnter();
+    e.stopPropagation();
+    const text = (this.lineSearchTexts[i] || '').trim();
+    const chosen = this.lines[i].productId
+      ? this.products.find(p => p.id === this.lines[i].productId) : undefined;
+    const chosenLabel = chosen ? (chosen.defaultCode ? `[${chosen.defaultCode}] ${chosen.name}` : chosen.name) : '';
+    // Texte saisi différent de l'article retenu : prendre la première proposition
+    if (text && text !== chosenLabel) {
+      const s = this.lineFilteredProducts(i);
+      if (s.length > 0) this.selectLineProduct(i, s[0]);
+    }
+    this.openDropdownIndex = null;
+    if (this.lines[i].productId) this.focusLineField(`exp-qty-${i}`);
   }
 
-  onLineEnter(): void {
-    this.addLine();
+  /**
+   * Entrée sur la quantité : passe à l'article de la ligne suivante, en créant cette ligne
+   * seulement si c'est la dernière. Une ligne sans article renvoie sur sa recherche.
+   */
+  onLineEnter(i: number, e: Event): void {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!this.lines[i].productId) { this.focusLineField(`exp-product-${i}`); return; }
+    if (i + 1 >= this.lines.length) this.addLine();
+    this.focusLineField(`exp-product-${i + 1}`);
+  }
+
+  private focusLineField(id: string): void {
     setTimeout(() => {
-      const inputs = this.productInputs.toArray();
-      if (inputs.length > 0) inputs[inputs.length - 1].nativeElement.focus();
-    }, 50);
+      const el = document.getElementById(id) as HTMLInputElement | null;
+      el?.focus();
+      el?.select();
+    });
   }
 
   onLineBlur(i: number): void { setTimeout(() => { if (this.openDropdownIndex === i) this.openDropdownIndex = null; }, 200); }

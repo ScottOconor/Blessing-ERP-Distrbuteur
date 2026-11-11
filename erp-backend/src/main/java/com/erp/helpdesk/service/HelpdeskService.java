@@ -40,6 +40,7 @@ public class HelpdeskService {
     private final TicketCommentRepository commentRepo;
     private final AuditService auditService;
     private final HubConfigService hubConfigService;
+    private final com.erp.sync.service.RemoteSyncGuard remoteSyncGuard;
     private final com.erp.common.list.ListQueryService listQuery;
 
     @Value("${sync.spoke.id:SPOKE}")
@@ -213,6 +214,7 @@ public class HelpdeskService {
     // ── Synchro Hub ───────────────────────────────────────────────────────────
 
     private void pushToHub(Ticket t) {
+        if (!remoteSyncGuard.isEnabled()) return;
         String hubUrl = hubConfigService.getHubUrl();
         if (hubUrl == null || hubUrl.isBlank()) return;
         new Thread(() -> {
@@ -238,6 +240,7 @@ public class HelpdeskService {
     }
 
     private void pushCommentToHub(Long ticketId, TicketComment c) {
+        if (!remoteSyncGuard.isEnabled()) return;
         String hubUrl = hubConfigService.getHubUrl();
         if (hubUrl == null || hubUrl.isBlank()) return;
         new Thread(() -> {

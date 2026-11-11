@@ -150,6 +150,7 @@
                     <input type="text" class="line-input"
                       [(ngModel)]="line.accountSearch"
                       (ngModelChange)="onAccountSearch(line)"
+                      (keydown.enter)="onAccountEnter(line)"
                       (blur)="hideAccountSuggestions(line)"
                       placeholder="Taper code ou nom..."
                       [disabled]="isReadonly">
@@ -232,7 +233,7 @@
 
         @if (!isReadonly) {
           <div style="padding:8px 12px">
-            <button type="button" class="btn btn-outline btn-sm" (click)="addLine()">
+            <button type="button" class="btn btn-outline btn-sm" data-add-line (click)="addLine()">
               <span class="material-icons">add</span> Ajouter une ligne
             </button>
           </div>

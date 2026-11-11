@@ -18,6 +18,11 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
 
     List<SalesOrder> findByCompanyIdOrderByDateDescNameDesc(Long companyId);
 
+    /** Bons non annulés déjà créés pour une facture eLeader (contrôle de doublon à l'import). */
+    @Query("SELECT o FROM SalesOrder o WHERE o.company.id = :companyId AND o.state <> 'cancelled'"
+            + " AND UPPER(TRIM(o.eleaderReference)) = UPPER(TRIM(:ref)) ORDER BY o.id")
+    List<SalesOrder> findActiveByEleaderReference(@Param("companyId") Long companyId, @Param("ref") String ref);
+
     /** Version streaming — voir SalesInvoiceRepository.streamByCompanyIdAndType pour le pourquoi
      *  (évite l'OutOfMemoryError sur une liste de commandes trop volumineuse). */
     @QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "50"))

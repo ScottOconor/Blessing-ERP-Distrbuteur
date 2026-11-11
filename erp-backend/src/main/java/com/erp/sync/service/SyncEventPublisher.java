@@ -22,6 +22,7 @@ public class SyncEventPublisher {
     private final OutboxEventRepository outboxRepo;
     private final ObjectMapper objectMapper;
     private final jakarta.persistence.EntityManager entityManager;
+    private final RemoteSyncGuard remoteSyncGuard;
 
     @Value("${sync.spoke.id}")
     private String spokeId;
@@ -53,6 +54,7 @@ public class SyncEventPublisher {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void publishSnapshot(SpokeSnapshotPayload snapshot) {
+        if (!remoteSyncGuard.isEnabled()) return;
         // Fractionne le snapshot en plusieurs parties si nécessaire pour rester sous la limite
         // cible par partie (par défaut 8MB) et publie chaque partie séparément.
         try {
@@ -165,6 +167,8 @@ public class SyncEventPublisher {
      * Doit être appelé dans la même transaction que l'opération métier.
      */
     public void publish(SyncEventType eventType, String entityId, Object payload) {
+        // Mode formation : rien dans l'outbox, donc rien qui puisse partir plus tard.
+        if (!remoteSyncGuard.isEnabled()) return;
         String json;
         try {
             json = objectMapper.writeValueAsString(payload);

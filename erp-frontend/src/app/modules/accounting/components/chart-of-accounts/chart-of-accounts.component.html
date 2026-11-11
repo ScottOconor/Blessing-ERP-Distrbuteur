@@ -132,7 +132,7 @@
                         <span class="code-badge" [style.color]="group.color">{{ acc.code }}</span>
                       </td>
                       <td class="acc-name">{{ acc.name }}</td>
-                      <td class="acc-type muted">{{ getAccountTypeLabel(acc.accountType) }}</td>
+                      <td class="acc-type muted">{{ getAccountTypeLabel(acc.accountType, acc.internalType) }}</td>
                       <td class="c">
                         @if (acc.reconcile) {
                           <span class="material-icons icon-on">check_circle</span>
@@ -189,7 +189,7 @@
               <td class="col-check" (click)="$event.stopPropagation()"><input type="checkbox" [checked]="sel.isSelected(acc)" (change)="sel.toggle(acc)" /></td>
               <td><span class="code-badge">{{ acc.code }}</span></td>
               <td class="acc-name">{{ acc.name }}</td>
-              <td class="muted acc-type">{{ getAccountTypeLabel(acc.accountType) }}</td>
+              <td class="muted acc-type">{{ getAccountTypeLabel(acc.accountType, acc.internalType) }}</td>
               <td class="muted acc-type">{{ acc.internalType }}</td>
               <td class="c">
                 @if (acc.reconcile) { <span class="material-icons icon-on">check_circle</span> }

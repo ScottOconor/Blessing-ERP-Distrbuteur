@@ -10,6 +10,7 @@ import { PurchaseService, PrixFournisseurArticle } from '../../../purchases/serv
 import { AccountingService } from '../../../accounting/services/accounting.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { forkJoin } from 'rxjs';
+import { httpErrorMessage } from '../../../../core/utils/http-error-message';
 import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, rowId, sameText, yesNo, RowSelection, ID_HEADER, importErrorMessage } from '../../../../core/utils/excel-import.util';
 
 const PRODUCT_HEADERS = ['Nom', 'Référence interne', 'Code-barres', 'Prix de vente', 'Prix minimum', 'Coût', 'Catégorie d\'article', 'Quantité en stock', 'Unité de mesure', 'Exempté TVA vente', 'Exempté TVA achat'];
@@ -327,7 +328,7 @@ export class ProductListComponent implements OnInit {
         this.newPriceClientId = null;
         this.newPrixClient = 0;
       },
-      error: (e: any) => { this.savingPrice = false; this.errorMsg = e.error?.message || 'Erreur'; }
+      error: (e: any) => { this.savingPrice = false; this.errorMsg = httpErrorMessage(e); }
     });
   }
 
@@ -377,7 +378,7 @@ export class ProductListComponent implements OnInit {
         this.newFournisseurId = null;
         this.newPrixFournisseur = 0;
       },
-      error: (e: any) => { this.savingFournisseurPrice = false; this.errorMsg = e.error?.message || 'Erreur'; }
+      error: (e: any) => { this.savingFournisseurPrice = false; this.errorMsg = httpErrorMessage(e); }
     });
   }
 
@@ -407,7 +408,7 @@ export class ProductListComponent implements OnInit {
         if (this.photoFile && saved.id) {
           this.stockService.uploadProductPhoto(saved.id, this.photoFile).subscribe({
             next: () => { this.saving = false; this.showModal = false; this.load(); },
-            error: (e) => { this.saving = false; this.errorMsg = 'Article enregistré, mais erreur sur la photo : ' + (e.error?.message || 'erreur inconnue'); this.load(); }
+            error: (e) => { this.saving = false; this.errorMsg = 'Article enregistré, mais erreur sur la photo : ' + httpErrorMessage(e); this.load(); }
           });
         } else {
           this.saving = false;
@@ -415,7 +416,7 @@ export class ProductListComponent implements OnInit {
           this.load();
         }
       },
-      error: (e) => { this.saving = false; this.errorMsg = e.error?.message || 'Erreur'; }
+      error: (e) => { this.saving = false; this.errorMsg = httpErrorMessage(e); }
     });
   }
 

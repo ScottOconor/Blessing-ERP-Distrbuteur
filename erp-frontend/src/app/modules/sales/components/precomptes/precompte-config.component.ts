@@ -6,15 +6,20 @@ import { PrecompteService, Precompte, Enlevement, EnlevementClient } from '../..
 import { SalesService, SalesClient } from '../../services/sales.service';
 import { StockService, ProductCategory } from '../../../stock/services/stock.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { downloadExcelTemplate, parseExcelFile, exportRowsToExcel, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
+import { downloadExcelTemplateRows, parseExcelFile, exportRowsToExcel, normText, yesNo, RowSelection } from '../../../../core/utils/excel-import.util';
+import { buildEnlevementImportPlan, EnlImportPlan, ENL_CLIENT_HEADER, ENL_SUPPLEMENT_HEADER } from '../../../../core/utils/enlevement-import.util';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 interface PartnerOption { id?: number; name: string; ref?: string; }
 
 
 
-const ENL_HEADERS = ["Catégorie d'article", "Montant de l'enlèvement", "Cout enlevement", "Date de l'enlèvement", 'Actif', 'Clients spécifiques'];
-const ENL_SAMPLE  = ['Alcools mixtes 12', '600', '528.45', '', 'OUI', 'NON'];
+const ENL_HEADERS = ["Catégorie d'article", "Montant de l'enlèvement", "Cout enlevement", "Date de l'enlèvement", 'Actif', 'Clients spécifiques', ENL_CLIENT_HEADER, ENL_SUPPLEMENT_HEADER];
+const ENL_SAMPLES = [
+  ['Alcools mixtes 12', '', '', '', '', '', 'Nom ou référence du client 1', '150'],
+  ['Alcools mixtes 12', '', '', '', '', '', 'Nom ou référence du client 2', '200'],
+  ['Bières 12', '', '', '', '', '', 'Nom ou référence du client 1', '150'],
+];
 
 @Component({
   selector: 'app-precompte-config',
@@ -41,7 +46,7 @@ export class PrecompteConfigComponent implements OnInit {
 
   // ===== Import Excel Enlèvements =====
   showImportEnlModal = false;
-  importEnlRows: Record<string, any>[] = [];
+  importEnlPlan: EnlImportPlan | null = null;
   importEnlLoading = false;
 
 
@@ -321,6 +326,27 @@ export class PrecompteConfigComponent implements OnInit {
 
   clientNameById(id?: number): string { return this.clientName(id); }
 
+  // Détail des suppléments : une catégorie peut compter plus de 100 clients, la liste est donc repliée.
+  expandedEnlId: number | null = null;
+  enlClientFilter = '';
+
+  toggleEnlClients(e: Enlevement): void {
+    this.expandedEnlId = this.expandedEnlId === e.id ? null : e.id!;
+    this.enlClientFilter = '';
+  }
+
+  /** Suppléments distincts d'une catégorie, du plus petit au plus grand : "+50 · +100". */
+  enlSuppSummary(e: { clients?: { montant: number }[] }): string {
+    const amounts = [...new Set((e.clients ?? []).map(c => Number(c.montant)))].sort((a, b) => a - b);
+    const shown = amounts.slice(0, 4).map(m => `+${m.toLocaleString('fr-FR')}`).join(' · ');
+    return amounts.length > 4 ? `${shown} …` : shown;
+  }
+
+  filteredEnlClients(e: Enlevement): EnlevementClient[] {
+    const q = normText(this.enlClientFilter);
+    return (e.clients ?? []).filter(c => !q || normText(c.partnerName || this.clientName(c.partnerId)).includes(q));
+  }
+
   private clientName(id?: number): string {
     return id ? (this.clients.find(c => c.id === Number(id))?.name ?? '') : '';
   }
@@ -492,16 +518,26 @@ export class PrecompteConfigComponent implements OnInit {
   // ===== Import Excel Enlèvements =====
 
   downloadEnlTemplate(): void {
-    downloadExcelTemplate(ENL_HEADERS, ENL_SAMPLE, 'modele_enlevements.xlsx');
+    downloadExcelTemplateRows(ENL_HEADERS, ENL_SAMPLES, 'modele_enlevements.xlsx');
   }
 
 
-  /** Exporte les enlèvements cochés (ou tous) au format du modèle d'import (clé : catégorie). */
+  /** Exporte les enlèvements cochés (ou tous) au format du modèle d'import : une ligne par client spécifique. */
   exportEnlExcel(): void {
-    const rows = this.selEnl.rowsToExport(this.enlevements, this.enlevements).map(e => [
-      e.categoryName, e.montantFixe, e.coutEnlevement ?? 0, '', yesNo(e.active !== false), yesNo((e.clients?.length ?? 0) > 0)
-    ]);
+    const rows = this.selEnl.rowsToExport(this.enlevements, this.enlevements).flatMap(e => {
+      const base = [e.categoryName, e.montantFixe, e.coutEnlevement ?? 0, '', yesNo(e.active !== false), yesNo((e.clients?.length ?? 0) > 0)];
+      return e.clients?.length
+        ? e.clients.map(c => [...base, this.clientImportLabel(c), c.montant])
+        : [[...base, '', '']];
+    });
     exportRowsToExcel(ENL_HEADERS, rows, 'export_enlevements');
+  }
+
+  /** Nom du client, ou sa référence s'il a un homonyme : le fichier doit se réimporter sans ambiguïté. */
+  private clientImportLabel(c: EnlevementClient): string {
+    const name = c.partnerName ?? this.clientName(c.partnerId);
+    const homonyms = this.clients.filter(p => normText(p.name) === normText(name));
+    return homonyms.length > 1 ? (this.clients.find(p => p.id === c.partnerId)?.ref ?? name) : name;
   }
 
   triggerEnlImport(): void {
@@ -514,19 +550,25 @@ export class PrecompteConfigComponent implements OnInit {
     if (!file) return;
     this.importEnlLoading = true;
     try {
-      const rows = await parseExcelFile(file);
-      this.importEnlRows = rows.filter(r => r["Catégorie d'article"] || r['Catégorie']);
-      if (this.importEnlRows.length === 0) {
+      const plan = buildEnlevementImportPlan(await parseExcelFile(file), this.clients);
+      if (plan.groups.length === 0) {
         alert('Aucune ligne valide (colonne "Catégorie d\'article" requise)');
         this.importEnlLoading = false;
         return;
       }
+      this.importEnlPlan = plan;
       this.showImportEnlModal = true;
     } catch (e: any) { alert('Erreur : ' + e.message); }
     this.importEnlLoading = false;
   }
 
-  closeImportEnlModal(): void { this.showImportEnlModal = false; this.importEnlRows = []; }
+  expandedImportIdx: number | null = null;
+
+  closeImportEnlModal(): void { this.showImportEnlModal = false; this.importEnlPlan = null; this.expandedImportIdx = null; }
+
+  get importEnlClientCount(): number {
+    return (this.importEnlPlan?.groups ?? []).reduce((n, g) => n + g.clients.length, 0);
+  }
 
   private norm(s: string): string {
     return (s || '').trim().toLowerCase()
@@ -556,33 +598,40 @@ export class PrecompteConfigComponent implements OnInit {
 
   async confirmImportEnl(): Promise<void> {
     this.importEnlLoading = true;
-    let done = 0, updated = 0, noCat = 0, apiErr = 0;
-    for (const row of this.importEnlRows) {
-      const catName = String(row["Catégorie d'article"] || row['Catégorie'] || '').trim();
-      const categoryId = await this.getOrCreateCategoryId(catName);
+    let done = 0, updated = 0, noCat = 0, apiErr = 0, clientsSaved = 0;
+    for (const group of this.importEnlPlan?.groups ?? []) {
+      const categoryId = await this.getOrCreateCategoryId(group.categoryName);
       if (!categoryId) { noCat++; continue; }
-      const montantKey = ["Montant de l'enl\u00e8vement", "Montant de l'enlevement"].find(k => k in row);
-      const coutKey    = ["Cout enlevement", "Co\u00fbt enl\u00e8vement"].find(k => k in row);
-      // Existant (clé : catégorie) → mise à jour. Une colonne absente garde la valeur actuelle,
-      // et `clients` n'est PAS envoyé : les tarifs spécifiques par client sont conservés
-      // (envoyer une liste vide les supprimait tous).
+      // Existant (clé : catégorie) → mise à jour. Une colonne absente garde la valeur actuelle.
       const existing = this.enlevements.find(e => e.categoryId === categoryId);
       const dto: Enlevement = {
         categoryId,
-        montantFixe: montantKey ? (parseFloat(String(row[montantKey])) || 0) : (existing?.montantFixe ?? 0),
-        coutEnlevement: coutKey ? (parseFloat(String(row[coutKey])) || 0) : (existing?.coutEnlevement ?? 0),
+        montantFixe: group.montantFixe ?? existing?.montantFixe ?? 0,
+        coutEnlevement: group.coutEnlevement ?? existing?.coutEnlevement ?? 0,
         companyId: this.companyId
       };
+      // Le serveur supprime les clients absents de la liste reçue : on complète donc les tarifs
+      // actuels avec ceux du fichier. Sans client dans le fichier, `clients` n'est PAS envoyé.
+      if (group.clients.length > 0) {
+        const merged = new Map((existing?.clients ?? []).map(c => [c.partnerId, c]));
+        for (const c of group.clients) {
+          merged.set(c.partnerId, { ...merged.get(c.partnerId), partnerId: c.partnerId, montant: c.montant });
+        }
+        dto.clients = [...merged.values()];
+      }
       try {
         await this.svc.saveEnlevement(dto).toPromise();
         if (existing) updated++; else done++;
+        clientsSaved += group.clients.length;
       } catch { apiErr++; }
     }
+    const skipped = (this.importEnlPlan?.issues.length ?? 0) + (this.importEnlPlan?.odooRefs ?? 0);
     this.importEnlLoading = false;
     this.closeImportEnlModal();
     this.loadEnlevements();
     this.selEnl.clear();
-    const msg = [`Import terminé : ${done} créé(s), ${updated} mis à jour`];
+    const msg = [`Import terminé : ${done} créé(s), ${updated} mis à jour, ${clientsSaved} supplément(s) client`];
+    if (skipped > 0) msg.push(`${skipped} ligne(s) signalée(s) dans l'aperçu`);
     if (noCat > 0)  msg.push(`${noCat} catégorie(s) introuvable(s)`);
     if (apiErr > 0) msg.push(`${apiErr} erreur(s) serveur`);
     alert(msg.join('\n'));

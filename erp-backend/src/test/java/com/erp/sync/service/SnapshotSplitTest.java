@@ -22,7 +22,7 @@ import static org.mockito.Mockito.mock;
 class SnapshotSplitTest {
 
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-    private final SyncEventPublisher publisher = new SyncEventPublisher(mock(OutboxEventRepository.class), mapper, mock(jakarta.persistence.EntityManager.class));
+    private final SyncEventPublisher publisher = new SyncEventPublisher(mock(OutboxEventRepository.class), mapper, mock(jakarta.persistence.EntityManager.class), RemoteSyncGuardTest.enabledGuard());
 
     private static SpokeSnapshotPayload snapshot(int invoices, int lines, int partners) {
         LocalDate d = LocalDate.of(2026, 10, 1);

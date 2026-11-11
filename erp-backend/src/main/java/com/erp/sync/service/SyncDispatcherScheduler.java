@@ -53,6 +53,7 @@ public class SyncDispatcherScheduler {
     private final RabbitTemplate         rabbitTemplate;
     private final InterAgencyKeyService  interAgencyKeyService;
     private final HubConfirmationService hubConfirmation;
+    private final RemoteSyncGuard        remoteSyncGuard;
 
     @Value("${sync.spoke.id:SPOKE_001}")          private String spokeId;
     @Value("${sync.spoke.name:Blessing ERP Distributeurs}") private String spokeName;
@@ -62,6 +63,9 @@ public class SyncDispatcherScheduler {
     @Value("${sync.broker.max-message-bytes:16777216}") private int brokerMaxMessageBytes;
 
     private String spokeApiUrl;
+    private volatile boolean urlDetected;
+    /** Enregistrement accepté par le broker depuis le démarrage (ou la dernière réactivation). */
+    private volatile boolean registrationSent;
 
     /** Type d'ERP, figé dans le code : le hub refuse de rattacher ce spoke à une entreprise d'un autre type. */
     public static final String SPOKE_CATEGORY = "DISTRIBUTEUR";
@@ -78,6 +82,7 @@ public class SyncDispatcherScheduler {
      * configurées publieraient sous le même identifiant et leurs données seraient mélangées au Hub.
      */
     private boolean spokeIdConfigured() {
+        if (!remoteSyncGuard.isEnabled()) return false;
         if (spokeId != null && !spokeId.isBlank() && !UNCONFIGURED_SPOKE_ID.equalsIgnoreCase(spokeId.trim())) return true;
         long now = System.currentTimeMillis();
         if (now - lastIdentityWarning > 3_600_000L) {
@@ -93,6 +98,10 @@ public class SyncDispatcherScheduler {
 
     @PostConstruct
     void detectSpokeApiUrl() {
+        // Synchronisation désactivée : pas d'appel aux services d'IP publique, l'URL ne sert qu'au Hub.
+        // Faite plus tard, au premier heartbeat après réactivation (cf. sendHeartbeat).
+        if (!remoteSyncGuard.isEnabled()) return;
+        urlDetected = true;
         // Niveau 1 : URL configurée explicitement dans application.properties
         if (configuredPublicUrl != null && !configuredPublicUrl.isBlank()) {
             spokeApiUrl = configuredPublicUrl.trim();
@@ -216,6 +225,7 @@ public class SyncDispatcherScheduler {
             reg.setEntityId(spokeId);
             reg.setOccurredAt(LocalDateTime.now());
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "erp.sync.register", reg);
+            registrationSent = true;
             log.info("Enregistrement envoyé au Hub : spoke={}", spokeId);
         } catch (Exception e) {
             log.warn("Enregistrement échoué (Hub inaccessible) : {}", e.getMessage());
@@ -224,7 +234,15 @@ public class SyncDispatcherScheduler {
 
     @Scheduled(fixedRate = 30_000, initialDelay = 10_000)
     public void sendHeartbeat() {
-        if (!spokeIdConfigured()) return;
+        if (!spokeIdConfigured()) {
+            registrationSent = false;  // réactivation : se réenregistrer
+            return;
+        }
+        if (!registrationSent) {
+            // Démarrage avec synchronisation désactivée puis réactivée, ou Hub injoignable au démarrage.
+            if (!urlDetected) detectSpokeApiUrl();
+            sendRegistration();
+        }
         try {
             SyncMessage hb = new SyncMessage();
             hb.setOutboxId(null);

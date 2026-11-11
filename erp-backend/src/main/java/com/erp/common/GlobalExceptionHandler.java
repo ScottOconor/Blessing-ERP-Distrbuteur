@@ -83,6 +83,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.notFound().build();
     }
 
+    /**
+     * Le navigateur a fermé la connexion pendant l'envoi (rechargement, changement d'écran pendant le
+     * téléchargement d'une police ou d'un fichier). Rien ne peut plus être écrit : sans ce gestionnaire,
+     * handleGeneric tentait d'écrire du JSON dans une réponse déjà typée (font/woff2…) et journalisait
+     * une erreur puis un HttpMessageNotWritableException.
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleClientAbort(Exception ex) {
+        log.debug("Connexion fermée par le client : {}", ex.getMessage());
+    }
+
     @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
     public ResponseEntity<Map<String, String>> handleAuthError(Exception ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

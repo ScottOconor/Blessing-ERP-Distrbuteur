@@ -112,7 +112,7 @@ public class ImportService {
                 String rawType = (colType != null) ? getString(row, colType) : "";
                 // Odoo stocke parfois le type sous forme "asset_receivable (Receivable)" → extraire la clé
                 if (rawType.contains("(")) rawType = rawType.substring(0, rawType.indexOf("(")).trim();
-                String[] mapped = mapOdooAccountType(rawType);
+                String[] mapped = mapAccountType(rawType, code);
                 String accountType = mapped[0];
                 String internalType = mapped[1];
 
@@ -653,9 +653,61 @@ public class ImportService {
     }
 
     /**
-     * Mappe les valeurs account_type d'Odoo vers [accountType, internalType].
+     * Type d'un compte importé, en [accountType, internalType] : libellé exact d'abord, puis mots-clés
+     * (le fichier peut être libellé librement, accents et pluriels compris), enfin classe OHADA du
+     * numéro de compte, pour ne jamais laisser un compte identifiable en « autre ».
      */
-    private String[] mapOdooAccountType(String raw) {
+    static String[] mapAccountType(String raw, String code) {
+        String[] byLabel = mapOdooAccountType(raw);
+        if (!"other".equals(byLabel[0])) return byLabel;
+        String[] byKeyword = mapKeywords(raw, code);
+        return byKeyword != null ? byKeyword : mapOhadaClass(code);
+    }
+
+    private static String[] mapKeywords(String raw, String code) {
+        String v = java.text.Normalizer.normalize(raw != null ? raw : "", java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").replace('\u00A0', ' ').toLowerCase().replaceAll("[_\\s]+", " ").trim();
+        if (v.isEmpty() || v.equals("other") || v.equals("autre") || v.equals("autres")) return null;
+        String c = code != null ? code.trim() : "";
+        if (v.contains("hors bilan") || v.contains("off balance") || v.contains("special")) return new String[]{"off_balance", "other"};
+        if (v.contains("capitaux") || v.contains("capital") || v.contains("equity") || v.contains("report a nouveau")
+                || v.contains("resultat") || v.contains("benefice") || v.contains("reserve")) return new String[]{"equity", "other"};
+        if (v.contains("fournisseur") || v.contains("payable")) return new String[]{"liability", "payable"};
+        if (v.contains("client") || v.contains("receivable") || v.contains("recevable")) return new String[]{"asset", "receivable"};
+        if (v.contains("tresorerie") || v.contains("liquidite") || v.contains("banque") || v.contains("caisse") || v.contains("cash"))
+            return new String[]{"asset", "liquidity"};
+        if (v.contains("dette") || v.contains("passif") || v.contains("liabilit") || v.contains("emprunt"))
+            return new String[]{"liability", c.startsWith("40") ? "payable" : "other"};
+        if (v.contains("creance")) return new String[]{"asset", c.startsWith("41") ? "receivable" : "other"};
+        if (v.contains("produit") || v.contains("revenu") || v.contains("vente") || v.contains("income")) return new String[]{"income", "other"};
+        if (v.contains("charge") || v.contains("depense") || v.contains("frais") || v.contains("achat") || v.contains("expense")
+                || v.contains("amortissement") || v.contains("depreciation") || v.contains("cout")) return new String[]{"expense", "other"};
+        if (v.contains("actif") || v.contains("asset") || v.contains("immobilis") || v.contains("stock") || v.contains("acompte"))
+            return new String[]{"asset", "other"};
+        return null;
+    }
+
+    /** Classe du plan OHADA, pour un libellé absent ou inconnu. */
+    private static String[] mapOhadaClass(String code) {
+        String c = code != null ? code.trim() : "";
+        if (c.isEmpty() || !Character.isDigit(c.charAt(0))) return new String[]{"other", "other"};
+        switch (c.charAt(0)) {
+            case '1': return new String[]{c.startsWith("16") || c.startsWith("17") || c.startsWith("18") || c.startsWith("19") ? "liability" : "equity", "other"};
+            case '2': case '3': return new String[]{"asset", "other"};
+            case '4':
+                if (c.startsWith("40")) return new String[]{"liability", "payable"};
+                if (c.startsWith("41")) return new String[]{"asset", "receivable"};
+                return new String[]{"liability", "other"};
+            case '5': return new String[]{"asset", c.startsWith("52") || c.startsWith("57") ? "liquidity" : "other"};
+            case '6': return new String[]{"expense", "other"};
+            case '7': return new String[]{"income", "other"};
+            case '8': return new String[]{"82468".indexOf(c.length() > 1 ? c.charAt(1) : '0') >= 0 ? "income" : "expense", "other"};
+            case '9': return new String[]{"off_balance", "other"};
+            default:  return new String[]{"other", "other"};
+        }
+    }
+
+    private static String[] mapOdooAccountType(String raw) {
         if (raw == null) raw = "";
         String v = raw.trim().toLowerCase();
 

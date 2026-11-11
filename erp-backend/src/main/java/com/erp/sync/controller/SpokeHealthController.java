@@ -20,9 +20,11 @@ public class SpokeHealthController {
     @Value("${server.port:8085}")      private int    serverPort;
 
     private final JdbcTemplate jdbc;
+    private final com.erp.sync.service.RemoteSyncGuard remoteSyncGuard;
 
-    public SpokeHealthController(JdbcTemplate jdbc) {
+    public SpokeHealthController(JdbcTemplate jdbc, com.erp.sync.service.RemoteSyncGuard remoteSyncGuard) {
         this.jdbc = jdbc;
+        this.remoteSyncGuard = remoteSyncGuard;
     }
 
     /** « up » seulement si la base répond : l'état renvoyait « up » base arrêtée, trompant la
@@ -41,6 +43,7 @@ public class SpokeHealthController {
             "spokeId",   spokeId,
             "spokeName", spokeName,
             "port",      serverPort,
+            "syncEnabled", remoteSyncGuard.isEnabled(),
             "timestamp", LocalDateTime.now().toString()
         );
         return databaseUp ? ResponseEntity.ok(body) : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);

@@ -91,21 +91,15 @@ public class EleaderImportService {
             }
             importLog.setEleaderReference(parsed.invoiceNumber);
 
-            // 4. Vérifier doublon — bloquer uniquement si le BC existe encore et n'est pas annulé
-            List<EleaderImportLog> existingLogs = logRepo.findByEleaderReferenceAndCompanyIdOrderByImportDateDesc(parsed.invoiceNumber, companyId);
-            Optional<EleaderImportLog> activeSuccessLog = existingLogs.stream()
-                    .filter(l -> "success".equals(l.getStatus()))
-                    .filter(l -> l.getSalesOrder() != null)
-                    .filter(l -> orderRepo.existsById(l.getSalesOrder().getId()))
-                    .filter(l -> {
-                        String state = orderRepo.findById(l.getSalesOrder().getId())
-                                .map(SalesOrder::getState).orElse("cancelled");
-                        return !"cancelled".equals(state);
-                    })
-                    .findFirst();
-            if (activeSuccessLog.isPresent()) {
+            // 4. Vérifier doublon sur les bons eux-mêmes, pas sur le journal d'import : un import
+            //    dont le bon a été créé mais marqué en erreur (exception après la création) laissait
+            //    réimporter la même facture → deux bons. Les imports sont sérialisés par le verrou
+            //    pris dans generateReference, donc deux envois simultanés ne passent pas tous deux.
+            List<SalesOrder> existing = orderRepo.findActiveByEleaderReference(companyId, parsed.invoiceNumber);
+            if (!existing.isEmpty()) {
                 return fail(importLog, "La facture eLeader " + parsed.invoiceNumber + " a déjà été importée (BC: "
-                        + activeSuccessLog.get().getSalesOrder().getName() + "). Annulez le bon de commande pour ré-importer.");
+                        + existing.stream().map(SalesOrder::getName).collect(Collectors.joining(", "))
+                        + "). Annulez le bon de commande pour ré-importer.");
             }
 
             if (parsed.clientName == null && parsed.clientCode == null) {

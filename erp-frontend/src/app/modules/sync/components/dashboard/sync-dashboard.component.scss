@@ -619,3 +619,22 @@
   &.mod-CAISSES      { background: #FDF4FF; color: #7E22CE; }
   &.mod-REFERENTIELS { background: #F0F9FF; color: #0369A1; }
 }
+
+// ── Interrupteur de synchronisation ──
+.sync-switch {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; margin-bottom: 20px;
+  border-radius: 10px;
+  background: var(--success-bg); border: 1px solid var(--success);
+  > .material-icons { font-size: 28px; color: var(--success); }
+  .sync-switch-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
+    strong { color: var(--text-primary); font-size: 14px; }
+    span { color: var(--text-muted); font-size: 13px; }
+  }
+  .btn-action { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); }
+  &.sync-switch-off {
+    background: var(--warning-bg); border-color: var(--warning);
+    > .material-icons { color: var(--warning); }
+  }
+  @media (max-width: 600px) { flex-wrap: wrap; }
+}

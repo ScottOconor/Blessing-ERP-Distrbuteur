@@ -46,6 +46,7 @@ export class EleaderConfigComponent implements OnInit {
     { eleaderCode: 'VCBB60',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
     { eleaderCode: 'VCBB50',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
     { eleaderCode: 'VCBV65',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
+    { eleaderCode: 'VCBV50',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
     { eleaderCode: 'VCMU65',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
     { eleaderCode: 'VCBA65',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
     { eleaderCode: 'VCBA50',  erpProductCode: 'CB12', invoiceModel: 'BRASSERIES' },
