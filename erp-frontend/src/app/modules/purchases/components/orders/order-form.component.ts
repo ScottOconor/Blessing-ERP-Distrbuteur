@@ -119,7 +119,7 @@ export class OrderFormComponent implements OnInit {
 
     this.stockService.getProducts(companyId).subscribe({
       next: data => {
-        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu');
+        this.allProducts = data.filter(p => p.type === 'product' || p.type === 'consu' || p.type === 'service');
         // Brouillon : le précompte dépend de la catégorie (Emballage → aucun), connue seulement ici
         if (!this.isReadOnly) this.order.lines.forEach((_, i) => this.computeLine(i));
       },

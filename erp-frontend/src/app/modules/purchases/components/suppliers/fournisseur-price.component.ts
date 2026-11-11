@@ -65,7 +65,7 @@ export class FournisseurPriceComponent implements OnInit {
       error: () => this.loading = false
     });
     this.stockService.getProducts(this.companyId).subscribe({
-      next: p => this.products = p.filter(x => x.active && (x.type === 'product' || x.type === 'consu'))
+      next: p => this.products = p.filter(x => x.active && (x.type === 'product' || x.type === 'consu' || x.type === 'service'))
     });
   }
 

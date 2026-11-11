@@ -70,6 +70,7 @@ public class PurchaseService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final String DEFAULT_EXPENSE_ACCOUNT   = "601100";
+    private static final String SERVICE_EXPENSE_ACCOUNT   = "605000";
     private static final String DEFAULT_PAYABLE_ACCOUNT   = "401100";
     private static final String TVA_DEDUCTIBLE_ACCOUNT    = "445200";
     private static final String PSA_PURCHASE_ACCOUNT      = "442100";
@@ -583,9 +584,16 @@ public class PurchaseService {
                         .setScale(0, RoundingMode.HALF_UP);
                 if (htCatalogue.compareTo(ZERO) != 0) {
                     String accCode = (line.getAccountCode() != null && !line.getAccountCode().isBlank())
-                            ? line.getAccountCode() : DEFAULT_EXPENSE_ACCOUNT;
-                    AccountAccount acc = accCode.equals(DEFAULT_EXPENSE_ACCOUNT) ? expenseAccount
-                            : accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(expenseAccount);
+                            ? line.getAccountCode().trim() : DEFAULT_EXPENSE_ACCOUNT;
+                    AccountAccount acc;
+                    if (isServiceLine(line, companyId) && accCode.startsWith("601")) {
+                        // Un service n'est pas une marchandise : jamais en 601 (achats de marchandises),
+                        // sauf compte explicitement choisi hors 601 sur la ligne.
+                        acc = serviceExpenseAccount(invoice.getCompany());
+                    } else {
+                        acc = accCode.equals(DEFAULT_EXPENSE_ACCOUNT) ? expenseAccount
+                                : accountRepo.findFirstByCodeAndCompanyId(accCode, companyId).orElse(expenseAccount);
+                    }
                     // 601100 au prix catalogue (= montantHT)
                     moveLines.add(AccountMoveLine.builder()
                             .move(move).account(acc).partner(invoice.getPartner())
@@ -734,6 +742,7 @@ public class PurchaseService {
 
         for (PurchaseInvoiceLine line : invoice.getLines()) {
             if (ConsigneCodes.isConsigne(line.getProductCode(), companyId)) continue;
+            if (isServiceLine(line, companyId)) continue; // un service ne passe pas en stock
 
             // Utiliser le prix unitaire de la ligne comme coût d'entrée
             BigDecimal cost = line.getPrixUnitaire() != null ? line.getPrixUnitaire() : ZERO;
@@ -855,6 +864,7 @@ public class PurchaseService {
                         invoice.getName(), line.getDescription(), line.getProductId(), line.getProductCode());
                 continue;
             }
+            if ("service".equals(product.getType())) continue; // un service n'a pas de réception
 
             StockMove move = StockMove.builder()
                     .picking(picking)
@@ -2634,6 +2644,25 @@ public class PurchaseService {
      * kg, L, sac…) faisait échouer silencieusement la réception de stock à la validation de la
      * facture, alors que l'écriture comptable de variation de stock se postait normalement.
      */
+    /** Ligne d'achat portant sur un article de type « service » (ni stock, ni réception, ni 601). */
+    private boolean isServiceLine(PurchaseInvoiceLine line, Long companyId) {
+        if (line.getProductId() == null && (line.getProductCode() == null || line.getProductCode().isBlank())) {
+            return false;
+        }
+        return resolveProduct(line.getProductId(), line.getProductCode(), companyId)
+                .map(p -> "service".equals(p.getType()))
+                .orElse(false);
+    }
+
+    /** Compte de charge des achats de services : 605 « Autres achats » (SYSCOHADA), créé au besoin. */
+    private AccountAccount serviceExpenseAccount(Company company) {
+        Long companyId = company.getId();
+        return accountRepo.findFirstByCodeAndCompanyId(SERVICE_EXPENSE_ACCOUNT, companyId)
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("6050", companyId))
+                .or(() -> accountRepo.findFirstByCodeAndCompanyId("605", companyId))
+                .orElseGet(() -> findOrCreatePurchaseAccount(SERVICE_EXPENSE_ACCOUNT, "Autres achats", companyId, company));
+    }
+
     private Optional<Product> resolveProduct(Long productId, String productCode, Long companyId) {
         if (productId != null) {
             Optional<Product> byId = productRepo.findById(productId);
