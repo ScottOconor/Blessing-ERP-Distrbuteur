@@ -21,6 +21,7 @@ export const stockRoutes: Routes = [
       { path: 'warehouses', loadComponent: () => import('./components/warehouses/warehouse-list.component').then(m => m.WarehouseListComponent) },
       { path: 'adjustments', loadComponent: () => import('./components/adjustments/adjustment-list.component').then(m => m.AdjustmentListComponent) },
       { path: 'casses', loadComponent: () => import('./components/casses/casse-list.component').then(m => m.CasseListComponent) },
+      { path: 'cessions', loadComponent: () => import('./components/cessions/cession-list.component').then(m => m.CessionListComponent) },
       { path: 'expeditions', loadComponent: () => import('./components/livraisons/livraison-list.component').then(m => m.LivraisonListComponent) },
       { path: 'expeditions/new', loadComponent: () => import('./components/livraisons/livraison-detail.component').then(m => m.LivraisonDetailComponent) },
       { path: 'expeditions/:id', loadComponent: () => import('./components/livraisons/livraison-detail.component').then(m => m.LivraisonDetailComponent) },

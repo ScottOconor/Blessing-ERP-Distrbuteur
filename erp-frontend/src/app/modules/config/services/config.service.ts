@@ -101,7 +101,7 @@ export const SYSTEM_ROLE_CODES = ['SUPER_ADMIN', 'ADMIN'];
 export const RESOURCES: Record<string, string[]> = {
   VENTES:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'CLIENTS', 'VENDEURS', 'PAIEMENTS', 'RISTOURNES', 'PRECOMPTES'],
   ACHATS:       ['COMMANDES', 'FACTURES', 'AVOIRS', 'PAIEMENTS', 'REMISES', 'ENLEVEMENTS'],
-  STOCK:        ['PRODUITS', 'MOUVEMENTS', 'INVENTAIRE', 'CASSES'],
+  STOCK:        ['PRODUITS', 'MOUVEMENTS', 'INVENTAIRE', 'CASSES', 'CESSIONS'],
   COMPTABILITE: ['JOURNAUX', 'ECRITURES', 'RAPPORTS'],
   CAISSE:       ['CAISSES', 'SESSIONS', 'OPERATIONS', 'COUPURES', 'RAPPORTS'],
   RH:           ['EMPLOYES', 'CONTRATS', 'BULLETINS', 'CONFIG_PAIE', 'CONGES'],
@@ -119,7 +119,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   COMMANDES: 'Commandes', FACTURES: 'Factures', AVOIRS: 'Avoirs',
   CLIENTS: 'Clients', VENDEURS: 'Vendeurs', PAIEMENTS: 'Paiements', RISTOURNES: 'Ristournes',
   REMISES: 'Remises fournisseurs', ENLEVEMENTS: 'Enlèvements',
-  PRODUITS: 'Produits', MOUVEMENTS: 'Mouvements de stock', INVENTAIRE: 'Inventaire', CASSES: 'Trous & Casses',
+  PRODUITS: 'Produits', MOUVEMENTS: 'Mouvements de stock', INVENTAIRE: 'Inventaire', CASSES: 'Trous & Casses', CESSIONS: 'Cessions',
   JOURNAUX: 'Journaux', ECRITURES: 'Écritures comptables', RAPPORTS: 'Rapports', PRECOMPTES: 'Précomptes',
   CAISSES: 'Caisses', TICKETS: 'Tickets support',
   SESSIONS: 'Sessions (ouverture / clôture)', OPERATIONS: 'Entrées & sorties', COUPURES: 'Coupures',

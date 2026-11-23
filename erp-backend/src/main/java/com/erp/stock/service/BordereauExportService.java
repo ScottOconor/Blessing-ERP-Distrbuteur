@@ -182,9 +182,21 @@ public class BordereauExportService {
         }
     }
 
-    // ======================== BORDEREAU DE CASSE / AVARIE ========================
+    // ======================== BORDEREAU DE CASSE / AVARIE / CESSION ========================
 
+    private static final Color CESSION_C = new Color(37, 99, 235);
+
+    /** Bordereau d'une opération de Trous & Casses (sortie de stock pour avarie). */
     public byte[] generateCassePdf(com.erp.stock.dto.CasseBordereauDTO dto) {
+        return generateStockOutPdf(dto, "BORDEREAU DE CASSE / AVARIE", AVARIE);
+    }
+
+    /** Bordereau d'une opération de Cession (sortie de stock vers un tiers). */
+    public byte[] generateCessionPdf(com.erp.stock.dto.CasseBordereauDTO dto) {
+        return generateStockOutPdf(dto, "BORDEREAU DE CESSION", CESSION_C);
+    }
+
+    private byte[] generateStockOutPdf(com.erp.stock.dto.CasseBordereauDTO dto, String docTitle, Color accent) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document doc = new Document(PageSize.A4, 25, 25, 30, 25);
             PdfWriter.getInstance(doc, out);
@@ -217,9 +229,9 @@ public class BordereauExportService {
             header.addCell(coCell);
 
             PdfPCell titCell = new PdfPCell();
-            titCell.setBackgroundColor(AVARIE); titCell.setBorder(Rectangle.NO_BORDER);
+            titCell.setBackgroundColor(accent); titCell.setBorder(Rectangle.NO_BORDER);
             titCell.setPadding(10); titCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-            titCell.addElement(new Paragraph("BORDEREAU DE CASSE / AVARIE", docTitF));
+            titCell.addElement(new Paragraph(docTitle, docTitF));
             if (dto.getName() != null) titCell.addElement(new Phrase("\n" + dto.getName(), docSubF));
             String dateStr = dto.getDate() != null ? dto.getDate().format(DATE_FMT) : java.time.LocalDate.now().format(DATE_FMT);
             titCell.addElement(new Phrase("\nDate : " + dateStr, docSubF));
@@ -239,7 +251,7 @@ public class BordereauExportService {
             // ── TABLEAU ARTICLES ──
             PdfPTable table = new PdfPTable(new float[]{2.5f, 6.5f, 2.5f, 2.5f, 3f});
             table.setWidthPercentage(100);
-            Color HDR_BG = AVARIE;
+            Color HDR_BG = accent;
             for (String h : new String[]{"Code", "Désignation", "Quantité", "CMUP", "Montant"}) {
                 PdfPCell hc = new PdfPCell(new Phrase(h, hdrFont));
                 hc.setBackgroundColor(HDR_BG); hc.setPadding(5);

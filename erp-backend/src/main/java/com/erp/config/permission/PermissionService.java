@@ -150,6 +150,9 @@ public class PermissionService {
         new PermissionRule("GET",    "/api/stock/casses",            "STOCK","CASSES","VIEW"),
         new PermissionRule("GET",    "/api/stock/casses/**",         "STOCK","CASSES","VIEW"),
         new PermissionRule("POST",   "/api/stock/casses",            "STOCK","CASSES","CREATE"),
+        new PermissionRule("GET",    "/api/stock/cessions",          "STOCK","CESSIONS","VIEW"),
+        new PermissionRule("GET",    "/api/stock/cessions/**",       "STOCK","CESSIONS","VIEW"),
+        new PermissionRule("POST",   "/api/stock/cessions",          "STOCK","CESSIONS","CREATE"),
 
         // ── COMPTABILITE ──────────────────────────────────────────────────
         new PermissionRule("GET",    "/api/accounting/accounts",     "COMPTABILITE","ECRITURES","VIEW"),

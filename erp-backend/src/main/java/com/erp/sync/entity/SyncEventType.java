@@ -51,6 +51,7 @@ public enum SyncEventType {
     STOCK_BORDEREAU_VALIDATED,
     /** Sortie de stock pour casse/avarie (Trous & Casses) */
     STOCK_LOSS_CREATED,
+    STOCK_CESSION_CREATED,
 
     // ── Achats ────────────────────────────────────────────────────────────
     /** Bon de commande achat réceptionné */

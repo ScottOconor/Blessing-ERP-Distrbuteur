@@ -60,6 +60,10 @@ export class StockLayoutComponent implements OnInit {
       items.push({ id: 'casses', label: 'Trous & Casses', icon: 'broken_image', route: '/stock/casses' });
     }
 
+    if (this.can('CESSIONS')) {
+      items.push({ id: 'cessions', label: 'Cessions', icon: 'swap_horizontal_circle', route: '/stock/cessions' });
+    }
+
     if (this.can('MOUVEMENTS') || this.can('INVENTAIRE')) {
       items.push({
         id: 'analyse', label: 'Analyse', icon: 'analytics',

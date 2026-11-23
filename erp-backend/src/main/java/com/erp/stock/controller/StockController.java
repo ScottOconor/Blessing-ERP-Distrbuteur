@@ -456,6 +456,39 @@ public class StockController {
                 .body(pdf);
     }
 
+    // ---- Cessions (sortie de stock, comptes débit/crédit choisis à l'opération) ----
+    @GetMapping("/cessions")
+    public ResponseEntity<StreamingResponseBody> getStockCessions(
+            @RequestParam("companyId") Long companyId,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo) {
+        StreamingResponseBody body = out -> stockService.streamStockCessions(companyId, dateFrom, dateTo, out);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
+    }
+
+    @PostMapping("/cessions")
+    public ResponseEntity<StockCessionDTO> createStockCession(@RequestBody StockCessionRequest req) {
+        return ResponseEntity.ok(stockService.createStockCession(req));
+    }
+
+    /** Bordereau imprimable d'une opération de Cession */
+    @GetMapping("/cessions/{id}/bordereau")
+    public ResponseEntity<CasseBordereauDTO> getCessionBordereau(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(stockService.getCessionBordereau(id));
+    }
+
+    @GetMapping("/cessions/{id}/bordereau/pdf")
+    public ResponseEntity<byte[]> getCessionBordereauPdf(@PathVariable("id") Long id) {
+        CasseBordereauDTO dto = stockService.getCessionBordereau(id);
+        enrichCasseBordereauWithCompany(dto);
+        byte[] pdf = bordereauExportService.generateCessionPdf(dto);
+        String filename = (dto.getName() != null ? dto.getName().replace("/", "-") : "bordereau_cession") + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
     private void enrichCasseBordereauWithCompany(CasseBordereauDTO dto) {
         if (dto.getCompanyId() == null) return;
         companyRepository.findById(dto.getCompanyId()).ifPresent(c -> {

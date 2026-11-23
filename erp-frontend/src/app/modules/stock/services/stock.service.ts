@@ -250,6 +250,49 @@ export interface StockLossRequest {
   lines: StockLossLineRequest[];
 }
 
+export interface StockCessionLine {
+  id?: number;
+  productId?: number;
+  productCode?: string;
+  description?: string;
+  quantity: number;
+  unitCost?: number;
+  montantTotal?: number;
+}
+
+export interface StockCession {
+  id?: number;
+  name?: string;
+  date: string;
+  warehouseId: number;
+  warehouseName?: string;
+  partnerId?: number;
+  partnerName?: string;
+  notes?: string;
+  debitAccountCode?: string;
+  debitAccountName?: string;
+  creditAccountCode?: string;
+  creditAccountName?: string;
+  totalValue?: number;
+  accountMoveId?: number;
+  accountMoveName?: string;
+  companyId: number;
+  lines: StockCessionLine[];
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface StockCessionRequest {
+  date: string;
+  warehouseId: number;
+  partnerId?: number;
+  notes?: string;
+  debitAccountCode: string;
+  creditAccountCode: string;
+  companyId: number;
+  lines: StockLossLineRequest[];
+}
+
 /** Une ligne d'historique de prix (CMUP par entrepôt, prix de revient, prix de vente). */
 export interface ProductPriceHistory {
   id: number;
@@ -681,6 +724,20 @@ export class StockService {
   }
   downloadCasseBordereauPdf(stockLossId: number): Observable<Blob> {
     return this.http.get(`${this.api}/casses/${stockLossId}/bordereau/pdf`, { responseType: 'blob' });
+  }
+
+  // Cessions
+  getStockCessions(companyId: number, dateFrom?: string, dateTo?: string): Observable<StockCession[]> {
+    let params = new HttpParams().set('companyId', companyId);
+    if (dateFrom) params = params.set('dateFrom', dateFrom);
+    if (dateTo) params = params.set('dateTo', dateTo);
+    return this.http.get<StockCession[]>(`${this.api}/cessions`, { params });
+  }
+  createStockCession(req: StockCessionRequest): Observable<StockCession> {
+    return this.http.post<StockCession>(`${this.api}/cessions`, req);
+  }
+  downloadCessionBordereauPdf(cessionId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/cessions/${cessionId}/bordereau/pdf`, { responseType: 'blob' });
   }
 
   downloadStockReportPdf(companyId: number): Observable<Blob> {

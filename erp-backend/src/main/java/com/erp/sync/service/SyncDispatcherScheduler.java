@@ -479,7 +479,7 @@ public class SyncDispatcherScheduler {
             case STOCK_MOVE_DONE,
                  STOCK_PICKING_FROM_SALE, STOCK_PICKING_FROM_PURCHASE,
                  STOCK_PICKING_VALIDATED, STOCK_BORDEREAU_VALIDATED,
-                 STOCK_LOSS_CREATED                                -> "STOCK";
+                 STOCK_LOSS_CREATED, STOCK_CESSION_CREATED        -> "STOCK";
 
             case CAISSE_OPERATION_ENTREE, CAISSE_OPERATION_SORTIE,
                  CAISSE_CLOTURE                                   -> "CAISSES";
@@ -520,6 +520,7 @@ public class SyncDispatcherScheduler {
             case STOCK_PICKING_VALIDATED            -> "Transfert de stock validé";
             case STOCK_BORDEREAU_VALIDATED          -> "Bordereau de réception validé";
             case STOCK_LOSS_CREATED                 -> "Trous & casses — sortie de stock";
+            case STOCK_CESSION_CREATED              -> "Cession — sortie de stock";
             case PURCHASE_ORDER_RECEIVED            -> "Bon de commande réceptionné";
             case ENLEVEMENT_SAVED                   -> "Enlèvement enregistré";
             case ELEADER_IMPORT_DONE                -> "Import eLeader réussi";

@@ -67,6 +67,7 @@ public class StockService {
     private final AgencyRepository agencyRepo;
     private final StockAdjustmentRepository adjustmentRepo;
     private final StockLossRepository stockLossRepo;
+    private final StockCessionRepository stockCessionRepo;
 
     // Accounting
     private final AccountMoveRepository accountMoveRepo;
@@ -2869,6 +2870,302 @@ public class StockService {
                 .accountMoveId(loss.getAccountMoveId()).accountMoveName(moveName)
                 .companyId(loss.getCompanyId()).lines(lineDTOs)
                 .createdBy(loss.getCreatedBy()).createdAt(loss.getCreatedAt())
+                .build();
+    }
+
+    // ============================================================
+    // CESSIONS — sortie de stock avec comptes débit/crédit choisis
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public void streamStockCessions(Long companyId, LocalDate dateFrom, LocalDate dateTo, java.io.OutputStream out) throws java.io.IOException {
+        List<StockCession> cessions = (dateFrom != null && dateTo != null)
+                ? stockCessionRepo.findByCompanyIdAndDateBetweenOrderByDateAsc(companyId, dateFrom, dateTo)
+                : stockCessionRepo.findByCompanyIdOrderByDateDesc(companyId);
+        List<Long> ids = cessions.stream().map(c -> c.getId()).collect(Collectors.toList());
+        jsonArrayStreamer.streamByIds(out, ids, stockCessionRepo::findAllById, c -> c.getId(), this::toStockCessionDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockCessionDTO> getStockCessions(Long companyId, LocalDate dateFrom, LocalDate dateTo) {
+        List<StockCession> cessions = (dateFrom != null && dateTo != null)
+                ? stockCessionRepo.findByCompanyIdAndDateBetweenOrderByDateAsc(companyId, dateFrom, dateTo)
+                : stockCessionRepo.findByCompanyIdOrderByDateDesc(companyId);
+        return cessions.stream().map(this::toStockCessionDTO).collect(Collectors.toList());
+    }
+
+    /**
+     * Cession de stock : sortie de marchandises du stock, calquée sur les Trous &amp; Casses
+     * (createStockLoss). Différence : l'écriture comptable est passée sur les comptes de débit et
+     * de crédit CHOISIS par l'utilisateur (resolus dans le plan de la société), pour la valeur
+     * totale (Σ quantité × CMUP). Aucune facturation générée.
+     */
+    public StockCessionDTO createStockCession(StockCessionRequest req) {
+        Long companyId = req.getCompanyId();
+        Warehouse warehouse = warehouseRepo.findById(req.getWarehouseId())
+                .orElseThrow(() -> new EntityNotFoundException("Entrepôt introuvable: " + req.getWarehouseId()));
+        if (warehouse.getStockLocationId() == null) {
+            throw new IllegalStateException("Cet entrepôt n'a pas d'emplacement de stock configuré");
+        }
+        Long srcLocId = warehouse.getStockLocationId();
+
+        Partner partner = req.getPartnerId() != null
+                ? partnerRepo.findById(req.getPartnerId()).orElse(null) : null;
+
+        if (req.getLines() == null || req.getLines().isEmpty()) {
+            throw new IllegalArgumentException("Aucun article renseigné");
+        }
+
+        // Comptes débit/crédit choisis à l'opération : obligatoires et doivent exister dans le plan.
+        if (req.getDebitAccountCode() == null || req.getDebitAccountCode().isBlank()) {
+            throw new IllegalArgumentException("Le compte de débit est obligatoire");
+        }
+        if (req.getCreditAccountCode() == null || req.getCreditAccountCode().isBlank()) {
+            throw new IllegalArgumentException("Le compte de crédit est obligatoire");
+        }
+        String debitCode = req.getDebitAccountCode().trim();
+        String creditCode = req.getCreditAccountCode().trim();
+        AccountAccount debitAccount = accountRepo.findFirstByCodeAndCompanyId(debitCode, companyId)
+                .orElseThrow(() -> new EntityNotFoundException("Compte de débit introuvable dans le plan : " + debitCode));
+        AccountAccount creditAccount = accountRepo.findFirstByCodeAndCompanyId(creditCode, companyId)
+                .orElseThrow(() -> new EntityNotFoundException("Compte de crédit introuvable dans le plan : " + creditCode));
+
+        LocalDate date = req.getDate() != null ? req.getDate() : LocalDate.now();
+        fiscalLockGuard.assertPeriodOpen(companyId, date);
+
+        // Résoudre les articles et vérifier le stock disponible AVANT toute décrémentation
+        // (une cession ne peut jamais faire passer le stock en négatif).
+        List<ResolvedLossLine> resolved = new ArrayList<>();
+        for (StockCessionRequest.LineRequest lr : req.getLines()) {
+            Product product = lr.getProductId() != null
+                    ? productRepo.findById(lr.getProductId()).orElse(null)
+                    : (lr.getProductCode() != null && !lr.getProductCode().isBlank()
+                        ? productRepo.findFirstByDefaultCodeAndCompanyId(lr.getProductCode(), companyId).orElse(null)
+                        : null);
+            if (product == null) {
+                throw new EntityNotFoundException("Article introuvable: "
+                        + (lr.getProductCode() != null ? lr.getProductCode() : lr.getProductId()));
+            }
+            BigDecimal qty = lr.getQuantity() != null ? lr.getQuantity() : ZERO;
+            if (qty.compareTo(ZERO) <= 0) {
+                throw new IllegalArgumentException("Quantité invalide pour " + product.getName());
+            }
+            BigDecimal available = quantRepo
+                    .findFirstByProductIdAndLocationIdAndCompanyId(product.getId(), srcLocId, companyId)
+                    .map(StockQuant::getQuantity).orElse(ZERO);
+            if (qty.compareTo(available) > 0) {
+                throw new IllegalStateException("Stock insuffisant pour \"" + product.getName() + "\" dans "
+                        + warehouse.getName() + " : " + available.setScale(0, RoundingMode.HALF_UP)
+                        + " en stock, " + qty.setScale(0, RoundingMode.HALF_UP) + " à sortir");
+            }
+            BigDecimal unitCost = getWarehouseCmup(product.getId(), warehouse.getId(), product);
+            BigDecimal montant = qty.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
+            resolved.add(new ResolvedLossLine(product, qty, unitCost, montant));
+        }
+
+        // Décrémenter le stock
+        for (ResolvedLossLine rl : resolved) {
+            StockQuant quant = findOrCreateQuant(rl.product().getId(), srcLocId, companyId);
+            quant.setQuantity(quant.getQuantity().subtract(rl.qty()));
+            quantRepo.save(quant);
+        }
+
+        BigDecimal totalValue = resolved.stream().map(ResolvedLossLine::montant).reduce(ZERO, BigDecimal::add);
+
+        String description = "Cession " + warehouse.getName()
+                + (partner != null ? " - " + partner.getName() : "")
+                + (req.getNotes() != null && !req.getNotes().isBlank() ? " (" + req.getNotes() + ")" : "");
+
+        createStockCessionPicking(resolved, srcLocId, companyId, description, date);
+        Long accountMoveId = createStockCessionAccountingEntry(totalValue, companyId, description, date,
+                debitAccount, creditAccount);
+
+        documentNumberLock.lock("stock.cession." + companyId);
+        long seq = stockCessionRepo.countByCompanyId(companyId) + 1;
+        StockCession cession = StockCession.builder()
+                .name(String.format("CESSION/%05d", seq))
+                .date(date)
+                .warehouseId(warehouse.getId())
+                .partnerId(partner != null ? partner.getId() : null)
+                .notes(req.getNotes())
+                .debitAccountCode(debitCode)
+                .creditAccountCode(creditCode)
+                .totalValue(totalValue)
+                .accountMoveId(accountMoveId)
+                .companyId(companyId)
+                .createdBy(auditService.getCurrentUsername())
+                .build();
+
+        List<StockCessionLine> lines = resolved.stream().map(rl -> StockCessionLine.builder()
+                .stockCession(cession)
+                .productId(rl.product().getId())
+                .productCode(rl.product().getDefaultCode())
+                .description(rl.product().getName())
+                .quantity(rl.qty())
+                .unitCost(rl.unitCost())
+                .montantTotal(rl.montant())
+                .build()).collect(Collectors.toList());
+        cession.setLines(lines);
+
+        StockCession saved = stockCessionRepo.save(cession);
+        auditService.log("STOCK_CESSION", saved.getId(), saved.getName(),
+                "STOCK_CESSION_CREATED", "Cession de stock",
+                AuditService.details(java.util.Map.of(
+                        "valeur", totalValue.toPlainString(),
+                        "entrepot", warehouse.getName(),
+                        "debit", debitCode,
+                        "credit", creditCode)),
+                companyId);
+
+        StockCessionDTO result = toStockCessionDTO(saved);
+        syncEventPublisher.publish(SyncEventType.STOCK_CESSION_CREATED, String.valueOf(saved.getId()), result);
+        return result;
+    }
+
+    private void createStockCessionPicking(List<ResolvedLossLine> lines, Long srcLocId, Long companyId,
+                                           String description, LocalDate date) {
+        try {
+            Long virtualLocId = resolveAdjustmentVirtualLocationId(false);
+            if (virtualLocId == null) {
+                log.warn("Aucun emplacement virtuel trouvé pour la cession de stock");
+                return;
+            }
+            List<StockPickingType> pts = pickingTypeRepo.findByCompanyIdAndCodeOrderByNameAsc(companyId, "outgoing");
+            Long ptId = pts.isEmpty() ? null : pts.get(0).getId();
+
+            documentNumberLock.lock("stock.picking." + companyId + ".CESSION");
+            Integer maxSeq = pickingRepo.findMaxSeq(companyId, "CESSION");
+            String pickingName = String.format("CESSION/%05d", (maxSeq != null ? maxSeq : 0) + 1);
+
+            StockPicking picking = StockPicking.builder()
+                    .name(pickingName)
+                    .pickingTypeId(ptId != null ? ptId : 1L)
+                    .pickingTypeCode("outgoing")
+                    .locationId(srcLocId)
+                    .locationDestId(virtualLocId)
+                    .state("done")
+                    .scheduledDate(date)
+                    .dateDone(date.atTime(java.time.LocalTime.now()))
+                    .origin(description)
+                    .notes(description)
+                    .companyId(companyId)
+                    .build();
+
+            for (ResolvedLossLine rl : lines) {
+                StockMove move = StockMove.builder()
+                        .picking(picking)
+                        .productId(rl.product().getId())
+                        .productCode(rl.product().getDefaultCode())
+                        .productName(rl.product().getName())
+                        .uomName(rl.product().getUomName())
+                        .qtyDemanded(rl.qty())
+                        .qtyDone(rl.qty())
+                        .priceUnit(rl.unitCost())
+                        .locationId(srcLocId)
+                        .locationDestId(virtualLocId)
+                        .state("done")
+                        .companyId(companyId)
+                        .build();
+                picking.getMoves().add(move);
+            }
+            pickingRepo.save(picking);
+        } catch (Exception e) {
+            log.warn("Impossible de créer le mouvement de stock pour la cession: {}", e.getMessage());
+        }
+    }
+
+    private Long createStockCessionAccountingEntry(BigDecimal totalValue, Long companyId,
+                                                   String description, LocalDate date,
+                                                   AccountAccount debitAccount, AccountAccount creditAccount) {
+        if (totalValue.compareTo(ZERO) == 0) return null;
+        Long journalId = resolveStockJournal(companyId);
+        Company company = companyRepo.findById(companyId).orElse(null);
+        if (journalId == null || company == null) return null;
+        AccountJournal journal = journalRepo.findById(journalId).orElse(null);
+        if (journal == null) return null;
+
+        // Numéro séquentiel par société et par année, sous verrou (comme les casses).
+        documentNumberLock.lock("accounting.move.CESSION." + companyId);
+        String cesPrefix = "CESSION/" + date.getYear() + "/";
+        Integer maxCes = accountMoveRepo.findMaxSequenceByCompanyAndPrefix(companyId, cesPrefix);
+        AccountMove move = AccountMove.builder()
+                .name(cesPrefix + ((maxCes != null ? maxCes : 0) + 1))
+                .date(date)
+                .ref(description)
+                .state("posted")
+                .journal(journal)
+                .company(company)
+                .build();
+
+        List<AccountMoveLine> moveLines = new ArrayList<>();
+        moveLines.add(AccountMoveLine.builder().move(move).account(debitAccount)
+                .name(description).date(date)
+                .debit(totalValue).credit(ZERO)
+                .journal(journal).company(company).build());
+        moveLines.add(AccountMoveLine.builder().move(move).account(creditAccount)
+                .name(description).date(date)
+                .debit(ZERO).credit(totalValue)
+                .journal(journal).company(company).build());
+        move.setLines(moveLines);
+        return accountMoveRepo.save(move).getId();
+    }
+
+    private StockCessionDTO toStockCessionDTO(StockCession cession) {
+        Warehouse wh = warehouseRepo.findById(cession.getWarehouseId()).orElse(null);
+        Partner partner = cession.getPartnerId() != null ? partnerRepo.findById(cession.getPartnerId()).orElse(null) : null;
+        String moveName = cession.getAccountMoveId() != null
+                ? accountMoveRepo.findById(cession.getAccountMoveId()).map(AccountMove::getName).orElse(null) : null;
+        String debitName = cession.getDebitAccountCode() != null
+                ? accountRepo.findFirstByCodeAndCompanyId(cession.getDebitAccountCode(), cession.getCompanyId())
+                    .map(AccountAccount::getName).orElse(null) : null;
+        String creditName = cession.getCreditAccountCode() != null
+                ? accountRepo.findFirstByCodeAndCompanyId(cession.getCreditAccountCode(), cession.getCompanyId())
+                    .map(AccountAccount::getName).orElse(null) : null;
+        List<StockCessionDTO.LineDTO> lineDTOs = cession.getLines().stream().map(l -> StockCessionDTO.LineDTO.builder()
+                        .id(l.getId()).productId(l.getProductId()).productCode(l.getProductCode())
+                        .description(l.getDescription()).quantity(l.getQuantity())
+                        .unitCost(l.getUnitCost()).montantTotal(l.getMontantTotal())
+                        .build())
+                .collect(Collectors.toList());
+        return StockCessionDTO.builder()
+                .id(cession.getId()).name(cession.getName()).date(cession.getDate())
+                .warehouseId(cession.getWarehouseId()).warehouseName(wh != null ? wh.getName() : null)
+                .partnerId(cession.getPartnerId()).partnerName(partner != null ? partner.getName() : null)
+                .notes(cession.getNotes())
+                .debitAccountCode(cession.getDebitAccountCode()).debitAccountName(debitName)
+                .creditAccountCode(cession.getCreditAccountCode()).creditAccountName(creditName)
+                .totalValue(cession.getTotalValue())
+                .accountMoveId(cession.getAccountMoveId()).accountMoveName(moveName)
+                .companyId(cession.getCompanyId()).lines(lineDTOs)
+                .createdBy(cession.getCreatedBy()).createdAt(cession.getCreatedAt())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public CasseBordereauDTO getCessionBordereau(Long cessionId) {
+        StockCession cession = stockCessionRepo.findById(cessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Cession introuvable: " + cessionId));
+        Warehouse wh = warehouseRepo.findById(cession.getWarehouseId()).orElse(null);
+        Partner partner = cession.getPartnerId() != null ? partnerRepo.findById(cession.getPartnerId()).orElse(null) : null;
+
+        List<CasseBordereauDTO.LigneCasse> lignes = cession.getLines().stream()
+                .map(l -> CasseBordereauDTO.LigneCasse.builder()
+                        .productCode(l.getProductCode())
+                        .productName(l.getDescription())
+                        .quantite(l.getQuantity())
+                        .unitCost(l.getUnitCost())
+                        .montant(l.getMontantTotal())
+                        .build())
+                .collect(Collectors.toList());
+
+        return CasseBordereauDTO.builder()
+                .stockLossId(cession.getId()).name(cession.getName()).date(cession.getDate())
+                .warehouseName(wh != null ? wh.getName() : null)
+                .partnerName(partner != null ? partner.getName() : null)
+                .notes(cession.getNotes()).totalValue(cession.getTotalValue())
+                .operatorName(cession.getCreatedBy())
+                .companyId(cession.getCompanyId())
+                .lignes(lignes)
                 .build();
     }
 
